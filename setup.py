@@ -1,13 +1,13 @@
 """Setup script for the snn_interpreter package.
 
 This project trains spiking neural networks (SNNs) on MNIST using
-snnTorch and PyTorch. The distribution is a flat module layout with
-``main.py`` providing the top-level entry point.
+snnTorch and PyTorch. The distribution ships an importable
+``snn_interpreter`` package plus a top-level ``main`` entry point.
 """
 
 from pathlib import Path
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 # Read the long description from a README if one exists, otherwise
@@ -22,7 +22,10 @@ def _read_long_description() -> str:
 setup(
     name="snn-interpreter",
     version="0.1.0",
-    description="Spiking neural network trainer/experiments for MNIST built with snnTorch and PyTorch.",
+    description=(
+        "Spiking neural network trainer/experiments for MNIST built "
+        "with snnTorch and PyTorch."
+    ),
     long_description=_read_long_description(),
     long_description_content_type="text/markdown",
     author="",
@@ -30,13 +33,15 @@ setup(
     url="",
     license="MIT",
     python_requires=">=3.8",
-    # The project currently uses a flat layout: installable modules live
-    # at the repository root. Add new top-level modules/packages here.
+    packages=find_packages(exclude=("tests", "tests.*")),
     py_modules=["main"],
     install_requires=[
         "torch>=1.13",
         "torchvision>=0.14",
         "snntorch>=0.8",
+        "matplotlib>=3.5",
+        "Pillow>=9.0",
+        "numpy>=1.21",
     ],
     extras_require={
         "dev": [
