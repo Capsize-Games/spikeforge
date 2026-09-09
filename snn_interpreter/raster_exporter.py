@@ -17,8 +17,7 @@ class RasterExporter(Exporter):
 
     def export(self, filepath=None, neuron_idx=None):
         """Save a two-panel raster figure to disk."""
-        if filepath is None:
-            filepath = self.DEFAULT_FILENAME
+        filepath = filepath or self.output_path
 
         trainer = self.trainer
         num_steps = trainer.spike_data.size(0)

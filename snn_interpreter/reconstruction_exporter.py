@@ -16,8 +16,7 @@ class ReconstructionExporter(Exporter):
 
     def export(self, filepath=None):
         """Save a two-panel reconstruction figure to disk."""
-        if filepath is None:
-            filepath = self.DEFAULT_FILENAME
+        filepath = filepath or self.output_path
         trainer = self.trainer
         self._draw_panel(
             121, time_averaged_image(

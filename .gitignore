@@ -1,3 +1,9 @@
+# Generated media (exporters write these to build/)
+build/
+*.gif
+*.mp4
+*.png
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

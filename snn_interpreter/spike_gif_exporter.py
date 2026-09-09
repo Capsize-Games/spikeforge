@@ -16,8 +16,7 @@ class SpikeGifExporter(Exporter):
 
     def export(self, filepath=None):
         """Save the spike animation as an infinitely looping GIF."""
-        if filepath is None:
-            filepath = self.DEFAULT_FILENAME
+        filepath = filepath or self.output_path
         sample = spike_sample(self.trainer.spike_data)
         frames = [self._frame(sample, step) for step in range(len(sample))]
         durations = [self.trainer.interval] * len(frames)

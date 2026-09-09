@@ -20,8 +20,7 @@ class PresentationGifExporter(Exporter):
 
     def export(self, filepath=None, slide_duration_ms=None):
         """Save the full visual tour as an infinitely looping GIF."""
-        if filepath is None:
-            filepath = self.DEFAULT_FILENAME
+        filepath = filepath or self.output_path
         if slide_duration_ms is None:
             slide_duration_ms = self.SLIDE_MS
         frames, durations = self._assemble(

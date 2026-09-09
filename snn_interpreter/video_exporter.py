@@ -14,8 +14,7 @@ class VideoExporter(Exporter):
 
     def export(self, filepath=None):
         """Write the animated spike sample to an MP4 file."""
-        if filepath is None:
-            filepath = self.DEFAULT_FILENAME
+        filepath = filepath or self.output_path
         fig, ax = plt.subplots()
         sample = spike_sample(self.trainer.spike_data)
         anim = splt.animator(
