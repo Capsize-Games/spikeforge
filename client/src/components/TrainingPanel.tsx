@@ -63,13 +63,6 @@ export function TrainingPanel({
 
   return (
     <div className="col-training">
-      <div className="panel">
-        <div className="panel-title">Results</div>
-        <div className="muted">
-          Run a section from the left column to see output here.
-        </div>
-      </div>
-
       {mismatch && compatibility && (
         <MismatchBanner compatibility={compatibility} />
       )}
