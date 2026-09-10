@@ -765,9 +765,22 @@ canvas,
 }
 
 .cursor-readout {
+  margin-top: 4px;
   font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* Hide the number-input spin buttons for the sample index. */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* Inset the track to the raster plot area (padL 46, padR 12) so the

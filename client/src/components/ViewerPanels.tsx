@@ -6,7 +6,6 @@ import type {
 } from "../types";
 import { HeatmapCanvas } from "./HeatmapCanvas";
 import { RasterCanvas } from "./RasterCanvas";
-import { SampleIndex } from "./SampleIndex";
 import { TimeCursor } from "./TimeCursor";
 
 interface Props {
@@ -125,7 +124,11 @@ export function ViewerPanels({
         step={timeStep}
         numSteps={numSteps}
         playing={playing}
+        sampleIndex={sampleIndex}
         onScrub={onScrub}
+        onPlay={onPlay}
+        onStop={onStop}
+        onSelectSample={onSelectSample}
       />
 
       <RasterCanvas
@@ -134,31 +137,6 @@ export function ViewerPanels({
         yTitle="neuron"
         summary={summarize(rasters.input)}
         highlightStep={timeStep}
-        actions={
-          <>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={onPlay}
-              disabled={playing}
-              title="Play spike frames"
-              aria-label="Play spike frames"
-            >
-              ▶
-            </button>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={onStop}
-              disabled={!playing}
-              title="Stop"
-              aria-label="Stop"
-            >
-              ■
-            </button>
-            <SampleIndex value={sampleIndex} onChange={onSelectSample} />
-          </>
-        }
       />
 
       <RasterCanvas
