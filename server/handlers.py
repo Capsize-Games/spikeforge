@@ -22,16 +22,14 @@ from server.stats import handle_stats
 
 
 async def stream_frames(ws, session: Session, cfg):
-    """Push a spike_frame message for each time step, slowly."""
+    """Push one spike_frame per step, looping until cancelled."""
     engine = session.engine
     delay = max(0.02, cfg.interval_ms / 1000.0)
-    if cfg.coding == "delta":
-        await emit_frame(ws, session, engine, 0)
-    else:
-        for step in range(engine.num_steps()):
+    steps = 1 if cfg.coding == "delta" else engine.num_steps()
+    while True:
+        for step in range(steps):
             await emit_frame(ws, session, engine, step)
             await asyncio.sleep(delay)
-    await send_run_state(ws, session, running=False, reason="finished")
 
 
 async def handle_run(ws, session: Session, cfg):
