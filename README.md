@@ -84,18 +84,19 @@ Both write PNGs/GIFs/MP4s into `build/`.
 ### Local dev (server + Vite)
 
 ```bash
-# terminal 1 - FastAPI (use a port not taken by other apps)
-venv/bin/python -m uvicorn server.app:app --port 8765
+# terminal 1 - FastAPI on the canonical dev port :8877 (same port as Docker)
+venv/bin/python -m server   # defaults to 8877 with reload
 
-# terminal 2 - Vite (proxy target in client/vite.config.ts must match)
+# terminal 2 - Vite (proxy target in client/vite.config.ts must match :8877)
 cd client && npm install && npm run dev
 ```
 
 Open the printed `http://localhost:5173` URL. Pick a coding type (rate,
 latency, delta, or random), tune parameters, then hit **Apply & Run** to
 stream spike frames into the raster and image panels in real time. The Vite
-dev server proxies `/ws` to the FastAPI port in
-[`client/vite.config.ts`](client/vite.config.ts).
+dev server proxies `/ws` to the FastAPI server on port 8877 (see
+[`client/vite.config.ts`](client/vite.config.ts) and
+[`server/__main__.py`](server/__main__.py)).
 
 ## Project layout
 
