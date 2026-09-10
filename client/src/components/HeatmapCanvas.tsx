@@ -7,6 +7,8 @@ interface Props {
   width?: number;
   height?: number;
   label?: string;
+  /** Grow to fill the row and scale the drawing buffer to stay crisp. */
+  fluid?: boolean;
 }
 
 /** Color helpers for the two tutorial-style palettes. */
@@ -28,8 +30,13 @@ export function HeatmapCanvas({
   width = 200,
   height = 200,
   label,
+  fluid = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // A larger drawing buffer keeps fluid canvases sharp when scaled up.
+  const buffer = fluid ? Math.max(width, height, 448) : undefined;
+  const w = buffer ?? width;
+  const h = buffer ?? height;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,12 +59,17 @@ export function HeatmapCanvas({
         ctx.fillRect(c * cw, r * ch, Math.ceil(cw), Math.ceil(ch));
       }
     }
-  }, [data, palette, width, height]);
+  }, [data, palette, w, h]);
 
   return (
-    <div className="panel">
+    <div className={fluid ? "panel grow" : "panel"}>
       {label && <div className="panel-title">{label}</div>}
-      <canvas ref={canvasRef} width={width} height={height} />
+      <canvas
+        ref={canvasRef}
+        width={w}
+        height={h}
+        className={fluid ? "heatmap-fluid" : undefined}
+      />
     </div>
   );
 }

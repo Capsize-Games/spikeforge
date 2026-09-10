@@ -752,3 +752,23 @@ canvas,
 .error {
   border-radius: 0;
 }
+
+/* --- fluid viewer row: sample + spike frame fill the width --- */
+.viz-row {
+  flex-wrap: nowrap;
+}
+
+.viz-row > .grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.sample-wrap.grow > .panel {
+  width: 100%;
+}
+
+canvas.heatmap-fluid {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+}

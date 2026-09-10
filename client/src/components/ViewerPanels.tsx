@@ -38,14 +38,15 @@ export function ViewerPanels({
 }: Props) {
   return (
     <div className="col-viz">
-      <div className="row">
-        <div className="sample-wrap">
+      <div className="row viz-row">
+        <div className="sample-wrap grow">
           <HeatmapCanvas
             data={sample}
             palette="binary"
             label="Input sample"
             width={224}
             height={224}
+            fluid
           />
           {inference && sample && <PredictionBadge inference={inference} />}
         </div>
@@ -55,6 +56,7 @@ export function ViewerPanels({
           label="Spike frame (input)"
           width={224}
           height={224}
+          fluid
         />
         {(reconGain1 || reconLow) && (
           <div className="panel">
