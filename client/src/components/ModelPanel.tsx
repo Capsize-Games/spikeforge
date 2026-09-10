@@ -7,6 +7,7 @@ interface Props {
   current: string | null;
   connected: boolean;
   busy: boolean;
+  loading: boolean;
   onNew: () => void;
   onLoad: (name: string) => void;
   onSave: (name: string) => void;
@@ -18,20 +19,30 @@ export function ModelPanel({
   current,
   connected,
   busy,
+  loading,
   onNew,
   onLoad,
   onSave,
 }: Props) {
   const [selected, setSelected] = useState("");
   const [name, setName] = useState("my_model");
-  const disabled = !connected || busy;
+  const disabled = !connected || busy || loading;
 
   return (
     <div className="panel model-panel">
       <div className="model-head">
         <span className="panel-title">Model</span>
-        <span className={`model-chip ${current ? "on" : ""}`}>
-          {current ?? "none loaded"}
+        <span
+          className={`model-chip ${current ? "on" : ""} ${loading ? "loading" : ""}`}
+        >
+          {loading ? (
+            <>
+              <span className="spinner" />
+              loading…
+            </>
+          ) : (
+            current ?? "none loaded"
+          )}
         </span>
       </div>
 

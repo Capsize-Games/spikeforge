@@ -807,6 +807,30 @@ canvas.heatmap-fluid {
   border-color: rgba(63, 185, 80, 0.5);
 }
 
+.model-chip.loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  border-color: rgba(88, 166, 255, 0.5);
+}
+
+.spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .model-panel .model-row .text-input {
   flex: 1;
   min-width: 0;

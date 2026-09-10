@@ -56,6 +56,7 @@ export default function App() {
   const [config, setConfig] = useState<EncodeConfig>(defaultConfig);
   const [state, setState] = useState<ViewerState>(initial);
   const [stats, setStats] = useState<SystemStatsPayload | null>(null);
+  const [modelLoading, setModelLoading] = useState(false);
   const training = useTraining();
 
   // Keep the latest encode config reachable from debounced callbacks.
@@ -66,6 +67,13 @@ export default function App() {
 
   const handleMessage = useCallback(
     (msg: ServerMsg) => {
+      if (
+        msg.type === "model_loaded" ||
+        msg.type === "model_cleared" ||
+        msg.type === "error"
+      ) {
+        setModelLoading(false);
+      }
       if (training.handleMessage(msg)) return;
       switch (msg.type) {
         case "config_ack":
@@ -198,6 +206,7 @@ export default function App() {
   const saveModel = (name: string) => sendNamed("save_model", name);
 
   const loadModel = (name: string) => {
+    setModelLoading(true);
     training.patch({ checkpoint: name });
     const merged = {
       ...training.state.config,
@@ -232,6 +241,7 @@ export default function App() {
             current={training.state.loaded?.name ?? null}
             connected={connected}
             busy={training.state.running}
+            loading={modelLoading}
             onNew={newModel}
             onLoad={loadModel}
             onSave={saveModel}
