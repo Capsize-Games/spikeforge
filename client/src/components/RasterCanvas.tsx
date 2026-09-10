@@ -182,13 +182,15 @@ export function RasterCanvas({
         </div>
       )}
       <div className="raster-body">
-        <div className="raster-rail" style={{ height }}>
-          {railLabels.map(({ key, text, top }) => (
-            <span key={key} className="rail-label" style={{ top }}>
-              {text}
-            </span>
-          ))}
-        </div>
+        {railLabels.length > 0 && (
+          <div className="raster-rail" style={{ height }}>
+            {railLabels.map(({ key, text, top }) => (
+              <span key={key} className="rail-label" style={{ top }}>
+                {text}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="raster-wrap" ref={wrapRef}>
           <canvas ref={canvasRef} width={plotWidth} height={height} />
         </div>

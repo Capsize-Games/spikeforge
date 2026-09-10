@@ -802,10 +802,10 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 
-/* Inset by the raster label rail (24px) so the track matches the plot. */
+/* Rasters fill the panel width, so the track spans the full width too. */
 .cursor-range {
-  width: calc(100% - 24px);
-  margin: 0 0 0 24px;
+  width: 100%;
+  margin: 0;
   accent-color: var(--accent);
 }
 

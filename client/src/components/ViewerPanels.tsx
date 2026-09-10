@@ -83,6 +83,17 @@ export function ViewerPanels({
 
   return (
     <div className="col-viz">
+      <TimeCursor
+        step={timeStep}
+        numSteps={numSteps}
+        playing={playing}
+        sampleIndex={sampleIndex}
+        onScrub={onScrub}
+        onPlay={onPlay}
+        onStop={onStop}
+        onSelectSample={onSelectSample}
+      />
+
       <div className="viz-row">
         <div className="panel grow">
           <div className="panel-title">Input</div>
@@ -119,17 +130,6 @@ export function ViewerPanels({
           </div>
         </div>
       </div>
-
-      <TimeCursor
-        step={timeStep}
-        numSteps={numSteps}
-        playing={playing}
-        sampleIndex={sampleIndex}
-        onScrub={onScrub}
-        onPlay={onPlay}
-        onStop={onStop}
-        onSelectSample={onSelectSample}
-      />
 
       <RasterCanvas
         raster={rasters.input}
