@@ -9,6 +9,9 @@ interface Props {
   reconLow: number[][] | null;
   rasters: Record<RasterSource, RasterPayload | null>;
   inference: InferencePayload | null;
+  playing: boolean;
+  onPlay: () => void;
+  onStop: () => void;
 }
 
 /** Predicted vs true badge shown while a model has scored the sample. */
@@ -35,6 +38,9 @@ export function ViewerPanels({
   reconLow,
   rasters,
   inference,
+  playing,
+  onPlay,
+  onStop,
 }: Props) {
   return (
     <div className="col-viz">
@@ -87,7 +93,34 @@ export function ViewerPanels({
         </div>
       </div>
 
-      <RasterCanvas raster={rasters.input} label="Input spikes" />
+      <RasterCanvas
+        raster={rasters.input}
+        label="Input spikes"
+        actions={
+          <>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={onPlay}
+              disabled={playing}
+              title="Play spike frames"
+              aria-label="Play spike frames"
+            >
+              ▶
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={onStop}
+              disabled={!playing}
+              title="Stop"
+              aria-label="Stop"
+            >
+              ■
+            </button>
+          </>
+        }
+      />
       <RasterCanvas raster={rasters.hidden} label="Hidden layer" />
       <RasterCanvas raster={rasters.output} label="Output layer" />
     </div>

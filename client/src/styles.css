@@ -915,3 +915,42 @@ canvas.heatmap-fluid {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* --- panel header actions (right-aligned) --- */
+.row-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.icon-btn:not(:disabled):hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

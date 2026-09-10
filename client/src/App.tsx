@@ -181,6 +181,12 @@ export default function App() {
     sendInfer(configRef.current, training.state.config);
   };
 
+  /** Replay the input spike-frame animation from step 0. */
+  const playPreview = () => send("run", configRef.current);
+
+  /** Stop the spike-frame animation. */
+  const stopPreview = () => send("stop", configRef.current);
+
   /** Data settings are shared, so training mirrors the single config. */
   const sharedPatch = {
     dataset: config.dataset,
@@ -270,6 +276,9 @@ export default function App() {
           reconLow={state.reconLow}
           rasters={state.rasters}
           inference={state.inference}
+          playing={state.running}
+          onPlay={playPreview}
+          onStop={stopPreview}
         />
 
           <TrainingPanel

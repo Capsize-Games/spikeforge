@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 
 import type { RasterPayload } from "../types";
 
@@ -7,6 +8,8 @@ interface Props {
   width?: number;
   height?: number;
   label?: string;
+  /** Right-aligned controls rendered in the panel header. */
+  actions?: ReactNode;
 }
 
 export function RasterCanvas({
@@ -14,6 +17,7 @@ export function RasterCanvas({
   width = 600,
   height = 260,
   label,
+  actions,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -54,7 +58,12 @@ export function RasterCanvas({
 
   return (
     <div className="panel">
-      {label && <div className="panel-title">{label}</div>}
+      {(label || actions) && (
+        <div className="panel-title row-title">
+          {label && <span>{label}</span>}
+          {actions && <span className="panel-actions">{actions}</span>}
+        </div>
+      )}
       <canvas ref={canvasRef} width={width} height={height} />
     </div>
   );
