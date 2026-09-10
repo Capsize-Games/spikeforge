@@ -4,12 +4,19 @@ from fastapi import WebSocket
 
 from server.messages import send_locked
 from server.session import Session
+from snn_interpreter.observability import metrics
 from snn_interpreter.runtime.system_stats import snapshot
 
 
 async def handle_stats(ws: WebSocket, session: Session) -> None:
-    """Send a CPU/GPU memory snapshot for the resource monitor."""
+    """Send a CPU/GPU memory snapshot plus in-process metrics.
+
+    The ``metrics`` key is additive: existing consumers read ``cpu``/``gpu``/
+    ``device`` unchanged and the dashboard may ignore the new key.
+    """
+    payload = snapshot(session.training.engine)
+    payload["metrics"] = metrics.snapshot()
     await send_locked(ws, session, {
         "type": "system_stats",
-        "payload": snapshot(session.training.engine),
+        "payload": payload,
     })

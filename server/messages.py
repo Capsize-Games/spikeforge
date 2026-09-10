@@ -190,6 +190,24 @@ async def send_target_list(
     })
 
 
+async def send_model_search(
+    ws: WebSocket, session: Session, payload: Dict[str, Any]
+) -> None:
+    """Send filtered checkpoint registry records to the client."""
+    await send_locked(ws, session, {
+        "type": "model_search", "payload": payload,
+    })
+
+
+async def send_model_diff(
+    ws: WebSocket, session: Session, payload: Dict[str, Any]
+) -> None:
+    """Send a checkpoint metadata diff to the client."""
+    await send_locked(ws, session, {
+        "type": "model_diff", "payload": payload,
+    })
+
+
 async def send_deployment_report(
     ws: WebSocket, session: Session, payload: Dict[str, Any]
 ) -> None:

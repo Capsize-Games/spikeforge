@@ -27,6 +27,12 @@ class TrainConfig(BaseModel):
     # (e.g. {"channels": 8}); unknown keys are ignored by the registry.
     topology: str = "fc_legacy"
     topology_params: Dict[str, Any] = Field(default_factory=dict)
+    # Training scale-ups, all additive, opt-in, and default-off so existing
+    # runs stay numerically identical. ``bptt_steps`` None means full BPTT.
+    amp: bool = False
+    grad_checkpoint: bool = False
+    bptt_steps: Optional[int] = None
+    multi_gpu: bool = False
     # Encoding settings for spike-input training; num_steps wins over the
     # legacy field above when a coding other than "raw" is active.
     encode: EncodeConfig = Field(default_factory=EncodeConfig)

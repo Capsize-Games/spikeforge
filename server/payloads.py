@@ -61,6 +61,7 @@ def model_loaded_payload(engine: Any, name: Optional[str],
         "topology": engine.topology,
         "mode": engine.mode,
         "device": engine.device,
+        "scaleup": engine.scale_up_status(),
         "meta": _meta(name),
         "compatibility": compatibility(engine, encode),
     }

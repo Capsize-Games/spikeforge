@@ -1,10 +1,8 @@
 """Train the spiking network, yielding live metrics for streaming."""
 
-from itertools import islice
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 import torch
-from torch.nn.functional import cross_entropy
 
 from snn_interpreter.data.data_loader import build_loader
 from snn_interpreter.data.datasets import dataset_info
@@ -13,16 +11,32 @@ from snn_interpreter.network import inference
 from snn_interpreter.runtime import device as device_mod
 from snn_interpreter.runtime.execution_mode import ExecutionMode
 from snn_interpreter.simulator.runner import run
+from snn_interpreter.simulator.trajectory import Trajectory
 from snn_interpreter.topology import registry
 from snn_interpreter.topology.stage_module import StageModule
+from snn_interpreter.tracking.seed import set_seed
 from snn_interpreter.training.checkpoint_mixin import CheckpointMixin
 from snn_interpreter.training.encoding_mixin import EncodingMixin
+from snn_interpreter.training.eval_mixin import EvalMixin
+from snn_interpreter.training.scaleup_mixin import ScaleUpMixin
 from snn_interpreter.training.topology_mixin import TopologyMixin
 
-EVAL_EVERY = 5  # evaluate the held-out set every N steps
-EVAL_BATCHES = 4  # number of test batches to score
-
 _Batch = Tuple[torch.Tensor, torch.Tensor]
+
+
+def _scaleup_options(
+    amp: bool,
+    grad_checkpoint: bool,
+    bptt_steps: Optional[int],
+    multi_gpu: bool,
+) -> Dict[str, Any]:
+    """Bundle the additive scale-up flags for the engine."""
+    return {
+        "amp": bool(amp),
+        "grad_checkpoint": bool(grad_checkpoint),
+        "bptt_steps": bptt_steps,
+        "multi_gpu": bool(multi_gpu),
+    }
 
 
 class TrainingEngine(
@@ -30,6 +44,8 @@ class TrainingEngine(
     CheckpointMixin,
     TopologyMixin,
     EncodingMixin,
+    ScaleUpMixin,
+    EvalMixin,
 ):
     """Run a cancellable training loop that emits metric dicts."""
 
@@ -39,7 +55,9 @@ class TrainingEngine(
     _mode: ExecutionMode
     _net: StageModule
     _optimizer: torch.optim.Adam
+    _seed: Optional[int]
     _test_batches: Optional[List[_Batch]]
+    _scaleups: Dict[str, Any]
 
     def __init__(
         self, dataset: str = "mnist", hidden: int = 128, beta: float = 0.5,
@@ -49,16 +67,22 @@ class TrainingEngine(
         input_mode: Optional[str] = None, device: Optional[str] = None,
         topology: str = "fc_legacy",
         topology_params: Optional[Dict[str, Any]] = None,
-        mode: str = "production",
+        mode: str = "production", seed: Optional[int] = None,
+        amp: bool = False, grad_checkpoint: bool = False,
+        bptt_steps: Optional[int] = None, multi_gpu: bool = False,
     ) -> None:
         """Resolve inputs, build the topology, and optionally restore it."""
         self._store_settings(
             dataset, hidden, beta, lr, epochs, num_steps, subset, batch_size
         )
         self._mode = ExecutionMode(mode)
+        self._seed = None if seed is None else int(seed)
         self._encode = encode
         self._topology = topology
         self._topology_params = dict(topology_params or {})
+        self._scaleups = _scaleup_options(
+            amp, grad_checkpoint, bptt_steps, multi_gpu
+        )
         self._setup_input(encode, input_mode, device)
         self._build(lr, checkpoint)
 
@@ -96,6 +120,8 @@ class TrainingEngine(
 
     def _build(self, lr: float, checkpoint: Optional[str] = None) -> None:
         """Create the configured topology/optimiser and restore a ckpt."""
+        if self._seed is not None:
+            set_seed(self._seed)
         self._adopt_topology(checkpoint)
         params = self._topology_arguments()
         self._architecture = registry.resolved_params(self._topology, params)
@@ -107,33 +133,21 @@ class TrainingEngine(
         device_mod.warmup(self._net, self._dummy_spikes())
         self._optimizer = torch.optim.Adam(self._net.parameters(), lr=lr)
         self._test_batches = None
+        self._configure_scaleups(**self._scaleups)
         if checkpoint:
             self._restore(checkpoint)
 
-    # --- evaluation ------------------------------------------------------
+    # --- forward ---------------------------------------------------------
 
-    def _load_test_batches(self) -> List[_Batch]:
-        """Cache a few held-out batches for scoring."""
-        if self._test_batches is None:
-            loader = build_loader(self._dataset, 1, 1000, train=False)
-            self._test_batches = list(islice(loader, EVAL_BATCHES))
-        return self._test_batches
-
-    def evaluate(self) -> float:
-        """Return held-out accuracy over the cached test batches."""
-        correct = total = 0
-        with torch.no_grad():
-            for inputs, targets in self._load_test_batches():
-                correct += int(
-                    (self.predict(inputs) == targets.to(self._device)).sum()
-                )
-                total += len(targets)
-        return 100.0 * correct / max(total, 1)
-
-    def _maybe_evaluate(self, step: int, total: int) -> Optional[float]:
-        """Evaluate periodically and on the final step."""
-        due = step == 1 or step == total or step % EVAL_EVERY == 0
-        return self.evaluate() if due else None
+    def _run_trajectory(self, spikes: torch.Tensor) -> Trajectory:
+        """Run the shared simulator with the engine's gradient policy."""
+        return run(
+            self._net,
+            spikes,
+            mode=self._mode,
+            grad_checkpoint=self._grad_checkpoint,
+            bptt_steps=self._bptt_steps,
+        )
 
     # --- training --------------------------------------------------------
 
@@ -156,29 +170,6 @@ class TrainingEngine(
                                 "total": total})
                 metrics["test_accuracy"] = self._maybe_evaluate(step, total)
                 yield metrics
-
-    def _train_batch(
-        self, inputs: torch.Tensor, targets: torch.Tensor
-    ) -> Dict[str, float]:
-        """Run one optimisation step and return loss/accuracy."""
-        outputs = run(
-            self._net, self._encode_batch(inputs), mode=self._mode
-        ).logits
-        loss = cross_entropy(outputs, targets.to(self._device))
-        self._optimizer.zero_grad()
-        loss.backward()
-        self._optimizer.step()
-        preds = outputs.argmax(dim=1)
-        accuracy = (preds == targets.to(self._device)).float().mean().item()
-        return {"loss": float(loss.item()), "train_accuracy": float(accuracy)}
-
-    def predict(self, inputs: torch.Tensor) -> torch.Tensor:
-        """Return predicted digits for a batch of images."""
-        with torch.no_grad():
-            trajectory = run(
-                self._net, self._encode_batch(inputs), mode=self._mode
-            )
-        return trajectory.logits.argmax(dim=1)
 
     def predict_sample(self) -> Dict[str, List[int]]:
         """Return digits/labels for one held-out batch."""
@@ -222,6 +213,11 @@ class TrainingEngine(
     def num_classes(self) -> int:
         """Return the number of output classes."""
         return self._num_classes
+
+    @property
+    def seed(self) -> Optional[int]:
+        """Return the seed used to initialise this run, if any."""
+        return self._seed
 
     @property
     def input_mode(self) -> str:

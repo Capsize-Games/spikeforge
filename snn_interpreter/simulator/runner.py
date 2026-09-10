@@ -1,12 +1,13 @@
 """The public temporal entry point that executes a topology step by step."""
 
-from typing import Any
+from typing import Any, Optional
 
 import torch
 
 from snn_interpreter.runtime.execution_mode import ExecutionMode
 from snn_interpreter.simulator.compiled_step import CompiledStep
 from snn_interpreter.simulator.execution import execute
+from snn_interpreter.simulator.grad_policy import GradPolicy
 from snn_interpreter.simulator.trajectory import Trajectory
 from snn_interpreter.topology.stage_module import StageModule
 
@@ -26,14 +27,21 @@ def run(
     current: bool = False,
     mode: ExecutionMode = ExecutionMode.PRODUCTION,
     compiled: bool = False,
+    grad_checkpoint: bool = False,
+    bptt_steps: Optional[int] = None,
 ) -> Trajectory:
     """Run ``module`` over a ``[T, ...]`` spike train in one time loop.
 
     ``track``/``membrane``/``current`` select spike, membrane, and input
-    current recording, and ``EDUCATIONAL`` records all three. ``compiled`` is
-    opt-in, defaults off, and leaves every default unchanged.
+    current recording, and ``EDUCATIONAL`` records all three. ``compiled``,
+    ``grad_checkpoint``, and ``bptt_steps`` are all opt-in and default off:
+    left unset they leave forward values, gradients, and numerics unchanged.
+    ``grad_checkpoint`` recomputes per-step activations in the backward pass;
+    ``bptt_steps`` detaches the carried state every N steps (gradient horizon
+    only, never forward values).
     """
     step_fn = _step_fn(module, compiled)
+    policy = GradPolicy(grad_checkpoint, bptt_steps)
     return execute(
-        module, spikes, track, membrane, current, mode, step_fn
+        module, spikes, track, membrane, current, mode, step_fn, policy
     )

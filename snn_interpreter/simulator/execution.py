@@ -12,6 +12,7 @@ import torch
 
 from snn_interpreter.runtime.execution_mode import ExecutionMode
 from snn_interpreter.simulator.frames import normalise_frame
+from snn_interpreter.simulator.grad_policy import GradPolicy
 from snn_interpreter.simulator.module_spec import spec_of
 from snn_interpreter.simulator.state import (
     initial_state,
@@ -83,16 +84,18 @@ def _simulate(
     spikes: torch.Tensor,
     spec: TopologySpec,
     kind: str,
+    policy: GradPolicy,
     spike_frames: _FrameMap,
     mem_frames: _FrameMap,
     cur_frames: _FrameMap,
 ) -> torch.Tensor:
-    """Step over the train with ``step_fn``, recording requested frames."""
+    """Step over the train under ``policy``'s gradient rules."""
     state = initial_state(spec, spikes[0])
     total: Optional[torch.Tensor] = None
     for index in range(int(spikes.size(0))):
         frame = normalise_frame(spikes[index], kind)
-        outputs, state = step_fn(frame, state)
+        outputs, state = policy.step(step_fn, frame, state)
+        state = policy.after_step(state, index)
         readout = outputs[spec.output]
         total = readout if total is None else total + readout
         _record(outputs, state, spike_frames, mem_frames, cur_frames)
@@ -124,11 +127,17 @@ def execute(
     current: bool,
     mode: ExecutionMode,
     step_fn: _StepFn,
+    policy: Optional[GradPolicy] = None,
 ) -> Trajectory:
-    """Run one temporal loop with an explicit per-step callable."""
+    """Run one temporal loop with an explicit per-step callable.
+
+    ``policy`` is additive: omitting it keeps the exact previous behaviour.
+    """
     spec = spec_of(module)
     steps = int(spikes.size(0))
     kind = spec.stage(spec.input).kind
     recorders = _recorders(spec, track, membrane, current, mode)
-    total = _simulate(step_fn, spikes, spec, kind, *recorders)
+    total = _simulate(
+        step_fn, spikes, spec, kind, policy or GradPolicy(), *recorders
+    )
     return _trajectory(steps, total, *recorders)

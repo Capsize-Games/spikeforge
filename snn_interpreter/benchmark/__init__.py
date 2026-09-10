@@ -10,7 +10,25 @@ snn_interpreter.benchmark`` from a shell; both return the same
 JSON-serialisable report.
 """
 
+from snn_interpreter.benchmark.compare import (
+    DEFAULT_THRESHOLD,
+    compare_runs,
+    exit_code,
+)
 from snn_interpreter.benchmark.config import BenchmarkConfig, default_config
 from snn_interpreter.benchmark.harness import run_benchmark
+from snn_interpreter.benchmark.store import BenchmarkStore, default_directory
+from snn_interpreter.benchmark.suite import run_suite, with_metadata
 
-__all__ = ["BenchmarkConfig", "default_config", "run_benchmark"]
+__all__ = [
+    "BenchmarkConfig",
+    "BenchmarkStore",
+    "DEFAULT_THRESHOLD",
+    "compare_runs",
+    "default_config",
+    "default_directory",
+    "exit_code",
+    "run_benchmark",
+    "run_suite",
+    "with_metadata",
+]

@@ -68,6 +68,9 @@ setup(
             "snn-interpreter=main:main",
             "snn-interpreter-encodings=main_encodings:main",
             "snn-verify=snn_interpreter.cli.verify:main",
+            "snn-records=snn_interpreter.cli.records_cli:main",
+            "snn-targets=snn_interpreter.cli.target_cli:main",
+            "snn-benchmark=snn_interpreter.benchmark.cli:main",
         ],
     },
     classifiers=[

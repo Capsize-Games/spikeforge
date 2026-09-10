@@ -17,6 +17,7 @@ from snn_interpreter.nir_bridge.exporter import to_nir
 from snn_interpreter.nir_bridge.interpreter import NirInterpreter
 from snn_interpreter.nir_bridge.tolerances import resolved
 from snn_interpreter.nir_bridge.validation_report import ValidationReport
+from snn_interpreter.observability import metrics as obs_metrics
 from snn_interpreter.simulator.runner import run
 from snn_interpreter.topology.spec import TopologySpec
 
@@ -197,6 +198,8 @@ def validate(
     reference, result = _trajectories(spec, module, spikes, graph)
     layers = _layers(spec, reference, result, settings)
     readout = drift.compare(result.readout, reference.logits)
+    obs_metrics.gauge("validation.drift", float(readout["max_abs"]))
+    obs_metrics.counter("validation.nir_runs")
     passed, worst = _verdict(layers, readout, settings)
     return ValidationReport(
         passed, reference.steps, layers, readout, worst, [SHARED_UNITS_NOTE]

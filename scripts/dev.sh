@@ -58,6 +58,13 @@ cmd_setup() {
   (cd "$CLIENT" && npm install)
 }
 
+# --- benchmark ---------------------------------------------------------------
+
+cmd_bench() {
+  info "Benchmark suite"
+  py -m snn_interpreter.benchmark "$@"
+}
+
 # --- python quality ----------------------------------------------------------
 
 cmd_lint() {
@@ -198,6 +205,13 @@ Quality
   lint                      ruff check the Python package and server
   test [pytest args]        run the test suite
   check                     lint + test + client type-check + client build
+  bench [args]              run the benchmark suite (snn-benchmark)
+                            e.g. bench --topology fc_small --steps 8
+                            add --save then --list to record/compare runs
+
+Observability (environment variables, opt-in)
+  SNN_LOG_JSON=1            emit structured JSON log lines
+  SNN_LOG_LEVEL=DEBUG       set the log level
 
 Servers
   server [args]             run the FastAPI server (:8877)
@@ -242,6 +256,7 @@ main() {
     lint) cmd_lint ;;
     test) cmd_test "$@" ;;
     check) cmd_check ;;
+    bench) cmd_bench "$@" ;;
     server) cmd_server "$@" ;;
     client-dev) cmd_client_dev ;;
     dev) cmd_dev ;;

@@ -184,3 +184,15 @@ def add_subcommands(subs: Any) -> None:
     ingest.add_argument("--file", required=True)
     ingest.add_argument("--topology", default="conv_net")
     ingest.set_defaults(handler=_run_ingest)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """Parse ``argv`` and dispatch to a deployment subcommand."""
+    parser = argparse.ArgumentParser(
+        prog="snn-targets",
+        description="List deployment targets and run NIR interop.",
+    )
+    subs = parser.add_subparsers(dest="command", required=True)
+    add_subcommands(subs)
+    args = parser.parse_args(argv)
+    return int(args.handler(args))

@@ -2,9 +2,12 @@ import type { IntrospectionServerMsg } from "./introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
 import type {
   ExecutionMode,
+  MetricsSnapshot,
   Modality,
   ModelLoadedPayload,
   ModelListPayload,
+  ModelRegistryServerMsg,
+  ScaleUpStatus,
 } from "./protocolTypes";
 import type { TargetServerMsg } from "./targetTypes";
 
@@ -17,6 +20,7 @@ export type {
   ModelLoadedPayload,
   ModelListPayload,
   SavedModel,
+  ScaleUpStatus,
 } from "./protocolTypes";
 
 export type CodingType = "rate" | "latency" | "delta" | "random";
@@ -112,6 +116,14 @@ export interface TrainConfig {
   topology: string;
   /** Per-topology overrides for the registry defaults. */
   topology_params: TopologyParams;
+  /** Opt-in mixed precision; default false preserves fp32 numerics. */
+  amp: boolean;
+  /** Opt-in per-step activation checkpointing; default false. */
+  grad_checkpoint: boolean;
+  /** Truncated-BPTT window; null means full backprop-through-time. */
+  bptt_steps: number | null;
+  /** Opt-in multi-GPU DataParallel; default false. */
+  multi_gpu: boolean;
   /** Encoding settings used for spike-input training. */
   encode: EncodeConfig;
 }
@@ -130,6 +142,10 @@ export const defaultTrainConfig: TrainConfig = {
   mode: "production",
   topology: "fc_legacy",
   topology_params: {},
+  amp: false,
+  grad_checkpoint: false,
+  bptt_steps: null,
+  multi_gpu: false,
   encode: { ...defaultConfig },
 };
 
@@ -142,6 +158,8 @@ export interface TrainMetrics {
   total: number;
   device?: string;
   step_ms?: number;
+  /** Observable status of the opt-in training scale-ups. */
+  scaleup?: ScaleUpStatus;
 }
 
 export interface TrainStatePayload {
@@ -149,6 +167,8 @@ export interface TrainStatePayload {
   reason: string;
   device?: string;
   mode?: ExecutionMode;
+  /** Present on the terminal (finished/error) training state. */
+  scaleup?: ScaleUpStatus;
 }
 
 export interface PredictionPayload {
@@ -189,6 +209,8 @@ export interface SystemStatsPayload {
   cpu: MemoryBlock | null;
   gpu: MemoryBlock | null;
   device: DeviceStatus;
+  /** Additive in-process metrics snapshot (Phase 6c); may be absent. */
+  metrics?: MetricsSnapshot;
 }
 
 /** Dataset-download progress streamed from the server. */
@@ -220,4 +242,5 @@ export type ServerMsg =
   | { type: "download_state"; payload: DownloadState }
   | IntrospectionServerMsg
   | TargetServerMsg
+  | ModelRegistryServerMsg
   | { type: "error"; payload: string };

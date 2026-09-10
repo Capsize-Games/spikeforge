@@ -71,3 +71,79 @@ export interface ModelLoadedPayload {
   meta?: Record<string, unknown>;
   compatibility?: Compatibility;
 }
+
+/** The reproducibility record persisted beside a checkpoint. */
+export interface ReproducibilityManifest {
+  schema_version: number;
+  created_at: number;
+  config_hash: string;
+  seed: number | null;
+  versions: Record<string, string | null>;
+  config: Record<string, unknown>;
+  history: HistoryPoint[];
+  reproducible: {
+    bit_exact: boolean;
+    guaranteed: string[];
+    not_guaranteed: string[];
+  };
+  /** False for a legacy checkpoint with no stored manifest. */
+  available?: boolean;
+  reason?: string;
+}
+
+/** One registry record returned by a model search. */
+export interface SearchRecord extends SavedModel {
+  input_mode?: string;
+  coding?: string;
+  topology?: string;
+  accuracy: number | null;
+  manifest: ReproducibilityManifest | null;
+}
+
+export interface ModelSearchPayload {
+  models: SearchRecord[];
+}
+
+/** One classified metadata key in a checkpoint diff. */
+export interface DiffEntry {
+  key: string;
+  left: unknown;
+  right: unknown;
+  status: "added" | "removed" | "changed" | "same";
+}
+
+export interface ModelDiffPayload {
+  left: { name: string | null; meta: Record<string, unknown> };
+  right: { name: string | null; meta: Record<string, unknown> };
+  entries: DiffEntry[];
+  changed: string[];
+  added: string[];
+  removed: string[];
+  identical: boolean;
+  config_hash: {
+    left: string | null;
+    right: string | null;
+    matches: boolean;
+  };
+}
+
+/** Observable status of the opt-in training scale-ups (all default off). */
+export interface ScaleUpStatus {
+  amp: boolean;
+  amp_dtype: string | null;
+  grad_checkpoint: boolean;
+  bptt_steps: number | null;
+  multi_gpu: boolean;
+  multi_gpu_status: string;
+}
+
+export type ModelRegistryServerMsg =
+  | { type: "model_search"; payload: ModelSearchPayload }
+  | { type: "model_diff"; payload: ModelDiffPayload };
+
+/** Additive in-process metrics snapshot surfaced with system stats. */
+export interface MetricsSnapshot {
+  counters: Record<string, number>;
+  gauges: Record<string, number>;
+  timers: Record<string, Record<string, number>>;
+}

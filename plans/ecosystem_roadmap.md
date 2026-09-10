@@ -5,6 +5,19 @@ Phase 1 is detailed in [`interpreter_spine_plan.md`](interpreter_spine_plan.md);
 this document covers every phase, their dependencies, and the acceptance bar
 that turns the project from a tutorial playground into a professional tool.
 
+> **Roadmap complete.** All phases (0–6) are delivered and verified. The
+> Python suite is green at **435 tests**, `ruff` is clean, and the client
+> builds; the final close-out is Phase 6d. The capabilities now shipped: the
+> NIR interpreter spine with independent drift validation; the
+> educational/production execution split with full `U[t]`/`I[t]`/`S[t]`
+> introspection; the unified dashboard with guided walkthroughs; Tonic event
+> datasets; a deployment-target registry with an honest capability matrix and
+> external NIR interop; and the Phase 6 production workflows (reproducibility
+> manifest, searchable model registry with metadata diffing, opt-in training
+> scale-ups, a stored benchmark suite with regression gating, and opt-in
+> structured logs and metrics). Each phase's status note below records what it
+> guarantees and the limitations it keeps honest.
+
 ---
 
 ## 1. Vision and pillars
@@ -321,6 +334,20 @@ always-available fallback.
 ---
 
 ### Phase 6 — Professional Workflows and Hardening
+
+> **Status — delivered (verified in Phase 6d).** Reproducibility manifests
+> with a config hash and a seed helper (`tracking/`); a searchable registry
+> with metadata diffing (`model_search`/`model_diff`) and the `records` CLI;
+> opt-in training scale-ups (AMP, gradient checkpointing, truncated BPTT,
+> multi-GPU) with every default off; the benchmark store/suite/compare with
+> `--fail-on-regression`; opt-in JSON logging and a metrics registry surfaced
+> additively in `system_stats`; packaging extras plus console scripts; Docker
+> CPU/GPU profiles with the default workflow unchanged; and the server
+> `model_search`/`model_diff` actions. The Python suite is green at 435 tests,
+> `ruff` is clean, and the client builds. Deferred with intent: tracking stays
+> local and file-based (`MODEL_DIR`) rather than an external tracker;
+> reproducibility is documented as *not* bit-exact; and the hardware-target
+> SDKs remain uninstalled, so only `reference` is available.
 
 **Objective:** close the gap between "works" and "trustworthy in production".
 

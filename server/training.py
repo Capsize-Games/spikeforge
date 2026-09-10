@@ -146,6 +146,8 @@ class TrainingService:
             checkpoint=checkpoint, encode=encode, device=config.device,
             topology=str(meta.get("topology", config.topology)),
             topology_params=dict(params), mode=config.mode,
+            amp=config.amp, grad_checkpoint=config.grad_checkpoint,
+            bptt_steps=config.bptt_steps, multi_gpu=config.multi_gpu,
         )
 
     def stop(self) -> None:
@@ -161,6 +163,7 @@ class TrainingService:
                 metrics["step_ms"] = round(elapsed, 1)
                 last = time.perf_counter()
                 metrics["device"] = engine.device
+                metrics["scaleup"] = engine.scale_up_status()
                 self._history.append(_point(metrics))
                 self._put({"type": "train_metrics", "payload": metrics})
             self._state("finished", engine)
@@ -171,11 +174,12 @@ class TrainingService:
             self._thread = None
 
     def _state(self, reason: str, engine: TrainingEngine) -> None:
-        """Queue a stopped train_state carrying device and mode."""
+        """Queue a stopped train_state carrying device, mode, and scaleups."""
         self._put({"type": "train_state",
                    "payload": {"running": False, "reason": reason,
                                "device": engine.device,
-                               "mode": engine.mode}})
+                               "mode": engine.mode,
+                               "scaleup": engine.scale_up_status()}})
 
     def _put(self, message: Dict[str, Any]) -> None:
         """Thread-safe enqueue onto the event loop."""

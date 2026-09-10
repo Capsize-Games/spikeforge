@@ -36,8 +36,9 @@ def save(
     net: torch.nn.Module,
     meta: Dict[str, Any],
     history: Optional[List[Dict[str, Any]]] = None,
+    manifest: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Save model weights, training metadata, and metric history to disk."""
+    """Save weights, metadata, metric history, and an optional manifest."""
     _ensure_dir()
     filepath = path_for(name)
     torch.save(
@@ -45,6 +46,7 @@ def save(
             "state_dict": net.state_dict(),
             "meta": meta,
             "history": history or [],
+            "manifest": manifest,
             "saved_at": time.time(),
         },
         filepath,
@@ -55,6 +57,28 @@ def save(
 def load(name: Optional[str]) -> Dict[str, Any]:
     """Load a checkpoint dict by name."""
     return torch.load(path_for(name), map_location="cpu", weights_only=False)
+
+
+def manifest(name: Optional[str]) -> Dict[str, Any]:
+    """Return a checkpoint's stored reproducibility manifest.
+
+    The result always carries an ``available`` flag. A legacy checkpoint saved
+    before manifests existed, or a missing file, yields a safe fallback whose
+    ``reason`` names the cause and whose ``meta`` echoes what is on disk, so a
+    reader never has to treat absence as an error.
+    """
+    try:
+        ckpt = load(name)
+    except Exception as exc:
+        return {"available": False, "reason": f"checkpoint unavailable: {exc}"}
+    stored = ckpt.get("manifest")
+    if stored:
+        return {**stored, "available": True}
+    return {
+        "available": False,
+        "reason": "no manifest stored (legacy checkpoint)",
+        "meta": ckpt.get("meta", {}),
+    }
 
 
 def list_models() -> List[Dict[str, Any]]:

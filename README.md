@@ -49,6 +49,12 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
 - **Targets and interoperability (Phase 5)**: a deployment-target registry
   with an honest capability matrix, per-target deployment reports, external
   NIR import/export, and a round-trip fidelity guarantee (see below)
+- **Production workflows (Phase 6)**: a reproducibility manifest and config
+  hash, a searchable checkpoint registry with metadata diffing, opt-in
+  training scale-ups (AMP, gradient checkpointing, truncated BPTT,
+  multi-GPU), a stored benchmark suite with regression gating, opt-in JSON
+  logging and a metrics snapshot, packaged console scripts, and Docker
+  CPU/GPU profiles (see below)
 
 ## Interpreter spine (Phase 1)
 
@@ -218,6 +224,9 @@ Six data-only actions were added, with client types in
 | `benchmark` | `benchmark` | Config, environment, and per-mode results |
 
 All are read-only; precondition failures emit the existing `error` message.
+The `stats` action's `system_stats` reply now also carries an additive
+`metrics` snapshot (Phase 6); its existing `cpu`/`gpu`/`device` keys are
+unchanged.
 
 ## Dashboard (Phase 3)
 
@@ -570,6 +579,158 @@ different target.
   graph in this project's version-stamped JSON envelope; `nirtorch`-based
   extraction from arbitrary third-party PyTorch modules is still out of scope.
 
+## Production workflows (Phase 6)
+
+Phase 6 closes the gap between "works" and "trustworthy in production": a run
+records how to reproduce itself, checkpoints become searchable, training
+scales up behind opt-in flags, performance is tracked over time, and logs and
+metrics become machine-readable. Every addition is opt-in and the default
+workflow is unchanged.
+
+### Reproducibility manifest and config hash
+
+[`snn_interpreter/tracking/`](snn_interpreter/tracking/__init__.py:1) records
+what a run needs to be recreated and compared. A
+[`ReproducibilityManifest`](snn_interpreter/tracking/manifest.py:35) captures
+the dataset, topology and params, encode config, hyperparameters, the resolved
+`TopologySpec`, the library versions, the seed, and the metric history.
+[`config_hash()`](snn_interpreter/tracking/config_hash.py:19) hashes the
+reproducibility-relevant config as canonical JSON (sorted keys, tight
+separators), so two runs with identical settings compare equal regardless of
+when they ran or what their histories show, and
+[`set_seed()`](snn_interpreter/tracking/seed.py:31) seeds Python, PyTorch, and
+every CUDA device.
+
+Reproducibility is stated honestly in the manifest's `reproducible` block; it
+is **not** claimed to be bit-exact. Guaranteed to reproduce from the manifest
+alone: the topology structure and resolved spec, the dataset/encode config and
+hyperparameters, the library versions and seed, and the initial parameter
+values for the same library build on CPU. **Not** guaranteed bit-for-bit: CUDA
+kernels (cuDNN, parallel reductions), hardware thread scheduling and any float
+summation order that follows, and dataset contents if the source files change
+between runs. `set_seed` deliberately leaves the global deterministic flags
+alone so seeding never slows the default training path.
+
+### Searchable registry, `records` CLI, and metadata diffing
+
+The file-based `MODEL_DIR` registry stays the source of truth, but two
+read-only helpers make it searchable and comparable.
+[`search_models(...)`](snn_interpreter/network/model_search.py:87) filters
+checkpoint summaries by dataset, topology, coding, device, minimum accuracy,
+and a case-insensitive name substring; each result carries the newest non-null
+test accuracy and the stored manifest (or `null` for a legacy checkpoint).
+[`checkpoint_diff(...)`](snn_interpreter/network/model_diff.py:102) classifies
+every metadata key as `added`, `removed`, `changed`, or `same` and compares the
+two manifests' config hashes. `list_models` and its payload shape are
+untouched, so existing callers are unaffected.
+
+The `snn-records` console script (also `verify records ...`) exposes both:
+
+```bash
+snn-records list --dataset mnist --topology conv_net --min-accuracy 90
+snn-records diff old_model new_model
+snn-records manifest my_model
+```
+
+The server mirrors this with read-only `model_search` and `model_diff`
+WebSocket actions (`model_search`/`model_diff` replies); a diff without exactly
+two names emits the existing `error` message.
+
+### Training scale-ups (opt-in, default-off)
+
+[`ScaleUpMixin`](snn_interpreter/training/scaleup_mixin.py:29) adds four
+additive options to `TrainConfig`. Every default reproduces the previous
+behaviour exactly:
+
+| Flag | Default | What it does |
+|---|---|---|
+| `amp` | `False` | Autocast float16 on CUDA / bfloat16 on CPU, with a CUDA `GradScaler`; falls back to fp32 when the device rejects the dtype |
+| `grad_checkpoint` | `False` | Recomputes each step's activations during the backward pass (smaller activation footprint, more compute) |
+| `bptt_steps` | `None` | Detaches the carried neuron state every N steps (truncated BPTT); `None` keeps full backprop-through-time |
+| `multi_gpu` | `False` | `DataParallel` fan-out when more than one CUDA device is visible |
+
+AMP numerics are close to, but not bit-identical to, fp32.
+[`MultiDeviceManager`](snn_interpreter/training/multi_device.py:26) reports an
+honest status (`disabled`, `unavailable: ...`, or `active: N cuda devices`)
+instead of failing, and both gradient policies live in the one shared temporal
+loop via [`GradPolicy`](snn_interpreter/simulator/grad_policy.py:44), so the
+forward values are untouched when either is off.
+
+### Performance suite: store, suite, and compare
+
+Runs can be recorded and regressions caught over time. A
+[`BenchmarkStore`](snn_interpreter/benchmark/store.py:40) keeps one JSON record
+per run under `SNN_BENCHMARK_DIR` (default `<DATA_DIR>/benchmarks`), and
+[`run_suite(...)`](snn_interpreter/benchmark/suite.py:55) benchmarks a set of
+topologies, attaches the library versions plus a timestamp, and saves the
+record:
+
+```bash
+# record a CI-sized suite (the saved run id is <timestamp>-<label>)
+python -m snn_interpreter.benchmark --topology fc_small --topology conv_net \
+    --steps 8 --repeats 3 --save --label main
+
+# list every stored run, newest first (the list prints each run_id)
+python -m snn_interpreter.benchmark --list
+
+# compare a stored baseline against a fresh run; exit 1 on regression
+python -m snn_interpreter.benchmark --compare <run-id> --threshold 0.1 \
+    --fail-on-regression
+
+# or diff two stored runs
+python -m snn_interpreter.benchmark --compare <baseline-id> --against <run-id>
+```
+
+[`compare_runs(...)`](snn_interpreter/benchmark/compare.py:123) matches records
+on `(topology, mode)` and reports the relative change in `ms/step`, `steps/s`,
+and peak memory, flagging a regression when a metric moves the wrong way past
+the threshold (`--fail-on-regression` turns that into a non-zero exit, so the
+command works as a CI gate). `--compare` takes a stored **run id, not a
+label**; `--list` prints the ids. The contract is JSON-able end to end.
+
+### Observability: opt-in logs and metrics
+
+[`snn_interpreter/observability/`](snn_interpreter/observability/__init__.py:1)
+adds two opt-in surfaces, neither enabled unless asked:
+
+- **Structured logging.** `configure_logging()` attaches one handler to the
+  `snn_interpreter` logger (never the root) and `reset_logging()` restores the
+  exact prior state. Set `SNN_LOG_JSON=1` for JSON lines (`timestamp`,
+  `level`, `event`, `logger`, plus optional `run_id` / `config_id` /
+  `config_hash` / `fields`) or `SNN_LOG_LEVEL=DEBUG` for a level. With neither
+  variable set the default human-readable behaviour is untouched, and no entry
+  point calls `configure_logging()` for you.
+- **Metrics snapshot.** `snn_interpreter.observability.metrics` is a
+  process-wide [`MetricsRegistry`](snn_interpreter/observability/registry.py:27)
+  of counters, gauges, and timers. The training loop records `train.steps`,
+  `train.encode_seconds`, `train.forward_seconds`, and
+  `train.backward_seconds`; the validation path records `validation.runs`,
+  `validation.seconds`, and `validation.accuracy` (plus `validation.drift` on
+  the NIR interpreter). `metrics.snapshot()` returns JSON-able data and is
+  surfaced additively as the `metrics` key of the `system_stats` payload.
+
+### Console scripts
+
+Packaging installs a console script per surface, so every headless command has
+a stable name:
+
+| Script | Equivalent |
+|---|---|
+| `snn-interpreter` | `python main.py` |
+| `snn-interpreter-encodings` | `python main_encodings.py` |
+| `snn-verify` | `python -m snn_interpreter.cli.verify` |
+| `snn-records` | `python -m snn_interpreter.cli.records_cli` |
+| `snn-targets` | `python -m snn_interpreter.cli.target_cli` |
+| `snn-benchmark` | `python -m snn_interpreter.benchmark` |
+
+### Docker CPU/GPU profiles
+
+Two opt-in Compose [profiles](docker-compose.yml) (`cpu`, `gpu`) select
+explicit CPU-only / CUDA builds of the same service without changing the
+default `docker compose up --build` (CUDA image, dashboard on port 8877, host
+GPU reserved). Only one profile can own port 8877 at a time; see the
+[Docker profiles](README.md#docker-profiles-cpu--gpu) subsection in Usage.
+
 ## Requirements
 
 - Python 3.8+
@@ -632,6 +793,25 @@ of the box; build a smaller CPU-only image with:
 docker compose build --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 ```
 
+#### Docker profiles (CPU / GPU)
+
+The default `docker compose up --build` is unchanged: it builds the CUDA
+image and serves the dashboard on port 8877. Two opt-in
+[profiles](docker-compose.yml) select explicit builds of the same service —
+neither is started by a plain `up`:
+
+```bash
+docker compose --profile cpu up --build   # CPU-only torch (smaller image)
+docker compose --profile gpu up --build   # explicit CUDA torch build
+```
+
+Because profiles are standard Compose, `scripts/dev.sh docker-up` honours
+`COMPOSE_PROFILES` too:
+
+```bash
+COMPOSE_PROFILES=cpu scripts/dev.sh docker-up
+```
+
 ### Local (non-Docker) development
 
 #### CLI exports (rate pipeline)
@@ -673,6 +853,7 @@ tests, dev servers, dataset cache, Docker):
 ```bash
 scripts/dev.sh help          # list every command
 scripts/dev.sh check         # ruff + client type-check + client build
+scripts/dev.sh bench         # run the benchmark suite (snn-benchmark)
 scripts/dev.sh dev           # run the API and Vite dev server together
 scripts/dev.sh data          # show the dataset cache and sizes
 scripts/dev.sh data-clear    # clear dataset caches (keeps models)
@@ -710,12 +891,18 @@ snn_interpreter/
     spiking_net.py           SpikingNet: fully-connected LIF model
     inference.py             Per-sample prediction + layer activity
     model_store.py           Save/load/list/delete model checkpoints
+    model_search.py          Filter checkpoints by stored metadata
+    model_diff.py            Classify metadata changes between checkpoints
   training/                  Training loop and its collaborators
     trainer.py               SSNTrainer: MNIST loading + rate coding
     logger.py                SNNTrainerLogger: diagnostic prints
     training_engine.py       TrainingEngine: train loop yielding metrics
     checkpoint_mixin.py      Checkpoint save/restore behaviour
     encoding_mixin.py        Raw-pixel / spike input encoding
+    eval_mixin.py            Periodic held-out evaluation
+    scaleup_mixin.py         Opt-in AMP/grad-ckpt/BPTT/multi-GPU wiring
+    amp_controller.py        Resolve and apply autocast/GradScaler AMP
+    multi_device.py          DataParallel decision + honest status
   topology/                  Topology specs, presets, module builder
     spec.py                  TopologySpec: stages + edges (+ chain helpers)
     presets.py               fc_legacy / fc_small / conv_net / recurrent_net
@@ -731,6 +918,8 @@ snn_interpreter/
     compiled_step.py         Opt-in torch.compile wrapper + eager fallback
     production.py            run_production(...) -> ProductionResult
     trajectory.py            Per-stage S[t] / U[t] / I[t] traces
+    grad_policy.py           Opt-in grad checkpoint + truncated BPTT
+    parallel_runner.py       DataParallel wrapper around the temporal loop
   introspection/             Educational mode: metrics, codings, surrogates
     metrics.py               trajectory_metrics(...) -> JSON-able metrics
     firing_rate.py           Per-stage firing rate
@@ -746,7 +935,17 @@ snn_interpreter/
     harness.py               run_benchmark(...) -> JSON-able report
     timing.py                Warmup/repeat call timing
     memory.py                CUDA/RSS/tracemalloc snapshots
+    store.py                 BenchmarkStore: file-based JSON run records
+    suite.py                 run_suite(...): multi-topology run + metadata
+    compare.py               compare_runs(...) + regression exit code
+    cli.py                   save / list / compare CLI (snn-benchmark)
     __main__.py              python -m snn_interpreter.benchmark
+  observability/             Opt-in structured logging + metrics
+    logging_setup.py         configure_logging / reset_logging (reversible)
+    json_formatter.py        JsonFormatter: one JSON object per log line
+    registry.py              MetricsRegistry: counters/gauges/timers
+    timer.py                 Context-manager timer recording into a registry
+    metrics.py               Shared registry + snapshot/JSON helpers
   nir_bridge/                NIR export, interpreter, validation, interop
     api.py                   The only module importing nir/nirtorch
     exporter.py              to_nir(spec, module); graph_summary(...)
@@ -769,9 +968,15 @@ snn_interpreter/
     substitution.py          Substitution record
     report.py                deployment_report(...) -> JSON
     summary.py               Availability-annotated registry summaries
+  tracking/                  Reproducibility: manifest, hash, seed, versions
+    manifest.py              ReproducibilityManifest: config/seed/history
+    config_hash.py           Canonical-JSON SHA-256 of the run config
+    seed.py                  set_seed: Python/torch/CUDA deterministic seed
+    versions.py              Library versions recorded in a manifest
   cli/                       Headless commands
     verify.py                export / validate subcommands
-    target_cli.py            targets / deploy / roundtrip / ingest
+    records_cli.py           records list / diff / manifest (snn-records)
+    target_cli.py            targets / deploy / roundtrip / ingest (snn-targets)
   exporters/                 matplotlib/GIF/MP4 output -> build/
     exporter.py              Exporter base + build/ output resolution
     plot_utils.py            shared fig/GIF helpers
@@ -787,6 +992,8 @@ server/
   nir_handlers.py            nir_export / nir_validate handlers
   target_handlers.py         targets / deployment_report handlers
   target_payloads.py         JSON payloads for the target actions
+  model_handlers.py          model_search / model_diff handlers
+  model_payloads.py          JSON payloads for the registry actions
   introspection_handlers.py  trajectory / metrics / encoding / surrogate
   introspection_payloads.py  JSON payload builders for introspection
   payloads.py                Model-list / model-load / NIR payload builders
@@ -870,6 +1077,24 @@ stays under 20 lines, and each class lives in its own file.
   version-stamped JSON envelope over NIR's own node vocabulary;
   `nirtorch`-based extraction from arbitrary third-party PyTorch modules is
   still out of scope.
+- **Production limitations (Phase 6).** (1) A manifest makes a run
+  *reproducible*, not *bit-exact*: CUDA kernels, thread scheduling/summation
+  order, and changed dataset files can still move results, and the manifest
+  says so in its `reproducible` block. (2) The registry and its search/diff
+  are local and file-based (`MODEL_DIR`); external trackers are out of scope.
+  (3) Benchmark records are compared per `(topology, mode)` on `ms/step`,
+  `steps/s`, and peak memory; wall-time noise on a shared CPU runner can move
+  a metric a few percent, so CI regressions use a threshold (default 10
+  percent) rather than bit-exact equality, and `--compare` takes a run id, not
+  a label. (4) The metrics registry is per-process and in-memory: a snapshot
+  is not persisted, so it resets on restart and is not aggregated across
+  workers. (5) Structured logging is opt-in via `SNN_LOG_JSON` /
+  `SNN_LOG_LEVEL`; nothing calls `configure_logging()` automatically, so the
+  default log output is unchanged. (6) AMP, gradient checkpointing, truncated
+  BPTT, and multi-GPU are all opt-in and default-off, so a default run is
+  numerically identical; multi-GPU needs more than one visible CUDA device and
+  otherwise reports an honest "unavailable" status. (7) The Docker `cpu`/`gpu`
+  profiles are alternate services; only one can own port 8877 at a time.
 
 ## License
 

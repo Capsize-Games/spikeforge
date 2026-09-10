@@ -3,10 +3,16 @@
 from typing import Any, Dict, List, Optional
 
 from snn_interpreter.network import model_store
+from snn_interpreter.tracking.manifest import ReproducibilityManifest
 
 
 class CheckpointMixin:
-    """Persist and restore a model plus its training metadata."""
+    """Persist and restore a model, its metadata, and its manifest."""
+
+    _seed: Optional[int]
+    _epochs: int
+    _subset: int
+    _batch_size: int
 
     def _stored_meta(self, checkpoint: str) -> Dict[str, Any]:
         """Return a checkpoint's stored meta mapping, or an empty dict."""
@@ -23,8 +29,14 @@ class CheckpointMixin:
     def save(
         self, name: str, history: Optional[List[Dict[str, Any]]] = None
     ) -> str:
-        """Persist the current model, its metadata, and metric history."""
-        meta = {
+        """Persist the model, its metadata, history, and manifest."""
+        return model_store.save(
+            name, self._net, self._meta(), history, self._manifest(history)
+        )
+
+    def _meta(self) -> Dict[str, Any]:
+        """Return the checkpoint metadata card for the current model."""
+        return {
             "dataset": self._dataset,
             "hidden": self._hidden,
             "beta": self._beta,
@@ -39,4 +51,40 @@ class CheckpointMixin:
             "topology_params": dict(self._architecture),
             "spec": self._spec.to_dict(),
         }
-        return model_store.save(name, self._net, meta, history)
+
+    def _manifest(
+        self, history: Optional[List[Dict[str, Any]]]
+    ) -> Dict[str, Any]:
+        """Build the reproducibility manifest persisted with the checkpoint."""
+        return ReproducibilityManifest(
+            self._manifest_config(), seed=self._seed, history=history
+        ).to_dict()
+
+    def _manifest_config(self) -> Dict[str, Any]:
+        """Return the reproducibility-relevant configuration of the run."""
+        config = {
+            "dataset": self._dataset,
+            "topology": self._topology,
+            "topology_params": dict(self._architecture),
+            "encode": self._encode.model_dump() if self._encode else None,
+            "input_mode": self._input_mode,
+            "coding": self._input_mode,
+            "mode": self._mode.value,
+            "device": self._device.type,
+            "spec": self._spec.to_dict(),
+        }
+        config.update(self._hyperparameters())
+        return config
+
+    def _hyperparameters(self) -> Dict[str, Any]:
+        """Return the manifest's training hyperparameter block."""
+        return {
+            "hidden": self._hidden,
+            "beta": self._beta,
+            "lr": self._lr,
+            "epochs": self._epochs,
+            "subset": self._subset,
+            "batch_size": self._batch_size,
+            "num_steps": self.num_steps,
+            "num_classes": self._num_classes,
+        }

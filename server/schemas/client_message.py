@@ -5,6 +5,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 from server.schemas.encode_config import EncodeConfig
+from server.schemas.model_query import ModelQuery
 from server.schemas.train_config import TrainConfig
 
 
@@ -19,7 +20,9 @@ class ClientMessage(BaseModel):
         "trajectory", "metrics", "encoding_report",
         "surrogates", "surrogate_curve", "benchmark",
         "targets", "deployment_report",
+        "model_search", "model_diff",
     ] = "configure"
     config: EncodeConfig = Field(default_factory=EncodeConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
+    query: ModelQuery = Field(default_factory=ModelQuery)
     name: Optional[str] = None
