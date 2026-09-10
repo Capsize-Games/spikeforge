@@ -17,7 +17,7 @@ import { useViewer } from "./hooks/useViewer";
 import { LESSONS } from "./tour/lessons";
 import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
-import type { ServerMsg } from "./types";
+import type { Modality, ServerMsg } from "./types";
 
 export default function App() {
   const { config, configRef, patchConfig, replaceConfig } = useEncodeConfig();
@@ -73,6 +73,9 @@ export default function App() {
   const rawSurrogate = training.state.config.topology_params.surrogate;
   const currentSurrogate = typeof rawSurrogate === "string" ? rawSurrogate : "";
 
+  const listed = training.state.datasets.find((d) => d.name === config.dataset);
+  const modality: Modality = listed?.modality ?? "image";
+
   return (
     <div className="app">
       <header className="app-header">
@@ -120,10 +123,12 @@ export default function App() {
 
           <ViewerPanels
             sample={viewer.state.sample}
+            eventFrame={viewer.state.eventFrame}
             spikeFrame={viewer.displayFrame}
             reconGain1={viewer.state.reconGain1}
             rasters={viewer.state.rasters}
             inference={viewer.state.inference}
+            modality={modality}
             loaded={training.state.loaded}
             coding={config.coding}
             mode={training.state.config.mode}

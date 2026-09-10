@@ -97,3 +97,8 @@ class EncoderEngine:
     def dataset(self) -> str:
         """Return the registry key of the loaded sample source."""
         return self._source.dataset
+
+    @property
+    def modality(self) -> str:
+        """Return the sample modality, always ``image``."""
+        return "image"

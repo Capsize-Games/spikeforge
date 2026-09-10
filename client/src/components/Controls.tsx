@@ -1,8 +1,9 @@
 import { HELP } from "../helpText";
 import type { DatasetInfo, EncodeConfig, TrainConfig } from "../types";
-import { CheckField } from "./CheckField";
+import { EncodingControls } from "./EncodingControls";
 import { ModelSection } from "./ModelSection";
 import { SelectField } from "./SelectField";
+import type { Option } from "./SelectField";
 import { SliderField } from "./SliderField";
 import { Section } from "./Stepper";
 import { TrainControls } from "./TrainControls";
@@ -27,6 +28,27 @@ interface Props {
   onStopTrain: () => void;
 }
 
+/** Human label for a dataset option, including modality and availability. */
+function datasetLabel(d: DatasetInfo): string {
+  const base = `${d.name} (${d.classes} classes)`;
+  if (d.modality !== "event") return base;
+  if (d.available === false) {
+    return `${base} — unavailable (install the events extra)`;
+  }
+  return `${base} — events`;
+}
+
+/** Build the dataset dropdown, disabling event sets with no tonic loader. */
+function datasetOptions(datasets: DatasetInfo[], current: string): Option[] {
+  if (datasets.length === 0) return [{ value: current, label: current }];
+  return datasets.map((d) => ({
+    value: d.name,
+    label: datasetLabel(d),
+    // Unavailable events would otherwise fail inside the download worker.
+    disabled: d.modality === "event" && d.available === false,
+  }));
+}
+
 export function Controls(props: Props) {
   const {
     config,
@@ -46,7 +68,9 @@ export function Controls(props: Props) {
     onStopTrain,
   } = props;
 
-  const set = (patch: Partial<EncodeConfig>) => onChange(patch);
+  const selected = datasets.find((d) => d.name === config.dataset);
+  const eventMode = selected?.modality === "event";
+  const eventUnavailable = eventMode && selected?.available === false;
 
   return (
     <div className="panel controls">
@@ -58,119 +82,45 @@ export function Controls(props: Props) {
         </div>
       )}
 
-      <Section title="Data" hint="which image the network looks at">
+      <Section
+        title="Data"
+        hint={
+          eventMode
+            ? "which event recording the network looks at"
+            : "which image the network looks at"
+        }
+      >
         <SelectField
           label="Dataset"
           value={config.dataset}
           help={HELP.dataset}
           tour="dataset"
           disabled={locked}
-          options={
-            datasets.length === 0
-              ? [{ value: config.dataset, label: config.dataset }]
-              : datasets.map((d) => ({
-                  value: d.name,
-                  label: `${d.name} (${d.classes} classes)`,
-                }))
-          }
+          options={datasetOptions(datasets, config.dataset)}
           onChange={(v) => onSelectSample({ dataset: v, sample_index: 0 })}
         />
 
+        {eventUnavailable && (
+          <p className="modality-note warn">{HELP.event_availability}</p>
+        )}
+
         <SliderField
           label="subset" value={config.subset} min={1} max={50} step={1}
-          help={HELP.subset} onChange={(v) => set({ subset: v })}
+          help={HELP.subset} onChange={(v) => onChange({ subset: v })}
         />
         <SliderField
           label="batch_size" value={config.batch_size}
           min={8} max={512} step={8}
-          help={HELP.batch_size} onChange={(v) => set({ batch_size: v })}
+          help={HELP.batch_size} onChange={(v) => onChange({ batch_size: v })}
         />
       </Section>
 
-      <Section title="Encoding" hint="how the image becomes spikes">
-        <SelectField
-          label="Coding"
-          value={config.coding}
-          help={HELP.coding}
-          tour="coding"
-          disabled={locked}
-          options={[
-            { value: "rate", label: "Rate" },
-            { value: "latency", label: "Latency" },
-            { value: "delta", label: "Delta" },
-            { value: "random", label: "Random (noise baseline)" },
-          ]}
-          onChange={(v) => set({ coding: v as EncodeConfig["coding"] })}
-        />
-
-        <SliderField
-          label="num_steps" value={config.num_steps}
-          min={5} max={200} step={5}
-          help={HELP.num_steps} disabled={locked}
-          onChange={(v) => set({ num_steps: v })}
-        />
-        <SliderField
-          label="interval (ms)" value={config.interval_ms}
-          min={20} max={400} step={10}
-          help={HELP.interval_ms}
-          onChange={(v) => set({ interval_ms: v })}
-        />
-
-        {config.coding === "rate" && (
-          <SliderField
-            label="gain" value={config.gain} min={0.05} max={1} step={0.05}
-            help={HELP.gain} disabled={locked}
-            onChange={(v) => set({ gain: v })}
-          />
-        )}
-
-        {config.coding === "latency" && (
-          <>
-            <SliderField
-              label="tau" value={config.tau} min={1} max={20} step={0.5}
-              help={HELP.tau} disabled={locked}
-              onChange={(v) => set({ tau: v })}
-            />
-            <SliderField
-              label="threshold" value={config.threshold}
-              min={0.005} max={0.1} step={0.005}
-              help={HELP.threshold} disabled={locked}
-              onChange={(v) => set({ threshold: v })}
-            />
-            <CheckField
-              label="linear" checked={config.linear} disabled={locked}
-              help={HELP.linear} onChange={(v) => set({ linear: v })}
-            />
-            <CheckField
-              label="normalize" checked={config.normalize} disabled={locked}
-              help={HELP.normalize}
-              onChange={(v) => set({ normalize: v })}
-            />
-            <CheckField
-              label="clip" checked={config.clip} disabled={locked}
-              help={HELP.clip} onChange={(v) => set({ clip: v })}
-            />
-          </>
-        )}
-
-        {config.coding === "delta" && (
-          <SliderField
-            label="delta_threshold" value={config.delta_threshold}
-            min={1} max={10} step={0.5}
-            help={HELP.delta_threshold} disabled={locked}
-            onChange={(v) => set({ delta_threshold: v })}
-          />
-        )}
-
-        {config.coding === "random" && (
-          <SliderField
-            label="random_scale" value={config.random_scale}
-            min={0.1} max={1} step={0.05}
-            help={HELP.random_scale}
-            onChange={(v) => set({ random_scale: v })}
-          />
-        )}
-      </Section>
+      <EncodingControls
+        config={config}
+        locked={locked}
+        eventMode={eventMode}
+        onChange={onChange}
+      />
 
       <ModelSection
         model={model}

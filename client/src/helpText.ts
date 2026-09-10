@@ -1,6 +1,18 @@
 /** Hover descriptions for each configurable setting. */
 
 export const HELP: Record<string, string> = {
+  event_modal:
+    "This dataset is a neuromorphic event stream: each sample already " +
+    "carries ON/OFF spikes in its own time bins, so rate/latency/delta/" +
+    "random coding does not apply. The coding and step controls are " +
+    "disabled and the recording's own raster and playback are shown.",
+  event_steps:
+    "Event samples define their own time bins from the recording; the " +
+    "step count is shown for reference and is not re-encoded.",
+  event_availability:
+    "Events need the optional tonic package. Install the events extra " +
+    "(pip install -e \".[events]\") to enable these datasets; until then " +
+    "the picker marks them unavailable instead of failing silently.",
   coding:
     "Spike encoding scheme. Rate uses firing frequency, latency uses " +
     "first-spike timing, delta fires on large changes, random generates " +

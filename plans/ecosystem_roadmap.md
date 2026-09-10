@@ -234,6 +234,19 @@ split early in the phase.
 
 ### Phase 4 — Data Breadth and Event Datasets
 
+> **Status — delivered (verified in Phase 4d).** The event modality ships:
+> a `DatasetSpec` registry with `modality`, four event datasets
+> (`n_mnist`, `dvs128_gesture`, `cifar10_dvs`, `ssc`) behind the optional
+> `events` extra (`tonic`), the `EventSample` model with
+> `to_frames`/`to_voxel` and the `EventSpikeBridge`, `EventSampleSource`
+> (tonic or an explicitly labelled synthetic fallback), the `tonic_api`
+> capability probe, and `server/event_engine.py` with modality routing plus
+> event frames and polarity-aware rasters. The Python suite is green at 305
+> tests (up from 234), `ruff` is clean, the client builds, and event
+> samples run through `fc_legacy`/`conv_net`/`recurrent_net` and NIR
+> validation. Deferred with intent: training on event datasets, which still
+> targets image datasets.
+
 **Objective:** ingest neuromorphic/event data through the same pipeline as
 static images.
 

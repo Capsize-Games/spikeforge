@@ -1,6 +1,7 @@
 import { HELP } from "../helpText";
 import type {
   InferencePayload,
+  Modality,
   RasterPayload,
   RasterSource,
 } from "../types";
@@ -11,6 +12,7 @@ interface Props {
   rasters: Record<RasterSource, RasterPayload | null>;
   inference: InferencePayload | null;
   timeStep: number | null;
+  modality: Modality;
 }
 
 /** Compact per-layer aggregate for training diagnostics. */
@@ -36,7 +38,16 @@ function summarize(raster: RasterPayload | null): string | undefined {
  * Merging them removes the duplicated per-panel titles and padding that made
  * the middle column the tallest, while keeping every layer visible at once.
  */
-export function NetworkActivity({ rasters, inference, timeStep }: Props) {
+export function NetworkActivity({
+  rasters,
+  inference,
+  timeStep,
+  modality,
+}: Props) {
+  const eventInput = modality === "event";
+  const inputLabel = eventInput
+    ? "Event spikes · neuron (ON then OFF)"
+    : "Input spikes · neuron";
   const outputLabels = rasters.output
     ? Array.from({ length: rasters.output.num_neurons }, (_, i) => String(i))
     : undefined;
@@ -57,9 +68,10 @@ export function NetworkActivity({ rasters, inference, timeStep }: Props) {
           bare
           height={260}
           raster={rasters.input}
-          label="Input spikes · neuron"
+          label={inputLabel}
           summary={summarize(rasters.input)}
           highlightStep={timeStep}
+          emptyNote={eventInput ? "select an event sample" : undefined}
         />
         <RasterCanvas
           bare

@@ -58,3 +58,19 @@
   line-height: 1.4;
   color: var(--muted);
 }
+
+/* --- dataset modality note (encoder-neutral for event datasets) --- */
+.modality-note {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.modality-note.warn {
+  border-left-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}

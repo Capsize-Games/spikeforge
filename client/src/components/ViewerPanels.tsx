@@ -4,6 +4,7 @@ import type {
   CodingType,
   ExecutionMode,
   InferencePayload,
+  Modality,
   ModelLoadedPayload,
   RasterPayload,
   RasterSource,
@@ -18,9 +19,11 @@ import { TrajectoryPanel } from "./TrajectoryPanel";
 
 interface Props {
   sample: number[][] | null;
+  eventFrame: number[][] | null;
   spikeFrame: number[][] | null;
   reconGain1: number[][] | null;
   rasters: Record<RasterSource, RasterPayload | null>;
+  modality: Modality;
   inference: InferencePayload | null;
   loaded: ModelLoadedPayload | null;
   coding: CodingType;
@@ -45,9 +48,11 @@ interface Props {
 /** The middle column: model summary, cursor, input, activity, NIR panels. */
 export function ViewerPanels({
   sample,
+  eventFrame,
   spikeFrame,
   reconGain1,
   rasters,
+  modality,
   inference,
   loaded,
   coding,
@@ -85,16 +90,19 @@ export function ViewerPanels({
 
       <InputRow
         sample={sample}
+        eventFrame={eventFrame}
         spikeFrame={spikeFrame}
         reconGain1={reconGain1}
         inference={inference}
         coding={coding}
+        modality={modality}
       />
 
       <NetworkActivity
         rasters={rasters}
         inference={inference}
         timeStep={timeStep}
+        modality={modality}
       />
 
       <TrajectoryPanel

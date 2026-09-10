@@ -59,6 +59,9 @@ setup(
             "nir>=1.0",
             "nirtorch>=1.0",
         ],
+        "events": [
+            "tonic>=1.4",
+        ],
     },
     entry_points={
         "console_scripts": [

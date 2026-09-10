@@ -19,13 +19,17 @@ async def send_locked(
 async def send_initial(
     ws: WebSocket, session: Session, cfg: EncodeConfig
 ) -> None:
-    """Push the static payloads: ack, sample, recon, raster, status."""
+    """Push the static payloads: ack, sample/event frame, raster, status."""
     engine = session.engine
     await send_locked(ws, session, {
-        "type": "config_ack", "payload": cfg.model_dump(),
+        "type": "config_ack",
+        "payload": {**cfg.model_dump(), "modality": engine.modality},
     })
-    await send_image(ws, session)
-    await send_reconstruction(ws, session)
+    if engine.modality == "event":
+        await send_event_frame(ws, session)
+    else:
+        await send_image(ws, session)
+        await send_reconstruction(ws, session)
     await send_locked(ws, session, {
         "type": "raster", "payload": engine.raster(), "source": "input",
     })
@@ -37,6 +41,21 @@ async def send_image(ws: WebSocket, session: Session) -> None:
     image = session.engine.sample_image()
     if image is not None:
         await send_locked(ws, session, {"type": "image", "payload": image})
+
+
+async def send_event_frame(ws: WebSocket, session: Session) -> None:
+    """Send the whole-sample ON/OFF frame as the sample image.
+
+    The frame reuses the existing ``image`` message with an ``event_frame``
+    kind instead of a dedicated type: it keeps one payload shape and one
+    client field, while ``kind`` lets the viewer route it away from the
+    static-sample slot.
+    """
+    await send_locked(ws, session, {
+        "type": "image",
+        "payload": session.engine.sample_frame(),
+        "kind": "event_frame",
+    })
 
 
 async def send_reconstruction(ws: WebSocket, session: Session) -> None:
@@ -66,6 +85,7 @@ async def send_status(
             "dataset": engine.dataset,
             "sample_index": engine.sample_index(),
             "true_label": engine.sample_label(),
+            "modality": engine.modality,
         },
     })
 

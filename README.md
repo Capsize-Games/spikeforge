@@ -43,6 +43,9 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
   topology/neuron/surrogate pickers, neuron-state trajectory and NIR graph
   viewers, a drift-validation panel, trajectory-metrics/encoding/surrogate/
   benchmark analysis panels, and seven guided walkthroughs (see below)
+- **Event datasets (Phase 4)**: N-MNIST, DVS128 Gesture, CIFAR10-DVS, and
+  Spiking Speech Commands through Tonic, with a modality-aware dataset
+  picker, an event-to-spike bridge, and polarity-aware rasters (see below)
 
 ## Interpreter spine (Phase 1)
 
@@ -318,6 +321,111 @@ failures emit the existing `error` message rather than raising.
 The schema also still declares a legacy `predict` type, but the client no
 longer sends it and the server does not dispatch it.
 
+## Event datasets (Phase 4)
+
+Phase 4 adds an **event** (neuromorphic) data modality beside the static
+image path. Datasets such as N-MNIST, DVS128 Gesture, CIFAR10-DVS, and
+Spiking Speech Commands load through [Tonic](https://tonic.readthedocs.io/),
+and their recordings flow through the same simulator and NIR validation as
+encoded images.
+
+### Installing the `events` extra
+
+Event loading is opt-in so the default install stays lean:
+
+```bash
+pip install -e ".[events]"
+```
+
+`tonic` is deliberately kept out of `requirements.txt`; without it the
+event datasets are reported unavailable rather than silently broken. The
+picker marks them "unavailable (install the events extra)", the loader
+raises the typed `EventsExtraMissingError`, and the server falls back to
+the explicit synthetic path described below.
+
+### Datasets, modality, and availability
+
+Every registry entry is now a `DatasetSpec` carrying a `modality` (`image`
+or `event`). `catalog()` reports `modality` and `available` per dataset,
+and the same fields ride on the `config_ack` and `status` payloads, so the
+picker only offers valid options:
+
+| Dataset | Modality | Classes | Available when |
+|---|---|---|---|
+| `n_mnist` | event | 10 | the `events` extra is installed |
+| `dvs128_gesture` | event | 11 | the `events` extra is installed |
+| `cifar10_dvs` | event | 10 | the `events` extra is installed |
+| `ssc` | event | 35 | the `events` extra is installed |
+| image datasets | image | 10-26 | always |
+
+Event datasets download through the existing isolated worker, so tonic's
+cache writes under `DATA_DIR/events/` (the gitignored `build/`) and the
+progress/cancel UI keeps working.
+
+### How event data flows
+
+```
+source -> EventSample -> frames -> bridge -> simulator / NIR
+```
+
+1. **Source** — `EventSampleSource` (`events/event_source.py`) serves a
+   `(EventSample, label)` pair per index. It uses tonic whenever the
+   dataset is loadable and otherwise the deterministic generators in
+   `events/synthetic.py`. The chosen backend is recorded in `origin` and
+   `description`, so a synthetic stream is never presented as a recording.
+2. **`EventSample`** — a validated sparse stream in `(x, y, t, p)` form
+   (`x` column, `y` row, `t` 0-based time bin, `p` `+1` ON / `-1` OFF)
+   with an `(H, W)` sensor layout.
+3. **Frames** — `events/dense.py` accumulates the stream into a time-major
+   `[T, 2, H, W]` tensor: `to_frames` binarises and `to_voxel` keeps raw
+   counts. Channel 0 is ON and channel 1 is OFF.
+4. **Bridge** — `EventSpikeBridge.encode(sample, spec)` lays the frames
+   out for the target topology: `[T, B, F]` for feature inputs and
+   `[T, B, C, H, W]` for spatial ones, exactly what `simulator.run()`
+   already consumes. It reuses the shared `input_shape` and sparsity
+   helpers rather than re-implementing coding math.
+5. **Simulator / NIR** — because the bridge emits the same spike-tensor
+   contract, a topology runs and NIR-validates an event sample unchanged.
+
+The server exposes this through `EventEngine` (`server/event_engine.py`),
+which presents the same method surface as `EncoderEngine` (frame, raster,
+spike input, label), so `engine_factory` routes a dataset to the right
+engine by modality and every downstream handler stays shared.
+
+### Polarity-aware raster and playback
+
+The event raster puts ON events at neuron indices `[0, H*W)` and OFF
+events at `[H*W, 2*H*W)`, so the shared `RasterPayload` shape is reused
+while the two polarities stay distinguishable. The viewer shows the
+recording's own whole-sample ON/OFF frame (`kind: "event_frame"` on the
+existing `image` message) beside the playback frame, and `send_initial`
+skips reconstruction for events because there is no image coding to
+invert.
+
+### Coding controls are gated for events
+
+Event recordings are already spike trains in their own time bins, so
+rate/latency/delta/random coding does not apply. The Encoding section
+disables the coding and per-coding controls with an explicit note ("events
+are already spikes") and leaves only the playback interval adjustable. The
+`encoding_report` action rejects an event sample with a typed error instead
+of decoding a missing image.
+
+### Limitations
+
+- **Training on event datasets is not wired.** The event path serves
+  samples for viewing, encoding, and NIR validation; the training loop
+  still loads image datasets through `build_dataset`, and `build_dataset`
+  refuses an event spec, so no event-mode training is offered yet.
+- **Spatial topologies need 28x28-like geometry.** `conv_net` consumes
+  `[T, B, 1, H, W]`; the bridge passes a polar frame through unchanged and
+  never reshapes a non-square frame. Use a feature-input topology
+  (`fc_legacy`, `fc_small`, `recurrent_net`) for other sensor geometries.
+- **The synthetic path is explicitly labelled.** With no `tonic`, or with
+  `synthetic_only=True`, the source serves deterministic moving-dot
+  streams and says so in `origin`/`description` — they are offline
+  fixtures, not real recordings.
+
 ## Requirements
 
 - Python 3.8+
@@ -331,6 +439,21 @@ Install the package (with web extras for the dashboard):
 ```bash
 pip install -e ".[web]"
 ```
+
+### Optional event datasets (Tonic)
+
+Neuromorphic/event datasets (N-MNIST, DVS128 Gesture, CIFAR10-DVS, Spiking
+Speech Commands) are powered by [Tonic](https://tonic.readthedocs.io/) and
+gated behind the optional `events` extra so the default image stays lean:
+
+```bash
+pip install -e ".[events]"
+```
+
+`tonic` is deliberately kept out of `requirements.txt`; the event loader and
+its capability probe work without it, reporting the event datasets as
+unavailable and raising a clear typed error that names the missing extra
+until it is installed.
 
 ## Usage
 
@@ -422,8 +545,18 @@ snn_interpreter/
   config.py                  Paths/settings resolved from the environment
   data/                      Dataset registry, loaders, sample access
     datasets.py              Dataset registry (MNIST/Fashion/KMNIST/...)
+    dataset_spec.py          DatasetSpec: registry metadata + modality
     data_loader.py           Loader construction with subset reduction
     sample_source.py         Single transformed images/labels for the viewer
+    event_loader.py          Tonic (x,y,t,p) stream -> EventSample
+    event_errors.py          EventsExtraMissingError for a missing extra
+  events/                    Event-modality model, dense forms, bridge
+    event_sample.py          EventSample: sparse (x, y, t, p) stream
+    dense.py                 to_frames / to_voxel -> [T, 2, H, W]
+    synthetic.py             Deterministic offline event generators
+    event_bridge.py          EventSample -> simulator/NIR spike tensor
+    event_source.py          EventSampleSource: tonic or explicit synthetic
+    tonic_api.py             The only module importing tonic
   encoding/                  Spike-encoding transforms
     spike_encoder.py         SpikeEncoder: rate/latency/delta/random
     latency_trainer.py       LatencyTrainer (tutorial 2.3)
@@ -496,6 +629,7 @@ server/
   payloads.py                Model-list / model-load / NIR payload builders
   messages.py                Outbound WS message helpers
   encoder.py                 Config -> encoder engine (JSON payloads)
+  event_engine.py            Config -> event engine (ON/OFF frames, raster)
   training.py                Threaded training bridge -> asyncio queue
   session.py                 Per-connection state (engine/train/stream)
   schemas/                   Pydantic WS message/config schemas
@@ -548,10 +682,19 @@ stays under 20 lines, and each class lives in its own file.
   upstream's wrapper.
 - **Dashboard limitations (Phase 3).** (1) The hardware-target picker moves
   to Phase 5, so the LEFT column exposes topology, neuron, and surrogate
-  controls only. (2) Event datasets are Phase 4, so the dataset
-  walkthrough's "where event data lands" step is explanatory for now.
-  (3) The trajectory viewer, metrics, and histogram are gated to educational
-  mode and show an explanatory empty state in production.
+  controls only. (2) Event datasets landed in Phase 4 (see the event
+  datasets section above), so that walkthrough step now describes the live
+  path. (3) The trajectory viewer, metrics, and histogram are gated to
+  educational mode and show an explanatory empty state in production.
+- **Event limitations (Phase 4).** (1) Training on event datasets is not
+  wired: the event path serves viewing, encoding, and NIR validation only,
+  and `build_dataset` refuses an event spec, so the training loop still
+  targets image datasets. (2) Spatial topologies such as `conv_net` expect
+  28x28-like single-channel geometry; a polar or non-square sensor should
+  use a feature-input topology. (3) The offline synthetic path is labelled
+  as such in `origin`/`description` and is never passed off as a recording.
+  (4) Event datasets need the optional `events` extra; without it they show
+  as unavailable and the loader raises `EventsExtraMissingError`.
 
 ## License
 

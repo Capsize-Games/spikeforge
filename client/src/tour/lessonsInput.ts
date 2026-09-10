@@ -84,11 +84,11 @@ export const INPUT_LESSONS: TourLesson[] = [
       {
         title: "Where event data lands",
         body:
-          "snnTorch's neuromorphic datasets stream asynchronous " +
-          "events rather than pixels. This dashboard currently " +
-          "ingests static images; event datasets such as DVS or " +
-          "N-MNIST arrive in Phase 4, which is why no event picker " +
-          "is shown yet.",
+          "Neuromorphic datasets stream asynchronous ON/OFF events " +
+          "rather than pixels. Pick one (N-MNIST, DVS128 Gesture, " +
+          "CIFAR10-DVS, or Speech Commands) to see the recording's " +
+          "own frame and a polarity-aware raster; the coding controls " +
+          "stay disabled because the sample is already a spike train.",
         target: '[data-tour="input-raster"]',
       },
     ],

@@ -24,6 +24,8 @@ export interface ViewerState {
   autoPredict: boolean;
   modelLoading: boolean;
   sample: number[][] | null;
+  /** Whole-sample ON/OFF frame for event-modality datasets, else null. */
+  eventFrame: number[][] | null;
   spikeFrames: FrameMap;
   spikeStep: number | null;
   reconGain1: number[][] | null;
@@ -61,6 +63,7 @@ export function createInitialViewerState(autoPredict: boolean): ViewerState {
     autoPredict,
     modelLoading: false,
     sample: null,
+    eventFrame: null,
     spikeFrames: EMPTY_FRAMES,
     spikeStep: null,
     reconGain1: null,
@@ -87,6 +90,7 @@ function clearStream(state: ViewerState): ViewerState {
     ...state,
     error: null,
     sample: null,
+    eventFrame: null,
     spikeFrames: EMPTY_FRAMES,
     spikeStep: null,
     reconGain1: null,
@@ -109,6 +113,7 @@ function applyImage(
 ): ViewerState {
   if (kind === "recon_gain1") return { ...state, reconGain1: payload };
   if (kind === "recon_low") return { ...state, reconLow: payload };
+  if (kind === "event_frame") return { ...state, eventFrame: payload };
   return { ...state, sample: payload };
 }
 

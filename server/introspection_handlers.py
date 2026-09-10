@@ -36,6 +36,11 @@ EDUCATIONAL_ONLY = (
     "trajectory capture needs educational mode; "
     "switch the execution mode to educational"
 )
+#: Error returned when an image-only action is used on an event sample.
+EVENT_UNSUPPORTED = (
+    "encoding reconstruction decodes image codings; event datasets are "
+    "already spike trains and carry no rate/latency signal to decode"
+)
 
 
 def _model_blocker(session: Session) -> Optional[str]:
@@ -102,11 +107,18 @@ async def handle_metrics(ws: WebSocket, session: Session) -> None:
 
 
 async def handle_encoding_report(ws: WebSocket, session: Session) -> None:
-    """Emit the encoding report for the configured sample."""
+    """Emit the encoding report for the configured sample.
+
+    Event modality has no image coding to decode, so it degrades to the
+    same typed error channel instead of failing on a missing image.
+    """
     if session.engine is None:
         await _reject(ws, session, "no sample configured")
         return
     engine = session.engine
+    if getattr(engine, "modality", "image") == "event":
+        await _reject(ws, session, EVENT_UNSUPPORTED)
+        return
     report = encoding_report(engine.sample_tensor(), engine.encoder)
     await send_introspection(ws, session, "encoding_report", report)
 

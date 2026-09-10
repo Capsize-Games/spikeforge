@@ -9,10 +9,17 @@ These live in their own module so `types.ts` stays within the 250-line limit;
  */
 export type ExecutionMode = "educational" | "production";
 
+/** Data modality a dataset delivers: static images or address-events. */
+export type Modality = "image" | "event";
+
 export interface DatasetInfo {
   name: string;
   classes: number;
   description: string;
+  /** Additive registry metadata: static image vs neuromorphic events. */
+  modality?: Modality;
+  /** False when the dataset's loader is missing (e.g. no tonic extra). */
+  available?: boolean;
 }
 
 export interface SavedModel {

@@ -2,6 +2,7 @@ import type { IntrospectionServerMsg } from "./introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
 import type {
   ExecutionMode,
+  Modality,
   ModelLoadedPayload,
   ModelListPayload,
 } from "./protocolTypes";
@@ -11,6 +12,7 @@ export type {
   DatasetInfo,
   ExecutionMode,
   HistoryPoint,
+  Modality,
   ModelLoadedPayload,
   ModelListPayload,
   SavedModel,
@@ -83,6 +85,8 @@ export interface StatusPayload {
   dataset?: string;
   sample_index?: number;
   true_label?: number | null;
+  /** Modality of the configured sample (additive). */
+  modality?: Modality;
 }
 
 export interface RunStatePayload {
@@ -194,7 +198,7 @@ export interface DownloadState {
 }
 
 export type ServerMsg =
-  | { type: "config_ack"; payload: EncodeConfig }
+  | { type: "config_ack"; payload: EncodeConfig & { modality?: Modality } }
   | { type: "status"; payload: StatusPayload | string }
   | { type: "image"; payload: number[][]; kind?: string }
   | { type: "raster"; payload: RasterPayload; source?: RasterSource }
