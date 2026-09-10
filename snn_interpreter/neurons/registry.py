@@ -4,6 +4,7 @@ from typing import Any, Dict, Mapping, Tuple
 
 import torch.nn as nn
 
+from snn_interpreter.neurons.alpha import AlphaNeuron
 from snn_interpreter.neurons.handler import NeuronHandler
 from snn_interpreter.neurons.lapicque import LapicqueNeuron
 from snn_interpreter.neurons.leaky import LeakyNeuron
@@ -16,6 +17,7 @@ NEURONS: Dict[str, NeuronHandler] = {
     LapicqueNeuron.kind: LapicqueNeuron(),
     SynapticNeuron.kind: SynapticNeuron(),
     RecurrentNeuron.kind: RecurrentNeuron(),
+    AlphaNeuron.kind: AlphaNeuron(),
 }
 
 

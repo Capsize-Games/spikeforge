@@ -109,3 +109,43 @@ class SpikeEncoder:
     def coding(self) -> str:
         """Return the active coding name."""
         return self._coding
+
+    @property
+    def tau(self) -> float:
+        """Return the latency RC time constant."""
+        return self._tau
+
+    @property
+    def threshold(self) -> float:
+        """Return the latency firing threshold."""
+        return self._threshold
+
+    @property
+    def clip(self) -> bool:
+        """Return whether below-threshold latencies are clipped."""
+        return self._clip
+
+    @property
+    def normalize(self) -> bool:
+        """Return whether latency codes are normalised to ``num_steps``."""
+        return self._normalize
+
+    @property
+    def linear(self) -> bool:
+        """Return whether the latency code is linear (not logarithmic)."""
+        return self._linear
+
+    @property
+    def delta_threshold(self) -> float:
+        """Return the delta change threshold (in percent)."""
+        return self._delta_threshold
+
+    @property
+    def random_scale(self) -> float:
+        """Return the noise scale used by the random coding."""
+        return self._random_scale
+
+    @property
+    def seed(self) -> Optional[int]:
+        """Return the optional seed used by the random coding."""
+        return self._seed

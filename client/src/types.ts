@@ -1,3 +1,4 @@
+import type { IntrospectionServerMsg } from "./introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
 
 export type CodingType = "rate" | "latency" | "delta" | "random";
@@ -226,12 +227,8 @@ export type ServerMsg =
   | { type: "status"; payload: StatusPayload | string }
   | { type: "image"; payload: number[][]; kind?: string }
   | { type: "raster"; payload: RasterPayload; source?: RasterSource }
-  | {
-      type: "spike_frame";
-      payload: number[][];
-      step?: number;
-      source?: RasterSource;
-    }
+  | { type: "spike_frame"; payload: number[][]; step?: number;
+      source?: RasterSource }
   | { type: "run_state"; payload: RunStatePayload }
   | { type: "train_metrics"; payload: TrainMetrics }
   | { type: "train_state"; payload: TrainStatePayload }
@@ -245,4 +242,5 @@ export type ServerMsg =
   | { type: "model_cleared"; payload?: null }
   | { type: "system_stats"; payload: SystemStatsPayload }
   | { type: "download_state"; payload: DownloadState }
+  | IntrospectionServerMsg
   | { type: "error"; payload: string };

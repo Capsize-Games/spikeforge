@@ -136,6 +136,13 @@ async def send_activity(
             })
 
 
+async def send_introspection(
+    ws: WebSocket, session: Session, kind: str, payload: Any
+) -> None:
+    """Send an introspection payload under its message type ``kind``."""
+    await send_locked(ws, session, {"type": kind, "payload": payload})
+
+
 async def send_nir_graph(
     ws: WebSocket, session: Session, payload: Dict[str, Any]
 ) -> None:

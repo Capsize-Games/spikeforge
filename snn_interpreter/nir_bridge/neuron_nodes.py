@@ -16,6 +16,13 @@ directly; ``none`` is a plain ``nir.LI`` plus ``nir.Threshold``.
 the synaptic and membrane time constants. ``recurrent`` maps to ``nir.LIF``
 plus a ``nir.Delay`` node that feeds the previous output back into the
 membrane; the delay breaks the cycle so the graph stays valid.
+
+``alpha`` has no faithful rendering in the installed ``nir`` (it needs three
+states and an alpha-function membrane, while ``nir.CubaLIF`` holds a single
+synaptic current), so it is listed in :data:`UNMAPPABLE_KINDS` and export
+raises the typed :class:`UnsupportedStageError` naming the kind instead of
+inventing a lossy mapping. ``alpha`` stays available for simulation and
+introspection.
 """
 
 from typing import Any, Callable, Dict, Tuple
@@ -40,6 +47,14 @@ from snn_interpreter.topology.stage import Stage
 FEEDBACK_SUFFIX = "__fb"
 #: One timestep of feedback delay.
 DELAY_STEPS = 1.0
+#: Neuron kinds with no faithful NIR rendering in the installed ``nir``.
+UNMAPPABLE_KINDS: Dict[str, str] = {
+    "alpha": (
+        "snn.Alpha keeps three states (syn_exc, syn_inh, mem) and an "
+        "alpha-function membrane; the installed nir has no Alpha primitive "
+        "and nir.CubaLIF carries only one synaptic current"
+    ),
+}
 
 NeuronBuilder = Callable[[Stage], StageMapping]
 
@@ -145,8 +160,15 @@ _BUILDERS: Dict[str, NeuronBuilder] = {
 
 
 def neuron_mapping(stage: Stage) -> StageMapping:
-    """Return the NIR rendering for a neuron ``stage``."""
+    """Return the NIR rendering for a neuron ``stage``.
+
+    A kind the installed ``nir`` cannot represent faithfully raises
+    :class:`UnsupportedStageError` naming the kind, so export fails loudly
+    rather than silently dropping or degrading the stage.
+    """
     builder = _BUILDERS.get(stage.kind)
-    if builder is None:
-        raise UnsupportedStageError(stage.kind)
-    return builder(stage)
+    if builder is not None:
+        return builder(stage)
+    if stage.kind in UNMAPPABLE_KINDS:
+        raise UnsupportedStageError(stage.kind, UNMAPPABLE_KINDS[stage.kind])
+    raise UnsupportedStageError(stage.kind)

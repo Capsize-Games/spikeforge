@@ -8,6 +8,7 @@ import torch.nn as nn
 
 from snn_interpreter.neurons import contract
 from snn_interpreter.neurons.contract import NeuronState
+from snn_interpreter.neurons.spike_grad import spike_grad_from
 
 
 class LeakyNeuron:
@@ -23,6 +24,7 @@ class LeakyNeuron:
                 params, "threshold", contract.DEFAULT_THRESHOLD
             ),
             reset_mechanism=contract.get_reset(params),
+            spike_grad=spike_grad_from(params),
         )
 
     def nir_params(self, params: Mapping[str, Any]) -> Dict[str, Any]:

@@ -35,6 +35,10 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
 - **Interpreter spine (Phase 1)**: topology presets, a neuron registry, NIR
   export, an independent NIR interpreter, and numerical drift validation
   (see below)
+- **Dual-mode introspection (Phase 2)**: an educational mode that records
+  per-step `U[t]`/`I[t]`/`S[t]`, trajectory metrics, encoding/decoding
+  reports, surrogate-gradient curves, a neuron comparison lab, and a
+  production-mode benchmark harness (see below)
 
 ## Interpreter spine (Phase 1)
 
@@ -93,6 +97,117 @@ python -m snn_interpreter.cli.verify validate --topology recurrent_net
 The server answers two new client actions: `nir_export` returns the graph
 summary for the active or configured topology, and `nir_validate` returns a
 drift report for the active model.
+
+## Dual-mode introspection (Phase 2)
+
+Phase 2 adds the educational/professional execution split and full
+neuron-state introspection behind one shared code path.
+
+### Execution modes
+
+`ExecutionMode` ([`runtime/execution_mode.py`](snn_interpreter/runtime/execution_mode.py))
+is a flag on the single temporal loop, not a fork:
+
+- `EDUCATIONAL` records every per-step trace; `PRODUCTION` records none and
+  runs lean.
+- [`simulator.run()`](snn_interpreter/simulator/runner.py:21) takes
+  `mode=...` and also exposes `track` / `membrane` / `current` for
+  finer-grained capture.
+- [`simulator.run_production()`](snn_interpreter/simulator/production.py:14)
+  returns a `ProductionResult(trajectory, compiled, status)`. `compiled` is
+  opt-in (`torch.compile`) and falls back transparently to eager, with
+  `status` in `{"eager", "unavailable", "compiled", "fallback"}`.
+
+Both paths share one loop, so the difference is recording overhead, not
+behaviour.
+
+### Trajectory capture
+
+`Trajectory` ([`simulator/trajectory.py`](snn_interpreter/simulator/trajectory.py:9))
+carries the averaged readout `logits` plus per-neuron-stage traces of spikes
+`S[t]`, membrane `U[t]`, and input current `I[t]` (`currents` is the merged
+inbound activation each stage received before its update). Educational mode
+fills all three; production mode leaves them empty.
+
+### Trajectory metrics
+
+[`introspection.metrics.trajectory_metrics()`](snn_interpreter/introspection/metrics.py:28)
+gathers, per stage:
+
+- **firing rate** — mean spikes per neuron per step.
+- **sparsity** — fraction of silent entries.
+- **ISI** — count/mean/median/std/cv of inter-spike intervals (`null` when
+  fewer than two spikes).
+- **histogram** — per-neuron firing-rate bin edges and counts.
+
+The result holds only plain JSON types.
+
+### Encoding and decoding introspection
+
+[`introspection.encoding.encoding_report()`](snn_interpreter/introspection/encoding.py:142)
+encodes one image, reconstructs it where the coding is invertible, and
+reports firing rate, sparsity, and coding-specific stats. The reconstruction
+is explicitly approximate, documented in the report's `approximation` field:
+
+- **rate** — mean spike count; a Bernoulli estimate of the clamped intensity
+  that converges as `num_steps` grows.
+- **latency** — inverts the time-to-first-spike map; quantised to integer
+  steps and saturating at the threshold ceiling for sub-threshold pixels.
+- **delta** — integrates the on/off stream crediting one threshold per
+  spike; a lower bound, exact only when each step rises by exactly the
+  threshold.
+- **random** — carries no image signal, so `reconstruction` is `null` and
+  `reconstruction_supported` is `false`.
+
+### Surrogate gradients
+
+[`introspection.surrogate`](snn_interpreter/introspection/surrogate.py:1)
+discovers the selectable surrogate factories from the installed
+`snntorch.surrogate` (so the list always matches what snnTorch provides).
+`list_surrogates()` names them and
+[`surrogate_curve()`](snn_interpreter/introspection/surrogate.py:94) samples
+the backward-pass derivative `dS/dU` into parallel `x`/`y` lists. Neurons
+accept an optional `surrogate` build parameter; leaving it unset (the
+default) keeps the build byte-identical to before.
+
+### Neuron comparison lab
+
+[`introspection.comparison.compare_neurons()`](snn_interpreter/introspection/comparison.py:59)
+runs the same seeded input through every registered neuron kind (Leaky,
+Lapicque, Synaptic, recurrent LIF, and Alpha) and returns
+`{kind: Trajectory}` for side-by-side diffing.
+
+### Benchmark harness
+
+[`snn_interpreter/benchmark/`](snn_interpreter/benchmark/__init__.py:1)
+measures wall time and memory of forward and backward passes for each mode
+(and, with `--compiled`, the compiled production path):
+
+```bash
+python -m snn_interpreter.benchmark                     # tiny default fixture
+python -m snn_interpreter.benchmark --topology conv_net --steps 16 --compiled
+python -m snn_interpreter.benchmark --out bench.json
+```
+
+The same report is available from Python via
+`benchmark.run_benchmark(BenchmarkConfig(...))`; every measurement is seeded
+and warmed up, and unavailable metrics are reported as `null`.
+
+### WebSocket actions
+
+Six data-only actions were added, with client types in
+[`client/src/introspectionTypes.ts`](client/src/introspectionTypes.ts:1):
+
+| Action | Server reply | Payload |
+|---|---|---|
+| `trajectory` | `trajectory` | Bounded `U[t]`/`I[t]`/`S[t]` rows (≤8 stages, ≤64 neurons) |
+| `metrics` | `metrics` | Firing rate, sparsity, ISI, histogram per stage |
+| `encoding_report` | `encoding_report` | Reconstruction + approximation note for the sample |
+| `surrogates` | `surrogate_list` | Selectable surrogate names |
+| `surrogate_curve` | `surrogate_curve` | Derivative `x`/`y` samples for one surrogate |
+| `benchmark` | `benchmark` | Config, environment, and per-mode results |
+
+All are read-only; precondition failures emit the existing `error` message.
 
 ## Requirements
 
@@ -221,10 +336,31 @@ snn_interpreter/
     registry.py              name -> builder; build_topology/resolved_params
     builder.py               build_module(spec) -> snnTorch StageModule
   neurons/                   Neuron registry + canonical NIR param contract
-    registry.py              NEURONS: name -> factory; build(name, **params)
+    registry.py              NEURONS: name -> factory (incl. alpha); build()
+    alpha.py                 snn.Alpha handler (simulation/introspection only)
+    spike_grad.py            Optional `surrogate` param -> spike_grad callable
   simulator/                 The single temporal loop and trajectory capture
-    runner.py                run(module, spikes, ...) -> Trajectory
+    execution.py             execute(...): one loop, both execution modes
+    runner.py                run(module, spikes, mode=...) -> Trajectory
+    compiled_step.py         Opt-in torch.compile wrapper + eager fallback
+    production.py            run_production(...) -> ProductionResult
     trajectory.py            Per-stage S[t] / U[t] / I[t] traces
+  introspection/             Educational mode: metrics, codings, surrogates
+    metrics.py               trajectory_metrics(...) -> JSON-able metrics
+    firing_rate.py           Per-stage firing rate
+    sparsity.py              Per-stage sparsity
+    isi.py                   Inter-spike-interval statistics
+    histogram.py             Per-neuron firing-rate histograms
+    encoding.py              encoding_report(...) + reconstruction
+    decoding.py              Approximate per-coding image inverses
+    surrogate.py             Surrogate registry + derivative curve
+    comparison.py            compare_neurons(...) across every kind
+  benchmark/                 Production-mode timing and memory harness
+    config.py                BenchmarkConfig fixture
+    harness.py               run_benchmark(...) -> JSON-able report
+    timing.py                Warmup/repeat call timing
+    memory.py                CUDA/RSS/tracemalloc snapshots
+    __main__.py              python -m snn_interpreter.benchmark
   nir_bridge/                NIR export, independent interpreter, validation
     api.py                   The only module importing nir/nirtorch
     exporter.py              to_nir(spec, module); graph_summary(...)
@@ -239,6 +375,7 @@ snn_interpreter/
     *_exporter.py            per-visual exporters
   runtime/                   Compute environment
     device.py                CPU/GPU selection + auto benchmark
+    execution_mode.py        Educational/Production execution flag
     system_stats.py          CPU RAM / GPU VRAM snapshots
 server/
   app.py                     FastAPI app + WebSocket endpoint
@@ -260,7 +397,7 @@ client/                      Vite + React + TypeScript dashboard
 ```
 
 Code is kept tidy by construction: modules are grouped into focused
-subpackages, each Python file is under 200 lines, every Python function
+subpackages, each Python file is under 250 lines, every Python function
 stays under 20 lines, and each class lives in its own file.
 
 ## Notes
@@ -278,6 +415,21 @@ stays under 20 lines, and each class lives in its own file.
   residual; both residuals are reported in the `ValidationReport` rather
   than hidden. Extracting NIR graphs from arbitrary external modules via
   `nirtorch` is deferred to Phase 5.
+- **Introspection limitations (Phase 2).** Four behaviours are deliberate.
+  (1) `snn.Alpha` is simulation/introspection-only: the installed `nir` has
+  no alpha-function primitive that matches its three-state dynamics, so
+  exporting an `alpha` stage raises the typed `UnsupportedStageError`
+  instead of inventing a lossy mapping. (2) `torch.compile` is opt-in
+  because dynamo retraces on the shape-changing neuron state, so eager stays
+  the default and `ProductionResult.status` makes a genuine compiled run
+  distinguishable from a transparent eager fallback. (3) The decoding
+  inverses are approximate: latency is quantised to integer steps and
+  saturates at the threshold ceiling for sub-threshold pixels, delta
+  integrates to a lower bound that is exact only when each step rises by
+  exactly the threshold, and rate is a noisy Bernoulli estimate; `random`
+  carries no image signal at all. (4) Upstream's `LSO` surrogate is listed
+  because snnTorch exposes it, but applying it raises `TypeError` from
+  upstream's wrapper.
 
 ## License
 

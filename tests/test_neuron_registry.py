@@ -12,12 +12,13 @@ from snn_interpreter.neurons.registry import (
     neuron_kinds,
 )
 
-_KINDS = ("leaky", "lapicque", "synaptic", "recurrent")
+_KINDS = ("leaky", "lapicque", "synaptic", "recurrent", "alpha")
 _PARAMS = {
     "leaky": {},
     "lapicque": {},
     "synaptic": {"alpha": 0.8, "beta": 0.9},
     "recurrent": {"beta": 0.9, "linear_features": 4},
+    "alpha": {"alpha": 0.9, "beta": 0.8},
 }
 
 
@@ -58,6 +59,7 @@ def test_base_contract_keys_are_present(kind: str) -> None:
         ("lapicque", ()),
         ("synaptic", contract.SYNAPTIC_KEYS),
         ("recurrent", contract.RECURRENT_KEYS),
+        ("alpha", contract.SYNAPTIC_KEYS),
     ],
 )
 def test_nir_param_key_sets_are_exact(

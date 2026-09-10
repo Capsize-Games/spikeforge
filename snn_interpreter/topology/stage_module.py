@@ -15,9 +15,14 @@ State contract
 ``state``    maps each neuron stage name to its :data:`NeuronState` tuple
              (e.g. ``(mem,)`` for leaky, ``(syn, mem)`` for synaptic), plus
              the reserved ``PREV_KEY`` entry mapping stage name to the
-             previous step's outputs. Delayed (feedback) edges read from
-             that previous-step mapping, which is what threads recurrence
-             without a time loop. Passing ``None`` starts a fresh sequence.
+             previous step's outputs and the reserved ``CURRENT_KEY`` entry
+             mapping each neuron stage name to the merged inbound activation
+             it received this step (its input current ``I[t]``). Delayed
+             (feedback) edges read from the previous-step mapping, which is
+             what threads recurrence without a time loop. Passing ``None``
+             starts a fresh sequence. The reserved entries are additive: the
+             ``(outputs, state)`` return shape and every caller are
+             unchanged.
 """
 
 from typing import Any, Dict, List, Mapping, Optional, Tuple
@@ -34,6 +39,8 @@ from snn_interpreter.topology.spec import TopologySpec
 
 #: Reserved state entry holding the previous step's stage outputs.
 PREV_KEY = "__prev__"
+#: Reserved state entry holding each neuron stage's input current this step.
+CURRENT_KEY = "__current__"
 
 StageOutputs = Dict[str, torch.Tensor]
 StateMap = Dict[str, Any]
@@ -75,18 +82,31 @@ class StageModule(nn.Module):
         """Run one time step, returning ``(outputs, state)``."""
         current: StateMap = dict(state) if state else {}
         prev = current.get(PREV_KEY, {})
+        outputs, updated, currents = self._sweep(x, prev, current)
+        updated[PREV_KEY] = outputs
+        updated[CURRENT_KEY] = currents
+        return outputs, updated
+
+    def _sweep(
+        self,
+        x: torch.Tensor,
+        prev: Mapping[str, torch.Tensor],
+        current: StateMap,
+    ) -> Tuple[StageOutputs, StateMap, StageOutputs]:
+        """Step every stage once, collecting outputs, states, and currents."""
         outputs: StageOutputs = {}
         updated: StateMap = {}
+        currents: StageOutputs = {}
         for name in self._order:
             inputs = self._gather(name, x, outputs, prev)
-            output, new_state = self._run_stage(
-                name, inputs, current.get(name)
-            )
+            if name in self._handlers:
+                currents[name] = inputs
+            result = self._run_stage(name, inputs, current.get(name))
+            output, new_state = result
             outputs[name] = output
             if new_state is not None:
                 updated[name] = new_state
-        updated[PREV_KEY] = outputs
-        return outputs, updated
+        return outputs, updated, currents
 
     def _run_stage(
         self,

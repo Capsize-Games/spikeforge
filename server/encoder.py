@@ -32,6 +32,10 @@ class EncoderEngine:
         """Return the raw input image grid as a nested list."""
         return to_list(self._image[0])
 
+    def sample_tensor(self) -> torch.Tensor:
+        """Return the raw input image as a ``[C, H, W]`` tensor."""
+        return self._image
+
     def reconstruction(self) -> Optional[Dict[str, Any]]:
         """Return averaged spike reconstructions for the rate coding."""
         if self._config.coding != "rate":
@@ -83,6 +87,11 @@ class EncoderEngine:
     def spike_input(self) -> torch.Tensor:
         """Return the [T,1,784] spikes for training/inference."""
         return self._spikes
+
+    @property
+    def encoder(self) -> SpikeEncoder:
+        """Return the encoder that produced the sample's spikes."""
+        return self._encoder
 
     @property
     def dataset(self) -> str:

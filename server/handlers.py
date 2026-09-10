@@ -15,8 +15,8 @@ from server.messages import (
     send_run_state,
     send_train_state,
 )
-from server.nir_handlers import dispatch_nir
 from server.payloads import model_loaded_payload
+from server.protocol_handlers import PROTOCOL_ACTIONS, dispatch_protocol
 from server.schemas import ClientMessage, EncodeConfig, TrainConfig
 from server.session import Session
 from server.stats import handle_stats
@@ -234,8 +234,8 @@ async def dispatch(
         await handle_train(ws, session, message.train)
     elif message.type == "stop_train":
         await handle_stop_train(ws, session)
-    elif message.type in ("nir_export", "nir_validate"):
-        await dispatch_nir(ws, session, message)
+    elif message.type in PROTOCOL_ACTIONS:
+        await dispatch_protocol(ws, session, message)
     elif message.type in ("select_sample", "infer"):
         await _dispatch_sample(ws, session, message)
     else:

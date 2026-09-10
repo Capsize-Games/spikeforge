@@ -143,6 +143,19 @@ the validator is the safety net and conversion constants are pinned by tests.
 
 ### Phase 2 — Dual-Mode Introspection Engine
 
+> **Status — delivered (verified in Phase 2e).** The educational/production
+> split, full `U[t]`/`I[t]`/`S[t]` capture, trajectory metrics,
+> encoding/decoding introspection, the surrogate registry and derivative
+> curve, the neuron comparison lab, and the benchmark harness
+> (`run_benchmark` plus `python -m snn_interpreter.benchmark`) all run live.
+> The Python suite is green at 214 tests (up from 143), `ruff` is clean, and
+> the client builds; six data-only WebSocket actions (`trajectory`,
+> `metrics`, `encoding_report`, `surrogates`, `surrogate_curve`, `benchmark`)
+> are dispatched. `snn.Alpha` stays simulation/introspection-only because
+> `nir` cannot represent it faithfully, so export raises the typed
+> `UnsupportedStageError`; `torch.compile` stays opt-in because dynamo
+> retraces on the shape-changing neuron state, so eager remains the default.
+
 **Objective:** deliver the educational/professional execution split and full
 neuron-state introspection promised by the goal.
 
