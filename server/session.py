@@ -1,15 +1,19 @@
-"""Track one WebSocket session: its engine, stream task, and send lock."""
+"""Track one WebSocket session: engine, stream task, and training."""
 
 import asyncio
 from typing import Optional
 
+from server.training import TrainingService
+
 
 class Session:
-    """Hold a client's encoder engine and cancellable stream task."""
+    """Hold a client's encoder engine, stream task, and trainer."""
 
-    def __init__(self):
+    def __init__(self, loop: asyncio.AbstractEventLoop):
         self._engine = None
         self._task: Optional[asyncio.Task] = None
+        self._drain_task: Optional[asyncio.Task] = None
+        self.training = TrainingService(loop)
         self.lock = asyncio.Lock()
 
     @property

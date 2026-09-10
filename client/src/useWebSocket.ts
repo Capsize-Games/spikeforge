@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { EncodeConfig, ServerMsg } from "./types";
+import type { EncodeConfig, ServerMsg, TrainConfig } from "./types";
 
 interface Options {
   onMessage: (msg: ServerMsg) => void;
@@ -29,5 +29,16 @@ export function useWebSocket({ onMessage }: Options) {
     wsRef.current?.send(JSON.stringify({ type, config }));
   }, []);
 
-  return { connected, send };
+  const sendTrain = useCallback(
+    (type: string, train: TrainConfig, name?: string) => {
+      wsRef.current?.send(JSON.stringify({ type, train, name }));
+    },
+    [],
+  );
+
+  const sendNamed = useCallback((type: string, name: string) => {
+    wsRef.current?.send(JSON.stringify({ type, name }));
+  }, []);
+
+  return { connected, send, sendTrain, sendNamed };
 }

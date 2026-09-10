@@ -18,8 +18,18 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
 - Delta modulation (`spikegen.delta`) with on/off spikes (tutorial 2.4)
 - Random spike generation from scratch via `spikegen.rate_conv` (tutorial 3)
 - Matplotlib exports (MP4s, GIFs, rasters, reconstructions) into `build/`
+- **Training**: a fully-connected LIF spiking network with a
+  surrogate-gradient cross-entropy loss, streaming live loss and both
+  batch + held-out accuracy
+- **Datasets**: train on MNIST, Fashion-MNIST, KMNIST, QMNIST, USPS,
+  EMNIST digits/letters, or (grayscaled) CIFAR-10, all normalised to
+  28x28 so one architecture fits all
+- **Model management**: save checkpoints, list/load/delete them, and
+  continue training an already-trained model
 - **Browser interface**: a dark-themed grid dashboard that streams encoded
-  spike data over WebSockets and renders plots live in the client
+  spike data over WebSockets and renders plots live in the client, with a
+  training panel (dataset picker, network config, live charts, model
+  management, predictions)
 
 ## Requirements
 
@@ -98,15 +108,24 @@ snn_interpreter/
   latency_trainer.py         LatencyTrainer (tutorial 2.3)
   delta_trainer.py           DeltaTrainer (tutorial 2.4)
   random_spikegen.py         RandomSpikeGenerator (tutorial 3)
+  datasets.py                Dataset registry (MNIST/Fashion/KMNIST/...)
+  spiking_net.py             SpikingNet: fully-connected LIF model
+  training_engine.py         TrainingEngine: train loop yielding metrics
+  model_store.py             Save/load/list/delete model checkpoints
   *_exporter.py              matplotlib exporters -> build/
   plot_utils.py              shared fig/GIF helpers
   exporter.py                Exporter base + build/ output resolution
 server/
   app.py                     FastAPI app + WebSocket endpoint
-  encoder.py                 Config -> trainer engine (JSON payloads)
+  handlers.py                Inbound message routing (encode + train)
+  messages.py                Outbound WS message helpers
+  encoder.py                 Config -> encoder engine (JSON payloads)
+  training.py                Threaded training bridge -> asyncio queue
+  session.py                 Per-connection state (engine/train/stream)
   schemas.py                 Pydantic WS message/config schemas
 client/                      Vite + React + TypeScript dashboard
   src/                       dark grid UI, canvas panels, WS hook
+  src/components/            controls, charts, panels (incl. training)
 ```
 
 Code is kept tidy by construction: each Python file is under 200 lines,

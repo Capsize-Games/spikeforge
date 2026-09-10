@@ -1,8 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Controls } from "./components/Controls";
-import { HeatmapCanvas } from "./components/HeatmapCanvas";
-import { RasterCanvas } from "./components/RasterCanvas";
+import { TopBar } from "./components/TopBar";
+import { TrainingPanel } from "./components/TrainingPanel";
+import { ViewerPanels } from "./components/ViewerPanels";
 import type {
   EncodeConfig,
   RasterPayload,
@@ -10,6 +11,7 @@ import type {
   StatusPayload,
 } from "./types";
 import { defaultConfig } from "./types";
+import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
 
 interface ViewerState {
@@ -37,21 +39,23 @@ const initial: ViewerState = {
 export default function App() {
   const [config, setConfig] = useState<EncodeConfig>(defaultConfig);
   const [state, setState] = useState<ViewerState>(initial);
+  const training = useTraining();
 
-  const handleMessage = useCallback((msg: ServerMsg) => {
-    switch (msg.type) {
-      case "config_ack":
-        setState((s) => ({
-          ...s,
-          error: null,
-          sample: null,
-          spikeFrame: null,
-          reconGain1: null,
-          reconLow: null,
-        }));
-        break;
-      case "image":
-        {
+  const handleMessage = useCallback(
+    (msg: ServerMsg) => {
+      if (training.handleMessage(msg)) return;
+      switch (msg.type) {
+        case "config_ack":
+          setState((s) => ({
+            ...s,
+            error: null,
+            sample: null,
+            spikeFrame: null,
+            reconGain1: null,
+            reconLow: null,
+          }));
+          break;
+        case "image": {
           const kind = (msg as { kind?: string }).kind;
           if (kind === "recon_gain1") {
             setState((s) => ({ ...s, reconGain1: msg.payload }));
@@ -60,32 +64,40 @@ export default function App() {
           } else {
             setState((s) => ({ ...s, sample: msg.payload }));
           }
+          break;
         }
-        break;
-      case "raster":
-        setState((s) => ({ ...s, raster: msg.payload }));
-        break;
-      case "spike_frame":
-        setState((s) => ({ ...s, spikeFrame: msg.payload }));
-        break;
-      case "run_state":
-        setState((s) => ({ ...s, running: msg.payload.running }));
-        break;
-      case "status":
-        if (typeof msg.payload === "object" && msg.payload !== null) {
-          setState((s) => ({
-            ...s,
-            status: msg.payload as StatusPayload,
-          }));
-        }
-        break;
-      case "error":
-        setState((s) => ({ ...s, error: msg.payload, running: false }));
-        break;
-    }
-  }, []);
+        case "raster":
+          setState((s) => ({ ...s, raster: msg.payload }));
+          break;
+        case "spike_frame":
+          setState((s) => ({ ...s, spikeFrame: msg.payload }));
+          break;
+        case "run_state":
+          setState((s) => ({ ...s, running: msg.payload.running }));
+          break;
+        case "status":
+          if (typeof msg.payload === "object" && msg.payload !== null) {
+            setState((s) => ({
+              ...s,
+              status: msg.payload as StatusPayload,
+            }));
+          }
+          break;
+        case "error":
+          setState((s) => ({ ...s, error: msg.payload, running: false }));
+          break;
+      }
+    },
+    [training],
+  );
 
-  const { connected, send } = useWebSocket({ onMessage: handleMessage });
+  const { connected, send, sendTrain, sendNamed } = useWebSocket({
+    onMessage: handleMessage,
+  });
+
+  useEffect(() => {
+    if (connected) sendNamed("list_models", "");
+  }, [connected, sendNamed]);
 
   const patchConfig = (patch: Partial<EncodeConfig>) =>
     setConfig((c) => ({ ...c, ...patch }));
@@ -101,76 +113,82 @@ export default function App() {
     send("stop", config);
   };
 
+  const train = () => {
+    training.reset();
+    training.setRunning(true);
+    sendTrain("train", training.state.config);
+  };
+
+  const stopTrain = () => {
+    training.setRunning(false);
+    sendTrain("stop_train", training.state.config);
+  };
+
+  const predict = () => sendTrain("predict", training.state.config);
+
+  const saveModel = (name: string) =>
+    sendNamed("save_model", name);
+
+  const loadModel = (name: string) => {
+    training.patch({ checkpoint: name });
+    sendTrain("load_model", { ...training.state.config, checkpoint: name }, name);
+  };
+
+  const deleteModel = (name: string) => sendNamed("delete_model", name);
+
   return (
     <div className="app">
-      <header className="topbar">
-        <h1>SNN Interpreter</h1>
-        <span className={`dot ${connected ? "ok" : "bad"}`} />
-        <span>{connected ? "connected" : "disconnected"}</span>
-        {state.status && (
-          <span className="status">
-            {state.status.coding} · {state.status.num_steps} steps
-            {state.status.target !== null && state.status.target !== undefined
-              ? ` · target ${state.status.target}`
-              : ""}
-          </span>
-        )}
-      </header>
+      <TopBar connected={connected} status={state.status} />
 
       <div className="grid">
         <div className="col-controls">
           <Controls config={config} onChange={patchConfig} />
           <div className="panel actions">
-            <button className="apply" onClick={run} disabled={!connected || state.running}>
+            <button
+              className="apply"
+              onClick={run}
+              disabled={!connected || state.running}
+            >
               {connected ? "▶ Run" : "Connecting…"}
             </button>
-            <button className="apply stop" onClick={stop} disabled={!connected || !state.running}>
+            <button
+              className="apply stop"
+              onClick={stop}
+              disabled={!connected || !state.running}
+            >
               ■ Stop
             </button>
           </div>
         </div>
 
-        <div className="col-viz">
-          <div className="row">
-            <HeatmapCanvas
-              data={state.sample}
-              palette="binary"
-              label="Input sample"
-              width={224}
-              height={224}
-            />
-            <HeatmapCanvas
-              data={state.spikeFrame}
-              palette="plasma"
-              label="Spike frame"
-              width={224}
-              height={224}
-            />
-            {(state.reconGain1 || state.reconLow) && (
-              <div className="panel">
-                <div className="panel-title">Reconstruction</div>
-                <div className="pair">
-                  <HeatmapCanvas
-                    data={state.reconGain1}
-                    palette="binary"
-                    label="Gain=1"
-                    width={120}
-                    height={120}
-                  />
-                  <HeatmapCanvas
-                    data={state.reconLow}
-                    palette="binary"
-                    label="Low gain"
-                    width={120}
-                    height={120}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+        <ViewerPanels
+          sample={state.sample}
+          spikeFrame={state.spikeFrame}
+          reconGain1={state.reconGain1}
+          reconLow={state.reconLow}
+          raster={state.raster}
+        />
 
-          <RasterCanvas raster={state.raster} label="Spike raster" />
-        </div>
+        <TrainingPanel
+          config={training.state.config}
+          datasets={training.state.datasets}
+          models={training.state.models}
+          onChange={training.patch}
+          onTrain={train}
+          onStop={stopTrain}
+          onPredict={predict}
+          onSave={saveModel}
+          onLoad={loadModel}
+          onDelete={deleteModel}
+          running={training.state.running}
+          connected={connected}
+          loss={training.state.loss}
+          trainAccuracy={training.state.trainAccuracy}
+          testAccuracy={training.state.testAccuracy}
+          last={training.state.last}
+          prediction={training.state.prediction}
+          loaded={training.state.loaded}
+        />
       </div>
 
       {state.error && <div className="error">{state.error}</div>}

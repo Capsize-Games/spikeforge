@@ -45,3 +45,24 @@ export const HELP: Record<string, string> = {
     "Upper bound on the random spiking probability before conversion. " +
     "Higher values give denser random spike trains.",
 };
+
+export const TRAIN_HELP: Record<string, string> = {
+  dataset:
+    "Which dataset to train on. All are normalised to 28x28 grayscale; " +
+    "the class count adjusts the output layer automatically.",
+  hidden:
+    "Number of neurons in the hidden LIF layer between the input and " +
+    "output layers.",
+  beta:
+    "Membrane potential decay rate of each LIF neuron. Higher beta means " +
+    "the neuron remembers its state longer.",
+  lr: "Adam learning rate. Larger values learn faster but can be unstable.",
+  epochs: "How many full passes over the training subset to run.",
+  num_steps:
+    "Time steps simulated per sample. The network accumulates output " +
+    "spikes across these steps.",
+  subset:
+    "Dataset reduction factor for training. Higher subset = less data = " +
+    "faster runs.",
+  batch_size: "Number of samples per training batch.",
+};

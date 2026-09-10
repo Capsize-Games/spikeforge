@@ -10,3 +10,6 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = os.environ.get("SNN_DATA_DIR", str(_REPO_ROOT / "build"))
 
 MNIST_PATH = os.path.join(DATA_DIR, "mnist")
+
+# Where saved model checkpoints live (separate from datasets).
+MODEL_DIR = os.environ.get("SNN_MODEL_DIR", os.path.join(DATA_DIR, "models"))
