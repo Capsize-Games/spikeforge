@@ -133,11 +133,13 @@ export function ViewerPanels({
       <RasterCanvas
         raster={rasters.hidden}
         label="Hidden layer"
+        highlightStep={playing ? spikeStep : null}
         emptyNote="train or load a model to see layer activity"
       />
       <RasterCanvas
         raster={rasters.output}
         label="Output layer"
+        highlightStep={playing ? spikeStep : null}
         emptyNote="train or load a model to see layer activity"
       />
     </div>
