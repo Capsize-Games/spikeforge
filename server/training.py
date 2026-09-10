@@ -56,13 +56,25 @@ class TrainingService:
         return self._thread is not None and self._thread.is_alive()
 
     def start(self, config, encode=None):
-        """Spawn a worker thread that trains and enqueues metrics."""
+        """Spawn a worker that builds the engine, then trains."""
         self._stop.clear()
-        self._engine = self._make_engine(config, encode, config.checkpoint)
         self._thread = threading.Thread(
-            target=self._run, args=(self._engine,), daemon=True
+            target=self._build_and_run, args=(config, encode), daemon=True
         )
         self._thread.start()
+
+    def _build_and_run(self, config, encode):
+        """Build the engine off the event loop, then stream metrics."""
+        try:
+            engine = self._make_engine(config, encode, config.checkpoint)
+        except Exception as exc:  # surface build failures to the client
+            self._put({"type": "error", "payload": str(exc)})
+            self._put({"type": "train_state",
+                       "payload": {"running": False, "reason": "error"}})
+            self._thread = None
+            return
+        self._engine = engine
+        self._run(engine)
 
     def adopt(self, checkpoint, config, encode=None):
         """Load a checkpoint into a ready-to-continue engine."""
@@ -98,10 +110,9 @@ class TrainingService:
         try:
             last = time.perf_counter()
             for metrics in engine.train(should_stop=self._stop.is_set):
-                now = time.perf_counter()
+                metrics["step_ms"] = round((time.perf_counter() - last) * 1000.0, 1)
+                last = time.perf_counter()
                 metrics["device"] = engine.device
-                metrics["step_ms"] = round((now - last) * 1000.0, 1)
-                last = now
                 self._put({"type": "train_metrics", "payload": metrics})
             self._put({"type": "train_state",
                        "payload": {"running": False, "reason": "finished",

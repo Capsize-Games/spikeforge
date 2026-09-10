@@ -1,7 +1,7 @@
 export type CodingType = "rate" | "latency" | "delta" | "random";
 
 /** Compute device selectable for training. */
-export type DeviceChoice = "cpu" | "gpu";
+export type DeviceChoice = "auto" | "cpu" | "gpu";
 
 /** Which layer produced a raster / spike frame. */
 export type RasterSource = "input" | "hidden" | "output";
@@ -94,7 +94,7 @@ export const defaultTrainConfig: TrainConfig = {
   subset: 10,
   batch_size: 64,
   checkpoint: null,
-  device: "gpu",
+  device: "auto",
   encode: { ...defaultConfig },
 };
 

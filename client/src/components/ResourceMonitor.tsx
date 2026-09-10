@@ -64,7 +64,8 @@ export function ResourceMonitor({ stats, requested }: Props) {
       <MemoryBar label="CPU RAM" block={stats?.cpu ?? null} />
       <MemoryBar label="GPU VRAM" block={stats?.gpu ?? null} />
       <div className="resource-device">
-        selected <b>{requested.toUpperCase()}</b>
+        selected{" "}
+        <b>{requested === "auto" ? "AUTO" : requested.toUpperCase()}</b>
         {active ? (
           <>
             {" "}
@@ -72,6 +73,12 @@ export function ResourceMonitor({ stats, requested }: Props) {
           </>
         ) : null}
       </div>
+      {requested === "auto" && active && (
+        <div className="muted">
+          Auto benchmarked this configuration and chose{" "}
+          {active === "cuda" ? "GPU" : "CPU"}.
+        </div>
+      )}
       {requested === "gpu" && !gpuAvailable && (
         <div className="mismatch">
           GPU unavailable in this runtime — training falls back to CPU.

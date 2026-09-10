@@ -29,21 +29,22 @@ class TrainingEngine(device_mod.DeviceMixin):
         self._num_steps = num_steps
         self._subset = subset
         self._batch_size = batch_size
-        self._checkpoint = checkpoint
         self._encode = encode
-        self._setup_input(encode, input_mode)
-        self._set_device(device)
+        self._setup_input(encode, input_mode, device)
         self._build(lr)
         if checkpoint:
             self._restore(checkpoint)
 
-    def _setup_input(self, encode, input_mode):
-        """Resolve the encoder and the effective input mode."""
+    def _setup_input(self, encode, input_mode, device):
+        """Resolve the encoder, effective input mode, and compute device."""
         self._encoder = (SpikeEncoder.from_encode_config(encode)
                          if encode is not None else None)
         self._explicit_mode = input_mode
         coding = encode.coding if encode is not None else "raw"
         self._input_mode = input_mode or coding
+        self._set_device(device, encoder=self._encoder,
+                         hidden=self._hidden, num_classes=self._num_classes,
+                         num_steps=self._num_steps, batch_size=self._batch_size)
 
     def _build(self, lr):
         """Create the network, optimiser, and lazy test-batch cache."""

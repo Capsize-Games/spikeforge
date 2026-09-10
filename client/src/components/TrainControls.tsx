@@ -166,6 +166,7 @@ export function TrainControls({
           }
           disabled={busy}
         >
+          <option value="auto">Auto (pick the faster)</option>
           <option value="gpu" disabled={!gpuAvailable}>
             GPU{gpuAvailable ? "" : " (unavailable)"}
           </option>

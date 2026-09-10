@@ -78,12 +78,12 @@ export const TRAIN_HELP: Record<string, string> = {
     "faster runs.",
   batch_size: "Number of samples per training batch.",
   device:
-    "Compute device for training and inference. GPU defaults on when " +
-    "available and falls back to CPU otherwise. Note: for this small " +
-    "fully-connected net the GPU is usually no faster than the CPU — the " +
-    "bottleneck is CPU spike encoding and the per-step loop. GPU pays off " +
-    "mainly with a large hidden layer and batch size. Watch 'ms/step' in " +
-    "Status to compare.",
+    "Compute device for training and inference. Auto (default) benchmarks " +
+    "this exact configuration — encoding, transfer, forward and backward — " +
+    "on CPU and GPU and picks the faster one; it falls back to CPU without " +
+    "a GPU. For this small net CPU often wins because per-op launch " +
+    "overhead dominates, while large hidden layers and batch sizes favour " +
+    "the GPU. Watch 'ms/step' in Status to see the effect.",
   resources:
     "Live CPU RAM and GPU VRAM for the machine running the server. CPU RAM " +
     "covers the whole host; VRAM is the GPU's memory. 'active' shows the " +

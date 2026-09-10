@@ -42,7 +42,7 @@ class TrainConfig(BaseModel):
     subset: int = 10
     batch_size: int = 64
     checkpoint: Optional[str] = None  # load this model to continue
-    device: Literal["cpu", "gpu"] = "gpu"
+    device: Literal["auto", "cpu", "gpu"] = "auto"
     # Encoding settings for spike-input training; num_steps wins over the
     # legacy field above when a coding other than "raw" is active.
     encode: EncodeConfig = Field(default_factory=EncodeConfig)

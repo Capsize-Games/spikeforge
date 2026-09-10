@@ -5,6 +5,8 @@ from typing import Dict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from snn_interpreter import device as device_mod
+
 from server.handlers import dispatch
 from server.messages import send_locked
 from server.schemas import ClientMessage
@@ -12,6 +14,9 @@ from server.session import Session
 from server.web import mount_client
 
 app = FastAPI(title="snn-interpreter server")
+
+# Warm the CUDA context once at startup so training/benchmarks don't stall.
+device_mod.prime()
 
 # Serve the built React app (no-op when client/dist is absent).
 mount_client(app)
