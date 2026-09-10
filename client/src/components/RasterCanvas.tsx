@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { RasterPayload } from "../types";
@@ -61,6 +61,21 @@ export function RasterCanvas({
   summary,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [plotWidth, setPlotWidth] = useState(width);
+
+  // Track the panel width so canvas pixels map 1:1 to display pixels,
+  // which keeps the time axis aligned with the Time cursor slider.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const cw = Math.floor(entries[0].contentRect.width);
+      if (cw > 0) setPlotWidth(cw);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -166,7 +181,9 @@ export function RasterCanvas({
           {actions && <span className="panel-actions">{actions}</span>}
         </div>
       )}
-      <canvas ref={canvasRef} width={width} height={height} />
+      <div className="raster-wrap" ref={wrapRef}>
+        <canvas ref={canvasRef} width={plotWidth} height={height} />
+      </div>
       {summary && <div className="raster-summary">{summary}</div>}
     </div>
   );

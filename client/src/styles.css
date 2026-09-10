@@ -770,9 +770,22 @@ canvas,
   font-variant-numeric: tabular-nums;
 }
 
+/* Inset the track to the raster plot area (padL 46, padR 12) so the
+   cursor lines up with the time axis beneath it. */
 .cursor-range {
-  width: 100%;
+  margin: 0 12px 0 46px;
+  width: calc(100% - 58px);
   accent-color: var(--accent);
+}
+
+.raster-wrap {
+  width: 100%;
+}
+
+.raster-wrap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .sample-wrap.grow {
