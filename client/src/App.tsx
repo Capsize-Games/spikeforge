@@ -76,6 +76,17 @@ export default function App() {
       ) {
         setModelLoading(false);
       }
+      // Refresh the network-activity rasters as soon as a model exists.
+      const trained =
+        msg.type === "train_state" &&
+        msg.payload.running === false &&
+        msg.payload.reason === "finished";
+      if (msg.type === "model_loaded" || trained) {
+        window.setTimeout(
+          () => sendInfer(configRef.current, training.state.config),
+          0,
+        );
+      }
       if (training.handleMessage(msg)) return;
       switch (msg.type) {
         case "config_ack":

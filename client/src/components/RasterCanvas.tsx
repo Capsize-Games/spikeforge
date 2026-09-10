@@ -12,6 +12,8 @@ interface Props {
   actions?: ReactNode;
   /** Time step to spotlight, e.g. while the spike-frame animation plays. */
   highlightStep?: number | null;
+  /** Shown centred when there is no raster yet. */
+  emptyNote?: string;
 }
 
 export function RasterCanvas({
@@ -21,14 +23,27 @@ export function RasterCanvas({
   label,
   actions,
   highlightStep = null,
+  emptyNote,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !raster) return;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    if (!raster) {
+      ctx.fillStyle = "#0d1117";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (emptyNote) {
+        ctx.fillStyle = "#8b949e";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(emptyNote, canvas.width / 2, canvas.height / 2);
+        ctx.textAlign = "start";
+      }
+      return;
+    }
 
     ctx.fillStyle = "#0d1117";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -78,7 +93,7 @@ export function RasterCanvas({
     ctx.fillStyle = "#8b949e";
     ctx.fillText("Time step", padL + plotW / 2 - 18, canvas.height - 6);
     ctx.fillText(String(steps), padL + plotW - 20, canvas.height - 6);
-  }, [raster, width, height, highlightStep]);
+  }, [raster, width, height, highlightStep, emptyNote]);
 
   return (
     <div className="panel">

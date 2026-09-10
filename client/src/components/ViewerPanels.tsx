@@ -130,8 +130,16 @@ export function ViewerPanels({
           </>
         }
       />
-      <RasterCanvas raster={rasters.hidden} label="Hidden layer" />
-      <RasterCanvas raster={rasters.output} label="Output layer" />
+      <RasterCanvas
+        raster={rasters.hidden}
+        label="Hidden layer"
+        emptyNote="train or load a model to see layer activity"
+      />
+      <RasterCanvas
+        raster={rasters.output}
+        label="Output layer"
+        emptyNote="train or load a model to see layer activity"
+      />
     </div>
   );
 }
