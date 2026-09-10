@@ -1,21 +1,16 @@
 import type {
   Compatibility,
-  DeviceChoice,
   InferencePayload,
   ModelLoadedPayload,
   PredictionPayload,
-  SystemStatsPayload,
   TrainMetrics,
 } from "../types";
 import { TRAIN_HELP } from "../helpText";
 import { ClassSpikeBarsFromInference } from "./ClassSpikeBars";
 import { HelpTip } from "./HelpTip";
 import { LineChart } from "./LineChart";
-import { ResourceMonitor } from "./ResourceMonitor";
 
 interface Props {
-  stats: SystemStatsPayload | null;
-  requestedDevice: DeviceChoice;
   loss: number[];
   trainAccuracy: number[];
   testAccuracy: number[];
@@ -48,8 +43,6 @@ function MismatchBanner({ compatibility }: { compatibility: Compatibility }) {
 }
 
 export function TrainingPanel({
-  stats,
-  requestedDevice,
   loss,
   trainAccuracy,
   testAccuracy,
@@ -76,8 +69,6 @@ export function TrainingPanel({
           Run a section from the left column to see output here.
         </div>
       </div>
-
-      <ResourceMonitor stats={stats} requested={requestedDevice} />
 
       {mismatch && compatibility && (
         <MismatchBanner compatibility={compatibility} />

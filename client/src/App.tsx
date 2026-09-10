@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Controls } from "./components/Controls";
+import { ResourceMonitor } from "./components/ResourceMonitor";
 import { Stepper } from "./components/Stepper";
 import { TopBar } from "./components/TopBar";
 import { TrainingPanel } from "./components/TrainingPanel";
@@ -227,22 +228,26 @@ export default function App() {
 
   return (
     <div className="app">
-      <TopBar connected={connected} status={state.status} />
-      <Stepper
-        steps={[
-          { n: "1", label: "Data" },
-          { n: "2", label: "Encoding" },
-          { n: "3", label: "Model" },
-          { n: "4", label: "Train & inspect" },
-        ]}
-      />
-      <p className="intro">
-        Expand a numbered section on the left to change settings — 1 Data · 2
-        Encoding · 3 Model · 4 Train & inspect. The middle shows what the
-        data looks like; the right column shows the results.
-      </p>
+      <header className="app-header">
+        <TopBar connected={connected} status={state.status} />
+      </header>
 
-      <div className="grid">
+      <main className="app-main">
+        <Stepper
+          steps={[
+            { n: "1", label: "Data" },
+            { n: "2", label: "Encoding" },
+            { n: "3", label: "Model" },
+            { n: "4", label: "Train & inspect" },
+          ]}
+        />
+        <p className="intro">
+          Expand a numbered section on the left to change settings — 1 Data · 2
+          Encoding · 3 Model · 4 Train & inspect. The middle shows what the
+          data looks like; the right column shows the results.
+        </p>
+
+        <div className="grid">
         <div className="col-controls">
           <Controls
             config={config}
@@ -277,21 +282,27 @@ export default function App() {
           inference={state.inference}
         />
 
-        <TrainingPanel
-          stats={stats}
-          requestedDevice={training.state.config.device}
-          loss={training.state.loss}
-          trainAccuracy={training.state.trainAccuracy}
-          testAccuracy={training.state.testAccuracy}
-          last={training.state.last}
-          device={training.state.device}
-          inference={state.inference}
-          prediction={training.state.prediction}
-          loaded={training.state.loaded}
-        />
-      </div>
+          <TrainingPanel
+            loss={training.state.loss}
+            trainAccuracy={training.state.trainAccuracy}
+            testAccuracy={training.state.testAccuracy}
+            last={training.state.last}
+            device={training.state.device}
+            inference={state.inference}
+            prediction={training.state.prediction}
+            loaded={training.state.loaded}
+          />
+        </div>
 
-      {state.error && <div className="error">{state.error}</div>}
+        {state.error && <div className="error">{state.error}</div>}
+      </main>
+
+      <footer className="app-footer">
+        <ResourceMonitor
+          stats={stats}
+          requested={training.state.config.device}
+        />
+      </footer>
     </div>
   );
 }

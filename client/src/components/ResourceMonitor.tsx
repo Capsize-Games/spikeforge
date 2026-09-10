@@ -1,6 +1,4 @@
-import { TRAIN_HELP } from "../helpText";
 import type { DeviceChoice, MemoryBlock, SystemStatsPayload } from "../types";
-import { HelpTip } from "./HelpTip";
 
 interface Props {
   stats: SystemStatsPayload | null;
@@ -11,7 +9,7 @@ function gb(bytes: number): string {
   return (bytes / 1024 ** 3).toFixed(1);
 }
 
-function MemoryBar({
+function ResourceItem({
   label,
   block,
 }: {
@@ -20,33 +18,25 @@ function MemoryBar({
 }) {
   if (!block) {
     return (
-      <div className="resource-row">
-        <div className="resource-head">
-          <span>{label}</span>
-          <span className="muted">unavailable</span>
-        </div>
+      <div className="res-item">
+        <span className="res-label">{label}</span>
+        <span className="res-muted">n/a</span>
       </div>
     );
   }
   return (
-    <div className="resource-row">
-      <div className="resource-head">
-        <span>
-          {label}
-          {block.name ? ` · ${block.name}` : ""}
-        </span>
-        <span>
-          {gb(block.used)} / {gb(block.total)} GB in use · {gb(block.available)}{" "}
-          GB free
-        </span>
-      </div>
-      <div className="resource-bar">
-        <div
-          className="resource-fill"
+    <div className="res-item" title={block.name ?? label}>
+      <span className="res-label">{label}</span>
+      <span className="res-value">
+        {gb(block.used)}/{gb(block.total)} GB
+      </span>
+      <span className="res-track">
+        <span
+          className="res-fill"
           style={{ width: `${Math.min(block.percent, 100)}%` }}
         />
-      </div>
-      <div className="resource-pct">{block.percent.toFixed(1)}% used</div>
+      </span>
+      <span className="res-muted">{block.percent.toFixed(0)}%</span>
     </div>
   );
 }
@@ -55,36 +45,23 @@ export function ResourceMonitor({ stats, requested }: Props) {
   const device = stats?.device;
   const gpuAvailable = device?.available.includes("gpu") ?? false;
   const active = device?.active;
+  const gpuWarning = requested === "gpu" && !gpuAvailable;
+
   return (
-    <div className="panel resource-monitor">
-      <div className="panel-title">
-        <span>System resources</span>
-        <HelpTip text={TRAIN_HELP.resources} />
+    <div className="res-bar">
+      <ResourceItem label="CPU RAM" block={stats?.cpu ?? null} />
+      <ResourceItem label="GPU VRAM" block={stats?.gpu ?? null} />
+      <div className="res-item">
+        <span className="res-label">Device</span>
+        <span className="res-value">
+          {requested === "auto" ? "AUTO" : requested.toUpperCase()}
+          {active ? ` → ${active === "cuda" ? "GPU" : "CPU"}` : ""}
+        </span>
       </div>
-      <MemoryBar label="CPU RAM" block={stats?.cpu ?? null} />
-      <MemoryBar label="GPU VRAM" block={stats?.gpu ?? null} />
-      <div className="resource-device">
-        selected{" "}
-        <b>{requested === "auto" ? "AUTO" : requested.toUpperCase()}</b>
-        {active ? (
-          <>
-            {" "}
-            · active <b>{active === "cuda" ? "GPU" : "CPU"}</b>
-          </>
-        ) : null}
-      </div>
-      {requested === "auto" && active && (
-        <div className="muted">
-          Auto benchmarked this configuration and chose{" "}
-          {active === "cuda" ? "GPU" : "CPU"}.
-        </div>
+      {gpuWarning && (
+        <span className="res-warn">GPU unavailable — using CPU</span>
       )}
-      {requested === "gpu" && !gpuAvailable && (
-        <div className="mismatch">
-          GPU unavailable in this runtime — training falls back to CPU.
-        </div>
-      )}
-      {!stats && <div className="muted">waiting for stats…</div>}
+      {!stats && <span className="res-muted">waiting for stats…</span>}
     </div>
   );
 }
