@@ -15,6 +15,9 @@ export function useServerBootstrap(
     if (!ws.connected) return;
     ws.sendNamed("list_models", "");
     ws.sendAction("surrogates");
+    ws.sendAction("targets");
+    // Seed the targets panel with the always-available reference report.
+    ws.sendNamed("deployment_report", "reference");
     // Populate the viewer immediately so every panel is shown at rest.
     ws.send("configure", configRef.current);
   }, [ws.connected, ws.sendNamed, ws.sendAction, ws.send, configRef]);

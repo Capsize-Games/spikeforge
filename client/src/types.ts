@@ -6,6 +6,7 @@ import type {
   ModelLoadedPayload,
   ModelListPayload,
 } from "./protocolTypes";
+import type { TargetServerMsg } from "./targetTypes";
 
 export type {
   Compatibility,
@@ -218,4 +219,5 @@ export type ServerMsg =
   | { type: "system_stats"; payload: SystemStatsPayload }
   | { type: "download_state"; payload: DownloadState }
   | IntrospectionServerMsg
+  | TargetServerMsg
   | { type: "error"; payload: string };

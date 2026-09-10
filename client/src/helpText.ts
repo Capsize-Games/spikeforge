@@ -124,6 +124,19 @@ export const HELP: Record<string, string> = {
     "highlights the controls or panel it is talking about, so the lesson " +
     "explains the dashboard in place instead of sending you to separate " +
     "documentation.",
+  targets:
+    "Deployment targets from the registry. Each row names its kind, the " +
+    "pip extra that would install its SDK, and whether that SDK is " +
+    "actually present. A target whose SDK is missing is shown as " +
+    "unavailable rather than hidden, so the gap is visible up front.",
+  deployment_report:
+    "How the selected target would run the active topology: nodes it " +
+    "supports, nodes it replaces with a substitute, and nodes it cannot " +
+    "run at all — nothing is silently dropped. 'deployable' is true only " +
+    "when the target is available and every node is supported. When a " +
+    "model and sample are loaded the report adds the reference " +
+    "interpreter's drift check; otherwise that section is omitted, never " +
+    "faked.",
 };
 
 export const TRAIN_HELP: Record<string, string> = {

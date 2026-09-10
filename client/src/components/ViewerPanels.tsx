@@ -1,6 +1,10 @@
 import type { TrajectoryPayload } from "../introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "../nirTypes";
 import type {
+  DeploymentReportPayload,
+  TargetListPayload,
+} from "../targetTypes";
+import type {
   CodingType,
   ExecutionMode,
   InferencePayload,
@@ -14,6 +18,7 @@ import { LoadedModelPanel } from "./LoadedModelPanel";
 import { NetworkActivity } from "./NetworkActivity";
 import { NirGraphPanel } from "./NirGraphPanel";
 import { NirValidationPanel } from "./NirValidationPanel";
+import { TargetsPanel } from "./TargetsPanel";
 import { TimeCursor } from "./TimeCursor";
 import { TrajectoryPanel } from "./TrajectoryPanel";
 
@@ -34,6 +39,8 @@ interface Props {
   trajectory: TrajectoryPayload | null;
   nirGraph: NirGraphPayload | null;
   nirValidation: NirValidationPayload | null;
+  targetList: TargetListPayload | null;
+  deploymentReport: DeploymentReportPayload | null;
   playing: boolean;
   onPlay: () => void;
   onStop: () => void;
@@ -42,6 +49,8 @@ interface Props {
   onRefreshTrajectory: () => void;
   onRefreshNirGraph: () => void;
   onRefreshNirValidation: () => void;
+  onRefreshTargets: () => void;
+  onSelectTarget: (name: string) => void;
   onSwitchToEducational: () => void;
 }
 
@@ -63,6 +72,8 @@ export function ViewerPanels({
   trajectory,
   nirGraph,
   nirValidation,
+  targetList,
+  deploymentReport,
   playing,
   onPlay,
   onStop,
@@ -71,6 +82,8 @@ export function ViewerPanels({
   onRefreshTrajectory,
   onRefreshNirGraph,
   onRefreshNirValidation,
+  onRefreshTargets,
+  onSelectTarget,
   onSwitchToEducational,
 }: Props) {
   return (
@@ -118,6 +131,13 @@ export function ViewerPanels({
       <NirValidationPanel
         validation={nirValidation}
         onRefresh={onRefreshNirValidation}
+      />
+
+      <TargetsPanel
+        list={targetList}
+        report={deploymentReport}
+        onRefresh={onRefreshTargets}
+        onSelectTarget={onSelectTarget}
       />
     </div>
   );

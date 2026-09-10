@@ -46,6 +46,9 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
 - **Event datasets (Phase 4)**: N-MNIST, DVS128 Gesture, CIFAR10-DVS, and
   Spiking Speech Commands through Tonic, with a modality-aware dataset
   picker, an event-to-spike bridge, and polarity-aware rasters (see below)
+- **Targets and interoperability (Phase 5)**: a deployment-target registry
+  with an honest capability matrix, per-target deployment reports, external
+  NIR import/export, and a round-trip fidelity guarantee (see below)
 
 ## Interpreter spine (Phase 1)
 
@@ -426,6 +429,147 @@ of decoding a missing image.
   streams and says so in `origin`/`description` — they are offline
   fixtures, not real recordings.
 
+## Targets and interoperability (Phase 5)
+
+Phase 5 turns an exported NIR graph into a *deployment story* and consumes
+graphs from other frameworks. It adds a deployment-target registry, a
+capability matrix, a per-target deployment report, and an external NIR
+import/export surface with a round-trip fidelity guarantee. Every surface
+(CLI, WebSocket, dashboard) renders from the same payload shapes.
+
+### Target registry and availability model
+
+[`snn_interpreter/targets/`](snn_interpreter/targets/__init__.py:1) declares
+what each target *can* run as a [`TargetSpec`](snn_interpreter/targets/target_spec.py:10):
+its kind, the pip `extra` that would install its SDK, the primitives it
+supports, its substitutions, and its constraints (dtype, timestep,
+quantization). The registry ships:
+
+| Target | Kind | Extra | Notes |
+|---|---|---|---|
+| `reference` | reference | — | In-process NIR interpreter; always available |
+| `lava_loihi2` | hardware | `lava` | Lava SDK path to Intel Loihi 2 |
+| `spinnaker2` | hardware | `spinnaker2` | SpiNNaker2 digital hardware |
+| `speck` | hardware | `speck` (`sinabs`) | SynSense Speck edge chip |
+| `xylo` | hardware | `xylo` (`rockpool`) | SynSense Xylo LIF fabric |
+| `norse` | simulator | `norse` | Norse PyTorch simulator |
+
+SDKs are optional and are reported **honestly**. Availability is resolved on
+demand through one isolated probe
+([`targets/probe.py`](snn_interpreter/targets/probe.py:1) — the only module
+that imports a backend SDK; it imports nothing at module load time). A target
+whose SDK is absent is returned with `"available": false` and named in the
+report notes; it is never hidden or silently treated as ready. Only the
+`reference` target is available by default.
+
+### Capability matrix
+
+[`classify(graph_or_spec, target)`](snn_interpreter/targets/capability_matrix.py:13)
+places every node of a graph in exactly one
+[`CapabilityMatrix`](snn_interpreter/targets/matrix_result.py:10) bucket:
+
+- **supported** — the target runs the node's primitive natively.
+- **substituted** — the target lacks the primitive but declares a replacement
+  (for example Loihi 2 maps `AvgPool2d` to `SumPool2d`; Norse maps `IF` to a
+  `beta=0` `LIF`). The record names the node, the primitive, and its
+  substitute.
+- **unsupported** — no native support and no declared substitute; the node
+  name is reported explicitly.
+
+The three buckets partition the node set, so a node is **never silently
+dropped**.
+
+### Deployment report and `deployable`
+
+[`deployment_report(spec_or_graph, target)`](snn_interpreter/targets/report.py:47)
+returns JSON carrying the classified `nodes` (with per-bucket counts), the
+target's `constraints`, an optional `validation` drift section, and
+human-readable `notes`. `deployable` is true **only** when the target is
+`available` and has zero unsupported nodes; a target with a missing SDK or a
+gap is reported `deployable: false` rather than raising. The `deploy` CLI
+command and the WebSocket `deployment_report` action emit the same payload.
+
+### External NIR import/export and round-trip fidelity
+
+[`snn_interpreter/nir_bridge/`](snn_interpreter/nir_bridge/__init__.py:1)
+grows a cross-library surface:
+
+- [`save_graph`](snn_interpreter/nir_bridge/serialization.py:52) /
+  [`load_graph`](snn_interpreter/nir_bridge/serialization.py:125) persist a
+  graph in a version-stamped JSON envelope. Node semantics stay owned by
+  `nir`'s own `to_dict`/`dict2NIRNode`; numpy values are tagged with dtype and
+  shape, so a reload reconstructs the exact array rather than a rounded list.
+- [`load_external`](snn_interpreter/nir_bridge/ingest.py:21) /
+  [`interpret_graph`](snn_interpreter/nir_bridge/ingest.py:30) /
+  [`interpret_file`](snn_interpreter/nir_bridge/ingest.py:35) ingest a graph
+  produced elsewhere and run it on the independent interpreter, which never
+  touches snnTorch.
+- [`roundtrip`](snn_interpreter/nir_bridge/roundtrip.py:84) persists, reloads,
+  and compares the reloaded interpretation against the in-memory export. The
+  report is `identical: true` only when every spike and membrane trace and the
+  readout match with zero maximum absolute error.
+
+Failures are typed and named, never silent:
+`GraphNotFoundError`, `MalformedGraphError`, `UnknownNodeKindError`, and
+`UnsupportedNodeError` ([`errors.py`](snn_interpreter/nir_bridge/errors.py:1)).
+
+### CLI subcommands
+
+The `verify` CLI gains four subcommands (all print JSON; they exit non-zero
+on a negative result so they double as CI gates):
+
+```bash
+python -m snn_interpreter.cli.verify targets
+python -m snn_interpreter.cli.verify deploy --topology conv_net --target reference
+python -m snn_interpreter.cli.verify deploy --topology conv_net --target xylo
+python -m snn_interpreter.cli.verify roundtrip --topology conv_net
+python -m snn_interpreter.cli.verify ingest --file build/graph.json
+```
+
+`targets` lists the registry with live availability; `deploy` classifies a
+topology against a target and exits `0` only when `deployable`; `roundtrip`
+exits `0` only when the persisted graph is `identical`; `ingest` runs a saved
+external graph and prints its traced nodes, or a typed error with a non-zero
+exit.
+
+### WebSocket actions
+
+Two read-only actions were added, with client types in
+[`client/src/targetTypes.ts`](client/src/targetTypes.ts:1):
+
+| Action | Reply | Payload |
+|---|---|---|
+| `targets` | `target_list` | Availability-annotated target registry |
+| `deployment_report` | `deployment_report` | Capability matrix, constraints, optional drift |
+
+An unknown target or topology emits the existing `error` message. A report is
+still produced when no sample is loaded — the drift section is simply omitted,
+never fabricated.
+
+### TargetsPanel
+
+The dashboard renders a
+[`TargetsPanel`](client/src/components/TargetsPanel.tsx:19): it lists the
+registry (kind, extra, availability), lets you select a target, and shows its
+deployment report as supported/substituted/unsupported buckets, a constraint
+table, and the optional drift table. A report is only shown when its target
+matches the current selection, so a stale reply can never imply support for a
+different target.
+
+### Limitations
+
+- **Only the reference target is available.** The hardware/simulator entries
+  are declarative placeholders; their SDKs are not installed, so they report
+  `available: false`. Wiring a concrete backend is a follow-up decision.
+- **Substitutions are declared, not executed.** The matrix says a target
+  *would* use a substitute primitive; it does not perform the swap.
+- **No hardware runtime is wired.** A deployment report classifies a graph
+  against a target's declared capabilities; it does not compile or run the
+  graph on a device.
+- **Graph exchange uses NIR's node vocabulary.** Import/export round-trips a
+  graph in this project's version-stamped JSON envelope; `nirtorch`-based
+  extraction from arbitrary third-party PyTorch modules is still out of scope.
+
 ## Requirements
 
 - Python 3.8+
@@ -603,14 +747,31 @@ snn_interpreter/
     timing.py                Warmup/repeat call timing
     memory.py                CUDA/RSS/tracemalloc snapshots
     __main__.py              python -m snn_interpreter.benchmark
-  nir_bridge/                NIR export, independent interpreter, validation
+  nir_bridge/                NIR export, interpreter, validation, interop
     api.py                   The only module importing nir/nirtorch
     exporter.py              to_nir(spec, module); graph_summary(...)
     interpreter.py           NirInterpreter: runs a graph without snnTorch
     validator.py             validate(...) -> ValidationReport
     drift.py                 Error metrics between two trajectories
+    serialization.py         save_graph / load_graph (version-stamped JSON)
+    array_codec.py           Tagged numpy encoding for an exact reload
+    ingest.py                load_external / interpret_graph / interpret_file
+    roundtrip.py             Persist + reload + compare graph fidelity
+  targets/                   Deployment targets: spec, matrix, reports
+    target_spec.py           TargetSpec: support, substitutions, constraints
+    catalog.py               Built-in targets (reference + placeholders)
+    registry.py              name -> spec; live availability lookup
+    primitives.py            EMITTED_PRIMITIVES: the mapper's NIR vocabulary
+    probe.py                 The only module importing a backend SDK
+    capability_matrix.py     classify(...) -> per-node CapabilityMatrix
+    matrix_result.py         Buckets, counts, and deployable() semantics
+    node_view.py             Node name/kind view of a spec or graph
+    substitution.py          Substitution record
+    report.py                deployment_report(...) -> JSON
+    summary.py               Availability-annotated registry summaries
   cli/                       Headless commands
     verify.py                export / validate subcommands
+    target_cli.py            targets / deploy / roundtrip / ingest
   exporters/                 matplotlib/GIF/MP4 output -> build/
     exporter.py              Exporter base + build/ output resolution
     plot_utils.py            shared fig/GIF helpers
@@ -624,6 +785,8 @@ server/
   handlers.py                Inbound message routing (encode + train)
   protocol_handlers.py       Router for the NIR + introspection actions
   nir_handlers.py            nir_export / nir_validate handlers
+  target_handlers.py         targets / deployment_report handlers
+  target_payloads.py         JSON payloads for the target actions
   introspection_handlers.py  trajectory / metrics / encoding / surrogate
   introspection_payloads.py  JSON payload builders for introspection
   payloads.py                Model-list / model-load / NIR payload builders
@@ -643,7 +806,7 @@ client/                      Vite + React + TypeScript dashboard
   src/components/            controls, charts, canvas panels (incl. training)
   src/tour/                  guided-walkthrough lessons + target highlighting
   src/styles/                split stylesheet (base/sections/controls/mode/
-                             panels/analysis/tour/...)
+                             panels/analysis/targets/tour/...)
 ```
 
 Code is kept tidy by construction: modules are grouped into focused
@@ -695,6 +858,18 @@ stays under 20 lines, and each class lives in its own file.
   as such in `origin`/`description` and is never passed off as a recording.
   (4) Event datasets need the optional `events` extra; without it they show
   as unavailable and the loader raises `EventsExtraMissingError`.
+- **Target limitations (Phase 5).** (1) Only the in-process `reference`
+  target is available by default; the hardware and simulator entries
+  (`lava_loihi2`, `spinnaker2`, `speck`, `xylo`, `norse`) are declarative
+  placeholders whose SDKs are not installed, so they report
+  `available: false`. (2) Substitutions are declared capabilities, not
+  executed swaps — the matrix states a substitute primitive, it does not
+  transform the graph. (3) No hardware runtime is wired: a deployment report
+  classifies a graph against declared support but neither compiles nor runs
+  it on a device. (4) Graph exchange round-trips through this project's
+  version-stamped JSON envelope over NIR's own node vocabulary;
+  `nirtorch`-based extraction from arbitrary third-party PyTorch modules is
+  still out of scope.
 
 ## License
 

@@ -1,9 +1,10 @@
-"""Headless ``export`` and ``validate`` commands for the NIR bridge.
+"""Headless NIR verify commands: ``export``, ``validate`` and Phase 5c.
 
 Run as ``python -m snn_interpreter.cli.verify export --topology conv_net`` or
 ``python -m snn_interpreter.cli.verify validate --topology conv_net``. The
 ``validate`` command exits non-zero when the report falls outside tolerance,
-so it works as a CI gate.
+so it works as a CI gate. The deployment subcommands (``targets``, ``deploy``,
+``roundtrip``, ``ingest``) are registered from :mod:`.target_cli`.
 """
 
 import argparse
@@ -14,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 
+from snn_interpreter.cli import target_cli
 from snn_interpreter.data.datasets import dataset_info
 from snn_interpreter.data.sample_source import SampleSource
 from snn_interpreter.encoding.spike_encoder import SpikeEncoder
@@ -103,6 +105,7 @@ def _parser() -> argparse.ArgumentParser:
     check.add_argument("--steps", type=int, default=10)
     check.add_argument("--seed", type=int, default=0)
     check.set_defaults(handler=_run_validate)
+    target_cli.add_subcommands(subs)
     return parser
 
 

@@ -179,3 +179,21 @@ async def send_nir_validation(
     await send_locked(ws, session, {
         "type": "nir_validation", "payload": payload,
     })
+
+
+async def send_target_list(
+    ws: WebSocket, session: Session, payload: Dict[str, Any]
+) -> None:
+    """Send the availability-annotated target registry to the client."""
+    await send_locked(ws, session, {
+        "type": "target_list", "payload": payload,
+    })
+
+
+async def send_deployment_report(
+    ws: WebSocket, session: Session, payload: Dict[str, Any]
+) -> None:
+    """Send a deployment report to the client."""
+    await send_locked(ws, session, {
+        "type": "deployment_report", "payload": payload,
+    })

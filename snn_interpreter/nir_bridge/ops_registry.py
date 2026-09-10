@@ -26,6 +26,7 @@ OPS: Dict[str, NodeOp] = {
     "SumPool2d": ops_linear.apply_sumpool,
     "LI": ops_neuron.apply_li,
     "LIF": ops_neuron.apply_lif,
+    "IF": ops_neuron.apply_if,
     "CubaLIF": ops_neuron.apply_cuba,
     "Threshold": ops_neuron.apply_threshold,
     "Scale": ops_neuron.apply_scale,
@@ -33,9 +34,9 @@ OPS: Dict[str, NodeOp] = {
 }
 
 #: Node kinds whose output is a binary spike train.
-SPIKING_KINDS = ("Threshold", "LIF", "CubaLIF")
+SPIKING_KINDS = ("Threshold", "LIF", "IF", "CubaLIF")
 #: Node kinds that expose a membrane potential trace.
-INTEGRATOR_KINDS = ("LI", "LIF", "CubaLIF")
+INTEGRATOR_KINDS = ("LI", "LIF", "IF", "CubaLIF")
 #: Node kinds that consume multi-dimensional (spatial) frames.
 SPATIAL_KINDS = ("Conv2d", "AvgPool2d", "SumPool2d", "Flatten")
 #: Every node kind the interpreter accepts, including the virtual nodes.

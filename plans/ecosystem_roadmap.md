@@ -275,6 +275,24 @@ isolated-download worker with its progress UI.
 
 ### Phase 5 — Hardware Targets and Cross-Library Interop
 
+> **Status — delivered (verified in Phase 5d).** The `targets/` registry
+> ships six entries (the always-available in-process `reference` plus honest
+> `lava_loihi2`/`spinnaker2`/`speck`/`xylo`/`norse` placeholders) resolved
+> through one isolated SDK probe, and a capability matrix that buckets every
+> node as supported, substituted, or unsupported — never silently dropped.
+> `deployment_report` yields a per-target report whose `deployable` flag is
+> true only for an available, gap-free target. The NIR bridge adds
+> `save_graph`/`load_graph`, `load_external`/`interpret_graph`/
+> `interpret_file`, and `roundtrip` with typed graph errors; `roundtrip`
+> reports `identical: true` with zero drift for `conv_net`. The `verify` CLI
+> gains `targets`/`deploy`/`roundtrip`/`ingest`, the server dispatches the
+> `targets`/`deployment_report` actions (`target_list`/`deployment_report`
+> replies), and the dashboard renders a `TargetsPanel`. The Python suite is
+> green at 371 tests (up from 305), `ruff` is clean, and the client builds.
+> Deferred with intent: only `reference` is available (hardware SDKs are not
+> installed), substitutions are declared rather than executed, and no
+> hardware runtime is wired yet.
+
 **Objective:** turn the NIR graph into deployments and consume graphs from
 other frameworks.
 

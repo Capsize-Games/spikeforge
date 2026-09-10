@@ -6,6 +6,10 @@ import type {
 } from "./introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
 import type {
+  DeploymentReportPayload,
+  TargetListPayload,
+} from "./targetTypes";
+import type {
   DownloadState,
   InferencePayload,
   RasterPayload,
@@ -47,6 +51,10 @@ export interface ViewerState {
   surrogateCurve: SurrogateCurvePayload | null;
   nirGraph: NirGraphPayload | null;
   nirValidation: NirValidationPayload | null;
+  /** Deployment target registry with live availability. */
+  targetList: TargetListPayload | null;
+  /** Last deployment report; only rendered when its target matches. */
+  deploymentReport: DeploymentReportPayload | null;
 }
 
 export type ViewerAction =
@@ -81,6 +89,8 @@ export function createInitialViewerState(autoPredict: boolean): ViewerState {
     surrogateCurve: null,
     nirGraph: null,
     nirValidation: null,
+    targetList: null,
+    deploymentReport: null,
   };
 }
 
@@ -103,6 +113,9 @@ function clearStream(state: ViewerState): ViewerState {
     trajectory: null,
     metrics: null,
     encodingReport: null,
+    // The report classifies the current topology, so a reconfigure stales it;
+    // the registry itself is topology-independent and survives.
+    deploymentReport: null,
   };
 }
 
@@ -184,6 +197,10 @@ function applyMessage(state: ViewerState, msg: ServerMsg): ViewerState {
       return { ...state, nirGraph: msg.payload };
     case "nir_validation":
       return { ...state, nirValidation: msg.payload };
+    case "target_list":
+      return { ...state, targetList: msg.payload };
+    case "deployment_report":
+      return { ...state, deploymentReport: msg.payload };
     case "error":
       return { ...state, error: msg.payload, running: false };
     default:

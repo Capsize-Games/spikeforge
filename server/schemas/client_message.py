@@ -18,6 +18,7 @@ class ClientMessage(BaseModel):
         "cancel_download", "nir_export", "nir_validate",
         "trajectory", "metrics", "encoding_report",
         "surrogates", "surrogate_curve", "benchmark",
+        "targets", "deployment_report",
     ] = "configure"
     config: EncodeConfig = Field(default_factory=EncodeConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)

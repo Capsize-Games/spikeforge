@@ -99,6 +99,13 @@ export function useModelActions(options: ActionsOptions) {
   const requestNirValidate = () =>
     ws.sendTrain("nir_validate", training.state.config);
 
+  /** Fetch the availability-annotated deployment target registry. */
+  const requestTargets = () => ws.sendAction("targets");
+
+  /** Request the deployment report for the named target. */
+  const requestDeploymentReport = (target: string) =>
+    ws.sendNamed("deployment_report", target);
+
   const saveModel = (name: string) => ws.sendNamed("save_model", name);
   const newModel = () => ws.sendNamed("new_model", "");
 
@@ -133,5 +140,7 @@ export function useModelActions(options: ActionsOptions) {
     requestBenchmark,
     requestNirExport,
     requestNirValidate,
+    requestTargets,
+    requestDeploymentReport,
   };
 }

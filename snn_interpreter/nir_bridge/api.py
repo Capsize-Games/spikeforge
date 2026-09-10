@@ -84,3 +84,36 @@ def node_class(name: str) -> Optional[type]:
         return None
     candidate = getattr(nir_module, name, None)
     return candidate if isinstance(candidate, type) else None
+
+
+def available() -> bool:
+    """Return True when the ``nir`` package can be imported."""
+    return _safe_import("nir") is not None
+
+
+def is_serializable_node(kind: Any) -> bool:
+    """Return True when ``nir`` can rebuild a node of type ``kind``.
+
+    ``nir.str2NIRNode`` is the resolver its own ``dict2NIRNode`` uses, so a
+    ``False`` result means a stored node kind would fail to load.
+    """
+    nir_module = _safe_import("nir")
+    resolver = getattr(nir_module, "str2NIRNode", None) if nir_module else None
+    if not isinstance(kind, str) or resolver is None:
+        return False
+    try:
+        resolver(kind)
+    except (AssertionError, KeyError):
+        return False
+    return True
+
+
+def node_from_dict(payload: Dict[str, Any]) -> Optional[Any]:
+    """Rebuild a ``nir`` node from a plain dict, or ``None`` if unavailable.
+
+    This is the inverse of ``NIRNode.to_dict`` and keeps every serialization
+    detail owned by the upstream package rather than reimplemented here.
+    """
+    nir_module = _safe_import("nir")
+    builder = getattr(nir_module, "dict2NIRNode", None) if nir_module else None
+    return builder(payload) if builder is not None else None

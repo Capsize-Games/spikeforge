@@ -84,6 +84,23 @@ def apply_lif(node: Any, x: torch.Tensor, state: Any) -> Result:
     return spike, stored, membrane
 
 
+def apply_if(node: Any, x: torch.Tensor, state: Any) -> Result:
+    """Integrate without leak (``v += R*I``), then apply the hard reset.
+
+    ``nir.IF`` has no leak term, unlike ``nir.LIF``, so it needs its own
+    update rather than the zero-order-hold form used for leaky neurons.
+    """
+    v_prev = state if state is not None else torch.zeros_like(x)
+    membrane = v_prev + as_tensor(node.r, x) * x
+    spike, stored = fire(
+        membrane,
+        as_tensor(node.v_threshold, x),
+        as_tensor(node.v_reset, x),
+        x,
+    )
+    return spike, stored, membrane
+
+
 def _cuba_prev(
     state: Any, x: torch.Tensor
 ) -> Tuple[torch.Tensor, torch.Tensor]:

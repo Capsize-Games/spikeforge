@@ -17,6 +17,7 @@ class ServerMessage(BaseModel):
         "nir_graph", "nir_validation",
         "trajectory", "metrics", "encoding_report",
         "surrogate_list", "surrogate_curve", "benchmark",
+        "target_list", "deployment_report",
     ]
     payload: Any = None
     source: Optional[str] = None

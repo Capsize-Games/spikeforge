@@ -138,6 +138,8 @@ export default function App() {
             trajectory={viewer.state.trajectory}
             nirGraph={viewer.state.nirGraph}
             nirValidation={viewer.state.nirValidation}
+            targetList={viewer.state.targetList}
+            deploymentReport={viewer.state.deploymentReport}
             playing={viewer.state.running}
             onPlay={actions.playPreview}
             onStop={actions.stopPreview}
@@ -148,6 +150,8 @@ export default function App() {
             onRefreshTrajectory={actions.requestTrajectory}
             onRefreshNirGraph={actions.requestNirExport}
             onRefreshNirValidation={actions.requestNirValidate}
+            onRefreshTargets={actions.requestTargets}
+            onSelectTarget={actions.requestDeploymentReport}
             onSwitchToEducational={() =>
               training.patch({ mode: "educational" })
             }
