@@ -783,11 +783,10 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 
-/* Inset the track to the raster plot area (padL 46, padR 12) so the
-   cursor lines up with the time axis beneath it. */
+/* The raster plot now spans the full panel width, so the track does too. */
 .cursor-range {
-  margin: 0 12px 0 46px;
-  width: calc(100% - 58px);
+  width: 100%;
+  margin: 0;
   accent-color: var(--accent);
 }
 

@@ -98,9 +98,10 @@ export function RasterCanvas({
 
     const steps = max1(raster.num_steps);
     const neurons = max1(raster.num_neurons);
-    const padL = 46;
+    const padL = 0;
+    const padR = 0;
     const padB = 22;
-    const plotW = canvas.width - padL - 12;
+    const plotW = canvas.width - padL - padR;
     const plotH = canvas.height - padB - 14;
     const bandH = plotH / neurons;
 
@@ -148,19 +149,28 @@ export function RasterCanvas({
     }
 
     ctx.font = "10px sans-serif";
-    ctx.fillStyle = "#8b949e";
-    if (yTitle) ctx.fillText(yTitle, 6, 18);
+    if (yTitle) {
+      ctx.fillStyle = "rgba(13, 17, 23, 0.75)";
+      ctx.fillRect(2, 2, ctx.measureText(yTitle).width + 8, 12);
+      ctx.fillStyle = "#8b949e";
+      ctx.fillText(yTitle, 5, 12);
+    }
     if (yLabels && yLabels.length === neurons && neurons <= 16) {
       ctx.font = "9px sans-serif";
-      ctx.textAlign = "right";
+      ctx.textAlign = "left";
       for (let i = 0; i < neurons; i++) {
-        ctx.fillText(yLabels[i] ?? "", padL - 6, yFor(rank[i], neurons, plotH) + 3);
+        const y = yFor(rank[i], neurons, plotH) + 3;
+        ctx.fillStyle = "rgba(13, 17, 23, 0.75)";
+        ctx.fillRect(1, y - 7, 13, 9);
+        ctx.fillStyle = "#8b949e";
+        ctx.fillText(yLabels[i] ?? "", 3, y);
       }
       ctx.textAlign = "start";
     }
     ctx.font = "10px sans-serif";
-    ctx.fillText("Time step", padL + plotW / 2 - 18, canvas.height - 6);
-    ctx.fillText(String(steps), padL + plotW - 20, canvas.height - 6);
+    ctx.fillStyle = "#8b949e";
+    ctx.fillText("Time step", plotW / 2 - 18, canvas.height - 6);
+    ctx.fillText(String(steps), plotW - 20, canvas.height - 6);
   }, [
     raster,
     width,
