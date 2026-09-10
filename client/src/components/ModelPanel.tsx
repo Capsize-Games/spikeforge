@@ -13,7 +13,11 @@ interface Props {
   onSave: (name: string) => void;
 }
 
-/** Minimal model manager: start fresh, load a checkpoint, or save one. */
+/**
+ * Model manager with two isolated workflows: loading an existing checkpoint
+ * and saving the current one. Only the primary action of the active tab is
+ * highlighted, so the actions never compete for attention.
+ */
 export function ModelPanel({
   models,
   current,
@@ -24,77 +28,108 @@ export function ModelPanel({
   onLoad,
   onSave,
 }: Props) {
+  const [tab, setTab] = useState<"load" | "save">("load");
   const [selected, setSelected] = useState("");
   const [name, setName] = useState("my_model");
   const disabled = !connected || busy || loading;
 
   return (
-    <div className="panel model-panel">
-      <div className="model-head">
-        <span className="panel-title">Model</span>
-        <span
-          className={`model-chip ${current ? "on" : ""} ${loading ? "loading" : ""}`}
-        >
+    <section className="model-panel">
+      <header className="model-head">
+        <span className="model-title">Model</span>
+        <span className="model-current">
+          <span className="model-current-label">Current:</span>
           {loading ? (
-            <>
+            <span className="model-loading">
               <span className="spinner" />
               loading…
-            </>
+            </span>
           ) : (
-            current ?? "none loaded"
+            <span className={`model-chip ${current ? "on" : ""}`}>
+              {current ?? "none"}
+            </span>
           )}
         </span>
-      </div>
+      </header>
 
-      <div className="model-row">
-        <select
-          className="text-input"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          disabled={disabled || models.length === 0}
-          aria-label="Saved models"
-        >
-          <option value="">
-            {models.length ? "load saved model…" : "no saved models"}
-          </option>
-          {models.map((m) => (
-            <option key={m.name} value={m.name}>
-              {m.name}
-            </option>
-          ))}
-        </select>
+      <div className="tabs" role="tablist" aria-label="Model actions">
         <button
-          className="apply small"
-          onClick={() => selected && onLoad(selected)}
-          disabled={disabled || !selected}
+          type="button"
+          role="tab"
+          aria-selected={tab === "load"}
+          className={`tab ${tab === "load" ? "active" : ""}`}
+          onClick={() => setTab("load")}
         >
-          Load
+          Load model
         </button>
         <button
-          className="apply small ghost"
-          onClick={onNew}
-          disabled={!connected}
-          title="Unload the current model"
+          type="button"
+          role="tab"
+          aria-selected={tab === "save"}
+          className={`tab ${tab === "save" ? "active" : ""}`}
+          onClick={() => setTab("save")}
         >
-          New
+          Save as
         </button>
       </div>
 
-      <div className="model-row">
-        <input
-          className="text-input"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="save as…"
-        />
-        <button
-          className="apply small"
-          onClick={() => onSave(name)}
-          disabled={disabled || !name.trim()}
-        >
-          Save
-        </button>
-      </div>
-    </div>
+      {tab === "load" ? (
+        <div className="model-block">
+          <div className="control-row">
+            <select
+              className="text-input"
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              disabled={disabled || models.length === 0}
+              aria-label="Saved models"
+            >
+              <option value="">
+                {models.length ? "choose a saved model…" : "no saved models"}
+              </option>
+              {models.map((m) => (
+                <option key={m.name} value={m.name}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <button
+              className="apply small"
+              onClick={() => selected && onLoad(selected)}
+              disabled={disabled || !selected}
+            >
+              Load
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="link model-new"
+            onClick={onNew}
+            disabled={!connected}
+          >
+            ✕ New model (clear current)
+          </button>
+        </div>
+      ) : (
+        <div className="model-block">
+          <div className="control-row">
+            <input
+              className="text-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="model name…"
+              aria-label="Model name"
+            />
+            <button
+              className="apply small"
+              onClick={() => onSave(name)}
+              disabled={disabled || !name.trim()}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

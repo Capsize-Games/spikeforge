@@ -773,26 +773,41 @@ canvas.heatmap-fluid {
   aspect-ratio: 1 / 1;
 }
 
-/* --- model manager panel --- */
+/* --- model manager --- */
 .model-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: #12171e;
 }
 
 .model-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
 
-.model-head .panel-title {
-  margin: 0;
+.model-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.model-current {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .model-chip {
-  max-width: 62%;
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -807,12 +822,11 @@ canvas.heatmap-fluid {
   border-color: rgba(63, 185, 80, 0.5);
 }
 
-.model-chip.loading {
+.model-loading {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   color: var(--accent);
-  border-color: rgba(88, 166, 255, 0.5);
 }
 
 .spinner {
@@ -831,12 +845,68 @@ canvas.heatmap-fluid {
   }
 }
 
-.model-panel .model-row .text-input {
-  flex: 1;
-  min-width: 0;
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
 }
 
-.model-panel .apply.small {
-  margin-top: 0;
+.tab {
+  flex: 1;
+  padding: 7px 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.model-block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-row .text-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+}
+
+.control-row .apply.small {
   flex: 0 0 auto;
+  margin-top: 0;
+  height: 30px;
+  padding: 0 14px;
+}
+
+.model-new {
+  align-self: flex-start;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.model-new:not(:disabled):hover {
+  color: var(--bad);
+}
+
+.model-new:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
