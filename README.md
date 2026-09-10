@@ -32,6 +32,67 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
   management, predictions)
 - **Compute selection**: a CPU/GPU device dropdown (GPU by default, with
   automatic CPU fallback) and a live CPU-RAM / VRAM resource monitor
+- **Interpreter spine (Phase 1)**: topology presets, a neuron registry, NIR
+  export, an independent NIR interpreter, and numerical drift validation
+  (see below)
+
+## Interpreter spine (Phase 1)
+
+Phase 1 lifts the models onto the Neuromorphic Intermediate Representation
+([NIR](https://github.com/neuromorphs/NIR)) and proves the translation. A
+model is declared once as a `TopologySpec` and rendered twice: into the
+snnTorch module that trains, and into the `nir.NIRGraph` that exports.
+
+### Topology presets
+
+Pick a topology by name — the training server takes a `topology` field and
+the CLI takes `--topology`:
+
+| Preset | Shape |
+|---|---|
+| `fc_legacy` | The original two-layer FC LIF `SpikingNet` (default) |
+| `fc_small` | Small FC LIF with an explicit flatten entry stage |
+| `conv_net` | Conv/pool feature extractor with a linear LIF readout |
+| `recurrent_net` | FC LIF with a one-step delayed feedback edge |
+
+`fc_legacy` stays the default and keeps `SpikingNet`'s
+`_fc1`/`_lif1`/`_fc2`/`_lif2` state-dict keys, so existing checkpoints load
+and infer unchanged.
+
+### Neuron registry
+
+`snn_interpreter/neurons/` maps a neuron name to its snnTorch factory and
+its canonical NIR parameter contract. The registry ships `leaky`,
+`lapicque`, `synaptic`, and `recurrent` (RLeaky) neurons.
+
+### NIR export, interpretation, and validation
+
+- `to_nir(spec, module)` exports a JSON-able `nir.NIRGraph`; `graph_summary`
+  describes its nodes and edges.
+- `NirInterpreter` executes the exported graph independently of snnTorch, so
+  `validate(spec, module, spikes)` reports a genuine `ValidationReport`
+  (per-layer max/mean/relative error plus spike agreement, and an overall
+  `within_tolerance` flag). Every shipped preset validates with bit-exact
+  spikes.
+- All `nir`/`nirtorch` imports are confined to `nir_bridge/api.py`.
+
+### Verify CLI
+
+Headless `export` and `validate` commands. `validate` exits non-zero when a
+report falls outside tolerance, so it doubles as a CI gate:
+
+```bash
+python -m snn_interpreter.cli.verify export --topology conv_net
+python -m snn_interpreter.cli.verify export --topology fc_legacy --out g.json
+python -m snn_interpreter.cli.verify validate --topology conv_net
+python -m snn_interpreter.cli.verify validate --topology recurrent_net
+```
+
+### WebSocket actions
+
+The server answers two new client actions: `nir_export` returns the graph
+summary for the active or configured topology, and `nir_validate` returns a
+drift report for the active model.
 
 ## Requirements
 
@@ -154,6 +215,24 @@ snn_interpreter/
     training_engine.py       TrainingEngine: train loop yielding metrics
     checkpoint_mixin.py      Checkpoint save/restore behaviour
     encoding_mixin.py        Raw-pixel / spike input encoding
+  topology/                  Topology specs, presets, module builder
+    spec.py                  TopologySpec: stages + edges (+ chain helpers)
+    presets.py               fc_legacy / fc_small / conv_net / recurrent_net
+    registry.py              name -> builder; build_topology/resolved_params
+    builder.py               build_module(spec) -> snnTorch StageModule
+  neurons/                   Neuron registry + canonical NIR param contract
+    registry.py              NEURONS: name -> factory; build(name, **params)
+  simulator/                 The single temporal loop and trajectory capture
+    runner.py                run(module, spikes, ...) -> Trajectory
+    trajectory.py            Per-stage S[t] / U[t] / I[t] traces
+  nir_bridge/                NIR export, independent interpreter, validation
+    api.py                   The only module importing nir/nirtorch
+    exporter.py              to_nir(spec, module); graph_summary(...)
+    interpreter.py           NirInterpreter: runs a graph without snnTorch
+    validator.py             validate(...) -> ValidationReport
+    drift.py                 Error metrics between two trajectories
+  cli/                       Headless commands
+    verify.py                export / validate subcommands
   exporters/                 matplotlib/GIF/MP4 output -> build/
     exporter.py              Exporter base + build/ output resolution
     plot_utils.py            shared fig/GIF helpers
@@ -193,6 +272,12 @@ stays under 20 lines, and each class lives in its own file.
   spiking percentage and spike patterns vary run to run — expected.
 - Larger `num_steps` values (e.g., 100) produce longer, richer animations;
   `subset`/`batch_size` trade dataset coverage for encode speed.
+- **Interpreter limitations (Phase 1d).** snnTorch's `Lapicque` uses a
+  first-order Euler update while the reference interpreter uses the exact
+  zero-order-hold form, and `Synaptic`'s subtract reset carries a small
+  residual; both residuals are reported in the `ValidationReport` rather
+  than hidden. Extracting NIR graphs from arbitrary external modules via
+  `nirtorch` is deferred to Phase 5.
 
 ## License
 

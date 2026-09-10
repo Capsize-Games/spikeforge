@@ -112,14 +112,20 @@ def resolve(requested: str = "auto", **bench: Any) -> torch.device:
     return torch.device("cuda" if chosen == "cuda" else "cpu")
 
 
-def warmup(net: torch.nn.Module, steps: int, features: int = 28 * 28) -> None:
-    """Prime a CUDA net so the first training step isn't slow."""
-    param = next(net.parameters(), None)
+def warmup(module: torch.nn.Module, spikes: torch.Tensor) -> None:
+    """Prime a CUDA module so the first training step isn't slow.
+
+    ``spikes`` is a correctly-shaped dummy ``[T, ...]`` train; the module is
+    run once through the generic simulator so the same helper works for the
+    legacy network and for every topology-rendered ``StageModule``.
+    """
+    param = next(module.parameters(), None)
     if param is None or param.device.type != "cuda":
         return
-    dummy = torch.zeros(1, steps, features, device=param.device)
+    from snn_interpreter.simulator.runner import run
+
     with torch.no_grad():
-        net.forward_spikes(dummy)
+        run(module, spikes.to(param.device))
     torch.cuda.synchronize()
 
 

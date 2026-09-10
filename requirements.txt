@@ -11,3 +11,9 @@ uvicorn[standard]>=0.27
 websockets>=12.0
 pydantic>=2.5
 psutil>=5.9
+
+# NIR interop: the official Neuromorphic Intermediate Representation packages.
+# They are isolated behind snn_interpreter/nir_bridge/api.py and are installed
+# by default so the Docker image can probe them (see the `nir` extra too).
+nir>=1.0
+nirtorch>=1.0

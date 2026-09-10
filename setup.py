@@ -55,11 +55,16 @@ setup(
             "websockets>=12.0",
             "pydantic>=2.5",
         ],
+        "nir": [
+            "nir>=1.0",
+            "nirtorch>=1.0",
+        ],
     },
     entry_points={
         "console_scripts": [
             "snn-interpreter=main:main",
             "snn-interpreter-encodings=main_encodings:main",
+            "snn-verify=snn_interpreter.cli.verify:main",
         ],
     },
     classifiers=[

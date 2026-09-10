@@ -1,6 +1,6 @@
 """Training run configuration schema."""
 
-from typing import Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,10 @@ class TrainConfig(BaseModel):
     batch_size: int = 64
     checkpoint: Optional[str] = None  # load this model to continue
     device: Literal["auto", "cpu", "gpu"] = "auto"
+    # Topology selection: the registry name plus per-topology overrides
+    # (e.g. {"channels": 8}); unknown keys are ignored by the registry.
+    topology: str = "fc_legacy"
+    topology_params: Dict[str, Any] = Field(default_factory=dict)
     # Encoding settings for spike-input training; num_steps wins over the
     # legacy field above when a coding other than "raw" is active.
     encode: EncodeConfig = Field(default_factory=EncodeConfig)

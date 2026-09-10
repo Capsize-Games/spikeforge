@@ -28,6 +28,24 @@ connected LIF network for training, inference, and matplotlib/MP4 exports.
   classes and the raw-pixel input path stay importable and behavior-compatible
   so old checkpoints and `main_encodings.py` keep working.
 
+### Architecture invariants (Phase 1 spine)
+
+1. **`TopologySpec` is the single source of truth.** Every model is declared
+   as a spec and rendered twice — into the snnTorch module (`build_module`)
+   and into the NIR graph (`to_nir`) — so the two cannot silently diverge.
+2. **`nir`/`nirtorch` imports stay confined to `nir_bridge/api.py`.** Every
+   other module reaches the packages through that isolated probe, which
+   contains upstream API churn to one file.
+3. **Exactly one temporal loop lives in `simulator/`.** Model `forward`s
+   never contain a time loop; each stage is a pure `(input, state)` step and
+   the single runner drives them over time.
+4. **Validation stays independent.** The reference NIR interpreter executes
+   the exported graph from its node parameters alone and never calls
+   snnTorch, so a drift check is a genuine cross-check, not a tautology.
+5. **Legacy compatibility is deliberate.** `fc_legacy` preserves the
+   `SpikingNet` parameter names, method contracts, and state-dict keys, so
+   old checkpoints keep loading and inferring unchanged.
+
 ---
 
 ## Python Code Style and Quality

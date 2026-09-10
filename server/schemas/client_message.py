@@ -15,7 +15,7 @@ class ClientMessage(BaseModel):
         "configure", "run", "stop", "train", "stop_train", "predict",
         "select_sample", "infer", "save_model", "list_models",
         "load_model", "delete_model", "new_model", "stats",
-        "cancel_download",
+        "cancel_download", "nir_export", "nir_validate",
     ] = "configure"
     config: EncodeConfig = Field(default_factory=EncodeConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)

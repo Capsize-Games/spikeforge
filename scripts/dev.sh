@@ -62,7 +62,7 @@ cmd_setup() {
 
 cmd_lint() {
   info "ruff check"
-  venv_tool ruff check snn_interpreter server main.py main_encodings.py
+  venv_tool ruff check snn_interpreter server main.py main_encodings.py tests
 }
 
 cmd_test() {
@@ -182,6 +182,7 @@ cmd_docker_reset() {
 
 cmd_check() {
   cmd_lint
+  cmd_test
   cmd_client_typecheck
   cmd_client_build
 }
@@ -196,7 +197,7 @@ Setup
 Quality
   lint                      ruff check the Python package and server
   test [pytest args]        run the test suite
-  check                     lint + client type-check + client build
+  check                     lint + test + client type-check + client build
 
 Servers
   server [args]             run the FastAPI server (:8877)

@@ -81,6 +81,7 @@ def _describe(entry: os.DirEntry) -> Dict[str, Any]:
         "meta": meta,
         "input_mode": meta.get("input_mode", "raw"),
         "coding": meta.get("coding", "raw"),
+        "topology": meta.get("topology", "fc_legacy"),
         "saved_at": saved_at,
     }
 

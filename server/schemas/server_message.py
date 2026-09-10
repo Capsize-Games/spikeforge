@@ -14,6 +14,7 @@ class ServerMessage(BaseModel):
         "train_metrics", "train_state", "prediction",
         "model_saved", "model_list", "model_loaded", "model_cleared",
         "inference", "system_stats", "download_state",
+        "nir_graph", "nir_validation",
     ]
     payload: Any = None
     source: Optional[str] = None

@@ -129,18 +129,15 @@ class TrainingService:
         """Build a TrainingEngine, honoring a checkpoint's architecture."""
         meta = _checkpoint_meta(checkpoint)
         dataset = meta.get("dataset") or _dataset_from(config, encode)
+        params = meta.get("topology_params") or config.topology_params
         return TrainingEngine(
-            dataset=dataset,
-            hidden=int(meta.get("hidden", config.hidden)),
-            beta=float(meta.get("beta", config.beta)),
-            lr=config.lr,
-            epochs=config.epochs,
-            num_steps=config.num_steps,
-            subset=config.subset,
-            batch_size=config.batch_size,
-            checkpoint=checkpoint,
-            encode=encode,
-            device=config.device,
+            dataset=dataset, hidden=int(meta.get("hidden", config.hidden)),
+            beta=float(meta.get("beta", config.beta)), lr=config.lr,
+            epochs=config.epochs, num_steps=config.num_steps,
+            subset=config.subset, batch_size=config.batch_size,
+            checkpoint=checkpoint, encode=encode, device=config.device,
+            topology=str(meta.get("topology", config.topology)),
+            topology_params=dict(params),
         )
 
     def stop(self) -> None:

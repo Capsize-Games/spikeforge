@@ -10,10 +10,13 @@ from snn_interpreter.data.data_loader import build_loader
 from snn_interpreter.data.datasets import dataset_info
 from snn_interpreter.encoding.spike_encoder import SpikeEncoder
 from snn_interpreter.network import inference
-from snn_interpreter.network.spiking_net import SpikingNet
 from snn_interpreter.runtime import device as device_mod
+from snn_interpreter.simulator.runner import run
+from snn_interpreter.topology import registry
+from snn_interpreter.topology.stage_module import StageModule
 from snn_interpreter.training.checkpoint_mixin import CheckpointMixin
 from snn_interpreter.training.encoding_mixin import EncodingMixin
+from snn_interpreter.training.topology_mixin import TopologyMixin
 
 EVAL_EVERY = 5  # evaluate the held-out set every N steps
 EVAL_BATCHES = 4  # number of test batches to score
@@ -21,13 +24,18 @@ EVAL_BATCHES = 4  # number of test batches to score
 _Batch = Tuple[torch.Tensor, torch.Tensor]
 
 
-class TrainingEngine(device_mod.DeviceMixin, CheckpointMixin, EncodingMixin):
+class TrainingEngine(
+    device_mod.DeviceMixin,
+    CheckpointMixin,
+    TopologyMixin,
+    EncodingMixin,
+):
     """Run a cancellable training loop that emits metric dicts."""
 
     _encoder: Optional[SpikeEncoder]
     _explicit_mode: Optional[str]
     _input_mode: str
-    _net: SpikingNet
+    _net: StageModule
     _optimizer: torch.optim.Adam
     _test_batches: Optional[List[_Batch]]
 
@@ -37,8 +45,24 @@ class TrainingEngine(device_mod.DeviceMixin, CheckpointMixin, EncodingMixin):
         subset: int = 10, batch_size: int = 64,
         checkpoint: Optional[str] = None, encode: Any = None,
         input_mode: Optional[str] = None, device: Optional[str] = None,
+        topology: str = "fc_legacy",
+        topology_params: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Resolve inputs, build the net, and optionally restore weights."""
+        """Resolve inputs, build the topology, and optionally restore it."""
+        self._store_settings(
+            dataset, hidden, beta, lr, epochs, num_steps, subset, batch_size
+        )
+        self._encode = encode
+        self._topology = topology
+        self._topology_params = dict(topology_params or {})
+        self._setup_input(encode, input_mode, device)
+        self._build(lr, checkpoint)
+
+    def _store_settings(
+        self, dataset: str, hidden: int, beta: float, lr: float,
+        epochs: int, num_steps: int, subset: int, batch_size: int,
+    ) -> None:
+        """Store the plain training settings on the instance."""
         self._dataset = dataset
         self._num_classes, _ = dataset_info(dataset)
         self._hidden = hidden
@@ -48,9 +72,6 @@ class TrainingEngine(device_mod.DeviceMixin, CheckpointMixin, EncodingMixin):
         self._num_steps = num_steps
         self._subset = subset
         self._batch_size = batch_size
-        self._encode = encode
-        self._setup_input(encode, input_mode, device)
-        self._build(lr, checkpoint)
 
     def _setup_input(
         self, encode: Any, input_mode: Optional[str], device: Optional[str]
@@ -70,11 +91,16 @@ class TrainingEngine(device_mod.DeviceMixin, CheckpointMixin, EncodingMixin):
                          batch_size=self._batch_size)
 
     def _build(self, lr: float, checkpoint: Optional[str] = None) -> None:
-        """Create the network/optimiser and restore any checkpoint."""
-        self._net = SpikingNet(hidden=self._hidden, beta=self._beta,
-                               num_classes=self._num_classes)
+        """Create the configured topology/optimiser and restore a ckpt."""
+        self._adopt_topology(checkpoint)
+        params = self._topology_arguments()
+        self._architecture = registry.resolved_params(self._topology, params)
+        self._apply_effective()
+        self._spec, self._net = registry.build_topology(
+            self._topology, params
+        )
         self._net.to(self._device)
-        device_mod.warmup(self._net, self._num_steps)
+        device_mod.warmup(self._net, self._dummy_spikes())
         self._optimizer = torch.optim.Adam(self._net.parameters(), lr=lr)
         self._test_batches = None
         if checkpoint:
@@ -131,7 +157,7 @@ class TrainingEngine(device_mod.DeviceMixin, CheckpointMixin, EncodingMixin):
         self, inputs: torch.Tensor, targets: torch.Tensor
     ) -> Dict[str, float]:
         """Run one optimisation step and return loss/accuracy."""
-        outputs = self._net.forward_spikes(self._encode_batch(inputs))
+        outputs = run(self._net, self._encode_batch(inputs)).logits
         loss = cross_entropy(outputs, targets.to(self._device))
         self._optimizer.zero_grad()
         loss.backward()
@@ -143,7 +169,7 @@ class TrainingEngine(device_mod.DeviceMixin, CheckpointMixin, EncodingMixin):
     def predict(self, inputs: torch.Tensor) -> torch.Tensor:
         """Return predicted digits for a batch of images."""
         with torch.no_grad():
-            outputs = self._net.forward_spikes(self._encode_batch(inputs))
+            outputs = run(self._net, self._encode_batch(inputs)).logits
         return outputs.argmax(dim=1)
 
     def predict_sample(self) -> Dict[str, List[int]]:
@@ -160,9 +186,10 @@ class TrainingEngine(device_mod.DeviceMixin, CheckpointMixin, EncodingMixin):
         self, spikes: torch.Tensor, true_label: Optional[int] = None
     ) -> Dict[str, Any]:
         """Score the displayed sample's spikes for the active model."""
+        shaped = self._to_input_shape(spikes.to(self._device))
         return inference.infer_spikes(
             self._net,
-            spikes.to(self._device),
+            shaped,
             self._num_classes,
             true_label,
             self.input_mode,
@@ -171,8 +198,8 @@ class TrainingEngine(device_mod.DeviceMixin, CheckpointMixin, EncodingMixin):
     # --- accessors -------------------------------------------------------
 
     @property
-    def net(self) -> SpikingNet:
-        """Return the underlying spiking network."""
+    def net(self) -> StageModule:
+        """Return the underlying topology module."""
         return self._net
 
     @property

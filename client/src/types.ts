@@ -1,3 +1,5 @@
+import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
+
 export type CodingType = "rate" | "latency" | "delta" | "random";
 
 /** Compute device selectable for training. */
@@ -80,6 +82,10 @@ export interface TrainConfig {
   batch_size: number;
   checkpoint: string | null;
   device: DeviceChoice;
+  /** Selectable topology registry name. */
+  topology: string;
+  /** Per-topology overrides for the registry defaults. */
+  topology_params: Record<string, number | string | boolean>;
   /** Encoding settings used for spike-input training. */
   encode: EncodeConfig;
 }
@@ -95,6 +101,8 @@ export const defaultTrainConfig: TrainConfig = {
   batch_size: 64,
   checkpoint: null,
   device: "auto",
+  topology: "fc_legacy",
+  topology_params: {},
   encode: { ...defaultConfig },
 };
 
@@ -229,6 +237,8 @@ export type ServerMsg =
   | { type: "train_state"; payload: TrainStatePayload }
   | { type: "prediction"; payload: PredictionPayload }
   | { type: "inference"; payload: InferencePayload }
+  | { type: "nir_graph"; payload: NirGraphPayload }
+  | { type: "nir_validation"; payload: NirValidationPayload }
   | { type: "model_saved"; payload: { name: string; path: string } }
   | { type: "model_list"; payload: ModelListPayload }
   | { type: "model_loaded"; payload: ModelLoadedPayload }

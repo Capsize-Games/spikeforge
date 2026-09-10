@@ -134,3 +134,19 @@ async def send_activity(
             await send_locked(ws, session, {
                 "type": "raster", "payload": raster, "source": source,
             })
+
+
+async def send_nir_graph(
+    ws: WebSocket, session: Session, payload: Dict[str, Any]
+) -> None:
+    """Send an NIR graph summary to the client."""
+    await send_locked(ws, session, {"type": "nir_graph", "payload": payload})
+
+
+async def send_nir_validation(
+    ws: WebSocket, session: Session, payload: Dict[str, Any]
+) -> None:
+    """Send a drift validation report to the client."""
+    await send_locked(ws, session, {
+        "type": "nir_validation", "payload": payload,
+    })
