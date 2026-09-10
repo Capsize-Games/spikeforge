@@ -1,5 +1,8 @@
+import type { TrajectoryPayload } from "../introspectionTypes";
+import type { NirGraphPayload, NirValidationPayload } from "../nirTypes";
 import type {
   CodingType,
+  ExecutionMode,
   InferencePayload,
   ModelLoadedPayload,
   RasterPayload,
@@ -8,7 +11,10 @@ import type {
 import { InputRow } from "./InputRow";
 import { LoadedModelPanel } from "./LoadedModelPanel";
 import { NetworkActivity } from "./NetworkActivity";
+import { NirGraphPanel } from "./NirGraphPanel";
+import { NirValidationPanel } from "./NirValidationPanel";
 import { TimeCursor } from "./TimeCursor";
+import { TrajectoryPanel } from "./TrajectoryPanel";
 
 interface Props {
   sample: number[][] | null;
@@ -18,17 +24,25 @@ interface Props {
   inference: InferencePayload | null;
   loaded: ModelLoadedPayload | null;
   coding: CodingType;
+  mode: ExecutionMode;
   sampleIndex: number;
   timeStep: number | null;
   numSteps: number;
+  trajectory: TrajectoryPayload | null;
+  nirGraph: NirGraphPayload | null;
+  nirValidation: NirValidationPayload | null;
   playing: boolean;
   onPlay: () => void;
   onStop: () => void;
   onScrub: (step: number) => void;
   onSelectSample: (index: number) => void;
+  onRefreshTrajectory: () => void;
+  onRefreshNirGraph: () => void;
+  onRefreshNirValidation: () => void;
+  onSwitchToEducational: () => void;
 }
 
-/** The middle column: loaded model summary, time cursor, input row, rasters. */
+/** The middle column: model summary, cursor, input, activity, NIR panels. */
 export function ViewerPanels({
   sample,
   spikeFrame,
@@ -37,14 +51,22 @@ export function ViewerPanels({
   inference,
   loaded,
   coding,
+  mode,
   sampleIndex,
   timeStep,
   numSteps,
+  trajectory,
+  nirGraph,
+  nirValidation,
   playing,
   onPlay,
   onStop,
   onScrub,
   onSelectSample,
+  onRefreshTrajectory,
+  onRefreshNirGraph,
+  onRefreshNirValidation,
+  onSwitchToEducational,
 }: Props) {
   return (
     <div className="col-viz">
@@ -73,6 +95,21 @@ export function ViewerPanels({
         rasters={rasters}
         inference={inference}
         timeStep={timeStep}
+      />
+
+      <TrajectoryPanel
+        mode={mode}
+        trajectory={trajectory}
+        cursorIndex={timeStep}
+        onRefresh={onRefreshTrajectory}
+        onSwitchMode={onSwitchToEducational}
+      />
+
+      <NirGraphPanel graph={nirGraph} onRefresh={onRefreshNirGraph} />
+
+      <NirValidationPanel
+        validation={nirValidation}
+        onRefresh={onRefreshNirValidation}
       />
     </div>
   );

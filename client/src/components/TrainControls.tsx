@@ -15,7 +15,7 @@ export function TrainControls({
   const busy = !connected || running;
 
   return (
-    <div className="actions">
+    <div className="actions" data-tour="train-controls">
       <button className="apply" onClick={onTrain} disabled={busy}>
         {running ? "Training…" : "⚡ Train model"}
       </button>

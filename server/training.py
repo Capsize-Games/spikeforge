@@ -62,6 +62,13 @@ class TrainingService:
             return "raw"
         return self._engine.input_mode
 
+    @property
+    def mode(self) -> str:
+        """Return the active engine's execution mode, defaulting production."""
+        if self._engine is None:
+            return "production"
+        return self._engine.mode
+
     def infer(
         self, spikes: torch.Tensor, true_label: Optional[int] = None
     ) -> Optional[Dict[str, Any]]:
@@ -100,7 +107,8 @@ class TrainingService:
         except Exception as exc:  # surface build failures to the client
             self._put({"type": "error", "payload": str(exc)})
             self._put({"type": "train_state",
-                       "payload": {"running": False, "reason": "error"}})
+                       "payload": {"running": False, "reason": "error",
+                                   "mode": config.mode}})
             self._thread = None
             return
         self._engine = engine
@@ -137,7 +145,7 @@ class TrainingService:
             subset=config.subset, batch_size=config.batch_size,
             checkpoint=checkpoint, encode=encode, device=config.device,
             topology=str(meta.get("topology", config.topology)),
-            topology_params=dict(params),
+            topology_params=dict(params), mode=config.mode,
         )
 
     def stop(self) -> None:
@@ -163,10 +171,11 @@ class TrainingService:
             self._thread = None
 
     def _state(self, reason: str, engine: TrainingEngine) -> None:
-        """Queue a stopped train_state carrying the active device."""
+        """Queue a stopped train_state carrying device and mode."""
         self._put({"type": "train_state",
                    "payload": {"running": False, "reason": reason,
-                               "device": engine.device}})
+                               "device": engine.device,
+                               "mode": engine.mode}})
 
     def _put(self, message: Dict[str, Any]) -> None:
         """Thread-safe enqueue onto the event loop."""

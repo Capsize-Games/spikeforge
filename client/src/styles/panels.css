@@ -1,0 +1,168 @@
+/* --- shared captions and empty-state notes for the CENTER panels --- */
+.panel-note {
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.panel-note .link {
+  font-style: normal;
+}
+
+.panel-caption {
+  margin-bottom: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- neuron-state trajectory viewer --- */
+.trajectory-stage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.trajectory-stage select {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.trajectory-chart canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* --- NIR topology graph --- */
+.nir-graph-scroll {
+  overflow-x: auto;
+}
+
+.nir-graph {
+  display: block;
+  width: 100%;
+  min-width: 520px;
+  height: auto;
+}
+
+.nir-node {
+  fill: var(--panel-alt);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.nir-node-name {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.nir-node-kind {
+  fill: var(--muted);
+  font-size: 9px;
+}
+
+.nir-edge {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.2;
+}
+
+.nir-edge.delayed {
+  stroke: var(--warn);
+  stroke-dasharray: 5 3;
+}
+
+.nir-arrow-head {
+  fill: var(--muted);
+}
+
+.nir-arrow-head.delayed {
+  fill: var(--warn);
+}
+
+/* --- NIR drift validation --- */
+.verdict {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.verdict.ok {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+
+.verdict.bad {
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 50%, transparent);
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+}
+
+.worst {
+  margin-bottom: 6px;
+  padding: 5px 7px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--warn);
+  font-variant-numeric: tabular-nums;
+}
+
+.drift-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.drift-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.drift-table td {
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.drift-table tr.bad td {
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+  color: var(--bad);
+}
+
+.drift-layer {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}

@@ -124,6 +124,12 @@
   gap: 6px;
 }
 
+/* The footer sits on the viewport edge, so its help opens upward. */
+.res-bar .help-popup {
+  top: auto;
+  bottom: 130%;
+}
+
 .res-label {
   color: var(--muted);
 }

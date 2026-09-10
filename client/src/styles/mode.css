@@ -1,0 +1,60 @@
+/* --- execution-mode toggle --- */
+.mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* The mode group takes the free space, so the theme button no longer does. */
+.topbar .theme-toggle {
+  margin-left: 0;
+}
+
+.mode-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mode-options {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mode-option {
+  padding: 4px 10px;
+  border: none;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mode-option:hover {
+  color: var(--text);
+}
+
+.mode-option.active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.mode-note {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* --- architecture note in the Model section --- */
+.arch-note {
+  margin: 0;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--muted);
+}

@@ -1,12 +1,32 @@
 import { useTheme } from "../theme";
+import type { TourLesson } from "../tour/types";
+import type { ExecutionMode } from "../types";
+import { ModeToggle } from "./ModeToggle";
+import { TourLauncher } from "./TourLauncher";
 
 /** Synapse edges connecting the three input nodes to the output node. */
 const LOGO_PATHS =
   "M5.7 6.5 10.3 8.6M5.7 11.4 10.3 9.4M5.7 12.6 10.3 14.6" +
   "M5.7 17.6 10.3 15.4M13.7 9.4 18.3 11.4M13.7 14.6 18.3 12.6";
 
-/** App header: a compact 24x24 logo mark and the light/dark toggle. */
-export function TopBar() {
+interface Props {
+  mode: ExecutionMode;
+  onModeChange: (mode: ExecutionMode) => void;
+  lessons: TourLesson[];
+  tourOpen: boolean;
+  onToggleTours: () => void;
+  onOpenTour: (id: string) => void;
+}
+
+/** App header: logo, guided tours, execution-mode toggle, theme toggle. */
+export function TopBar({
+  mode,
+  onModeChange,
+  lessons,
+  tourOpen,
+  onToggleTours,
+  onOpenTour,
+}: Props) {
   const { theme, toggle } = useTheme();
   return (
     <header className="topbar">
@@ -29,6 +49,15 @@ export function TopBar() {
           <path d={LOGO_PATHS} />
         </svg>
       </span>
+
+      <ModeToggle mode={mode} onChange={onModeChange} />
+
+      <TourLauncher
+        lessons={lessons}
+        open={tourOpen}
+        onToggle={onToggleTours}
+        onOpen={onOpenTour}
+      />
 
       <button
         type="button"

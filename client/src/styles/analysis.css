@@ -1,0 +1,81 @@
+/* --- Phase 3d analysis panels (RIGHT column) --- */
+
+/* --- firing-rate histogram --- */
+.histogram {
+  margin-top: 4px;
+}
+
+.histogram-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 64px;
+  padding: 0 1px;
+  border-bottom: 1px solid var(--border);
+}
+
+.histogram-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--accent);
+}
+
+.histogram-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- surrogate derivative line --- */
+.surrogate-chart canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* --- compact readout tables (encoding stats, benchmark) --- */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.readout-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.readout-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.readout-table td {
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.readout-table tbody th {
+  color: var(--muted);
+}
+
+.readout-name {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- benchmark header button sits inline with the help tip --- */
+.benchmark-panel .panel-title {
+  margin-bottom: 6px;
+}

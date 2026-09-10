@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Mapping, Optional
 import torch
 
 from snn_interpreter.neurons.registry import NEURONS
+from snn_interpreter.runtime.execution_mode import ExecutionMode
 from snn_interpreter.simulator.module_spec import spec_of
 from snn_interpreter.simulator.runner import run
 from snn_interpreter.simulator.trajectory import Trajectory
@@ -19,9 +20,12 @@ def infer_spikes(
     coding: str = "rate",
     hidden_cap: int = 256,
     membrane: bool = False,
+    mode: ExecutionMode = ExecutionMode.PRODUCTION,
 ) -> Dict[str, Any]:
     """Score one sample's encoded spikes and summarise its activity."""
-    trajectory = run(net, spikes, track=True, membrane=membrane)
+    trajectory = run(
+        net, spikes, track=True, membrane=membrane, mode=mode
+    )
     spec = spec_of(net)
     output = _frames(trajectory.spikes[spec.output])
     hidden = _frames(trajectory.spikes[hidden_stage(spec)])

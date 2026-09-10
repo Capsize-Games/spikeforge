@@ -5,9 +5,26 @@ from typing import Any, Dict, Optional
 import torch
 
 from server.schemas import EncodeConfig
+from snn_interpreter.data.datasets import catalog
 from snn_interpreter.network import model_store
+from snn_interpreter.neurons.registry import neuron_kinds
 from snn_interpreter.nir_bridge import graph_summary, to_nir, validate
+from snn_interpreter.topology.registry import topology_names
 from snn_interpreter.topology.spec import TopologySpec
+
+
+def model_list_payload() -> Dict[str, Any]:
+    """Return saved checkpoints, datasets, topologies, and neuron kinds.
+
+    The ``topologies``/``neurons`` keys are additive: they let the client
+    populate its pickers from the registries instead of hard-coding names.
+    """
+    return {
+        "models": model_store.list_models(),
+        "datasets": catalog(),
+        "topologies": topology_names(),
+        "neurons": list(neuron_kinds()),
+    }
 
 
 def compatibility(
@@ -42,6 +59,7 @@ def model_loaded_payload(engine: Any, name: Optional[str],
         "num_steps": engine.num_steps,
         "num_classes": engine.num_classes,
         "topology": engine.topology,
+        "mode": engine.mode,
         "device": engine.device,
         "meta": _meta(name),
         "compatibility": compatibility(engine, encode),

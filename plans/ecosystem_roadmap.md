@@ -193,6 +193,16 @@ the trade-off.
 
 ### Phase 3 — Educational + Professional Interface
 
+> **Status — delivered (verified in Phase 3f).** The Educational/Production
+> mode toggle, the LEFT topology/neuron/surrogate controls, the CENTER
+> trajectory (`U[t]`/`I[t]`) and NIR graph viewers plus the drift-validation
+> panel, the RIGHT metrics/histogram, encoding-report, surrogate-curve, and
+> benchmark panels, and seven guided walkthroughs all render from live server
+> payloads. The Python suite is green at 234 tests (up from 214), `ruff` is
+> clean, the client builds, and the `verify` CLI plus
+> `python -m snn_interpreter.benchmark` run. Deferred with intent: the
+> hardware-target picker is Phase 5 and event datasets are Phase 4.
+
 **Objective:** make the dashboard the goto surface for both audiences.
 
 **Tutorials:** all.

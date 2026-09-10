@@ -20,6 +20,9 @@ class TrainConfig(BaseModel):
     batch_size: int = 64
     checkpoint: Optional[str] = None  # load this model to continue
     device: Literal["auto", "cpu", "gpu"] = "auto"
+    # Execution mode: production skips trajectory capture, educational
+    # records it. Defaults to production to preserve existing behaviour.
+    mode: Literal["educational", "production"] = "production"
     # Topology selection: the registry name plus per-topology overrides
     # (e.g. {"channels": 8}); unknown keys are ignored by the registry.
     topology: str = "fc_legacy"

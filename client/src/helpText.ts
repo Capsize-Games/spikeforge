@@ -56,6 +56,62 @@ export const HELP: Record<string, string> = {
     "Run the loaded model on the currently encoded sample and report its " +
     "prediction, confidence, and the output-layer spike activity for each " +
     "class. Needs a trained or loaded model.",
+  trajectory:
+    "Per-step neuron state captured in educational mode: the mean membrane " +
+    "potential U[t] and input current I[t] for each stage of the active " +
+    "model. Production mode skips this capture, so the panel stays empty.",
+  nir_graph:
+    "The NIR summary of the active topology: one node per primitive " +
+    "(affine, LIF, delay, pooling) and one edge per connection. Dashed " +
+    "edges carry a time delay; skip and recurrent edges bow out of the " +
+    "column grid.",
+  nir_validation:
+    "Drift report from the independent NIR interpreter. It re-runs the " +
+    "exported graph from its node parameters alone and compares spikes and " +
+    "membranes to the snnTorch model, naming the worst offending layer.",
+  metrics:
+    "Aggregate firing rate, sparsity, and inter-spike-interval statistics " +
+    "for each stage of the active model, plus the firing-rate histogram. " +
+    "Like the trajectory viewer it needs educational mode, which records " +
+    "the per-step spikes these metrics are derived from.",
+  encoding_report:
+    "Decodes the currently configured sample back to an image using the " +
+    "selected coding, and reports firing rate, sparsity, and how exact the " +
+    "reconstruction is. It tracks the LEFT encoding controls, so change " +
+    "them and refresh.",
+  surrogate_curve:
+    "Backward-pass derivative dS/dU of the selected surrogate gradient, " +
+    "sampled over a fixed range. Surrogates shape training only; inference " +
+    "never uses them, and the default uses snnTorch's built-in Fast Sigmoid.",
+  benchmark:
+    "Times forward (and backward) passes across topologies and modes on a " +
+    "tiny fixture resolved from the current training settings. It is never " +
+    "run automatically; press Run benchmark. Long measurements report as —.",
+  benchmark_compiled:
+    "Whether the benchmark run used torch.compile and, when it did not, " +
+    "why. Compilation can speed up steady-state training but costs a one-" +
+    "off warm-up, so the status text explains a fallback instead of " +
+    "silently reporting a slower number.",
+  benchmark_memory:
+    "Peak memory for the run, attributed to CPU or GPU. It is the high-" +
+    "water mark, so it tells you the batch size a device can actually " +
+    "hold rather than what is allocated right now.",
+  time_cursor:
+    "The shared time cursor for the centre panels. Scrubbing or playing " +
+    "moves every raster, the neuron-state trace, and the prediction bars " +
+    "together, so a spike at t lines up across layers. Prev/next also " +
+    "re-encodes the displayed sample, keeping the picture and its spikes " +
+    "in sync.",
+  activity:
+    "Per-layer spike rasters for the input, hidden, and output stages. The " +
+    "hidden layer is sorted by firing rate and silent neurons are reported " +
+    "because a stage that never fires passes no gradient — usually the " +
+    "first sign that a coding or beta is misconfigured.",
+  tour:
+    "Guided tours open a short lesson per snnTorch tutorial. Each step " +
+    "highlights the controls or panel it is talking about, so the lesson " +
+    "explains the dashboard in place instead of sending you to separate " +
+    "documentation.",
 };
 
 export const TRAIN_HELP: Record<string, string> = {
@@ -84,6 +140,23 @@ export const TRAIN_HELP: Record<string, string> = {
     "a GPU. For this small net CPU often wins because per-op launch " +
     "overhead dominates, while large hidden layers and batch sizes favour " +
     "the GPU. Watch 'ms/step' in Status to see the effect.",
+  mode:
+    "Execution mode for a run. Educational records per-step membrane, " +
+    "current, and spike traces so the trajectory and metrics panels have " +
+    "data; production skips that capture for a leaner run, so those panels " +
+    "stay empty.",
+  topology:
+    "Network architecture from the topology registry. fc_legacy keeps the " +
+    "original fully-connected LIF net; other presets add convolutional, " +
+    "pooled, and recurrent stages.",
+  neuron:
+    "Neuron model used for every spiking stage, from the neuron registry. " +
+    "leaky is the classic LIF; lapicque, alpha, synaptic, and recurrent " +
+    "change how each membrane state evolves.",
+  surrogate:
+    "Surrogate gradient used to backprop through spikes. Default uses " +
+    "snnTorch's built-in Fast Sigmoid; the other names are snnTorch's " +
+    "surrogate factories and affect training only, never inference.",
   resources:
     "Live CPU RAM and GPU VRAM for the machine running the server. CPU RAM " +
     "covers the whole host; VRAM is the GPU's memory. 'active' shows the " +

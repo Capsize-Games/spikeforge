@@ -29,6 +29,13 @@ from snn_interpreter.introspection.surrogate import (
 X_MIN = -2.0
 X_MAX = 2.0
 POINTS = 101
+#: Execution mode required by the trajectory-capturing actions.
+EDUCATIONAL_MODE = "educational"
+#: Error returned when trajectory capture is requested in production mode.
+EDUCATIONAL_ONLY = (
+    "trajectory capture needs educational mode; "
+    "switch the execution mode to educational"
+)
 
 
 def _model_blocker(session: Session) -> Optional[str]:
@@ -37,6 +44,27 @@ def _model_blocker(session: Session) -> Optional[str]:
         return "no sample configured"
     if session.training.engine is None:
         return "no model loaded; train or load one"
+    return None
+
+
+def _active_mode(session: Session) -> str:
+    """Return the active engine's execution mode.
+
+    The default is ``educational`` so an engine that predates the mode field
+    (or a test double) keeps the historical capture behaviour rather than
+    silently failing; a real engine always declares its mode.
+    """
+    engine = session.training.engine
+    return str(getattr(engine, "mode", EDUCATIONAL_MODE))
+
+
+def _capture_blocker(session: Session) -> Optional[str]:
+    """Return why trajectory capture cannot run, or None when it can."""
+    blocker = _model_blocker(session)
+    if blocker is not None:
+        return blocker
+    if _active_mode(session) != EDUCATIONAL_MODE:
+        return EDUCATIONAL_ONLY
     return None
 
 
@@ -53,7 +81,7 @@ async def _reject(ws: WebSocket, session: Session, reason: str) -> None:
 
 async def handle_trajectory(ws: WebSocket, session: Session) -> None:
     """Emit bounded U[t]/I[t]/S[t] traces for the active model."""
-    blocker = _model_blocker(session)
+    blocker = _capture_blocker(session)
     if blocker is not None:
         await _reject(ws, session, blocker)
         return
@@ -64,7 +92,7 @@ async def handle_trajectory(ws: WebSocket, session: Session) -> None:
 
 async def handle_metrics(ws: WebSocket, session: Session) -> None:
     """Emit trajectory metrics for the active model."""
-    blocker = _model_blocker(session)
+    blocker = _capture_blocker(session)
     if blocker is not None:
         await _reject(ws, session, blocker)
         return

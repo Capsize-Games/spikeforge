@@ -1,4 +1,11 @@
 import type {
+  EncodingReportPayload,
+  SurrogateCurvePayload,
+  TrajectoryMetricsPayload,
+  TrajectoryPayload,
+} from "./introspectionTypes";
+import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
+import type {
   DownloadState,
   InferencePayload,
   RasterPayload,
@@ -28,6 +35,16 @@ export interface ViewerState {
   running: boolean;
   framesByStep: Record<number, number[][]>;
   download: DownloadState | null;
+  /** Educational-mode U[t]/I[t]/S[t] capture for the active model. */
+  trajectory: TrajectoryPayload | null;
+  /** Educational-mode aggregate metrics for the active model. */
+  metrics: TrajectoryMetricsPayload | null;
+  /** Encoding report for the currently configured sample. */
+  encodingReport: EncodingReportPayload | null;
+  /** Derivative curve of the selected surrogate gradient. */
+  surrogateCurve: SurrogateCurvePayload | null;
+  nirGraph: NirGraphPayload | null;
+  nirValidation: NirValidationPayload | null;
 }
 
 export type ViewerAction =
@@ -55,6 +72,12 @@ export function createInitialViewerState(autoPredict: boolean): ViewerState {
     running: false,
     framesByStep: {},
     download: null,
+    trajectory: null,
+    metrics: null,
+    encodingReport: null,
+    surrogateCurve: null,
+    nirGraph: null,
+    nirValidation: null,
   };
 }
 
@@ -71,6 +94,11 @@ function clearStream(state: ViewerState): ViewerState {
     rasters: EMPTY_RASTERS,
     inference: null,
     framesByStep: {},
+    // A new sample invalidates the captured trajectory and metrics; the user
+    // refreshes. The surrogate curve is coding-independent, so it survives.
+    trajectory: null,
+    metrics: null,
+    encodingReport: null,
   };
 }
 
@@ -139,6 +167,18 @@ function applyMessage(state: ViewerState, msg: ServerMsg): ViewerState {
       return applyStatus(state, msg.payload);
     case "download_state":
       return { ...state, download: msg.payload };
+    case "trajectory":
+      return { ...state, trajectory: msg.payload };
+    case "metrics":
+      return { ...state, metrics: msg.payload };
+    case "encoding_report":
+      return { ...state, encodingReport: msg.payload };
+    case "surrogate_curve":
+      return { ...state, surrogateCurve: msg.payload };
+    case "nir_graph":
+      return { ...state, nirGraph: msg.payload };
+    case "nir_validation":
+      return { ...state, nirValidation: msg.payload };
     case "error":
       return { ...state, error: msg.payload, running: false };
     default:

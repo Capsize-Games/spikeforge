@@ -33,7 +33,7 @@ export function SampleIndex({ value, onChange }: Props) {
   };
 
   return (
-    <span className="sample-index">
+    <span className="sample-index" data-tour="sample-index">
       <button
         type="button"
         className="icon-btn"

@@ -1,10 +1,28 @@
 import type { IntrospectionServerMsg } from "./introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
+import type {
+  ExecutionMode,
+  ModelLoadedPayload,
+  ModelListPayload,
+} from "./protocolTypes";
+
+export type {
+  Compatibility,
+  DatasetInfo,
+  ExecutionMode,
+  HistoryPoint,
+  ModelLoadedPayload,
+  ModelListPayload,
+  SavedModel,
+} from "./protocolTypes";
 
 export type CodingType = "rate" | "latency" | "delta" | "random";
 
 /** Compute device selectable for training. */
 export type DeviceChoice = "auto" | "cpu" | "gpu";
+
+/** Per-topology overrides for the registry defaults. */
+export type TopologyParams = Record<string, number | string | boolean>;
 
 /** Which layer produced a raster / spike frame. */
 export type RasterSource = "input" | "hidden" | "output";
@@ -83,10 +101,12 @@ export interface TrainConfig {
   batch_size: number;
   checkpoint: string | null;
   device: DeviceChoice;
+  /** Execution mode for the run. */
+  mode: ExecutionMode;
   /** Selectable topology registry name. */
   topology: string;
   /** Per-topology overrides for the registry defaults. */
-  topology_params: Record<string, number | string | boolean>;
+  topology_params: TopologyParams;
   /** Encoding settings used for spike-input training. */
   encode: EncodeConfig;
 }
@@ -102,22 +122,11 @@ export const defaultTrainConfig: TrainConfig = {
   batch_size: 64,
   checkpoint: null,
   device: "auto",
+  mode: "production",
   topology: "fc_legacy",
   topology_params: {},
   encode: { ...defaultConfig },
 };
-
-export interface DatasetInfo {
-  name: string;
-  classes: number;
-  description: string;
-}
-
-export interface SavedModel {
-  name: string;
-  meta: Record<string, unknown>;
-  saved_at: number;
-}
 
 export interface TrainMetrics {
   loss: number;
@@ -134,50 +143,12 @@ export interface TrainStatePayload {
   running: boolean;
   reason: string;
   device?: string;
+  mode?: ExecutionMode;
 }
 
 export interface PredictionPayload {
   digits: number[];
   labels: number[];
-}
-
-export interface ModelListPayload {
-  models: SavedModel[];
-  datasets: DatasetInfo[];
-}
-
-/** How a loaded checkpoint relates to the current encoding controls. */
-export interface Compatibility {
-  dataset_match: boolean;
-  coding_match: boolean;
-  num_steps_match: boolean;
-  expected_input_mode: string;
-  current_coding: string;
-}
-
-/** One persisted training-metric sample. */
-export interface HistoryPoint {
-  step: number;
-  epoch: number;
-  loss: number;
-  train_accuracy: number;
-  test_accuracy: number | null;
-}
-
-export interface ModelLoadedPayload {
-  name: string;
-  dataset: string;
-  accuracy: number;
-  history?: HistoryPoint[];
-  input_mode?: string;
-  coding?: string;
-  hidden?: number;
-  beta?: number;
-  num_steps?: number;
-  num_classes?: number;
-  device?: string;
-  meta?: Record<string, unknown>;
-  compatibility?: Compatibility;
 }
 
 /** Result of inferring on the currently displayed sample. */

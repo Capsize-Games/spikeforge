@@ -15,12 +15,11 @@ from server.messages import (
     send_run_state,
     send_train_state,
 )
-from server.payloads import model_loaded_payload
+from server.payloads import model_list_payload, model_loaded_payload
 from server.protocol_handlers import PROTOCOL_ACTIONS, dispatch_protocol
 from server.schemas import ClientMessage, EncodeConfig, TrainConfig
 from server.session import Session
 from server.stats import handle_stats
-from snn_interpreter.data.datasets import catalog
 from snn_interpreter.network import model_store
 
 
@@ -121,7 +120,7 @@ async def handle_train(
     if not await ensure_dataset(ws, session, dataset):
         return
     session.training.start(cfg, encode)
-    await send_train_state(ws, session, running=True)
+    await send_train_state(ws, session, running=True, mode=cfg.mode)
 
 
 async def handle_stop_train(ws: WebSocket, session: Session) -> None:
@@ -154,13 +153,10 @@ async def handle_save_model(
 
 
 async def handle_list_models(ws: WebSocket, session: Session) -> None:
-    """Send the list of saved checkpoints plus dataset catalog."""
+    """Send checkpoints, datasets, topologies, and neuron kinds."""
     await send_locked(ws, session, {
         "type": "model_list",
-        "payload": {
-            "models": model_store.list_models(),
-            "datasets": catalog(),
-        },
+        "payload": model_list_payload(),
     })
 
 

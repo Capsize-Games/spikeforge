@@ -11,6 +11,7 @@ from snn_interpreter.data.datasets import dataset_info
 from snn_interpreter.encoding.spike_encoder import SpikeEncoder
 from snn_interpreter.network import inference
 from snn_interpreter.runtime import device as device_mod
+from snn_interpreter.runtime.execution_mode import ExecutionMode
 from snn_interpreter.simulator.runner import run
 from snn_interpreter.topology import registry
 from snn_interpreter.topology.stage_module import StageModule
@@ -35,6 +36,7 @@ class TrainingEngine(
     _encoder: Optional[SpikeEncoder]
     _explicit_mode: Optional[str]
     _input_mode: str
+    _mode: ExecutionMode
     _net: StageModule
     _optimizer: torch.optim.Adam
     _test_batches: Optional[List[_Batch]]
@@ -47,11 +49,13 @@ class TrainingEngine(
         input_mode: Optional[str] = None, device: Optional[str] = None,
         topology: str = "fc_legacy",
         topology_params: Optional[Dict[str, Any]] = None,
+        mode: str = "production",
     ) -> None:
         """Resolve inputs, build the topology, and optionally restore it."""
         self._store_settings(
             dataset, hidden, beta, lr, epochs, num_steps, subset, batch_size
         )
+        self._mode = ExecutionMode(mode)
         self._encode = encode
         self._topology = topology
         self._topology_params = dict(topology_params or {})
@@ -157,7 +161,9 @@ class TrainingEngine(
         self, inputs: torch.Tensor, targets: torch.Tensor
     ) -> Dict[str, float]:
         """Run one optimisation step and return loss/accuracy."""
-        outputs = run(self._net, self._encode_batch(inputs)).logits
+        outputs = run(
+            self._net, self._encode_batch(inputs), mode=self._mode
+        ).logits
         loss = cross_entropy(outputs, targets.to(self._device))
         self._optimizer.zero_grad()
         loss.backward()
@@ -169,8 +175,10 @@ class TrainingEngine(
     def predict(self, inputs: torch.Tensor) -> torch.Tensor:
         """Return predicted digits for a batch of images."""
         with torch.no_grad():
-            outputs = run(self._net, self._encode_batch(inputs)).logits
-        return outputs.argmax(dim=1)
+            trajectory = run(
+                self._net, self._encode_batch(inputs), mode=self._mode
+            )
+        return trajectory.logits.argmax(dim=1)
 
     def predict_sample(self) -> Dict[str, List[int]]:
         """Return digits/labels for one held-out batch."""
@@ -193,6 +201,7 @@ class TrainingEngine(
             self._num_classes,
             true_label,
             self.input_mode,
+            mode=self._mode,
         )
 
     # --- accessors -------------------------------------------------------
@@ -218,6 +227,16 @@ class TrainingEngine(
     def input_mode(self) -> str:
         """Return the effective input mode."""
         return self._input_mode
+
+    @property
+    def mode(self) -> str:
+        """Return the active execution mode name."""
+        return self._mode.value
+
+    @property
+    def execution_mode(self) -> ExecutionMode:
+        """Return the active :class:`ExecutionMode` member."""
+        return self._mode
 
     @property
     def dataset(self) -> str:

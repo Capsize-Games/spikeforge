@@ -59,6 +59,11 @@ export function useWebSocket({ onMessage }: Options) {
     wsRef.current?.send(JSON.stringify({ type, name }));
   }, []);
 
+  /** Send a parameterless action (e.g. "surrogates", "metrics"). */
+  const sendAction = useCallback((type: string) => {
+    wsRef.current?.send(JSON.stringify({ type }));
+  }, []);
+
   const sendSelectSample = useCallback((config: EncodeConfig) => {
     wsRef.current?.send(JSON.stringify({ type: "select_sample", config }));
   }, []);
@@ -80,6 +85,7 @@ export function useWebSocket({ onMessage }: Options) {
     send,
     sendTrain,
     sendNamed,
+    sendAction,
     sendSelectSample,
     sendInfer,
     sendStats,

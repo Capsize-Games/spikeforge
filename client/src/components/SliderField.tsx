@@ -8,6 +8,8 @@ interface Props {
   step: number;
   help: string;
   disabled?: boolean;
+  /** Value for the `data-tour` hook a guided-tour step highlights. */
+  tour?: string;
   onChange: (value: number) => void;
 }
 
@@ -20,10 +22,11 @@ export function SliderField({
   step,
   help,
   disabled,
+  tour,
   onChange,
 }: Props) {
   return (
-    <label className="field">
+    <label className="field" data-tour={tour}>
       <span className="field-label">
         <span>
           {label}: <b>{value}</b>

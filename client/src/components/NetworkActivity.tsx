@@ -1,8 +1,10 @@
+import { HELP } from "../helpText";
 import type {
   InferencePayload,
   RasterPayload,
   RasterSource,
 } from "../types";
+import { HelpTip } from "./HelpTip";
 import { RasterCanvas } from "./RasterCanvas";
 
 interface Props {
@@ -46,7 +48,10 @@ export function NetworkActivity({ rasters, inference, timeStep }: Props) {
 
   return (
     <div className="panel">
-      <div className="panel-title">Network activity</div>
+      <div className="panel-title">
+        Network activity
+        <HelpTip text={HELP.activity} />
+      </div>
       <div className="raster-stack">
         <RasterCanvas
           bare

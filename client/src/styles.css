@@ -3,6 +3,10 @@
 @import "./styles/controls.css";
 @import "./styles/feedback.css";
 @import "./styles/viewer.css";
+@import "./styles/panels.css";
 @import "./styles/model.css";
 @import "./styles/model-actions.css";
+@import "./styles/mode.css";
+@import "./styles/analysis.css";
 @import "./styles/download.css";
+@import "./styles/tour.css";

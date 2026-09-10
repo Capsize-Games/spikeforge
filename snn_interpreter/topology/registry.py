@@ -17,29 +17,42 @@ from snn_interpreter.topology.stage_module import StageModule
 SpecBuilder = Callable[..., TopologySpec]
 ModuleBuilder = Callable[[Mapping[str, Any]], StageModule]
 
+#: Neuron kind selected by every preset when ``params["neuron"]`` is absent.
+_DEFAULT_NEURON = presets.DEFAULT_NEURON
+#: Default surrogate selection (``None`` keeps snnTorch's own default).
+_DEFAULT_SURROGATE: Optional[str] = None
+
 _LEGACY_DEFAULTS: Dict[str, Any] = {
     "hidden": 128,
     "beta": 0.5,
     "num_classes": 10,
     "input_size": 28 * 28,
+    "neuron": _DEFAULT_NEURON,
+    "surrogate": _DEFAULT_SURROGATE,
 }
 _SMALL_DEFAULTS: Dict[str, Any] = {
     "hidden": 32,
     "beta": 0.9,
     "num_classes": 10,
     "input_size": 28 * 28,
+    "neuron": _DEFAULT_NEURON,
+    "surrogate": _DEFAULT_SURROGATE,
 }
 _CONV_DEFAULTS: Dict[str, Any] = {
     "in_channels": 1,
     "channels": 8,
     "num_classes": 10,
     "input_size": 28,
+    "neuron": _DEFAULT_NEURON,
+    "surrogate": _DEFAULT_SURROGATE,
 }
 _RECURRENT_DEFAULTS: Dict[str, Any] = {
     "hidden": 64,
     "beta": 0.9,
     "num_classes": 10,
     "input_size": 28 * 28,
+    "neuron": _DEFAULT_NEURON,
+    "surrogate": _DEFAULT_SURROGATE,
 }
 
 _Entry = Tuple[SpecBuilder, Mapping[str, Any], Optional[ModuleBuilder]]
@@ -99,6 +112,20 @@ def resolved_params(
     return defaults
 
 
+def _uses_legacy_wrapper(resolved: Mapping[str, Any]) -> bool:
+    """Return True when ``fc_legacy`` can still render its legacy wrapper.
+
+    The ``SpikingNet`` wrapper implements only ``snn.Leaky`` and takes no
+    surrogate, so the generic module is used whenever ``neuron`` or
+    ``surrogate`` departs from the historical default.
+    """
+    default_neuron = resolved.get("neuron", _DEFAULT_NEURON)
+    return (
+        default_neuron == _DEFAULT_NEURON
+        and resolved.get("surrogate") is None
+    )
+
+
 def build_topology(
     name: str, params: Optional[Mapping[str, Any]] = None
 ) -> Tuple[TopologySpec, StageModule]:
@@ -106,6 +133,6 @@ def build_topology(
     builder, _, module_builder = _entry(name)
     resolved = resolved_params(name, params)
     spec = builder(**resolved)
-    if module_builder is not None:
+    if module_builder is not None and _uses_legacy_wrapper(resolved):
         return spec, module_builder(resolved)
     return spec, build_module(spec)

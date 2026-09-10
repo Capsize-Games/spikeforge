@@ -6,7 +6,7 @@ import type {
   ModelLoadedPayload,
   TrainMetrics,
 } from "../types";
-import { HELP } from "../helpText";
+import { HELP, TRAIN_HELP } from "../helpText";
 import { ClassSpikeBarsFromInference } from "./ClassSpikeBarsFromInference";
 import { HelpTip } from "./HelpTip";
 import { LineChart } from "./LineChart";
@@ -34,7 +34,10 @@ function MismatchBanner({ compatibility }: { compatibility: Compatibility }) {
   const legacy = compatibility.expected_input_mode === "raw";
   return (
     <div className="mismatch">
-      <div className="mismatch-title">⚠ Checkpoint mismatch</div>
+      <div className="mismatch-title">
+        ⚠ Checkpoint mismatch
+        <HelpTip text={TRAIN_HELP.compatibility} />
+      </div>
       {legacy ? (
         <div>Legacy raw checkpoint — the encoding controls are ignored.</div>
       ) : (
@@ -121,7 +124,7 @@ export function TrainingPanel({
       compatibility.expected_input_mode === "raw");
 
   return (
-    <div className="col-training">
+    <>
       {mismatch && compatibility && (
         <MismatchBanner compatibility={compatibility} />
       )}
@@ -175,7 +178,7 @@ export function TrainingPanel({
 
         <div className="panel-title subsection">Status</div>
         {last ? (
-          <div className="metrics">
+          <div className="metrics" data-tour="training-live">
             <div>step {last.step} / {last.total}</div>
             <div>epoch {last.epoch + 1}</div>
             <div>loss {last.loss.toFixed(3)}</div>
@@ -224,6 +227,6 @@ export function TrainingPanel({
           ]}
         />
       </div>
-    </div>
+    </>
   );
 }

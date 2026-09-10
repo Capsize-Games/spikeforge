@@ -1,4 +1,6 @@
+import { TRAIN_HELP } from "../helpText";
 import type { DeviceChoice, MemoryBlock, SystemStatsPayload } from "../types";
+import { HelpTip } from "./HelpTip";
 
 interface Props {
   stats: SystemStatsPayload | null;
@@ -61,6 +63,7 @@ export function ResourceMonitor({ stats, requested }: Props) {
       {gpuWarning && (
         <span className="res-warn">GPU unavailable — using CPU</span>
       )}
+      <HelpTip text={TRAIN_HELP.resources} />
       {!stats && <span className="res-muted">waiting for stats…</span>}
     </div>
   );

@@ -1,15 +1,20 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 
+import { AnalysisPanels } from "./components/AnalysisPanels";
 import { Controls } from "./components/Controls";
 import { DownloadProgress } from "./components/DownloadProgress";
 import { ModelPanel } from "./components/ModelPanel";
 import { StatusBar } from "./components/StatusBar";
 import { TopBar } from "./components/TopBar";
+import { TourCard } from "./components/TourCard";
 import { TrainingPanel } from "./components/TrainingPanel";
 import { ViewerPanels } from "./components/ViewerPanels";
 import { useEncodeConfig } from "./hooks/useEncodeConfig";
 import { useModelActions } from "./hooks/useModelActions";
+import { useServerBootstrap } from "./hooks/useServerBootstrap";
+import { useTour } from "./hooks/useTour";
 import { useViewer } from "./hooks/useViewer";
+import { LESSONS } from "./tour/lessons";
 import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
 import type { ServerMsg } from "./types";
@@ -17,6 +22,7 @@ import type { ServerMsg } from "./types";
 export default function App() {
   const { config, configRef, patchConfig, replaceConfig } = useEncodeConfig();
   const training = useTraining();
+  const tour = useTour(LESSONS);
 
   // useViewer needs the socket's send helpers, while the socket needs
   // useViewer's message handler — bridge the cycle with a ref.
@@ -45,19 +51,7 @@ export default function App() {
     setScrubStep: viewer.setScrubStep,
   });
 
-  useEffect(() => {
-    if (!ws.connected) return;
-    ws.sendNamed("list_models", "");
-    // Populate the viewer immediately so every panel is shown at rest.
-    ws.send("configure", configRef.current);
-  }, [ws.connected, ws.sendNamed, ws.send, configRef]);
-
-  useEffect(() => {
-    if (!ws.connected) return;
-    ws.sendStats();
-    const id = setInterval(ws.sendStats, 2000);
-    return () => clearInterval(id);
-  }, [ws.connected, ws.sendStats]);
+  useServerBootstrap(ws, configRef);
 
   /** Toggle auto-prediction: run now when enabled, clear when disabled. */
   const toggleAutoPredict = () => {
@@ -75,10 +69,21 @@ export default function App() {
       ? viewer.state.download
       : null;
 
+  // The configured surrogate drives the curve panel's initial selection.
+  const rawSurrogate = training.state.config.topology_params.surrogate;
+  const currentSurrogate = typeof rawSurrogate === "string" ? rawSurrogate : "";
+
   return (
     <div className="app">
       <header className="app-header">
-        <TopBar />
+        <TopBar
+          mode={training.state.config.mode}
+          onModeChange={(mode) => training.patch({ mode })}
+          lessons={LESSONS}
+          tourOpen={tour.menuOpen}
+          onToggleTours={tour.toggleMenu}
+          onOpenTour={tour.openLesson}
+        />
       </header>
 
       <main className="app-main">
@@ -101,6 +106,9 @@ export default function App() {
               gpuAvailable={viewer.gpuAvailable}
               connected={ws.connected}
               trainRunning={training.state.running}
+              topologies={training.state.topologies}
+              neurons={training.state.neurons}
+              surrogates={training.state.surrogates}
               locked={viewer.locked}
               onChange={patchConfig}
               onModelChange={training.patch}
@@ -118,9 +126,13 @@ export default function App() {
             inference={viewer.state.inference}
             loaded={training.state.loaded}
             coding={config.coding}
+            mode={training.state.config.mode}
             sampleIndex={config.sample_index}
             timeStep={viewer.timeStep}
             numSteps={viewer.numSteps}
+            trajectory={viewer.state.trajectory}
+            nirGraph={viewer.state.nirGraph}
+            nirValidation={viewer.state.nirValidation}
             playing={viewer.state.running}
             onPlay={actions.playPreview}
             onStop={actions.stopPreview}
@@ -128,21 +140,45 @@ export default function App() {
             onSelectSample={(index) =>
               actions.selectSample({ sample_index: index })
             }
+            onRefreshTrajectory={actions.requestTrajectory}
+            onRefreshNirGraph={actions.requestNirExport}
+            onRefreshNirValidation={actions.requestNirValidate}
+            onSwitchToEducational={() =>
+              training.patch({ mode: "educational" })
+            }
           />
 
-          <TrainingPanel
-            loss={training.state.loss}
-            trainAccuracy={training.state.trainAccuracy}
-            testAccuracy={training.state.testAccuracy}
-            last={training.state.last}
-            device={training.state.device}
-            inference={viewer.state.inference}
-            timeStep={viewer.timeStep}
-            loaded={training.state.loaded}
-            autoPredict={viewer.autoPredict}
-            canAutoPredict={viewer.canAutoPredict}
-            onToggleAutoPredict={toggleAutoPredict}
-          />
+          <div className="col-training">
+            <TrainingPanel
+              loss={training.state.loss}
+              trainAccuracy={training.state.trainAccuracy}
+              testAccuracy={training.state.testAccuracy}
+              last={training.state.last}
+              device={training.state.device}
+              inference={viewer.state.inference}
+              timeStep={viewer.timeStep}
+              loaded={training.state.loaded}
+              autoPredict={viewer.autoPredict}
+              canAutoPredict={viewer.canAutoPredict}
+              onToggleAutoPredict={toggleAutoPredict}
+            />
+
+            <AnalysisPanels
+              mode={training.state.config.mode}
+              metrics={viewer.state.metrics}
+              encodingReport={viewer.state.encodingReport}
+              surrogateCurve={viewer.state.surrogateCurve}
+              benchmark={training.state.benchmark}
+              benchmarkLoading={training.state.benchmarkLoading}
+              surrogates={training.state.surrogates}
+              currentSurrogate={currentSurrogate}
+              onRefreshMetrics={actions.requestMetrics}
+              onRefreshEncodingReport={actions.requestEncodingReport}
+              onRequestSurrogateCurve={actions.requestSurrogateCurve}
+              onRunBenchmark={actions.requestBenchmark}
+              onSwitchMode={() => training.patch({ mode: "educational" })}
+            />
+          </div>
         </div>
 
         {viewer.state.error && (
@@ -160,6 +196,18 @@ export default function App() {
         <DownloadProgress
           download={downloading}
           onCancel={ws.sendCancelDownload}
+        />
+      )}
+
+      {tour.lesson && tour.step && (
+        <TourCard
+          lesson={tour.lesson}
+          step={tour.step}
+          stepIndex={tour.stepIndex}
+          missing={tour.missing}
+          onPrev={tour.prev}
+          onNext={tour.next}
+          onClose={tour.closeLesson}
         />
       )}
     </div>

@@ -12,6 +12,8 @@ interface Props {
   help: string;
   options: Option[];
   disabled?: boolean;
+  /** Value for the `data-tour` hook a guided-tour step highlights. */
+  tour?: string;
   onChange: (value: string) => void;
 }
 
@@ -22,10 +24,11 @@ export function SelectField({
   help,
   options,
   disabled,
+  tour,
   onChange,
 }: Props) {
   return (
-    <label className="field">
+    <label className="field" data-tour={tour}>
       <span className="field-label">
         <span>{label}</span>
         <HelpTip text={help} />

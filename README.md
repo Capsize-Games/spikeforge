@@ -39,6 +39,10 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
   per-step `U[t]`/`I[t]`/`S[t]`, trajectory metrics, encoding/decoding
   reports, surrogate-gradient curves, a neuron comparison lab, and a
   production-mode benchmark harness (see below)
+- **Unified dashboard (Phase 3)**: an Educational/Production mode toggle,
+  topology/neuron/surrogate pickers, neuron-state trajectory and NIR graph
+  viewers, a drift-validation panel, trajectory-metrics/encoding/surrogate/
+  benchmark analysis panels, and seven guided walkthroughs (see below)
 
 ## Interpreter spine (Phase 1)
 
@@ -208,6 +212,111 @@ Six data-only actions were added, with client types in
 | `benchmark` | `benchmark` | Config, environment, and per-mode results |
 
 All are read-only; precondition failures emit the existing `error` message.
+
+## Dashboard (Phase 3)
+
+Phase 3 turns the browser dashboard into the go-to surface for both
+audiences. Every panel below renders from live server payloads over the
+existing WebSocket protocol, so nothing needs a page reload.
+
+### Execution-mode toggle
+
+The top bar carries an **Educational / Production** toggle wired to
+`TrainConfig.mode` — the same `ExecutionMode` the runtime uses. It changes
+what a run *records*, not what it computes:
+
+- **Production** (the default) skips trajectory capture and runs lean, so
+  the introspection panels show their gated empty state.
+- **Educational** records per-step `U[t]`/`I[t]`/`S[t]` and unlocks the
+  trajectory viewer, the metrics panel, and the firing-rate histogram.
+
+The mode is applied when the engine is built, so switch it and then start a
+run (`train`) or load a checkpoint (`load_model`) to see the panels fill in.
+
+### LEFT column — model controls
+
+- **Topology** picker -> `TrainConfig.topology` (`fc_legacy`, `fc_small`,
+  `conv_net`, `recurrent_net`).
+- **Neuron** picker -> `TrainConfig.topology_params.neuron` (registry kinds).
+- **Surrogate** picker -> `TrainConfig.topology_params.surrogate`; it also
+  drives the surrogate-curve panel's initial selection.
+- The existing **dataset** and **coding** controls (rate / latency / delta /
+  random) and the model-zoo browser.
+
+The hardware-target picker is deferred to Phase 5 (see Notes).
+
+### CENTER column — introspection panels
+
+- **Neuron-state trajectory viewer** — `U[t]` (membrane) and `I[t]` (input
+  current) per stage, with a stage selector and the shared time cursor.
+- **NIR topology graph viewer** — the graph summary drawn as nodes and edges,
+  with non-linear (skip/conv) and delayed (recurrent) edges rendered
+  distinctly.
+- **NIR drift-validation panel** — the independent-interpreter
+  `ValidationReport`, per layer and overall `within_tolerance`.
+- The existing sample / spike-frame / reconstruction / raster panels.
+
+### RIGHT column — analysis panels
+
+- **Trajectory metrics** — firing rate, sparsity, and ISI per stage, plus a
+  firing-rate histogram.
+- **Encoding report** — reconstruction plus the approximation note for the
+  current sample (see the Phase 2 decoding caveats).
+- **Surrogate-derivative curve** — sampled `dS/dU` for the selected
+  surrogate gradient.
+- **Benchmark readout** — config, environment, and per-mode timing/memory.
+- The training and prediction panels.
+
+### Guided walkthroughs
+
+Seven short in-app lessons (one per tutorial theme) launch from the **Tours**
+menu in the top bar. Each step highlights its target control or panel and
+explains what it does:
+
+| Lesson | Theme |
+|---|---|
+| `encoding` | Spike encoding |
+| `datasets` | Neuromorphic datasets |
+| `snn` | Spiking neural networks (neuron model, mode, state viewer) |
+| `training` | Training SNNs (surrogate, curve, loss/accuracy) |
+| `cnn` | Spiking CNNs (topology, graph viewer) |
+| `recurrent` | Recurrent SNNs (delayed edges) |
+| `nir` | NIR export, validation, and benchmarking |
+
+Targets are marked with `data-tour` attributes on the panels. A step whose
+target is gated (for example the trajectory viewer in production mode) shows
+its explanatory note instead of a highlight. The help tips are expanded to
+cover topology, neuron model, mode, and NIR concepts.
+
+### WebSocket actions
+
+The dashboard drives the server with the actions below; precondition
+failures emit the existing `error` message rather than raising.
+
+| Action | Reply | Mode / precondition |
+|---|---|---|
+| `configure` | `config_ack`, sample panels | needs an encode config |
+| `run` / `stop` | `run_state`, rasters | needs a configured sample |
+| `select_sample` | sample panels | needs a configured sample |
+| `infer` | `inference` | needs a trained/loaded model |
+| `train` / `stop_train` | `train_metrics`, `train_state` | builds the engine; applies `mode` |
+| `save_model` | `model_saved` | needs a name |
+| `load_model` | `model_loaded` | needs a saved name; applies `mode` |
+| `delete_model` / `new_model` | `model_list` / `model_cleared` | — |
+| `list_models` | `model_list` | — |
+| `stats` | `system_stats` | — |
+| `cancel_download` | `download_state` | — |
+| `nir_export` | `nir_graph` | active or configured topology |
+| `nir_validate` | `nir_validation` | needs a configured sample |
+| `trajectory` | `trajectory` | **educational** mode + active model |
+| `metrics` | `metrics` | **educational** mode + active model |
+| `encoding_report` | `encoding_report` | needs a configured sample |
+| `surrogates` | `surrogate_list` | — |
+| `surrogate_curve` | `surrogate_curve` | needs a surrogate name |
+| `benchmark` | `benchmark` | runs the tiny default fixture |
+
+The schema also still declares a legacy `predict` type, but the client no
+longer sends it and the server does not dispatch it.
 
 ## Requirements
 
@@ -380,6 +489,11 @@ snn_interpreter/
 server/
   app.py                     FastAPI app + WebSocket endpoint
   handlers.py                Inbound message routing (encode + train)
+  protocol_handlers.py       Router for the NIR + introspection actions
+  nir_handlers.py            nir_export / nir_validate handlers
+  introspection_handlers.py  trajectory / metrics / encoding / surrogate
+  introspection_payloads.py  JSON payload builders for introspection
+  payloads.py                Model-list / model-load / NIR payload builders
   messages.py                Outbound WS message helpers
   encoder.py                 Config -> encoder engine (JSON payloads)
   training.py                Threaded training bridge -> asyncio queue
@@ -391,9 +505,11 @@ server/
     server_message.py        ServerMessage
 client/                      Vite + React + TypeScript dashboard
   src/                       app shell, theme, types, WS/training hooks
-  src/hooks/                 viewer state, encode config, model actions
+  src/hooks/                 viewer state, encode config, model/tour actions
   src/components/            controls, charts, canvas panels (incl. training)
-  src/styles/                split stylesheet (base/sections/controls/...)
+  src/tour/                  guided-walkthrough lessons + target highlighting
+  src/styles/                split stylesheet (base/sections/controls/mode/
+                             panels/analysis/tour/...)
 ```
 
 Code is kept tidy by construction: modules are grouped into focused
@@ -430,6 +546,12 @@ stays under 20 lines, and each class lives in its own file.
   carries no image signal at all. (4) Upstream's `LSO` surrogate is listed
   because snnTorch exposes it, but applying it raises `TypeError` from
   upstream's wrapper.
+- **Dashboard limitations (Phase 3).** (1) The hardware-target picker moves
+  to Phase 5, so the LEFT column exposes topology, neuron, and surrogate
+  controls only. (2) Event datasets are Phase 4, so the dataset
+  walkthrough's "where event data lands" step is explanatory for now.
+  (3) The trajectory viewer, metrics, and histogram are gated to educational
+  mode and show an explanatory empty state in production.
 
 ## License
 

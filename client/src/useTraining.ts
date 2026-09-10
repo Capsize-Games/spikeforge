@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import type { BenchmarkPayload } from "./introspectionTypes";
 import type {
   DatasetInfo,
   ModelLoadedPayload,
@@ -23,8 +24,16 @@ interface TrainingState {
   prediction: PredictionPayload | null;
   models: SavedModel[];
   datasets: DatasetInfo[];
+  /** Registry names for the architecture pickers, empty until listed. */
+  topologies: string[];
+  neurons: string[];
+  surrogates: string[];
   loaded: ModelLoadedPayload | null;
   status: string | null;
+  /** Latest benchmark report; null until one is run. */
+  benchmark: BenchmarkPayload | null;
+  /** True while a benchmark run is in flight. */
+  benchmarkLoading: boolean;
 }
 
 const initial: TrainingState = {
@@ -38,8 +47,13 @@ const initial: TrainingState = {
   prediction: null,
   models: [],
   datasets: [],
+  topologies: [],
+  neurons: [],
+  surrogates: [],
   loaded: null,
   status: null,
+  benchmark: null,
+  benchmarkLoading: false,
 };
 
 /** Restore persisted training settings, filling in any missing defaults. */
@@ -49,6 +63,23 @@ function loadTrainConfig(): TrainConfig {
     ...defaultTrainConfig,
     ...saved,
     encode: { ...defaultConfig, ...(saved.encode ?? {}) },
+  };
+}
+
+/** Fields derived from a checkpoint's stored history on load. */
+function loadedState(
+  payload: ModelLoadedPayload,
+  prevLast: TrainMetrics | null,
+): Partial<TrainingState> {
+  const h = payload.history ?? [];
+  return {
+    loaded: payload,
+    loss: h.map((p) => p.loss),
+    trainAccuracy: h.map((p) => p.train_accuracy * 100),
+    testAccuracy: h
+      .filter((p) => p.test_accuracy !== null)
+      .map((p) => p.test_accuracy as number),
+    last: h.length ? { ...h[h.length - 1], total: h.length } : prevLast,
   };
 }
 
@@ -96,22 +127,30 @@ export function useTraining() {
           ...s,
           models: msg.payload.models,
           datasets: msg.payload.datasets,
+          topologies: msg.payload.topologies,
+          neurons: msg.payload.neurons,
         }));
         return true;
-      case "model_loaded": {
-        const h = msg.payload.history ?? [];
+      case "surrogate_list":
+        setState((s) => ({ ...s, surrogates: msg.payload }));
+        return true;
+      case "benchmark":
         setState((s) => ({
           ...s,
-          loaded: msg.payload,
-          loss: h.map((p) => p.loss),
-          trainAccuracy: h.map((p) => p.train_accuracy * 100),
-          testAccuracy: h
-            .filter((p) => p.test_accuracy !== null)
-            .map((p) => p.test_accuracy as number),
-          last: h.length ? { ...h[h.length - 1], total: h.length } : s.last,
+          benchmark: msg.payload,
+          benchmarkLoading: false,
         }));
         return true;
-      }
+      case "error":
+        // A failed run must not leave the benchmark spinner stuck; the
+        // viewer still owns the visible error banner, so return false.
+        setState((s) =>
+          s.benchmarkLoading ? { ...s, benchmarkLoading: false } : s,
+        );
+        return false;
+      case "model_loaded":
+        setState((s) => ({ ...s, ...loadedState(msg.payload, s.last) }));
+        return true;
       case "model_cleared":
         setState((s) => ({
           ...s,
@@ -144,5 +183,15 @@ export function useTraining() {
   const setRunning = (running: boolean) =>
     setState((s) => ({ ...s, running }));
 
-  return { state, handleMessage, patch, reset, setRunning };
+  const setBenchmarkLoading = (benchmarkLoading: boolean) =>
+    setState((s) => ({ ...s, benchmarkLoading }));
+
+  return {
+    state,
+    handleMessage,
+    patch,
+    reset,
+    setRunning,
+    setBenchmarkLoading,
+  };
 }

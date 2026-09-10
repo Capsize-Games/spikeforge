@@ -41,7 +41,7 @@ export function InputRow({
   const rateCoding = coding === "rate";
 
   return (
-    <div className="viz-row">
+    <div className="viz-row" data-tour="input-raster">
       <div className="panel grow">
         <div className={`pair grow${rateCoding ? " three" : ""}`}>
           <div className="sample-wrap grow">

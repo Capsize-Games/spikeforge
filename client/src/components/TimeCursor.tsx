@@ -1,3 +1,5 @@
+import { HELP } from "../helpText";
+import { HelpTip } from "./HelpTip";
 import { SampleIndex } from "./SampleIndex";
 
 interface Props {
@@ -28,8 +30,12 @@ export function TimeCursor({
   return (
     <div className="panel time-cursor">
       <div className="panel-title row-title">
-        <span>Time cursor</span>
+        <span>
+          Time cursor
+          <HelpTip text={HELP.time_cursor} />
+        </span>
         <span className="panel-actions">
+          <HelpTip text={HELP.sample_index} />
           <button
             type="button"
             className="icon-btn"

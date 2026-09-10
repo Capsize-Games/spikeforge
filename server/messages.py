@@ -81,12 +81,14 @@ async def send_run_state(
 
 
 async def send_train_state(
-    ws: WebSocket, session: Session, running: bool, reason: str = ""
+    ws: WebSocket, session: Session, running: bool, reason: str = "",
+    mode: str = "",
 ) -> None:
     """Tell the client whether training is currently running."""
     await send_locked(ws, session, {
         "type": "train_state",
-        "payload": {"running": running, "reason": reason},
+        "payload": {"running": running, "reason": reason,
+                    "mode": mode or session.training.mode},
     })
 
 

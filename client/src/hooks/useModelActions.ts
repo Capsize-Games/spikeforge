@@ -1,9 +1,9 @@
 import type { MutableRefObject } from "react";
 
+import { loadCheckpoint } from "../modelLoad";
 import { useTraining } from "../useTraining";
 import { useWebSocket } from "../useWebSocket";
-import { defaultConfig } from "../types";
-import type { EncodeConfig, TrainConfig } from "../types";
+import type { EncodeConfig } from "../types";
 
 type Training = ReturnType<typeof useTraining>;
 type WebSocketControls = ReturnType<typeof useWebSocket>;
@@ -72,45 +72,47 @@ export function useModelActions(options: ActionsOptions) {
     ws.sendTrain("stop_train", training.state.config);
   };
 
+  /** Capture bounded U[t]/I[t]/S[t] traces (educational mode only). */
+  const requestTrajectory = () => ws.sendAction("trajectory");
+
+  /** Capture aggregate firing-rate/sparsity/ISI metrics (educational only). */
+  const requestMetrics = () => ws.sendAction("metrics");
+
+  /** Decode the configured sample into an encoding report. */
+  const requestEncodingReport = () => ws.sendAction("encoding_report");
+
+  /** Sample the named surrogate gradient's derivative curve. */
+  const requestSurrogateCurve = (name: string) =>
+    ws.sendNamed("surrogate_curve", name);
+
+  /** Run the tiny benchmark fixture from the current training config. */
+  const requestBenchmark = () => {
+    training.setBenchmarkLoading(true);
+    ws.sendTrain("benchmark", training.state.config);
+  };
+
+  /** Export the active/configured topology as a NIR graph summary. */
+  const requestNirExport = () =>
+    ws.sendTrain("nir_export", training.state.config);
+
+  /** Run the independent NIR interpreter and report drift. */
+  const requestNirValidate = () =>
+    ws.sendTrain("nir_validate", training.state.config);
+
   const saveModel = (name: string) => ws.sendNamed("save_model", name);
   const newModel = () => ws.sendNamed("new_model", "");
 
   /** Apply a checkpoint's saved architecture/encoding, then load it. */
   const loadModel = (name: string) => {
     setModelLoading(true);
-    const saved = training.state.models.find((m) => m.name === name);
-    const meta = (saved?.meta ?? {}) as {
-      encode?: Partial<EncodeConfig>;
-      dataset?: string;
-      hidden?: number;
-      beta?: number;
-    };
-    // Restore the exact encoding the checkpoint was trained with so the
-    // server's compatibility check passes, then lock the controls.
-    const nextEncode: EncodeConfig = meta.encode
-      ? {
-          ...defaultConfig,
-          ...meta.encode,
-          sample_index: configRef.current.sample_index,
-        }
-      : { ...configRef.current };
-    replaceConfig(nextEncode);
-
-    const patch: Partial<TrainConfig> = {
-      checkpoint: name,
-      encode: nextEncode,
-    };
-    if (meta.dataset) patch.dataset = meta.dataset;
-    if (typeof meta.hidden === "number") patch.hidden = meta.hidden;
-    if (typeof meta.beta === "number") patch.beta = meta.beta;
-    training.patch(patch);
-
-    const merged: TrainConfig = {
-      ...training.state.config,
-      ...sharedPatch,
-      ...patch,
-      checkpoint: name,
-    };
+    const merged = loadCheckpoint(name, {
+      saved: training.state.models.find((m) => m.name === name),
+      current: configRef.current,
+      config: training.state.config,
+      sharedPatch,
+      replaceConfig,
+      applyPatch: training.patch,
+    });
     ws.sendTrain("load_model", merged, name);
   };
 
@@ -124,5 +126,12 @@ export function useModelActions(options: ActionsOptions) {
     saveModel,
     loadModel,
     newModel,
+    requestTrajectory,
+    requestMetrics,
+    requestEncodingReport,
+    requestSurrogateCurve,
+    requestBenchmark,
+    requestNirExport,
+    requestNirValidate,
   };
 }

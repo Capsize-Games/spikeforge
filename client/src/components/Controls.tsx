@@ -1,6 +1,7 @@
-import { HELP, TRAIN_HELP } from "../helpText";
+import { HELP } from "../helpText";
 import type { DatasetInfo, EncodeConfig, TrainConfig } from "../types";
 import { CheckField } from "./CheckField";
+import { ModelSection } from "./ModelSection";
 import { SelectField } from "./SelectField";
 import { SliderField } from "./SliderField";
 import { Section } from "./Stepper";
@@ -13,6 +14,10 @@ interface Props {
   gpuAvailable: boolean;
   connected: boolean;
   trainRunning: boolean;
+  /** Registry names for the architecture pickers, empty until listed. */
+  topologies: string[];
+  neurons: string[];
+  surrogates: string[];
   /** True when a checkpoint is loaded: architecture/encoding are read-only. */
   locked: boolean;
   onChange: (patch: Partial<EncodeConfig>) => void;
@@ -30,6 +35,9 @@ export function Controls(props: Props) {
     gpuAvailable,
     connected,
     trainRunning,
+    topologies,
+    neurons,
+    surrogates,
     locked,
     onChange,
     onModelChange,
@@ -39,7 +47,6 @@ export function Controls(props: Props) {
   } = props;
 
   const set = (patch: Partial<EncodeConfig>) => onChange(patch);
-  const setModel = (patch: Partial<TrainConfig>) => onModelChange(patch);
 
   return (
     <div className="panel controls">
@@ -56,6 +63,7 @@ export function Controls(props: Props) {
           label="Dataset"
           value={config.dataset}
           help={HELP.dataset}
+          tour="dataset"
           disabled={locked}
           options={
             datasets.length === 0
@@ -84,6 +92,7 @@ export function Controls(props: Props) {
           label="Coding"
           value={config.coding}
           help={HELP.coding}
+          tour="coding"
           disabled={locked}
           options={[
             { value: "rate", label: "Rate" },
@@ -163,42 +172,15 @@ export function Controls(props: Props) {
         )}
       </Section>
 
-      <Section title="Model" hint="the network that learns these spikes">
-        <SelectField
-          label="Device"
-          value={model.device}
-          help={TRAIN_HELP.device}
-          options={[
-            { value: "auto", label: "Auto (pick the faster)" },
-            {
-              value: "gpu",
-              label: gpuAvailable ? "GPU" : "GPU (unavailable)",
-              disabled: !gpuAvailable,
-            },
-            { value: "cpu", label: "CPU" },
-          ]}
-          onChange={(v) => setModel({ device: v as TrainConfig["device"] })}
-        />
-
-        <SliderField
-          label="hidden" value={model.hidden} min={16} max={512} step={16}
-          help={TRAIN_HELP.hidden} disabled={locked}
-          onChange={(v) => setModel({ hidden: v })}
-        />
-        <SliderField
-          label="beta" value={model.beta} min={0.1} max={0.95} step={0.05}
-          help={TRAIN_HELP.beta} disabled={locked}
-          onChange={(v) => setModel({ beta: v })}
-        />
-        <SliderField
-          label="lr" value={model.lr} min={0.001} max={0.05} step={0.001}
-          help={TRAIN_HELP.lr} onChange={(v) => setModel({ lr: v })}
-        />
-        <SliderField
-          label="epochs" value={model.epochs} min={1} max={10} step={1}
-          help={TRAIN_HELP.epochs} onChange={(v) => setModel({ epochs: v })}
-        />
-      </Section>
+      <ModelSection
+        model={model}
+        gpuAvailable={gpuAvailable}
+        locked={locked}
+        topologies={topologies}
+        neurons={neurons}
+        surrogates={surrogates}
+        onChange={onModelChange}
+      />
 
       <Section
         title="Train & inspect"
