@@ -9,6 +9,7 @@ interface Props {
   reconLow: number[][] | null;
   rasters: Record<RasterSource, RasterPayload | null>;
   inference: InferencePayload | null;
+  spikeStep: number | null;
   playing: boolean;
   onPlay: () => void;
   onStop: () => void;
@@ -38,6 +39,7 @@ export function ViewerPanels({
   reconLow,
   rasters,
   inference,
+  spikeStep,
   playing,
   onPlay,
   onStop,
@@ -96,6 +98,7 @@ export function ViewerPanels({
       <RasterCanvas
         raster={rasters.input}
         label="Input spikes"
+        highlightStep={playing ? spikeStep : null}
         actions={
           <>
             <button

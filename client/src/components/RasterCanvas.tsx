@@ -10,6 +10,8 @@ interface Props {
   label?: string;
   /** Right-aligned controls rendered in the panel header. */
   actions?: ReactNode;
+  /** Time step to spotlight, e.g. while the spike-frame animation plays. */
+  highlightStep?: number | null;
 }
 
 export function RasterCanvas({
@@ -18,6 +20,7 @@ export function RasterCanvas({
   height = 260,
   label,
   actions,
+  highlightStep = null,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -51,10 +54,31 @@ export function RasterCanvas({
       ctx.fillRect(x, y, 1.4, 1.4);
     }
 
+    if (highlightStep !== null && highlightStep !== undefined) {
+      const idx = Math.max(0, Math.min(highlightStep, steps - 1));
+      const x0 = padL + (idx / steps) * plotW;
+      const bandW = Math.max(2, plotW / steps);
+      ctx.fillStyle = "rgba(88, 166, 255, 0.16)";
+      ctx.fillRect(x0, 8, bandW, plotH);
+      ctx.fillStyle = "#79c0ff";
+      for (let i = 0; i < raster.time.length; i++) {
+        if (raster.time[i] !== idx) continue;
+        const x = padL + (raster.time[i] / steps) * plotW;
+        const y = 8 + plotH - (raster.neurons[i] / neurons) * plotH;
+        ctx.fillRect(x, y, 2.4, 2.4);
+      }
+      ctx.strokeStyle = "rgba(88, 166, 255, 0.8)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x0 + bandW / 2, 8);
+      ctx.lineTo(x0 + bandW / 2, 8 + plotH);
+      ctx.stroke();
+    }
+
     ctx.fillStyle = "#8b949e";
     ctx.fillText("Time step", padL + plotW / 2 - 18, canvas.height - 6);
     ctx.fillText(String(steps), padL + plotW - 20, canvas.height - 6);
-  }, [raster, width, height]);
+  }, [raster, width, height, highlightStep]);
 
   return (
     <div className="panel">

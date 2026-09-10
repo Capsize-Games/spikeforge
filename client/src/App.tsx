@@ -28,6 +28,7 @@ type FrameMap = Record<FrameSource, number[][] | null>;
 interface ViewerState {
   sample: number[][] | null;
   spikeFrames: FrameMap;
+  spikeStep: number | null;
   reconGain1: number[][] | null;
   reconLow: number[][] | null;
   rasters: RasterMap;
@@ -43,6 +44,7 @@ const emptyFrames: FrameMap = { input: null, hidden: null };
 const initial: ViewerState = {
   sample: null,
   spikeFrames: emptyFrames,
+  spikeStep: null,
   reconGain1: null,
   reconLow: null,
   rasters: emptyRasters,
@@ -82,6 +84,7 @@ export default function App() {
             error: null,
             sample: null,
             spikeFrames: emptyFrames,
+            spikeStep: null,
             reconGain1: null,
             reconLow: null,
             rasters: emptyRasters,
@@ -113,6 +116,8 @@ export default function App() {
           setState((s) => ({
             ...s,
             spikeFrames: { ...s.spikeFrames, [source]: msg.payload },
+            spikeStep:
+              source === "input" ? (msg.step ?? s.spikeStep) : s.spikeStep,
           }));
           break;
         }
@@ -276,6 +281,7 @@ export default function App() {
           reconLow={state.reconLow}
           rasters={state.rasters}
           inference={state.inference}
+          spikeStep={state.spikeStep}
           playing={state.running}
           onPlay={playPreview}
           onStop={stopPreview}
