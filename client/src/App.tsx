@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Controls } from "./components/Controls";
 import { ResourceMonitor } from "./components/ResourceMonitor";
-import { Stepper } from "./components/Stepper";
 import { TopBar } from "./components/TopBar";
 import { TrainingPanel } from "./components/TrainingPanel";
 import { ViewerPanels } from "./components/ViewerPanels";
@@ -233,20 +232,6 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <Stepper
-          steps={[
-            { n: "1", label: "Data" },
-            { n: "2", label: "Encoding" },
-            { n: "3", label: "Model" },
-            { n: "4", label: "Train & inspect" },
-          ]}
-        />
-        <p className="intro">
-          Expand a numbered section on the left to change settings — 1 Data · 2
-          Encoding · 3 Model · 4 Train & inspect. The middle shows what the
-          data looks like; the right column shows the results.
-        </p>
-
         <div className="grid">
         <div className="col-controls">
           <Controls

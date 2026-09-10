@@ -1,23 +1,6 @@
-/** Guidance chrome: the overall workflow and collapsible sections. */
+/** Collapsible numbered section used by the control column. */
 
 import type { ReactNode } from "react";
-
-export function Stepper({
-  steps,
-}: {
-  steps: { n: string; label: string }[];
-}) {
-  return (
-    <nav className="stepper" aria-label="Workflow">
-      {steps.map((s, i) => (
-        <span key={s.n} className="stepper-item">
-          <b>{s.n}</b> {s.label}
-          {i < steps.length - 1 && <span className="stepper-arrow">→</span>}
-        </span>
-      ))}
-    </nav>
-  );
-}
 
 export function Section({
   step,

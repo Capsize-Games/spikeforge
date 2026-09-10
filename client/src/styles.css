@@ -95,52 +95,7 @@ body {
   align-items: start;
 }
 
-/* --- workflow stepper + section headings --- */
-.stepper {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.stepper-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.stepper-item b {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--accent);
-  font-size: 10px;
-}
-
-.stepper-arrow {
-  margin-left: 8px;
-  color: var(--border);
-}
-
-.intro {
-  margin: -4px 0 12px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-
+/* --- collapsible section headings --- */
 .section {
   border-bottom: 1px solid var(--border);
 }
@@ -729,7 +684,6 @@ canvas {
 
 /* --- square corners on containers and controls --- */
 .panel,
-.stepper,
 canvas,
 .model-item,
 .mismatch,
@@ -743,7 +697,6 @@ canvas,
 .help-popup,
 .help-tip,
 .section-step,
-.stepper-item b,
 .apply,
 .apply.small,
 .step-btn,
