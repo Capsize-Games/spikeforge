@@ -172,17 +172,6 @@ export default function App() {
     sendInfer(configRef.current, training.state.config);
   };
 
-  const run = () => {
-    setState((s) => ({ ...s, error: null }));
-    send("configure", config);
-    send("run", config);
-  };
-
-  const stop = () => {
-    setState((s) => ({ ...s, running: false }));
-    send("stop", config);
-  };
-
   /** Data settings are shared, so training mirrors the single config. */
   const sharedPatch = {
     dataset: config.dataset,
@@ -244,14 +233,11 @@ export default function App() {
             models={training.state.models}
             gpuAvailable={gpuAvailable}
             connected={connected}
-            encodeRunning={state.running}
             trainRunning={training.state.running}
             canInfer={canInfer}
             onChange={patchConfig}
             onModelChange={training.patch}
             onSelectSample={selectSample}
-            onRun={run}
-            onStop={stop}
             onTrain={train}
             onStopTrain={stopTrain}
             onInfer={runInference}

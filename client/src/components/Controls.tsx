@@ -19,14 +19,11 @@ interface Props {
   models: SavedModel[];
   gpuAvailable: boolean;
   connected: boolean;
-  encodeRunning: boolean;
   trainRunning: boolean;
   canInfer: boolean;
   onChange: (patch: Partial<EncodeConfig>) => void;
   onModelChange: (patch: Partial<TrainConfig>) => void;
   onSelectSample: (patch: Partial<EncodeConfig>) => void;
-  onRun: () => void;
-  onStop: () => void;
   onTrain: () => void;
   onStopTrain: () => void;
   onInfer: () => void;
@@ -43,14 +40,11 @@ export function Controls(props: Props) {
     models,
     gpuAvailable,
     connected,
-    encodeRunning,
     trainRunning,
     canInfer,
     onChange,
     onModelChange,
     onSelectSample,
-    onRun,
-    onStop,
     onTrain,
     onStopTrain,
     onInfer,
@@ -200,14 +194,6 @@ export function Controls(props: Props) {
           <SliderField label="random_scale" value={config.random_scale} min={0.1} max={1} step={0.05} help={HELP.random_scale} onChange={(v) => set({ random_scale: v })} />
         )}
 
-        <div className="actions">
-          <button className="apply" onClick={onRun} disabled={!connected || encodeRunning}>
-            {encodeRunning ? "Playing…" : "▶ Preview spikes"}
-          </button>
-          <button className="apply stop" onClick={onStop} disabled={!connected || !encodeRunning}>
-            ■ Stop
-          </button>
-        </div>
       </Section>
 
       <Section

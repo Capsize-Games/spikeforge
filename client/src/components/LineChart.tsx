@@ -13,9 +13,17 @@ interface Props {
   title?: string;
   width?: number;
   height?: number;
+  /** Render only the canvas, for nesting inside another panel. */
+  bare?: boolean;
 }
 
-export function LineChart({ series, title, width = 340, height = 150 }: Props) {
+export function LineChart({
+  series,
+  title,
+  width = 340,
+  height = 150,
+  bare = false,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -58,6 +66,10 @@ export function LineChart({ series, title, width = 340, height = 150 }: Props) {
       legendX += ctx.measureText(s.label).width + 34;
     });
   }, [series, width, height]);
+
+  if (bare) {
+    return <canvas ref={canvasRef} width={width} height={height} />;
+  }
 
   return (
     <div className="panel">

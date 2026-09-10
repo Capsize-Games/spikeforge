@@ -53,17 +53,17 @@ async def handle_configure(ws, session: Session, cfg):
     await session.cancel()
     session.set_engine(EncoderEngine(cfg), cfg)
     await send_initial(ws, session, cfg)
-    await send_run_state(ws, session, running=False, reason="configured")
+    await handle_run(ws, session, cfg)
     if session.training.engine is not None:
         await handle_infer(ws, session, cfg)
 
 
 async def handle_select_sample(ws, session: Session, cfg):
-    """Rebuild the engine for a new sample and repaint the viewer."""
+    """Rebuild the engine for a new sample and replay the preview."""
     await session.cancel()
     session.set_engine(EncoderEngine(cfg), cfg)
     await send_initial(ws, session, cfg)
-    await send_run_state(ws, session, running=False, reason="sample")
+    await handle_run(ws, session, cfg)
     if session.training.engine is not None:
         await handle_infer(ws, session, cfg)
 

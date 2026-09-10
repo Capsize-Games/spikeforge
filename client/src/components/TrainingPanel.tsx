@@ -127,7 +127,9 @@ export function TrainingPanel({
       </div>
 
       <div className="panel">
-        <div className="panel-title">Training status</div>
+        <div className="panel-title">Training</div>
+
+        <div className="panel-title subsection">Status</div>
         {last ? (
           <div className="metrics">
             <div>step {last.step} / {last.total}</div>
@@ -150,29 +152,32 @@ export function TrainingPanel({
         ) : (
           <div className="muted">Not training</div>
         )}
-      </div>
 
-      <LineChart
-        title="Loss (training)"
-        series={[{ label: "loss", color: "#f85149", values: loss }]}
-      />
-      <LineChart
-        title="Accuracy (%)"
-        series={[
-          {
-            label: "held-out",
-            color: "#3fb950",
-            values: testAccuracy,
-            max: 100,
-          },
-          {
-            label: "train batch",
-            color: "#8b949e",
-            values: trainAccuracy,
-            max: 100,
-          },
-        ]}
-      />
+        <div className="panel-title subsection">Loss (training)</div>
+        <LineChart
+          bare
+          series={[{ label: "loss", color: "#f85149", values: loss }]}
+        />
+
+        <div className="panel-title subsection">Accuracy (%)</div>
+        <LineChart
+          bare
+          series={[
+            {
+              label: "held-out",
+              color: "#3fb950",
+              values: testAccuracy,
+              max: 100,
+            },
+            {
+              label: "train batch",
+              color: "#8b949e",
+              values: trainAccuracy,
+              max: 100,
+            },
+          ]}
+        />
+      </div>
     </div>
   );
 }
