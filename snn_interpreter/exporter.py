@@ -2,7 +2,7 @@
 
 import os
 
-BUILD_DIR = "build"
+from snn_interpreter.config import DATA_DIR
 
 
 class Exporter:
@@ -19,10 +19,10 @@ class Exporter:
 
     @property
     def output_path(self):
-        """Full path under build/ for this exporter's default file."""
-        os.makedirs(BUILD_DIR, exist_ok=True)
-        return os.path.join(BUILD_DIR, self.DEFAULT_FILENAME)
+        """Full path under the data dir for this exporter's default file."""
+        os.makedirs(DATA_DIR, exist_ok=True)
+        return os.path.join(DATA_DIR, self.DEFAULT_FILENAME)
 
     def export(self, filepath=None):
-        """Write output to filepath, defaulting under the build dir."""
+        """Write output to filepath, defaulting under the data dir."""
         raise NotImplementedError

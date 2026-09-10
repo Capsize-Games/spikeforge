@@ -5,11 +5,13 @@ from snntorch import spikegen, utils
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
+from snn_interpreter.config import MNIST_PATH
+
 
 class SSNTrainer:
     """Load an MNIST subset and encode it as rate-coded spike trains."""
 
-    _data_path = "/tmp/data/mnist"
+    _data_path = MNIST_PATH
     _batch_size = 128
     _subset = 10
     _vectorization_num_steps = 10

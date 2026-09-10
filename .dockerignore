@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[codz]
+*.egg-info/
+venv/
+build/
+
+# Client build artifacts & deps (rebuilt inside the image)
+client/node_modules/
+client/dist/
+client/.vite/
+
+# Git & editor
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Generated media
+*.gif
+*.mp4
+*.png
+
+# Misc
+.DS_Store
+*.log

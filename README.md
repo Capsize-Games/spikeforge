@@ -1,107 +1,121 @@
 # snn-interpreter
 
-A rate-coding demonstration for spiking neural networks (SNNs), built on
-[snnTorch](https://snntorch.readthedocs.io/) and PyTorch. It loads a subset of
-MNIST, converts the samples into rate-coded spike trains, and exports a set of
-visual artifacts (MP4, looping GIFs, raster plots, and reconstructed images)
-into the `build/` directory.
+A rate-coding and spike-encoding playground for spiking neural networks
+(SNNs), built on [snnTorch](https://snntorch.readthedocs.io/) and PyTorch.
+It loads MNIST subsets, converts samples into **rate**, **latency**, and
+**delta** spike codes (plus random spike generation), and renders them
+through matplotlib exports and a live **browser dashboard** served by
+FastAPI + React over WebSockets.
 
-The encoding pipeline mirrors the concepts from the
-[snnTorch tutorial on rate coding](https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_1.html).
+The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_1.html).
 
 ## Features
 
-- Loads MNIST and reduces it with `snntorch.utils.data_subset`
-- Encodes a mini-batch into spike trains with `spikegen.rate`
-  (once at gain 1, once at a configurable lower gain)
-- Exports:
-  - An **MP4** animation of the rate-coded spikes
-  - A **looping GIF** of the same animation (post-friendly)
-  - A **reconstruction figure** comparing gain=1 vs. low-gain input
-  - A **raster plot** of the input layer and a single spiking neuron
-  - A combined **presentation GIF** (title, raster, reconstruction, animation)
+- MNIST loading + `snntorch.utils.data_subset` reduction
+- Rate coding (`spikegen.rate`) at gain 1 and a lower gain
+- Latency coding (`spikegen.latency`) with `tau`, `threshold`, `linear`,
+  `normalize`, and `clip` variants (tutorial 2.3)
+- Delta modulation (`spikegen.delta`) with on/off spikes (tutorial 2.4)
+- Random spike generation from scratch via `spikegen.rate_conv` (tutorial 3)
+- Matplotlib exports (MP4s, GIFs, rasters, reconstructions) into `build/`
+- **Browser interface**: a dark-themed grid dashboard that streams encoded
+  spike data over WebSockets and renders plots live in the client
 
 ## Requirements
 
 - Python 3.8+
-- `torch`, `torchvision`
-- `snntorch`
+- `torch`, `torchvision`, `snntorch`
 - `matplotlib`, `Pillow`, `numpy`
-- `ffmpeg` (only if the MP4 writer requires it)
+- Node.js 18+ and npm (for the `client/` dashboard)
+- `ffmpeg` (only when exporting MP4s)
 
-Install the package and its dependencies:
+Install the package (with web extras for the dashboard):
 
 ```bash
-pip install -e .
+pip install -e ".[web]"
 ```
 
 ## Usage
 
-Run the full pipeline from the project root:
+### 🐳 Run everything with Docker (recommended)
+
+The whole stack — React dashboard, FastAPI server, WebSocket streaming —
+builds into a single container and is served from **one port**.
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:8877**. The dashboard auto-connects to the
+WebSocket on the same host/port (no separate backend or proxy to run).
+Datasets download on first use into a Docker volume, so they persist across
+restarts.
+
+> Port 8877 was chosen to avoid clashing with other apps (e.g., 8000 is
+> commonly used by other dev servers). To change it, edit the
+> `ports:` mapping in [`docker-compose.yml`](docker-compose.yml).
+
+### Local (non-Docker) development
+
+#### CLI exports (rate pipeline)
 
 ```bash
 python main.py
 ```
 
-This constructs an `SNNTrainerLogger`, rate-codes the first mini-batch, and
-writes every artifact under `build/`:
+### Additional encoding demos (latency / delta / random)
 
-| File | Description |
-| --- | --- |
-| `build/spike_mnist_test.mp4` | Rate-coded spike animation (gain = 1) |
-| `build/spike_mnist_test.gif` | Same animation as an infinite-loop GIF |
-| `build/spike_reconstruction.png` | Reconstructed input, gain 1 vs. low gain |
-| `build/spike_raster.png` | Input-layer + single-neuron raster plots |
-| `build/spike_presentation.gif` | Combined looping presentation GIF |
-
-`build/` is created automatically and is git-ignored, along with generated
-media files, so build outputs are never committed.
-
-### Programmatic use
-
-```python
-from snn_interpreter.logger import SNNTrainerLogger
-from snn_interpreter.raster_exporter import RasterExporter
-from snn_interpreter.presentation_exporter import PresentationGifExporter
-
-trainer = SNNTrainerLogger(
-    subset=10,
-    vectorization_num_steps=10,
-    vector_value=0.5,
-    reconstruction_gain=0.25,
-    animation_interval=100,
-)
-RasterExporter(trainer).export()
-PresentationGifExporter(trainer).export()
+```bash
+python main_encodings.py
 ```
 
-Each exporter writes to `build/<DEFAULT_FILENAME>` unless a `filepath` is
-passed explicitly.
+Both write PNGs/GIFs/MP4s into `build/`.
+
+### Local dev (server + Vite)
+
+```bash
+# terminal 1 - FastAPI (use a port not taken by other apps)
+venv/bin/python -m uvicorn server.app:app --port 8765
+
+# terminal 2 - Vite (proxy target in client/vite.config.ts must match)
+cd client && npm install && npm run dev
+```
+
+Open the printed `http://localhost:5173` URL. Pick a coding type (rate,
+latency, delta, or random), tune parameters, then hit **Apply & Run** to
+stream spike frames into the raster and image panels in real time. The Vite
+dev server proxies `/ws` to the FastAPI port in
+[`client/vite.config.ts`](client/vite.config.ts).
 
 ## Project layout
 
 ```
-main.py                     Thin entry point wiring trainer -> exporters
-setup.py                    Packaging metadata (editable install)
+main.py                      Thin entry point: rate pipeline -> exporters
+main_encodings.py            Extra tutorial-1 encodings (latency/delta/random)
+setup.py                     Packaging metadata + web extra
 snn_interpreter/
-  trainer.py                SSNTrainer: MNIST loading + rate coding
-  logger.py                 SNNTrainerLogger: logging subclass
-  exporter.py               Exporter base + build/ output resolution
-  plot_utils.py             Shared figure/GIF rendering helpers
-  video_exporter.py         VideoExporter      -> build/*.mp4
-  spike_gif_exporter.py     SpikeGifExporter   -> build/*.gif
-  reconstruction_exporter.py ReconstructionExporter -> build/*.png
-  raster_exporter.py        RasterExporter     -> build/*.png
-  presentation_exporter.py  PresentationGifExporter -> build/*.gif
+  trainer.py                 SSNTrainer: MNIST loading + rate coding
+  latency_trainer.py         LatencyTrainer (tutorial 2.3)
+  delta_trainer.py           DeltaTrainer (tutorial 2.4)
+  random_spikegen.py         RandomSpikeGenerator (tutorial 3)
+  *_exporter.py              matplotlib exporters -> build/
+  plot_utils.py              shared fig/GIF helpers
+  exporter.py                Exporter base + build/ output resolution
+server/
+  app.py                     FastAPI app + WebSocket endpoint
+  encoder.py                 Config -> trainer engine (JSON payloads)
+  schemas.py                 Pydantic WS message/config schemas
+client/                      Vite + React + TypeScript dashboard
+  src/                       dark grid UI, canvas panels, WS hook
 ```
 
-Code is kept tidy by construction: each file is under 200 lines, each class
-lives in its own file, and every function stays under 20 lines.
+Code is kept tidy by construction: each Python file is under 200 lines,
+every Python function stays under 20 lines, and each class lives in its own
+file.
 
 ## Notes
 
 - The Bernoulli encoder in `spikegen.rate` is stochastic, so the reported
-  "percent of time spiking" and the raster/spike patterns vary run to run;
-  this is expected.
-- Larger `vectorization_num_steps` values (e.g., 100) produce longer, richer
-  spike animations and are easy to experiment with via the trainer argument.
+  spiking percentage and spike patterns vary run to run — expected.
+- Larger `num_steps` values (e.g., 100) produce longer, richer animations;
+  `subset`/`batch_size` trade dataset coverage for encode speed.

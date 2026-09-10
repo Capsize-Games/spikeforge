@@ -34,7 +34,7 @@ setup(
     license="MIT",
     python_requires=">=3.8",
     packages=find_packages(exclude=("tests", "tests.*")),
-    py_modules=["main"],
+    py_modules=["main", "main_encodings"],
     install_requires=[
         "torch>=1.13",
         "torchvision>=0.14",
@@ -49,10 +49,17 @@ setup(
             "pytest-cov>=4.0",
             "ruff>=0.0.280",
         ],
+        "web": [
+            "fastapi>=0.110",
+            "uvicorn[standard]>=0.27",
+            "websockets>=12.0",
+            "pydantic>=2.5",
+        ],
     },
     entry_points={
         "console_scripts": [
             "snn-interpreter=main:main",
+            "snn-interpreter-encodings=main_encodings:main",
         ],
     },
     classifiers=[

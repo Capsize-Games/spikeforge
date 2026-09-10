@@ -4,6 +4,13 @@ build/
 *.mp4
 *.png
 
+# Frontend client
+client/node_modules/
+client/dist/
+client/.vite/
+client/*.tsbuildinfo
+*.tsbuildinfo
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
