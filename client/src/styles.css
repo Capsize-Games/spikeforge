@@ -777,8 +777,8 @@ canvas.heatmap-fluid {
 .model-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 12px;
+  gap: 0;
+  padding: 0;
   border: 1px solid var(--border);
   background: #12171e;
 }
@@ -787,6 +787,9 @@ canvas.heatmap-fluid {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 8px 12px;
+  background: #0b0f14;
+  border-bottom: 1px solid var(--border);
 }
 
 .model-title {
@@ -847,6 +850,7 @@ canvas.heatmap-fluid {
 
 .tabs {
   display: flex;
+  padding: 0 12px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -874,6 +878,7 @@ canvas.heatmap-fluid {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 14px 12px;
 }
 
 .control-row {
