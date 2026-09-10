@@ -50,6 +50,7 @@ class TrainingEngine(device_mod.DeviceMixin):
         self._net = SpikingNet(hidden=self._hidden, beta=self._beta,
                                num_classes=self._num_classes)
         self._net.to(self._device)
+        device_mod.warmup(self._net, self._num_steps)
         self._optimizer = torch.optim.Adam(self._net.parameters(), lr=lr)
         self._test_batches = None
 

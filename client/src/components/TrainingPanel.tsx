@@ -184,6 +184,11 @@ export function TrainingPanel({
             </div>
             <div>batch {(last.train_accuracy * 100).toFixed(1)}%</div>
             <div>device {device ?? last.device ?? "—"}</div>
+            <div>
+              {last.step_ms !== undefined
+                ? `${last.step_ms.toFixed(0)} ms/step`
+                : "— ms/step"}
+            </div>
           </div>
         ) : (
           <div className="muted">Not training</div>

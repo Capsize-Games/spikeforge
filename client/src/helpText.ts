@@ -79,8 +79,11 @@ export const TRAIN_HELP: Record<string, string> = {
   batch_size: "Number of samples per training batch.",
   device:
     "Compute device for training and inference. GPU defaults on when " +
-    "available; if not, it silently falls back to CPU. Changing device " +
-    "starts a fresh engine on your next Train.",
+    "available and falls back to CPU otherwise. Note: for this small " +
+    "fully-connected net the GPU is usually no faster than the CPU — the " +
+    "bottleneck is CPU spike encoding and the per-step loop. GPU pays off " +
+    "mainly with a large hidden layer and batch size. Watch 'ms/step' in " +
+    "Status to compare.",
   resources:
     "Live CPU RAM and GPU VRAM for the machine running the server. CPU RAM " +
     "covers the whole host; VRAM is the GPU's memory. 'active' shows the " +

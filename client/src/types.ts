@@ -118,6 +118,7 @@ export interface TrainMetrics {
   step: number;
   total: number;
   device?: string;
+  step_ms?: number;
 }
 
 export interface TrainStatePayload {

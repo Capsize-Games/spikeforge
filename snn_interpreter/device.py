@@ -25,6 +25,16 @@ def resolve(requested="gpu"):
     return torch.device("cuda" if want_gpu and cuda_available() else "cpu")
 
 
+def warmup(net, steps, features=28 * 28):
+    """Trigger CUDA context init so the first training step isn't slow."""
+    if not cuda_available():
+        return
+    dummy = torch.zeros(1, steps, features, device="cuda")
+    with torch.no_grad():
+        net.forward_spikes(dummy)
+    torch.cuda.synchronize()
+
+
 class DeviceMixin:
     """Give an object a resolved torch device and a label property."""
 

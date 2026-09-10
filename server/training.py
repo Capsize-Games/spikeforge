@@ -2,6 +2,7 @@
 
 import asyncio
 import threading
+import time
 from typing import Optional
 
 from snn_interpreter import model_store
@@ -95,8 +96,12 @@ class TrainingService:
     def _run(self, engine: TrainingEngine):
         """Iterate metrics in the worker and push them to the queue."""
         try:
+            last = time.perf_counter()
             for metrics in engine.train(should_stop=self._stop.is_set):
+                now = time.perf_counter()
                 metrics["device"] = engine.device
+                metrics["step_ms"] = round((now - last) * 1000.0, 1)
+                last = now
                 self._put({"type": "train_metrics", "payload": metrics})
             self._put({"type": "train_state",
                        "payload": {"running": False, "reason": "finished",
