@@ -1,36 +1,27 @@
 import type {
-  EncodeConfig,
+  Compatibility,
+  DeviceChoice,
   InferencePayload,
   ModelLoadedPayload,
   PredictionPayload,
   SavedModel,
   SystemStatsPayload,
-  TrainConfig,
   TrainMetrics,
 } from "../types";
+import { TRAIN_HELP } from "../helpText";
 import { ClassSpikeBarsFromInference } from "./ClassSpikeBars";
 import { HelpTip } from "./HelpTip";
 import { LineChart } from "./LineChart";
 import { ResourceMonitor } from "./ResourceMonitor";
 import { TrainControls } from "./TrainControls";
-import { TRAIN_HELP } from "../helpText";
 
 interface Props {
-  config: TrainConfig;
-  encode: EncodeConfig;
   models: SavedModel[];
-  onChange: (patch: Partial<TrainConfig>) => void;
-  onTrain: () => void;
-  onStop: () => void;
-  onInfer: () => void;
-  onSave: (name: string) => void;
-  onLoad: (name: string) => void;
-  onDelete: (name: string) => void;
   running: boolean;
   connected: boolean;
   canInfer: boolean;
   stats: SystemStatsPayload | null;
-  gpuAvailable: boolean;
+  requestedDevice: DeviceChoice;
   loss: number[];
   trainAccuracy: number[];
   testAccuracy: number[];
@@ -39,24 +30,42 @@ interface Props {
   inference: InferencePayload | null;
   prediction: PredictionPayload | null;
   loaded: ModelLoadedPayload | null;
+  onTrain: () => void;
+  onStop: () => void;
+  onInfer: () => void;
+  onSave: (name: string) => void;
+  onLoad: (name: string) => void;
+  onDelete: (name: string) => void;
+}
+
+function MismatchBanner({ compatibility }: { compatibility: Compatibility }) {
+  const legacy = compatibility.expected_input_mode === "raw";
+  return (
+    <div className="mismatch">
+      <div className="mismatch-title">⚠ Checkpoint mismatch</div>
+      {legacy ? (
+        <div>Legacy raw checkpoint — the encoding controls are ignored.</div>
+      ) : (
+        <div>
+          Trained with “{compatibility.expected_input_mode}”; current is “
+          {compatibility.current_coding}”.
+        </div>
+      )}
+      {!compatibility.dataset_match && (
+        <div>Dataset differs — prediction is disabled until they match.</div>
+      )}
+      {!compatibility.num_steps_match && <div>Time-step count differs.</div>}
+    </div>
+  );
 }
 
 export function TrainingPanel({
-  config,
-  encode,
   models,
-  onChange,
-  onTrain,
-  onStop,
-  onInfer,
-  onSave,
-  onLoad,
-  onDelete,
   running,
   connected,
   canInfer,
   stats,
-  gpuAvailable,
+  requestedDevice,
   loss,
   trainAccuracy,
   testAccuracy,
@@ -65,28 +74,42 @@ export function TrainingPanel({
   inference,
   prediction,
   loaded,
+  onTrain,
+  onStop,
+  onInfer,
+  onSave,
+  onLoad,
+  onDelete,
 }: Props) {
+  const compatibility = loaded?.compatibility;
+  const mismatch =
+    compatibility !== undefined &&
+    compatibility !== null &&
+    (!compatibility.coding_match ||
+      !compatibility.dataset_match ||
+      !compatibility.num_steps_match ||
+      compatibility.expected_input_mode === "raw");
+
   return (
     <div className="col-training">
       <TrainControls
-        config={config}
-        encode={encode}
         models={models}
-        compatibility={loaded?.compatibility}
-        onChange={onChange}
+        running={running}
+        connected={connected}
+        canInfer={canInfer}
         onTrain={onTrain}
         onStop={onStop}
         onInfer={onInfer}
         onSave={onSave}
         onLoad={onLoad}
         onDelete={onDelete}
-        running={running}
-        connected={connected}
-        canInfer={canInfer}
-        gpuAvailable={gpuAvailable}
       />
 
-      <ResourceMonitor stats={stats} requested={config.device} />
+      <ResourceMonitor stats={stats} requested={requestedDevice} />
+
+      {mismatch && compatibility && (
+        <MismatchBanner compatibility={compatibility} />
+      )}
 
       {loaded && (
         <div className="panel">
@@ -99,9 +122,7 @@ export function TrainingPanel({
             <div>{loaded.dataset}</div>
             <div>acc {loaded.accuracy.toFixed(1)}%</div>
             <div>input {loaded.input_mode ?? "raw"}</div>
-            <div>coding {loaded.coding ?? "raw"}</div>
-            {loaded.hidden !== undefined && <div>hidden {loaded.hidden}</div>}
-            {loaded.num_steps !== undefined && <div>steps {loaded.num_steps}</div>}
+            <div>hidden {loaded.hidden ?? "—"}</div>
             <div>device {loaded.device ?? "—"}</div>
           </div>
         </div>
@@ -143,31 +164,11 @@ export function TrainingPanel({
             ))}
           </div>
         ) : (
-          <div className="muted">Run "Infer on this sample"</div>
+          <div className="muted">
+            Click “Predict displayed sample” to score the current image.
+          </div>
         )}
       </div>
-
-      <LineChart
-        title="Loss (training)"
-        series={[{ label: "loss", color: "#f85149", values: loss }]}
-      />
-      <LineChart
-        title="Accuracy (%)"
-        series={[
-          {
-            label: "held-out",
-            color: "#3fb950",
-            values: testAccuracy,
-            max: 100,
-          },
-          {
-            label: "train batch",
-            color: "#8b949e",
-            values: trainAccuracy,
-            max: 100,
-          },
-        ]}
-      />
 
       <div className="panel">
         <div className="panel-title">Status</div>
@@ -194,6 +195,28 @@ export function TrainingPanel({
           <div className="muted">Not training</div>
         )}
       </div>
+
+      <LineChart
+        title="Loss (training)"
+        series={[{ label: "loss", color: "#f85149", values: loss }]}
+      />
+      <LineChart
+        title="Accuracy (%)"
+        series={[
+          {
+            label: "held-out",
+            color: "#3fb950",
+            values: testAccuracy,
+            max: 100,
+          },
+          {
+            label: "train batch",
+            color: "#8b949e",
+            values: trainAccuracy,
+            max: 100,
+          },
+        ]}
+      />
     </div>
   );
 }

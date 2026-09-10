@@ -58,9 +58,101 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: 300px 1fr 360px;
+  grid-template-columns: 320px minmax(0, 1fr) 380px;
   gap: 12px;
   align-items: start;
+}
+
+/* --- workflow stepper + section headings --- */
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stepper-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.stepper-item b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.stepper-arrow {
+  margin-left: 8px;
+  color: var(--border);
+}
+
+.intro {
+  margin: -4px 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.section-head {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 16px 0 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.section-head:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.section-step {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #0d1117;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.section-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.section-hint {
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .col-controls,

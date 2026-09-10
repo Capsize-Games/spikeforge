@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Controls } from "./components/Controls";
+import { Stepper } from "./components/Stepper";
 import { TopBar } from "./components/TopBar";
 import { TrainingPanel } from "./components/TrainingPanel";
 import { ViewerPanels } from "./components/ViewerPanels";
@@ -179,9 +180,18 @@ export default function App() {
     send("stop", config);
   };
 
+  /** Data settings are shared, so training mirrors the single config. */
+  const sharedPatch = {
+    dataset: config.dataset,
+    subset: config.subset,
+    batch_size: config.batch_size,
+    num_steps: config.num_steps,
+    encode: config,
+  };
+
   const train = () => {
-    const merged = { ...training.state.config, dataset: config.dataset, encode: config };
-    training.patch({ dataset: config.dataset, encode: config });
+    const merged = { ...training.state.config, ...sharedPatch };
+    training.patch(sharedPatch);
     training.reset();
     training.setRunning(true);
     sendTrain("train", merged);
@@ -198,8 +208,7 @@ export default function App() {
     training.patch({ checkpoint: name });
     const merged = {
       ...training.state.config,
-      dataset: config.dataset,
-      encode: config,
+      ...sharedPatch,
       checkpoint: name,
     };
     sendTrain("load_model", merged, name);
@@ -219,34 +228,35 @@ export default function App() {
   return (
     <div className="app">
       <TopBar connected={connected} status={state.status} />
+      <Stepper
+        steps={[
+          { n: "1", label: "Data" },
+          { n: "2", label: "Encoding" },
+          { n: "3", label: "Model" },
+          { n: "4", label: "Train & inspect" },
+        ]}
+      />
+      <p className="intro">
+        Work left to right: pick a sample, preview its spikes, set the model,
+        then train. The middle shows what the data looks like; the right column
+        shows the results.
+      </p>
 
       <div className="grid">
         <div className="col-controls">
           <Controls
             config={config}
+            model={training.state.config}
             datasets={training.state.datasets}
-            onChange={patchConfig}
-            onSelectSample={selectSample}
-            onInfer={runInference}
-            canInfer={canInfer}
+            gpuAvailable={gpuAvailable}
             connected={connected}
+            running={state.running}
+            onChange={patchConfig}
+            onModelChange={training.patch}
+            onSelectSample={selectSample}
+            onRun={run}
+            onStop={stop}
           />
-          <div className="panel actions">
-            <button
-              className="apply"
-              onClick={run}
-              disabled={!connected || state.running}
-            >
-              {connected ? "▶ Run" : "Connecting…"}
-            </button>
-            <button
-              className="apply stop"
-              onClick={stop}
-              disabled={!connected || !state.running}
-            >
-              ■ Stop
-            </button>
-          </div>
         </div>
 
         <ViewerPanels
@@ -259,21 +269,12 @@ export default function App() {
         />
 
         <TrainingPanel
-          config={training.state.config}
-          encode={config}
           models={training.state.models}
-          onChange={training.patch}
-          onTrain={train}
-          onStop={stopTrain}
-          onInfer={runInference}
-          onSave={saveModel}
-          onLoad={loadModel}
-          onDelete={deleteModel}
           running={training.state.running}
           connected={connected}
           canInfer={canInfer}
           stats={stats}
-          gpuAvailable={gpuAvailable}
+          requestedDevice={training.state.config.device}
           loss={training.state.loss}
           trainAccuracy={training.state.trainAccuracy}
           testAccuracy={training.state.testAccuracy}
@@ -282,6 +283,12 @@ export default function App() {
           inference={state.inference}
           prediction={training.state.prediction}
           loaded={training.state.loaded}
+          onTrain={train}
+          onStop={stopTrain}
+          onInfer={runInference}
+          onSave={saveModel}
+          onLoad={loadModel}
+          onDelete={deleteModel}
         />
       </div>
 

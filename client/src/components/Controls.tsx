@@ -1,94 +1,40 @@
 import { useEffect, useRef, useState } from "react";
 
-import { HELP } from "../helpText";
-import type { DatasetInfo, EncodeConfig } from "../types";
+import { HELP, TRAIN_HELP } from "../helpText";
+import type { DatasetInfo, EncodeConfig, TrainConfig } from "../types";
+import { CheckField, SelectField, SliderField } from "./Fields";
 import { HelpTip } from "./HelpTip";
+import { SectionHeader } from "./Stepper";
 
 interface Props {
   config: EncodeConfig;
+  model: TrainConfig;
   datasets: DatasetInfo[];
-  onChange: (patch: Partial<EncodeConfig>) => void;
-  onSelectSample: (patch: Partial<EncodeConfig>) => void;
-  onInfer: () => void;
-  canInfer: boolean;
+  gpuAvailable: boolean;
   connected: boolean;
-}
-
-function SliderField({
-  label,
-  value,
-  min,
-  max,
-  step,
-  help,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  help: string;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="field">
-      <span className="field-label">
-        <span>
-          {label}: <b>{value}</b>
-        </span>
-        <HelpTip text={help} />
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-    </label>
-  );
-}
-
-function CheckField({
-  label,
-  checked,
-  help,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  help: string;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="field check">
-      <span className="field-label">
-        <span>
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={(e) => onChange(e.target.checked)}
-          />
-          {label}
-        </span>
-        <HelpTip text={help} />
-      </span>
-    </label>
-  );
+  running: boolean;
+  onChange: (patch: Partial<EncodeConfig>) => void;
+  onModelChange: (patch: Partial<TrainConfig>) => void;
+  onSelectSample: (patch: Partial<EncodeConfig>) => void;
+  onRun: () => void;
+  onStop: () => void;
 }
 
 export function Controls({
   config,
+  model,
   datasets,
-  onChange,
-  onSelectSample,
-  onInfer,
-  canInfer,
+  gpuAvailable,
   connected,
+  running,
+  onChange,
+  onModelChange,
+  onSelectSample,
+  onRun,
+  onStop,
 }: Props) {
   const set = (patch: Partial<EncodeConfig>) => onChange(patch);
+  const setModel = (patch: Partial<TrainConfig>) => onModelChange(patch);
   const [indexText, setIndexText] = useState(String(config.sample_index));
   const debounce = useRef<number | null>(null);
 
@@ -116,29 +62,26 @@ export function Controls({
 
   return (
     <div className="panel controls">
-      <div className="panel-title">Controls</div>
+      <SectionHeader
+        step="1"
+        title="Data"
+        hint="which image the network looks at"
+      />
 
-      <label className="field">
-        <span className="field-label">
-          <span>Dataset (encoding)</span>
-          <HelpTip text={HELP.dataset} />
-        </span>
-        <select
-          value={config.dataset}
-          onChange={(e) =>
-            onSelectSample({ dataset: e.target.value, sample_index: 0 })
-          }
-        >
-          {datasets.length === 0 && (
-            <option value={config.dataset}>{config.dataset}</option>
-          )}
-          {datasets.map((d) => (
-            <option key={d.name} value={d.name}>
-              {d.name} ({d.classes} classes)
-            </option>
-          ))}
-        </select>
-      </label>
+      <SelectField
+        label="Dataset"
+        value={config.dataset}
+        help={HELP.dataset}
+        options={
+          datasets.length === 0
+            ? [{ value: config.dataset, label: config.dataset }]
+            : datasets.map((d) => ({
+                value: d.name,
+                label: `${d.name} (${d.classes} classes)`,
+              }))
+        }
+        onChange={(v) => onSelectSample({ dataset: v, sample_index: 0 })}
+      />
 
       <div className="field">
         <span className="field-label">
@@ -177,43 +120,34 @@ export function Controls({
         </div>
       </div>
 
-      <button
-        className="apply ghost"
-        onClick={onInfer}
-        disabled={!connected || !canInfer}
-      >
-        ⚡ Infer on this sample
-      </button>
-
-      <div className="panel-title subsection">Encoding</div>
-
-      <label className="field">
-        <span className="field-label">
-          <span>Coding</span>
-          <HelpTip text={HELP.coding} />
-        </span>
-        <select
-          value={config.coding}
-          onChange={(e) =>
-            set({ coding: e.target.value as EncodeConfig["coding"] })
-          }
-        >
-          <option value="rate">Rate</option>
-          <option value="latency">Latency</option>
-          <option value="delta">Delta</option>
-          <option value="random">Random (noise baseline)</option>
-        </select>
-      </label>
-
-      <SliderField label="num_steps" value={config.num_steps} min={5} max={200} step={5} help={HELP.num_steps} onChange={(v) => set({ num_steps: v })} />
       <SliderField label="subset" value={config.subset} min={1} max={50} step={1} help={HELP.subset} onChange={(v) => set({ subset: v })} />
       <SliderField label="batch_size" value={config.batch_size} min={8} max={512} step={8} help={HELP.batch_size} onChange={(v) => set({ batch_size: v })} />
+
+      <SectionHeader
+        step="2"
+        title="Encoding"
+        hint="how the image becomes spikes"
+      />
+
+      <SelectField
+        label="Coding"
+        value={config.coding}
+        help={HELP.coding}
+        options={[
+          { value: "rate", label: "Rate" },
+          { value: "latency", label: "Latency" },
+          { value: "delta", label: "Delta" },
+          { value: "random", label: "Random (noise baseline)" },
+        ]}
+        onChange={(v) => set({ coding: v as EncodeConfig["coding"] })}
+      />
+
+      <SliderField label="num_steps" value={config.num_steps} min={5} max={200} step={5} help={HELP.num_steps} onChange={(v) => set({ num_steps: v })} />
       <SliderField label="interval (ms)" value={config.interval_ms} min={20} max={400} step={10} help={HELP.interval_ms} onChange={(v) => set({ interval_ms: v })} />
 
       {config.coding === "rate" && (
         <>
           <SliderField label="gain" value={config.gain} min={0.05} max={1} step={0.05} help={HELP.gain} onChange={(v) => set({ gain: v })} />
-          <SliderField label="vector_value" value={config.vector_value} min={0.1} max={1} step={0.05} help={HELP.vector_value} onChange={(v) => set({ vector_value: v })} />
         </>
       )}
 
@@ -234,6 +168,38 @@ export function Controls({
       {config.coding === "random" && (
         <SliderField label="random_scale" value={config.random_scale} min={0.1} max={1} step={0.05} help={HELP.random_scale} onChange={(v) => set({ random_scale: v })} />
       )}
+
+      <div className="actions">
+        <button className="apply" onClick={onRun} disabled={!connected || running}>
+          {running ? "Playing…" : "▶ Preview spikes"}
+        </button>
+        <button className="apply stop" onClick={onStop} disabled={!connected || !running}>
+          ■ Stop
+        </button>
+      </div>
+
+      <SectionHeader
+        step="3"
+        title="Model"
+        hint="the network that learns these spikes"
+      />
+
+      <SelectField
+        label="Device"
+        value={model.device}
+        help={TRAIN_HELP.device}
+        options={[
+          { value: "auto", label: "Auto (pick the faster)" },
+          { value: "gpu", label: gpuAvailable ? "GPU" : "GPU (unavailable)", disabled: !gpuAvailable },
+          { value: "cpu", label: "CPU" },
+        ]}
+        onChange={(v) => setModel({ device: v as TrainConfig["device"] })}
+      />
+
+      <SliderField label="hidden" value={model.hidden} min={16} max={512} step={16} help={TRAIN_HELP.hidden} onChange={(v) => setModel({ hidden: v })} />
+      <SliderField label="beta" value={model.beta} min={0.1} max={0.95} step={0.05} help={TRAIN_HELP.beta} onChange={(v) => setModel({ beta: v })} />
+      <SliderField label="lr" value={model.lr} min={0.001} max={0.05} step={0.001} help={TRAIN_HELP.lr} onChange={(v) => setModel({ lr: v })} />
+      <SliderField label="epochs" value={model.epochs} min={1} max={10} step={1} help={TRAIN_HELP.epochs} onChange={(v) => setModel({ epochs: v })} />
     </div>
   );
 }
