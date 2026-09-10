@@ -6,23 +6,42 @@ interface Options {
   onMessage: (msg: ServerMsg) => void;
 }
 
+const RETRY_MS = 1500;
+
 export function useWebSocket({ onMessage }: Options) {
   const wsRef = useRef<WebSocket | null>(null);
+  const onMessageRef = useRef(onMessage);
+  const closedRef = useRef(false);
   const [connected, setConnected] = useState(false);
 
+  // Keep the newest handler without re-opening the socket.
   useEffect(() => {
-    const protocol = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${protocol}://${location.host}/ws`);
-    wsRef.current = ws;
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
 
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => setConnected(false);
-    ws.onmessage = (event) => {
-      onMessage(JSON.parse(event.data as string) as ServerMsg);
+  useEffect(() => {
+    let timer: number | undefined;
+    const connect = () => {
+      const protocol = location.protocol === "https:" ? "wss" : "ws";
+      const ws = new WebSocket(`${protocol}://${location.host}/ws`);
+      wsRef.current = ws;
+      ws.onopen = () => setConnected(true);
+      ws.onmessage = (event) =>
+        onMessageRef.current(JSON.parse(event.data as string) as ServerMsg);
+      ws.onerror = () => ws.close();
+      ws.onclose = () => {
+        setConnected(false);
+        if (!closedRef.current) {
+          timer = window.setTimeout(connect, RETRY_MS);
+        }
+      };
     };
-
-    return () => ws.close();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    connect();
+    return () => {
+      closedRef.current = true;
+      if (timer) window.clearTimeout(timer);
+      wsRef.current?.close();
+    };
   }, []);
 
   const send = useCallback((type: string, config: EncodeConfig) => {

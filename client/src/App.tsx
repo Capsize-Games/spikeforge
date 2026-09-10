@@ -207,7 +207,10 @@ export default function App() {
 
   const deleteModel = (name: string) => sendNamed("delete_model", name);
 
-  const gpuAvailable = stats?.device.available.includes("gpu") ?? false;
+  // Unknown until stats arrive: allow GPU so the option isn't disabled.
+  const gpuAvailable = stats
+    ? stats.device.available.includes("gpu")
+    : true;
   const compatibility = training.state.loaded?.compatibility;
   const hasModel =
     training.state.loaded !== null || training.state.last !== null;
@@ -275,6 +278,7 @@ export default function App() {
           trainAccuracy={training.state.trainAccuracy}
           testAccuracy={training.state.testAccuracy}
           last={training.state.last}
+          device={training.state.device}
           inference={state.inference}
           prediction={training.state.prediction}
           loaded={training.state.loaded}

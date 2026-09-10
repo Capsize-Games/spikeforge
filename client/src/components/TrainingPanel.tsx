@@ -35,6 +35,7 @@ interface Props {
   trainAccuracy: number[];
   testAccuracy: number[];
   last: TrainMetrics | null;
+  device: string | null;
   inference: InferencePayload | null;
   prediction: PredictionPayload | null;
   loaded: ModelLoadedPayload | null;
@@ -60,6 +61,7 @@ export function TrainingPanel({
   trainAccuracy,
   testAccuracy,
   last,
+  device,
   inference,
   prediction,
   loaded,
@@ -100,6 +102,7 @@ export function TrainingPanel({
             <div>coding {loaded.coding ?? "raw"}</div>
             {loaded.hidden !== undefined && <div>hidden {loaded.hidden}</div>}
             {loaded.num_steps !== undefined && <div>steps {loaded.num_steps}</div>}
+            <div>device {loaded.device ?? "—"}</div>
           </div>
         </div>
       )}
@@ -180,6 +183,7 @@ export function TrainingPanel({
                 : "—"}
             </div>
             <div>batch {(last.train_accuracy * 100).toFixed(1)}%</div>
+            <div>device {device ?? last.device ?? "—"}</div>
           </div>
         ) : (
           <div className="muted">Not training</div>

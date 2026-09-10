@@ -18,6 +18,7 @@ interface TrainingState {
   testAccuracy: number[];
   trainAccuracy: number[];
   last: TrainMetrics | null;
+  device: string | null;
   prediction: PredictionPayload | null;
   models: SavedModel[];
   datasets: DatasetInfo[];
@@ -32,6 +33,7 @@ const initial: TrainingState = {
   testAccuracy: [],
   trainAccuracy: [],
   last: null,
+  device: null,
   prediction: null,
   models: [],
   datasets: [],
@@ -50,6 +52,7 @@ export function useTraining() {
         setState((s) => ({
           ...s,
           last: m,
+          device: m.device ?? s.device,
           loss: [...s.loss, m.loss],
           trainAccuracy: [...s.trainAccuracy, m.train_accuracy * 100],
           testAccuracy:
@@ -60,7 +63,11 @@ export function useTraining() {
         return true;
       }
       case "train_state":
-        setState((s) => ({ ...s, running: msg.payload.running }));
+        setState((s) => ({
+          ...s,
+          running: msg.payload.running,
+          device: msg.payload.device ?? s.device,
+        }));
         return true;
       case "prediction":
         setState((s) => ({ ...s, prediction: msg.payload }));

@@ -39,7 +39,12 @@ async def _serve(ws: WebSocket, session: Session):
     """Receive-and-dispatch loop for one connection."""
     while True:
         raw = await ws.receive_json()
-        await dispatch(ws, session, ClientMessage.model_validate(raw))
+        try:
+            await dispatch(ws, session, ClientMessage.model_validate(raw))
+        except Exception as exc:  # keep the connection alive on bad input
+            await send_locked(ws, session, {
+                "type": "error", "payload": str(exc),
+            })
 
 
 @app.websocket("/ws")

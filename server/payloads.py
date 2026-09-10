@@ -30,6 +30,7 @@ def model_loaded_payload(engine, name, encode, accuracy):
         "beta": engine.net.beta,
         "num_steps": engine.num_steps,
         "num_classes": engine.num_classes,
+        "device": engine.device,
         "meta": _meta(name),
         "compatibility": compatibility(engine, encode),
     }

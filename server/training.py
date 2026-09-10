@@ -4,7 +4,23 @@ import asyncio
 import threading
 from typing import Optional
 
+from snn_interpreter import model_store
 from snn_interpreter.training_engine import TrainingEngine
+
+
+def _checkpoint_meta(checkpoint):
+    """Return a checkpoint's stored meta, or an empty dict."""
+    if not checkpoint:
+        return {}
+    try:
+        return model_store.load(checkpoint).get("meta", {})
+    except Exception:
+        return {}
+
+
+def _dataset_from(config, encode):
+    """Prefer the encode config's dataset, else the train config's."""
+    return encode.dataset if encode is not None else config.dataset
 
 
 class TrainingService:
@@ -41,7 +57,7 @@ class TrainingService:
     def start(self, config, encode=None):
         """Spawn a worker thread that trains and enqueues metrics."""
         self._stop.clear()
-        self._engine = self._make_engine(config, encode, None)
+        self._engine = self._make_engine(config, encode, config.checkpoint)
         self._thread = threading.Thread(
             target=self._run, args=(self._engine,), daemon=True
         )
@@ -55,12 +71,13 @@ class TrainingService:
 
     @staticmethod
     def _make_engine(config, encode, checkpoint):
-        """Build a TrainingEngine, mirroring dataset from the encode cfg."""
-        dataset = encode.dataset if encode is not None else config.dataset
+        """Build a TrainingEngine, honoring a checkpoint's architecture."""
+        meta = _checkpoint_meta(checkpoint)
+        dataset = meta.get("dataset") or _dataset_from(config, encode)
         return TrainingEngine(
             dataset=dataset,
-            hidden=config.hidden,
-            beta=config.beta,
+            hidden=int(meta.get("hidden", config.hidden)),
+            beta=float(meta.get("beta", config.beta)),
             lr=config.lr,
             epochs=config.epochs,
             num_steps=config.num_steps,
@@ -79,13 +96,16 @@ class TrainingService:
         """Iterate metrics in the worker and push them to the queue."""
         try:
             for metrics in engine.train(should_stop=self._stop.is_set):
+                metrics["device"] = engine.device
                 self._put({"type": "train_metrics", "payload": metrics})
             self._put({"type": "train_state",
-                       "payload": {"running": False, "reason": "finished"}})
+                       "payload": {"running": False, "reason": "finished",
+                                   "device": engine.device}})
         except Exception as exc:  # surface worker errors to the client
             self._put({"type": "error", "payload": str(exc)})
             self._put({"type": "train_state",
-                       "payload": {"running": False, "reason": "error"}})
+                       "payload": {"running": False, "reason": "error",
+                                   "device": engine.device}})
         finally:
             self._thread = None
 

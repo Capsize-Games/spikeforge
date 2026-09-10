@@ -117,11 +117,13 @@ export interface TrainMetrics {
   epoch: number;
   step: number;
   total: number;
+  device?: string;
 }
 
 export interface TrainStatePayload {
   running: boolean;
   reason: string;
+  device?: string;
 }
 
 export interface PredictionPayload {
@@ -153,6 +155,7 @@ export interface ModelLoadedPayload {
   beta?: number;
   num_steps?: number;
   num_classes?: number;
+  device?: string;
   meta?: Record<string, unknown>;
   compatibility?: Compatibility;
 }
