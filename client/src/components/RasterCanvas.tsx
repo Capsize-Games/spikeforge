@@ -14,6 +14,36 @@ interface Props {
   highlightStep?: number | null;
   /** Shown centred when there is no raster yet. */
   emptyNote?: string;
+  /** Label each neuron row (e.g. class digits) when the layer is small. */
+  yLabels?: string[];
+  /** Rows to shade, e.g. the predicted and true classes. */
+  highlightRows?: number[];
+  /** Reorder neurons by firing rate so silent / hot units stand out. */
+  sortByRate?: boolean;
+  /** Short axis caption, e.g. "neuron" or "class". */
+  yTitle?: string;
+  /** Small caption rendered under the canvas. */
+  summary?: string;
+}
+
+/** Neuron draw order on the y-axis (top = most active when sorted). */
+function rowOrder(raster: RasterPayload, sortByRate: boolean): number[] {
+  const order = Array.from({ length: max1(raster.num_neurons) }, (_, i) => i);
+  if (!sortByRate) return order;
+  const counts = new Array(max1(raster.num_neurons)).fill(0);
+  raster.neurons.forEach((n) => {
+    counts[n] += 1;
+  });
+  return order.slice().sort((a, b) => counts[b] - counts[a]);
+}
+
+function max1(n: number): number {
+  return Math.max(1, n);
+}
+
+/** Pixel y for a neuron/rank on the plot (0 at the bottom). */
+function yFor(pos: number, neurons: number, plotH: number): number {
+  return 8 + plotH - (pos / neurons) * plotH;
 }
 
 export function RasterCanvas({
@@ -24,6 +54,11 @@ export function RasterCanvas({
   actions,
   highlightStep = null,
   emptyNote,
+  yLabels,
+  highlightRows,
+  sortByRate = false,
+  yTitle,
+  summary,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -32,9 +67,10 @@ export function RasterCanvas({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    ctx.fillStyle = "#0d1117";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (!raster) {
-      ctx.fillStyle = "#0d1117";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
       if (emptyNote) {
         ctx.fillStyle = "#8b949e";
         ctx.font = "12px sans-serif";
@@ -45,27 +81,33 @@ export function RasterCanvas({
       return;
     }
 
-    ctx.fillStyle = "#0d1117";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const steps = Math.max(1, raster.num_steps);
-    const neurons = Math.max(1, raster.num_neurons);
+    const steps = max1(raster.num_steps);
+    const neurons = max1(raster.num_neurons);
     const padL = 46;
     const padB = 22;
     const plotW = canvas.width - padL - 12;
     const plotH = canvas.height - padB - 14;
+    const bandH = plotH / neurons;
 
     ctx.strokeStyle = "#30363d";
     ctx.strokeRect(padL, 8, plotW, plotH);
 
-    ctx.fillStyle = "#c9d1d9";
-    ctx.font = "10px sans-serif";
-    ctx.fillText(String(neurons), 4, 16);
+    const order = rowOrder(raster, sortByRate);
+    const rank = new Array(neurons).fill(0);
+    order.forEach((neuron, pos) => {
+      rank[neuron] = pos;
+    });
+
+    (highlightRows ?? []).forEach((row) => {
+      if (row < 0 || row >= neurons) return;
+      ctx.fillStyle = "rgba(63, 185, 80, 0.14)";
+      ctx.fillRect(padL, yFor(rank[row], neurons, plotH) - bandH / 2, plotW, bandH);
+    });
 
     ctx.fillStyle = "#e3b341";
     for (let i = 0; i < raster.time.length; i++) {
       const x = padL + (raster.time[i] / steps) * plotW;
-      const y = 8 + plotH - (raster.neurons[i] / neurons) * plotH;
+      const y = yFor(rank[raster.neurons[i]] ?? 0, neurons, plotH);
       ctx.fillRect(x, y, 1.4, 1.4);
     }
 
@@ -79,7 +121,7 @@ export function RasterCanvas({
       for (let i = 0; i < raster.time.length; i++) {
         if (raster.time[i] !== idx) continue;
         const x = padL + (raster.time[i] / steps) * plotW;
-        const y = 8 + plotH - (raster.neurons[i] / neurons) * plotH;
+        const y = yFor(rank[raster.neurons[i]] ?? 0, neurons, plotH);
         ctx.fillRect(x, y, 2.4, 2.4);
       }
       ctx.strokeStyle = "rgba(88, 166, 255, 0.8)";
@@ -90,10 +132,31 @@ export function RasterCanvas({
       ctx.stroke();
     }
 
+    ctx.font = "10px sans-serif";
     ctx.fillStyle = "#8b949e";
+    if (yTitle) ctx.fillText(yTitle, 6, 18);
+    if (yLabels && yLabels.length === neurons && neurons <= 16) {
+      ctx.font = "9px sans-serif";
+      ctx.textAlign = "right";
+      for (let i = 0; i < neurons; i++) {
+        ctx.fillText(yLabels[i] ?? "", padL - 6, yFor(rank[i], neurons, plotH) + 3);
+      }
+      ctx.textAlign = "start";
+    }
+    ctx.font = "10px sans-serif";
     ctx.fillText("Time step", padL + plotW / 2 - 18, canvas.height - 6);
     ctx.fillText(String(steps), padL + plotW - 20, canvas.height - 6);
-  }, [raster, width, height, highlightStep, emptyNote]);
+  }, [
+    raster,
+    width,
+    height,
+    highlightStep,
+    emptyNote,
+    yLabels,
+    highlightRows,
+    sortByRate,
+    yTitle,
+  ]);
 
   return (
     <div className="panel">
@@ -104,6 +167,7 @@ export function RasterCanvas({
         </div>
       )}
       <canvas ref={canvasRef} width={width} height={height} />
+      {summary && <div className="raster-summary">{summary}</div>}
     </div>
   );
 }

@@ -1,20 +1,28 @@
-import type { InferencePayload, RasterPayload, RasterSource } from "../types";
+import type {
+  CodingType,
+  InferencePayload,
+  RasterPayload,
+  RasterSource,
+} from "../types";
 import { HeatmapCanvas } from "./HeatmapCanvas";
 import { RasterCanvas } from "./RasterCanvas";
 import { SampleIndex } from "./SampleIndex";
+import { TimeCursor } from "./TimeCursor";
 
 interface Props {
   sample: number[][] | null;
   spikeFrame: number[][] | null;
   reconGain1: number[][] | null;
-  reconLow: number[][] | null;
   rasters: Record<RasterSource, RasterPayload | null>;
   inference: InferencePayload | null;
-  spikeStep: number | null;
+  coding: CodingType;
   sampleIndex: number;
+  timeStep: number | null;
+  numSteps: number;
   playing: boolean;
   onPlay: () => void;
   onStop: () => void;
+  onScrub: (step: number) => void;
   onSelectSample: (index: number) => void;
 }
 
@@ -35,26 +43,51 @@ function PredictionBadge({ inference }: { inference: InferencePayload }) {
   );
 }
 
+/** Compact per-layer aggregate for training diagnostics. */
+function summarize(raster: RasterPayload | null): string | undefined {
+  if (!raster) return undefined;
+  const total = raster.time.length;
+  const unique = new Set(raster.neurons).size;
+  const perStep = raster.num_steps ? (total / raster.num_steps).toFixed(1) : "0";
+  const pct = raster.num_neurons
+    ? Math.round((unique / raster.num_neurons) * 100)
+    : 0;
+  const silent = Math.max(0, raster.num_neurons - unique);
+  return `${perStep} spikes/step · ${unique}/${raster.num_neurons} active (${pct}%) · ${silent} silent`;
+}
+
 export function ViewerPanels({
   sample,
   spikeFrame,
   reconGain1,
-  reconLow,
   rasters,
   inference,
-  spikeStep,
+  coding,
   sampleIndex,
+  timeStep,
+  numSteps,
   playing,
   onPlay,
   onStop,
+  onScrub,
   onSelectSample,
 }: Props) {
+  const rateCoding = coding === "rate";
+  const outputLabels = rasters.output
+    ? Array.from({ length: rasters.output.num_neurons }, (_, i) => String(i))
+    : undefined;
+  const outputRows = inference
+    ? [inference.predicted, inference.true_label].filter(
+        (v): v is number => v !== null && v >= 0,
+      )
+    : undefined;
+
   return (
     <div className="col-viz">
-      <div className="row viz-row">
+      <div className="viz-row">
         <div className="panel grow">
           <div className="panel-title">Input</div>
-          <div className="pair grow">
+          <div className={`pair grow${rateCoding ? " three" : ""}`}>
             <div className="sample-wrap grow">
               <HeatmapCanvas
                 data={sample}
@@ -74,36 +107,33 @@ export function ViewerPanels({
               height={224}
               fluid
             />
-          </div>
-        </div>
-
-        <div className="panel grow">
-          <div className="panel-title">Reconstruction</div>
-          <div className="pair grow">
-            <HeatmapCanvas
-              data={reconGain1}
-              palette="binary"
-              label="Gain=1"
-              width={120}
-              height={120}
-              fluid
-            />
-            <HeatmapCanvas
-              data={reconLow}
-              palette="binary"
-              label="Low gain"
-              width={120}
-              height={120}
-              fluid
-            />
+            {rateCoding && (
+              <HeatmapCanvas
+                data={reconGain1}
+                palette="binary"
+                label="Decoded"
+                width={224}
+                height={224}
+                fluid
+              />
+            )}
           </div>
         </div>
       </div>
 
+      <TimeCursor
+        step={timeStep}
+        numSteps={numSteps}
+        playing={playing}
+        onScrub={onScrub}
+      />
+
       <RasterCanvas
         raster={rasters.input}
         label="Input spikes"
-        highlightStep={playing ? spikeStep : null}
+        yTitle="neuron"
+        summary={summarize(rasters.input)}
+        highlightStep={timeStep}
         actions={
           <>
             <button
@@ -130,16 +160,24 @@ export function ViewerPanels({
           </>
         }
       />
+
       <RasterCanvas
         raster={rasters.hidden}
         label="Hidden layer"
-        highlightStep={playing ? spikeStep : null}
+        yTitle="neuron"
+        summary={summarize(rasters.hidden)}
+        sortByRate
+        highlightStep={timeStep}
         emptyNote="train or load a model to see layer activity"
       />
       <RasterCanvas
         raster={rasters.output}
         label="Output layer"
-        highlightStep={playing ? spikeStep : null}
+        yTitle="class"
+        yLabels={outputLabels}
+        highlightRows={outputRows}
+        summary={summarize(rasters.output)}
+        highlightStep={timeStep}
         emptyNote="train or load a model to see layer activity"
       />
     </div>

@@ -736,10 +736,7 @@ canvas,
 
 /* --- viewer rows: deterministic equal columns --- */
 .viz-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
+  display: block;
 }
 
 .viz-row > .panel {
@@ -753,8 +750,29 @@ canvas,
   align-items: start;
 }
 
+.pair.grow.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .pair.grow > * {
   min-width: 0;
+}
+
+.raster-summary {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.cursor-readout {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cursor-range {
+  width: 100%;
+  accent-color: var(--accent);
 }
 
 .sample-wrap.grow {

@@ -59,6 +59,10 @@ export default function App() {
   const [state, setState] = useState<ViewerState>(initial);
   const [stats, setStats] = useState<SystemStatsPayload | null>(null);
   const [modelLoading, setModelLoading] = useState(false);
+  const [scrubStep, setScrubStep] = useState<number | null>(null);
+  const [framesByStep, setFramesByStep] = useState<
+    Record<number, number[][]>
+  >({});
   const training = useTraining();
 
   // Keep the latest encode config reachable from debounced callbacks.
@@ -90,6 +94,8 @@ export default function App() {
       if (training.handleMessage(msg)) return;
       switch (msg.type) {
         case "config_ack":
+          setScrubStep(null);
+          setFramesByStep({});
           setState((s) => ({
             ...s,
             error: null,
@@ -124,12 +130,15 @@ export default function App() {
         case "spike_frame": {
           const source: FrameSource =
             msg.source === "hidden" ? "hidden" : "input";
+          const step = msg.step;
           setState((s) => ({
             ...s,
             spikeFrames: { ...s.spikeFrames, [source]: msg.payload },
-            spikeStep:
-              source === "input" ? (msg.step ?? s.spikeStep) : s.spikeStep,
+            spikeStep: source === "input" ? (step ?? s.spikeStep) : s.spikeStep,
           }));
+          if (source === "input" && step !== undefined) {
+            setFramesByStep((m) => ({ ...m, [step]: msg.payload }));
+          }
           break;
         }
         case "inference":
@@ -197,8 +206,11 @@ export default function App() {
     sendInfer(configRef.current, training.state.config);
   };
 
-  /** Replay the input spike-frame animation from step 0. */
-  const playPreview = () => send("run", configRef.current);
+  /** Replay the input spike-frame animation from step 0 (back to live). */
+  const playPreview = () => {
+    setScrubStep(null);
+    send("run", configRef.current);
+  };
 
   /** Stop the spike-frame animation. */
   const stopPreview = () => send("stop", configRef.current);
@@ -244,6 +256,16 @@ export default function App() {
   const gpuAvailable = stats
     ? stats.device.available.includes("gpu")
     : true;
+
+  // Shared time cursor: scrubbed step wins, else follow the live stream.
+  const numSteps =
+    state.rasters.input?.num_steps ??
+    state.status?.num_steps ??
+    config.num_steps;
+  const timeStep = scrubStep ?? (state.running ? state.spikeStep : null);
+  const displayFrame =
+    (scrubStep !== null ? framesByStep[scrubStep] : undefined) ??
+    state.spikeFrames.input;
   const compatibility = training.state.loaded?.compatibility;
   const hasModel =
     training.state.loaded !== null || training.state.last !== null;
@@ -287,16 +309,18 @@ export default function App() {
 
         <ViewerPanels
           sample={state.sample}
-          spikeFrame={state.spikeFrames.input}
+          spikeFrame={displayFrame}
           reconGain1={state.reconGain1}
-          reconLow={state.reconLow}
           rasters={state.rasters}
           inference={state.inference}
-          spikeStep={state.spikeStep}
+          coding={config.coding}
           sampleIndex={config.sample_index}
+          timeStep={timeStep}
+          numSteps={numSteps}
           playing={state.running}
           onPlay={playPreview}
           onStop={stopPreview}
+          onScrub={(step) => setScrubStep(step)}
           onSelectSample={(index) => selectSample({ sample_index: index })}
         />
 
