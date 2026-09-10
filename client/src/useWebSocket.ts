@@ -48,5 +48,17 @@ export function useWebSocket({ onMessage }: Options) {
     wsRef.current?.send(JSON.stringify({ type: "infer", config, train }));
   }, []);
 
-  return { connected, send, sendTrain, sendNamed, sendSelectSample, sendInfer };
+  const sendStats = useCallback(() => {
+    wsRef.current?.send(JSON.stringify({ type: "stats" }));
+  }, []);
+
+  return {
+    connected,
+    send,
+    sendTrain,
+    sendNamed,
+    sendSelectSample,
+    sendInfer,
+    sendStats,
+  };
 }

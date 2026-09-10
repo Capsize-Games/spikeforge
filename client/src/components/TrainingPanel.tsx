@@ -4,12 +4,14 @@ import type {
   ModelLoadedPayload,
   PredictionPayload,
   SavedModel,
+  SystemStatsPayload,
   TrainConfig,
   TrainMetrics,
 } from "../types";
 import { ClassSpikeBarsFromInference } from "./ClassSpikeBars";
 import { HelpTip } from "./HelpTip";
 import { LineChart } from "./LineChart";
+import { ResourceMonitor } from "./ResourceMonitor";
 import { TrainControls } from "./TrainControls";
 import { TRAIN_HELP } from "../helpText";
 
@@ -27,6 +29,8 @@ interface Props {
   running: boolean;
   connected: boolean;
   canInfer: boolean;
+  stats: SystemStatsPayload | null;
+  gpuAvailable: boolean;
   loss: number[];
   trainAccuracy: number[];
   testAccuracy: number[];
@@ -50,6 +54,8 @@ export function TrainingPanel({
   running,
   connected,
   canInfer,
+  stats,
+  gpuAvailable,
   loss,
   trainAccuracy,
   testAccuracy,
@@ -75,7 +81,10 @@ export function TrainingPanel({
         running={running}
         connected={connected}
         canInfer={canInfer}
+        gpuAvailable={gpuAvailable}
       />
+
+      <ResourceMonitor stats={stats} requested={config.device} />
 
       {loaded && (
         <div className="panel">

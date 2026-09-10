@@ -1,5 +1,8 @@
 export type CodingType = "rate" | "latency" | "delta" | "random";
 
+/** Compute device selectable for training. */
+export type DeviceChoice = "cpu" | "gpu";
+
 /** Which layer produced a raster / spike frame. */
 export type RasterSource = "input" | "hidden" | "output";
 
@@ -76,6 +79,7 @@ export interface TrainConfig {
   subset: number;
   batch_size: number;
   checkpoint: string | null;
+  device: DeviceChoice;
   /** Encoding settings used for spike-input training. */
   encode: EncodeConfig;
 }
@@ -90,6 +94,7 @@ export const defaultTrainConfig: TrainConfig = {
   subset: 10,
   batch_size: 64,
   checkpoint: null,
+  device: "gpu",
   encode: { ...defaultConfig },
 };
 
@@ -165,6 +170,28 @@ export interface InferencePayload {
   dataset_match: boolean;
 }
 
+/** One memory pool's usage, in bytes. */
+export interface MemoryBlock {
+  total: number;
+  used: number;
+  available: number;
+  percent: number;
+  name?: string;
+}
+
+/** Device availability plus the engine's currently active device. */
+export interface DeviceStatus {
+  available: DeviceChoice[];
+  gpu_name: string | null;
+  active: string | null;
+}
+
+export interface SystemStatsPayload {
+  cpu: MemoryBlock | null;
+  gpu: MemoryBlock | null;
+  device: DeviceStatus;
+}
+
 export type ServerMsg =
   | { type: "config_ack"; payload: EncodeConfig }
   | { type: "status"; payload: StatusPayload | string }
@@ -184,4 +211,5 @@ export type ServerMsg =
   | { type: "model_saved"; payload: { name: string; path: string } }
   | { type: "model_list"; payload: ModelListPayload }
   | { type: "model_loaded"; payload: ModelLoadedPayload }
+  | { type: "system_stats"; payload: SystemStatsPayload }
   | { type: "error"; payload: string };

@@ -11,6 +11,7 @@ import type {
   RasterSource,
   ServerMsg,
   StatusPayload,
+  SystemStatsPayload,
 } from "./types";
 import { defaultConfig } from "./types";
 import { useTraining } from "./useTraining";
@@ -52,6 +53,7 @@ const initial: ViewerState = {
 export default function App() {
   const [config, setConfig] = useState<EncodeConfig>(defaultConfig);
   const [state, setState] = useState<ViewerState>(initial);
+  const [stats, setStats] = useState<SystemStatsPayload | null>(null);
   const training = useTraining();
 
   // Keep the latest encode config reachable from debounced callbacks.
@@ -118,6 +120,9 @@ export default function App() {
             }));
           }
           break;
+        case "system_stats":
+          setStats(msg.payload);
+          break;
         case "error":
           setState((s) => ({ ...s, error: msg.payload, running: false }));
           break;
@@ -133,11 +138,19 @@ export default function App() {
     sendNamed,
     sendSelectSample,
     sendInfer,
+    sendStats,
   } = useWebSocket({ onMessage: handleMessage });
 
   useEffect(() => {
     if (connected) sendNamed("list_models", "");
   }, [connected, sendNamed]);
+
+  useEffect(() => {
+    if (!connected) return;
+    sendStats();
+    const id = setInterval(sendStats, 2000);
+    return () => clearInterval(id);
+  }, [connected, sendStats]);
 
   const patchConfig = (patch: Partial<EncodeConfig>) =>
     setConfig((c) => ({ ...c, ...patch }));
@@ -194,6 +207,7 @@ export default function App() {
 
   const deleteModel = (name: string) => sendNamed("delete_model", name);
 
+  const gpuAvailable = stats?.device.available.includes("gpu") ?? false;
   const compatibility = training.state.loaded?.compatibility;
   const hasModel =
     training.state.loaded !== null || training.state.last !== null;
@@ -255,6 +269,8 @@ export default function App() {
           running={training.state.running}
           connected={connected}
           canInfer={canInfer}
+          stats={stats}
+          gpuAvailable={gpuAvailable}
           loss={training.state.loss}
           trainAccuracy={training.state.trainAccuracy}
           testAccuracy={training.state.testAccuracy}

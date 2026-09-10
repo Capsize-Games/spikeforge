@@ -24,7 +24,13 @@ WORKDIR /app
 
 # Install Python deps first (better layer caching).
 COPY requirements.txt ./
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# PyTorch build selector: default CUDA so the GPU device option works.
+# For a smaller CPU-only image:
+#   docker compose build --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu132
+RUN pip install --upgrade pip \
+    && pip install --index-url ${TORCH_INDEX_URL} torch torchvision \
+    && pip install -r requirements.txt
 
 # Copy app source + built client.
 COPY . .

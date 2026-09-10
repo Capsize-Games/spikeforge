@@ -24,6 +24,7 @@ interface Props {
   running: boolean;
   connected: boolean;
   canInfer: boolean;
+  gpuAvailable: boolean;
 }
 
 function NumberField({
@@ -123,6 +124,7 @@ export function TrainControls({
   running,
   connected,
   canInfer,
+  gpuAvailable,
 }: Props) {
   const [saveName, setSaveName] = useState("my_model");
   const set = (patch: Partial<TrainConfig>) => onChange(patch);
@@ -151,6 +153,25 @@ export function TrainControls({
       )}
 
       <MirrorField label="Dataset" value={encode.dataset} help={TRAIN_HELP.dataset} />
+
+      <label className="field">
+        <span className="field-label">
+          <span>Device</span>
+          <HelpTip text={TRAIN_HELP.device} />
+        </span>
+        <select
+          value={config.device}
+          onChange={(e) =>
+            set({ device: e.target.value as TrainConfig["device"] })
+          }
+          disabled={busy}
+        >
+          <option value="gpu" disabled={!gpuAvailable}>
+            GPU{gpuAvailable ? "" : " (unavailable)"}
+          </option>
+          <option value="cpu">CPU</option>
+        </select>
+      </label>
 
       <NumberField label="hidden" value={config.hidden} min={16} max={512} step={16} help={TRAIN_HELP.hidden} onChange={(v) => set({ hidden: v })} />
       <NumberField label="beta" value={config.beta} min={0.1} max={0.95} step={0.05} help={TRAIN_HELP.beta} onChange={(v) => set({ beta: v })} />

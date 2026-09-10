@@ -10,6 +10,15 @@ services:
       - snn-data:/data
     environment:
       - SNN_DATA_DIR=/data
+    # Request the host GPU so the container can train on CUDA. Needs the
+    # NVIDIA Container Toolkit; ignored when no GPU is present.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     restart: unless-stopped
 
 volumes:

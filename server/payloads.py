@@ -25,7 +25,7 @@ def model_loaded_payload(engine, name, encode, accuracy):
         "dataset": engine.dataset,
         "accuracy": accuracy,
         "input_mode": engine.input_mode,
-        "coding": engine.coding,
+        "coding": engine.input_mode,
         "hidden": engine.net.hidden,
         "beta": engine.net.beta,
         "num_steps": engine.num_steps,

@@ -18,6 +18,7 @@ from server.messages import (
 from server.payloads import model_loaded_payload
 from server.schemas import ClientMessage
 from server.session import Session
+from server.stats import handle_stats
 
 
 async def stream_frames(ws, session: Session, cfg):
@@ -168,6 +169,8 @@ async def _dispatch_model(ws, session: Session, message: ClientMessage):
         await handle_load_model(ws, session, message.name, message.train)
     elif message.type == "delete_model":
         await handle_delete_model(ws, session, message.name)
+    elif message.type == "stats":
+        await handle_stats(ws, session)
 
 
 async def dispatch(ws, session: Session, message: ClientMessage):

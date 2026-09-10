@@ -30,6 +30,8 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
   spike data over WebSockets and renders plots live in the client, with a
   training panel (dataset picker, network config, live charts, model
   management, predictions)
+- **Compute selection**: a CPU/GPU device dropdown (GPU by default, with
+  automatic CPU fallback) and a live CPU-RAM / VRAM resource monitor
 
 ## Requirements
 
@@ -64,6 +66,19 @@ restarts.
 > Port 8877 was chosen to avoid clashing with other apps (e.g., 8000 is
 > commonly used by other dev servers). To change it, edit the
 > `ports:` mapping in [`docker-compose.yml`](docker-compose.yml).
+
+### Compute device & resources
+
+The training panel has a **Device** dropdown (CPU / GPU) that defaults to
+GPU and falls back to CPU automatically when CUDA is unavailable. A live
+**System resources** panel shows host CPU RAM and GPU VRAM
+(used / total / free). The Docker image installs CUDA PyTorch (`cu132`) and
+requests the host GPU, so `docker compose up --build` trains on the GPU out
+of the box; build a smaller CPU-only image with:
+
+```bash
+docker compose build --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
+```
 
 ### Local (non-Docker) development
 

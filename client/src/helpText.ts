@@ -77,6 +77,14 @@ export const TRAIN_HELP: Record<string, string> = {
     "Dataset reduction factor for training. Higher subset = less data = " +
     "faster runs.",
   batch_size: "Number of samples per training batch.",
+  device:
+    "Compute device for training and inference. GPU defaults on when " +
+    "available; if not, it silently falls back to CPU. Changing device " +
+    "starts a fresh engine on your next Train.",
+  resources:
+    "Live CPU RAM and GPU VRAM for the machine running the server. CPU RAM " +
+    "covers the whole host; VRAM is the GPU's memory. 'active' shows the " +
+    "device the model is actually using.",
   input_mode:
     "How the checkpoints feeds samples into the network: a spike coding " +
     "(rate/latency/delta) or the legacy raw-pixel mode. Inference must " +

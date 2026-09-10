@@ -1,6 +1,5 @@
-# CPU-only PyTorch for a smaller container.
---extra-index-url https://download.pytorch.org/whl/cpu
-
+# PyTorch is installed by the Dockerfile from the TORCH_INDEX_URL build arg so
+# the build (CPU vs CUDA) can be chosen; these pins keep dev installs working.
 torch>=2.5
 torchvision>=0.20
 snntorch>=1.0
@@ -11,3 +10,4 @@ fastapi>=0.110
 uvicorn[standard]>=0.27
 websockets>=12.0
 pydantic>=2.5
+psutil>=5.9

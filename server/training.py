@@ -68,6 +68,7 @@ class TrainingService:
             batch_size=config.batch_size,
             checkpoint=checkpoint,
             encode=encode,
+            device=config.device,
         )
 
     def stop(self):

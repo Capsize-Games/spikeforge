@@ -3,6 +3,7 @@
 import torch
 import torch.nn.functional as F
 
+from snn_interpreter import device as device_mod
 from snn_interpreter import inference, model_store
 from snn_interpreter.data_loader import build_loader
 from snn_interpreter.datasets import dataset_info
@@ -13,12 +14,12 @@ EVAL_EVERY = 5       # evaluate the held-out set every N steps
 EVAL_BATCHES = 4     # number of test batches to score
 
 
-class TrainingEngine:
+class TrainingEngine(device_mod.DeviceMixin):
     """Run a cancellable training loop that emits metric dicts."""
 
     def __init__(self, dataset="mnist", hidden=128, beta=0.5, lr=1e-2,
                  epochs=1, num_steps=10, subset=10, batch_size=64,
-                 checkpoint=None, encode=None, input_mode=None):
+                 checkpoint=None, encode=None, input_mode=None, device=None):
         self._dataset = dataset
         self._num_classes, _ = dataset_info(dataset)
         self._hidden = hidden
@@ -31,6 +32,7 @@ class TrainingEngine:
         self._checkpoint = checkpoint
         self._encode = encode
         self._setup_input(encode, input_mode)
+        self._set_device(device)
         self._build(lr)
         if checkpoint:
             self._restore(checkpoint)
@@ -47,6 +49,7 @@ class TrainingEngine:
         """Create the network, optimiser, and lazy test-batch cache."""
         self._net = SpikingNet(hidden=self._hidden, beta=self._beta,
                                num_classes=self._num_classes)
+        self._net.to(self._device)
         self._optimizer = torch.optim.Adam(self._net.parameters(), lr=lr)
         self._test_batches = None
 
@@ -71,6 +74,7 @@ class TrainingEngine:
             "num_classes": self._num_classes,
             "input_mode": self._input_mode,
             "coding": self._input_mode,
+            "device": self._device.type,
             "encode": self._encode.model_dump() if self._encode else None,
         }
         return model_store.save(name, self._net, meta)
@@ -80,10 +84,10 @@ class TrainingEngine:
     def _encode_batch(self, inputs):
         """Return [T,B,784] spikes for the configured input mode."""
         if self._encoder is None or self._input_mode == "raw":
-            return self._repeat_pixels(inputs)
+            return self._repeat_pixels(inputs).to(self._device)
         if self._input_mode == "random":
             raise ValueError("random coding carries no label signal")
-        return self._encoder.encode(inputs)
+        return self._encoder.encode(inputs).to(self._device)
 
     def _repeat_pixels(self, inputs):
         """Legacy raw path: repeat normalised pixels across steps."""
@@ -106,7 +110,8 @@ class TrainingEngine:
         correct = total = 0
         with torch.no_grad():
             for inputs, targets in self._load_test_batches():
-                correct += int((self.predict(inputs) == targets).sum())
+                correct += int((self.predict(inputs)
+                                == targets.to(self._device)).sum())
                 total += len(targets)
         return 100.0 * correct / max(total, 1)
 
@@ -138,12 +143,12 @@ class TrainingEngine:
     def _train_batch(self, inputs, targets):
         """Run one optimisation step and return loss/accuracy."""
         outputs = self._net.forward_spikes(self._encode_batch(inputs))
-        loss = F.cross_entropy(outputs, targets)
+        loss = F.cross_entropy(outputs, targets.to(self._device))
         self._optimizer.zero_grad()
         loss.backward()
         self._optimizer.step()
         preds = outputs.argmax(dim=1)
-        accuracy = (preds == targets).float().mean().item()
+        accuracy = (preds == targets.to(self._device)).float().mean().item()
         return {"loss": float(loss.item()),
                 "train_accuracy": float(accuracy)}
 
@@ -163,8 +168,8 @@ class TrainingEngine:
 
     def infer(self, spikes, true_label=None):
         """Score the displayed sample's spikes for the active model."""
-        return inference.infer_spikes(self._net, spikes, self._num_classes,
-                                      true_label, self.input_mode)
+        return inference.infer_spikes(self._net, spikes.to(self._device),
+                                      self._num_classes, true_label, self.input_mode)
 
     # --- accessors -------------------------------------------------------
 
@@ -185,10 +190,6 @@ class TrainingEngine:
 
     @property
     def input_mode(self):
-        return self._input_mode
-
-    @property
-    def coding(self):
         return self._input_mode
 
     @property

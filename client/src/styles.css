@@ -524,3 +524,52 @@ canvas {
   line-height: 1;
   color: var(--muted);
 }
+
+/* --- resource monitor --- */
+.resource-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resource-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.resource-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.resource-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #0d1117;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.resource-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ok), var(--accent));
+  transition: width 400ms ease;
+}
+
+.resource-pct {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.resource-device {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.resource-device b {
+  color: var(--text);
+}

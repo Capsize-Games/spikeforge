@@ -29,9 +29,10 @@ class SpikingNet(nn.Module):
     def forward_spikes(self, spikes, track=False):
         """Consume [T,B,F] spikes, re-injecting frame t each step."""
         frames = spikes.reshape(spikes.size(0), spikes.size(1), -1)
-        mem1 = self._lif1.init_leaky()
-        mem2 = self._lif2.init_leaky()
-        out_sum = torch.zeros(spikes.size(1), self._num_classes)
+        device = frames.device
+        mem1 = self._lif1.init_leaky().to(device)
+        mem2 = self._lif2.init_leaky().to(device)
+        out_sum = torch.zeros(spikes.size(1), self._num_classes, device=device)
         hidden, output = [], []
         for t in range(frames.size(0)):
             spk1, mem1, spk2, mem2 = self._step(frames[t], mem1, mem2)
