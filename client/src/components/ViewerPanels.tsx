@@ -133,16 +133,14 @@ export function ViewerPanels({
 
       <RasterCanvas
         raster={rasters.input}
-        label="Input spikes"
-        yTitle="neuron"
+        label="Input spikes · neuron"
         summary={summarize(rasters.input)}
         highlightStep={timeStep}
       />
 
       <RasterCanvas
         raster={rasters.hidden}
-        label="Hidden layer"
-        yTitle="neuron"
+        label="Hidden layer · neuron (sorted by rate)"
         summary={summarize(rasters.hidden)}
         sortByRate
         highlightStep={timeStep}
@@ -150,8 +148,7 @@ export function ViewerPanels({
       />
       <RasterCanvas
         raster={rasters.output}
-        label="Output layer"
-        yTitle="class"
+        label="Output layer · class"
         yLabels={outputLabels}
         highlightRows={outputRows}
         summary={summarize(rasters.output)}

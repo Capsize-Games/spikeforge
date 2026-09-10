@@ -20,8 +20,6 @@ interface Props {
   highlightRows?: number[];
   /** Reorder neurons by firing rate so silent / hot units stand out. */
   sortByRate?: boolean;
-  /** Short axis caption, e.g. "neuron" or "class". */
-  yTitle?: string;
   /** Small caption rendered under the canvas. */
   summary?: string;
 }
@@ -57,7 +55,6 @@ export function RasterCanvas({
   yLabels,
   highlightRows,
   sortByRate = false,
-  yTitle,
   summary,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -149,25 +146,6 @@ export function RasterCanvas({
     }
 
     ctx.font = "10px sans-serif";
-    if (yTitle) {
-      ctx.fillStyle = "rgba(13, 17, 23, 0.75)";
-      ctx.fillRect(2, 2, ctx.measureText(yTitle).width + 8, 12);
-      ctx.fillStyle = "#8b949e";
-      ctx.fillText(yTitle, 5, 12);
-    }
-    if (yLabels && yLabels.length === neurons && neurons <= 16) {
-      ctx.font = "9px sans-serif";
-      ctx.textAlign = "left";
-      for (let i = 0; i < neurons; i++) {
-        const y = yFor(rank[i], neurons, plotH) + 3;
-        ctx.fillStyle = "rgba(13, 17, 23, 0.75)";
-        ctx.fillRect(1, y - 7, 13, 9);
-        ctx.fillStyle = "#8b949e";
-        ctx.fillText(yLabels[i] ?? "", 3, y);
-      }
-      ctx.textAlign = "start";
-    }
-    ctx.font = "10px sans-serif";
     ctx.fillStyle = "#8b949e";
     ctx.fillText("Time step", plotW / 2 - 18, canvas.height - 6);
     ctx.fillText(String(steps), plotW - 20, canvas.height - 6);
@@ -180,8 +158,20 @@ export function RasterCanvas({
     yLabels,
     highlightRows,
     sortByRate,
-    yTitle,
   ]);
+
+  // Rail labels mirror the canvas row geometry so they line up with dots.
+  const rowTop = 8;
+  const plotHeight = Math.max(1, height - 22 - 14);
+  const rowCount = raster ? max1(raster.num_neurons) : 0;
+  const railLabels =
+    raster && yLabels && yLabels.length === rowCount && rowCount <= 16
+      ? rowOrder(raster, sortByRate).map((neuron, pos) => ({
+          key: neuron,
+          text: yLabels[neuron] ?? "",
+          top: rowTop + plotHeight - (pos / rowCount) * plotHeight - 6,
+        }))
+      : [];
 
   return (
     <div className="panel">
@@ -191,8 +181,17 @@ export function RasterCanvas({
           {actions && <span className="panel-actions">{actions}</span>}
         </div>
       )}
-      <div className="raster-wrap" ref={wrapRef}>
-        <canvas ref={canvasRef} width={plotWidth} height={height} />
+      <div className="raster-body">
+        <div className="raster-rail" style={{ height }}>
+          {railLabels.map(({ key, text, top }) => (
+            <span key={key} className="rail-label" style={{ top }}>
+              {text}
+            </span>
+          ))}
+        </div>
+        <div className="raster-wrap" ref={wrapRef}>
+          <canvas ref={canvasRef} width={plotWidth} height={height} />
+        </div>
       </div>
       {summary && <div className="raster-summary">{summary}</div>}
     </div>

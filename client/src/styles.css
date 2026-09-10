@@ -758,6 +758,25 @@ canvas,
   min-width: 0;
 }
 
+.raster-body {
+  display: flex;
+  align-items: flex-start;
+}
+
+.raster-rail {
+  position: relative;
+  flex: 0 0 auto;
+  width: 24px;
+}
+
+.rail-label {
+  position: absolute;
+  right: 5px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--muted);
+}
+
 .raster-summary {
   margin-top: 6px;
   font-size: 11px;
@@ -783,15 +802,16 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 
-/* The raster plot now spans the full panel width, so the track does too. */
+/* Inset by the raster label rail (24px) so the track matches the plot. */
 .cursor-range {
-  width: 100%;
-  margin: 0;
+  width: calc(100% - 24px);
+  margin: 0 0 0 24px;
   accent-color: var(--accent);
 }
 
 .raster-wrap {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .raster-wrap canvas {
