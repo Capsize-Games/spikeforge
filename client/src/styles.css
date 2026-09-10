@@ -954,3 +954,18 @@ canvas.heatmap-fluid {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.sample-index {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+}
+
+.index-input {
+  flex: 0 0 auto;
+  width: 66px;
+  height: 22px;
+  padding: 0 6px;
+  text-align: center;
+}

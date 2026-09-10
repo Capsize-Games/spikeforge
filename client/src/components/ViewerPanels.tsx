@@ -1,6 +1,7 @@
 import type { InferencePayload, RasterPayload, RasterSource } from "../types";
 import { HeatmapCanvas } from "./HeatmapCanvas";
 import { RasterCanvas } from "./RasterCanvas";
+import { SampleIndex } from "./SampleIndex";
 
 interface Props {
   sample: number[][] | null;
@@ -10,9 +11,11 @@ interface Props {
   rasters: Record<RasterSource, RasterPayload | null>;
   inference: InferencePayload | null;
   spikeStep: number | null;
+  sampleIndex: number;
   playing: boolean;
   onPlay: () => void;
   onStop: () => void;
+  onSelectSample: (index: number) => void;
 }
 
 /** Predicted vs true badge shown while a model has scored the sample. */
@@ -40,9 +43,11 @@ export function ViewerPanels({
   rasters,
   inference,
   spikeStep,
+  sampleIndex,
   playing,
   onPlay,
   onStop,
+  onSelectSample,
 }: Props) {
   return (
     <div className="col-viz">
@@ -121,6 +126,7 @@ export function ViewerPanels({
             >
               ■
             </button>
+            <SampleIndex value={sampleIndex} onChange={onSelectSample} />
           </>
         }
       />

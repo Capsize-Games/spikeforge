@@ -282,9 +282,11 @@ export default function App() {
           rasters={state.rasters}
           inference={state.inference}
           spikeStep={state.spikeStep}
+          sampleIndex={config.sample_index}
           playing={state.running}
           onPlay={playPreview}
           onStop={stopPreview}
+          onSelectSample={(index) => selectSample({ sample_index: index })}
         />
 
           <TrainingPanel

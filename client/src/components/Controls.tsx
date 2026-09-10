@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import { HELP, TRAIN_HELP } from "../helpText";
 import type { DatasetInfo, EncodeConfig, TrainConfig } from "../types";
 import { CheckField, SelectField, SliderField } from "./Fields";
-import { HelpTip } from "./HelpTip";
 import { Section } from "./Stepper";
 import { TrainControls } from "./TrainControls";
 
@@ -46,31 +45,6 @@ export function Controls(props: Props) {
   const toggle = (id: string) =>
     setOpen((o) => ({ ...o, [id]: !o[id] }));
 
-  const [indexText, setIndexText] = useState(String(config.sample_index));
-  const debounce = useRef<number | null>(null);
-
-  useEffect(() => {
-    setIndexText(String(config.sample_index));
-  }, [config.sample_index]);
-
-  useEffect(
-    () => () => {
-      if (debounce.current !== null) window.clearTimeout(debounce.current);
-    },
-    [],
-  );
-
-  /** Debounce typed indices so each keystroke doesn't rebuild the engine. */
-  const onIndexInput = (value: string) => {
-    setIndexText(value);
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return;
-    if (debounce.current !== null) window.clearTimeout(debounce.current);
-    debounce.current = window.setTimeout(() => {
-      onSelectSample({ sample_index: Math.max(0, Math.round(parsed)) });
-    }, 350);
-  };
-
   return (
     <div className="panel controls">
       <Section
@@ -94,43 +68,6 @@ export function Controls(props: Props) {
           }
           onChange={(v) => onSelectSample({ dataset: v, sample_index: 0 })}
         />
-
-        <div className="field">
-          <span className="field-label">
-            <span>Sample index</span>
-            <HelpTip text={HELP.sample_index} />
-          </span>
-          <div className="sample-row">
-            <button
-              className="step-btn"
-              onClick={() =>
-                onSelectSample({
-                  sample_index: Math.max(0, config.sample_index - 1),
-                })
-              }
-              disabled={config.sample_index <= 0}
-              aria-label="Previous sample"
-            >
-              ◀
-            </button>
-            <input
-              className="text-input"
-              type="number"
-              min={0}
-              value={indexText}
-              onChange={(e) => onIndexInput(e.target.value)}
-            />
-            <button
-              className="step-btn"
-              onClick={() =>
-                onSelectSample({ sample_index: config.sample_index + 1 })
-              }
-              aria-label="Next sample"
-            >
-              ▶
-            </button>
-          </div>
-        </div>
 
         <SliderField label="subset" value={config.subset} min={1} max={50} step={1} help={HELP.subset} onChange={(v) => set({ subset: v })} />
         <SliderField label="batch_size" value={config.batch_size} min={8} max={512} step={8} help={HELP.batch_size} onChange={(v) => set({ batch_size: v })} />
