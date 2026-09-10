@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { HELP, TRAIN_HELP } from "../helpText";
-import type {
-  DatasetInfo,
-  EncodeConfig,
-  SavedModel,
-  TrainConfig,
-} from "../types";
+import type { DatasetInfo, EncodeConfig, TrainConfig } from "../types";
 import { CheckField, SelectField, SliderField } from "./Fields";
 import { HelpTip } from "./HelpTip";
 import { Section } from "./Stepper";
@@ -16,7 +11,6 @@ interface Props {
   config: EncodeConfig;
   model: TrainConfig;
   datasets: DatasetInfo[];
-  models: SavedModel[];
   gpuAvailable: boolean;
   connected: boolean;
   trainRunning: boolean;
@@ -27,9 +21,6 @@ interface Props {
   onTrain: () => void;
   onStopTrain: () => void;
   onInfer: () => void;
-  onSave: (name: string) => void;
-  onLoad: (name: string) => void;
-  onDelete: (name: string) => void;
 }
 
 export function Controls(props: Props) {
@@ -37,7 +28,6 @@ export function Controls(props: Props) {
     config,
     model,
     datasets,
-    models,
     gpuAvailable,
     connected,
     trainRunning,
@@ -48,9 +38,6 @@ export function Controls(props: Props) {
     onTrain,
     onStopTrain,
     onInfer,
-    onSave,
-    onLoad,
-    onDelete,
   } = props;
 
   const set = (patch: Partial<EncodeConfig>) => onChange(patch);
@@ -229,16 +216,12 @@ export function Controls(props: Props) {
         onToggle={() => toggle("4")}
       >
         <TrainControls
-          models={models}
           running={trainRunning}
           connected={connected}
           canInfer={canInfer}
           onTrain={onTrain}
           onStop={onStopTrain}
           onInfer={onInfer}
-          onSave={onSave}
-          onLoad={onLoad}
-          onDelete={onDelete}
         />
       </Section>
     </div>

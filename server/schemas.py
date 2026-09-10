@@ -54,7 +54,7 @@ class ClientMessage(BaseModel):
     type: Literal[
         "configure", "run", "stop", "train", "stop_train", "predict",
         "select_sample", "infer", "save_model", "list_models",
-        "load_model", "delete_model", "stats",
+        "load_model", "delete_model", "new_model", "stats",
     ] = "configure"
     config: EncodeConfig = Field(default_factory=EncodeConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
@@ -68,8 +68,8 @@ class ServerMessage(BaseModel):
         "status", "image", "raster", "spike_frame",
         "curve", "error", "config_ack", "run_state",
         "train_metrics", "train_state", "prediction",
-        "model_saved", "model_list", "model_loaded", "inference",
-        "system_stats",
+        "model_saved", "model_list", "model_loaded", "model_cleared",
+        "inference", "system_stats",
     ]
     payload: Any = None
     source: Optional[str] = None

@@ -11,5 +11,7 @@ DATA_DIR = os.environ.get("SNN_DATA_DIR", str(_REPO_ROOT / "build"))
 
 MNIST_PATH = os.path.join(DATA_DIR, "mnist")
 
-# Where saved model checkpoints live (separate from datasets).
+# Settings: where saved model checkpoints live (separate from datasets).
+# The model manager's Load/Save read and write this directory. Change it here
+# (or set SNN_MODEL_DIR / SNN_DATA_DIR) to relocate saved models.
 MODEL_DIR = os.environ.get("SNN_MODEL_DIR", os.path.join(DATA_DIR, "models"))

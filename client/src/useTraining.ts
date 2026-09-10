@@ -82,6 +82,14 @@ export function useTraining() {
       case "model_loaded":
         setState((s) => ({ ...s, loaded: msg.payload }));
         return true;
+      case "model_cleared":
+        setState((s) => ({
+          ...s,
+          loaded: null,
+          prediction: null,
+          config: { ...s.config, checkpoint: null },
+        }));
+        return true;
       case "model_saved":
         setState((s) => ({ ...s, status: `saved ${msg.payload.name}` }));
         return true;

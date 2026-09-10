@@ -55,6 +55,11 @@ class TrainingService:
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
 
+    def clear(self):
+        """Stop training and drop the active engine."""
+        self.stop()
+        self._engine = None
+
     def start(self, config, encode=None):
         """Spawn a worker that builds the engine, then trains."""
         self._stop.clear()

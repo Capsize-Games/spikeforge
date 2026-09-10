@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Controls } from "./components/Controls";
+import { ModelPanel } from "./components/ModelPanel";
 import { ResourceMonitor } from "./components/ResourceMonitor";
 import { TopBar } from "./components/TopBar";
 import { TrainingPanel } from "./components/TrainingPanel";
@@ -206,7 +207,7 @@ export default function App() {
     sendTrain("load_model", merged, name);
   };
 
-  const deleteModel = (name: string) => sendNamed("delete_model", name);
+  const newModel = () => sendNamed("new_model", "");
 
   // Unknown until stats arrive: allow GPU so the option isn't disabled.
   const gpuAvailable = stats
@@ -220,17 +221,25 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <TopBar connected={connected} status={state.status} />
+        <TopBar />
       </header>
 
       <main className="app-main">
         <div className="grid">
         <div className="col-controls">
+          <ModelPanel
+            models={training.state.models}
+            current={training.state.loaded?.name ?? null}
+            connected={connected}
+            busy={training.state.running}
+            onNew={newModel}
+            onLoad={loadModel}
+            onSave={saveModel}
+          />
           <Controls
             config={config}
             model={training.state.config}
             datasets={training.state.datasets}
-            models={training.state.models}
             gpuAvailable={gpuAvailable}
             connected={connected}
             trainRunning={training.state.running}
@@ -241,9 +250,6 @@ export default function App() {
             onTrain={train}
             onStopTrain={stopTrain}
             onInfer={runInference}
-            onSave={saveModel}
-            onLoad={loadModel}
-            onDelete={deleteModel}
           />
         </div>
 
@@ -276,6 +282,10 @@ export default function App() {
           stats={stats}
           requested={training.state.config.device}
         />
+        <span className={`conn ${connected ? "ok" : "bad"}`}>
+          <span className={`dot ${connected ? "ok" : "bad"}`} />
+          {connected ? "connected" : "disconnected"}
+        </span>
       </footer>
     </div>
   );

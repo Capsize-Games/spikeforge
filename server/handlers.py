@@ -108,12 +108,10 @@ async def handle_stop_train(ws, session: Session):
     await send_train_state(ws, session, running=False, reason="stopped")
 
 
-async def handle_predict(ws, session: Session):
-    """Predict sample digits with the current model, if trained."""
-    engine = session.training.engine
-    payload = (engine.predict_sample() if engine is not None
-               else {"digits": [], "labels": []})
-    await send_locked(ws, session, {"type": "prediction", "payload": payload})
+async def handle_new_model(ws, session: Session):
+    """Unload the current model so the next run starts from scratch."""
+    session.training.clear()
+    await send_locked(ws, session, {"type": "model_cleared", "payload": None})
 
 
 async def handle_save_model(ws, session: Session, name):
@@ -172,6 +170,8 @@ async def _dispatch_model(ws, session: Session, message: ClientMessage):
         await handle_load_model(ws, session, message.name, message.train)
     elif message.type == "delete_model":
         await handle_delete_model(ws, session, message.name)
+    elif message.type == "new_model":
+        await handle_new_model(ws, session)
     elif message.type == "stats":
         await handle_stats(ws, session)
 
@@ -188,8 +188,6 @@ async def dispatch(ws, session: Session, message: ClientMessage):
         await handle_train(ws, session, message.train)
     elif message.type == "stop_train":
         await handle_stop_train(ws, session)
-    elif message.type == "predict":
-        await handle_predict(ws, session)
     elif message.type in ("select_sample", "infer"):
         handler = handle_infer if message.type == "infer" else handle_select_sample
         await handler(ws, session, message.config)

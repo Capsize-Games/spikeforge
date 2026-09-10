@@ -215,5 +215,6 @@ export type ServerMsg =
   | { type: "model_saved"; payload: { name: string; path: string } }
   | { type: "model_list"; payload: ModelListPayload }
   | { type: "model_loaded"; payload: ModelLoadedPayload }
+  | { type: "model_cleared"; payload?: null }
   | { type: "system_stats"; payload: SystemStatsPayload }
   | { type: "error"; payload: string };
