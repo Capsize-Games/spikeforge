@@ -39,46 +39,52 @@ export function ViewerPanels({
   return (
     <div className="col-viz">
       <div className="row viz-row">
-        <div className="sample-wrap grow">
-          <HeatmapCanvas
-            data={sample}
-            palette="binary"
-            label="Input sample"
-            width={224}
-            height={224}
-            fluid
-          />
-          {inference && sample && <PredictionBadge inference={inference} />}
-        </div>
-        <HeatmapCanvas
-          data={spikeFrame}
-          palette="plasma"
-          label="Spike frame (input)"
-          width={224}
-          height={224}
-          fluid
-        />
-        {(reconGain1 || reconLow) && (
-          <div className="panel">
-            <div className="panel-title">Reconstruction</div>
-            <div className="pair">
+        <div className="panel grow">
+          <div className="panel-title">Input</div>
+          <div className="pair grow">
+            <div className="sample-wrap grow">
               <HeatmapCanvas
-                data={reconGain1}
+                data={sample}
                 palette="binary"
-                label="Gain=1"
-                width={120}
-                height={120}
+                label="Sample"
+                width={224}
+                height={224}
+                fluid
               />
-              <HeatmapCanvas
-                data={reconLow}
-                palette="binary"
-                label="Low gain"
-                width={120}
-                height={120}
-              />
+              {inference && sample && <PredictionBadge inference={inference} />}
             </div>
+            <HeatmapCanvas
+              data={spikeFrame}
+              palette="plasma"
+              label="Spike frame"
+              width={224}
+              height={224}
+              fluid
+            />
           </div>
-        )}
+        </div>
+
+        <div className="panel grow">
+          <div className="panel-title">Reconstruction</div>
+          <div className="pair grow">
+            <HeatmapCanvas
+              data={reconGain1}
+              palette="binary"
+              label="Gain=1"
+              width={120}
+              height={120}
+              fluid
+            />
+            <HeatmapCanvas
+              data={reconLow}
+              palette="binary"
+              label="Low gain"
+              width={120}
+              height={120}
+              fluid
+            />
+          </div>
+        </div>
       </div>
 
       <RasterCanvas raster={rasters.input} label="Input spikes" />

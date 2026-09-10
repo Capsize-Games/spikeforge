@@ -143,8 +143,11 @@ export default function App() {
   } = useWebSocket({ onMessage: handleMessage });
 
   useEffect(() => {
-    if (connected) sendNamed("list_models", "");
-  }, [connected, sendNamed]);
+    if (!connected) return;
+    sendNamed("list_models", "");
+    // Populate the viewer immediately so every panel is shown at rest.
+    send("configure", configRef.current);
+  }, [connected, sendNamed, send]);
 
   useEffect(() => {
     if (!connected) return;

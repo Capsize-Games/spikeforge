@@ -710,7 +710,7 @@ canvas,
   border-radius: 0;
 }
 
-/* --- fluid viewer row: sample + spike frame fill the space --- */
+/* --- fluid viewer: Input and Reconstruction fill the space --- */
 .viz-row {
   flex-wrap: nowrap;
   flex: 1 1 auto;
@@ -718,7 +718,20 @@ canvas,
   align-items: stretch;
 }
 
-.viz-row > .grow {
+.viz-row > .panel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pair.grow {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.pair.grow > .grow {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
