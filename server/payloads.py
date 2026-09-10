@@ -1,9 +1,14 @@
 """Assemble outbound payloads from engines and encoder configs."""
 
-from snn_interpreter import model_store
+from typing import Any, Dict, Optional
+
+from server.schemas import EncodeConfig
+from snn_interpreter.network import model_store
 
 
-def compatibility(engine, encode):
+def compatibility(
+    engine: Any, encode: Optional[EncodeConfig]
+) -> Dict[str, Any]:
     """Compare a checkpoint's training config to the encoder config."""
     expected = engine.input_mode
     current = encode.coding if encode is not None else "raw"
@@ -18,7 +23,9 @@ def compatibility(engine, encode):
     }
 
 
-def model_loaded_payload(engine, name, encode, accuracy):
+def model_loaded_payload(engine: Any, name: Optional[str],
+                         encode: Optional[EncodeConfig],
+                         accuracy: float) -> Dict[str, Any]:
     """Build the model_loaded payload including config coupling details."""
     return {
         "name": name,
@@ -36,7 +43,7 @@ def model_loaded_payload(engine, name, encode, accuracy):
     }
 
 
-def _meta(name):
+def _meta(name: Optional[str]) -> Dict[str, Any]:
     """Read a checkpoint's stored meta, tolerating missing files."""
     try:
         return model_store.load(name).get("meta", {})

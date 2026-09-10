@@ -4,22 +4,28 @@ Produces latency curve + rasters + animation, delta plots, and random
 spike visuals under build/.
 """
 
-from snn_interpreter.delta_exporter import DeltaPlotExporter
-from snn_interpreter.delta_trainer import DeltaTrainer
-from snn_interpreter.latency_exporter import (
+from snn_interpreter.encoding.delta_trainer import DeltaTrainer
+from snn_interpreter.encoding.latency_trainer import LatencyTrainer
+from snn_interpreter.encoding.random_spikegen import RandomSpikeGenerator
+from snn_interpreter.exporters.delta_exporter import DeltaPlotExporter
+from snn_interpreter.exporters.latency_curve_exporter import (
     LatencyCurveExporter,
+)
+from snn_interpreter.exporters.latency_raster_exporter import (
     LatencyRasterExporter,
+)
+from snn_interpreter.exporters.latency_video_exporter import (
     LatencyVideoExporter,
 )
-from snn_interpreter.latency_trainer import LatencyTrainer
-from snn_interpreter.random_spike_exporter import (
+from snn_interpreter.exporters.random_spike_raster_exporter import (
     RandomSpikeRasterExporter,
+)
+from snn_interpreter.exporters.random_spike_video_exporter import (
     RandomSpikeVideoExporter,
 )
-from snn_interpreter.random_spikegen import RandomSpikeGenerator
 
 
-def main():
+def main() -> None:
     """Train the latency/delta/random encoders and export their visuals."""
     latency_trainer = LatencyTrainer(animation_interval=100)
     LatencyCurveExporter(latency_trainer).export()

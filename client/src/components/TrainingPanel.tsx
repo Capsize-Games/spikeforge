@@ -7,9 +7,10 @@ import type {
   TrainMetrics,
 } from "../types";
 import { HELP } from "../helpText";
-import { ClassSpikeBarsFromInference } from "./ClassSpikeBars";
+import { ClassSpikeBarsFromInference } from "./ClassSpikeBarsFromInference";
 import { HelpTip } from "./HelpTip";
 import { LineChart } from "./LineChart";
+import { CHART_COLORS } from "./chartColors";
 import { confidenceSeries } from "./readoutMath";
 
 interface Props {
@@ -149,7 +150,8 @@ export function TrainingPanel({
             />
             {!inference.dataset_match && (
               <div className="mismatch">
-                Inference dataset differs from the checkpoint's training dataset.
+                Inference dataset differs from the checkpoint's training
+                dataset.
               </div>
             )}
             <ClassSpikeBarsFromInference
@@ -198,7 +200,9 @@ export function TrainingPanel({
         <div className="panel-title subsection">Loss (training)</div>
         <LineChart
           bare
-          series={[{ label: "loss", color: "#f85149", values: loss }]}
+          series={[
+            { label: "loss", color: CHART_COLORS.loss, values: loss },
+          ]}
         />
 
         <div className="panel-title subsection">Accuracy (%)</div>
@@ -207,13 +211,13 @@ export function TrainingPanel({
           series={[
             {
               label: "held-out",
-              color: "#3fb950",
+              color: CHART_COLORS.heldOut,
               values: testAccuracy,
               max: 100,
             },
             {
               label: "train batch",
-              color: "#8b949e",
+              color: CHART_COLORS.trainBatch,
               values: trainAccuracy,
               max: 100,
             },

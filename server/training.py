@@ -3,13 +3,16 @@
 import asyncio
 import threading
 import time
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
-from snn_interpreter import model_store
-from snn_interpreter.training_engine import TrainingEngine
+import torch
+
+from server.schemas import EncodeConfig, TrainConfig
+from snn_interpreter.network import model_store
+from snn_interpreter.training.training_engine import TrainingEngine
 
 
-def _checkpoint_meta(checkpoint):
+def _checkpoint_meta(checkpoint: Optional[str]) -> Dict[str, Any]:
     """Return a checkpoint's stored meta, or an empty dict."""
     if not checkpoint:
         return {}
@@ -19,12 +22,12 @@ def _checkpoint_meta(checkpoint):
         return {}
 
 
-def _dataset_from(config, encode):
+def _dataset_from(config: TrainConfig, encode: Optional[EncodeConfig]) -> str:
     """Prefer the encode config's dataset, else the train config's."""
     return encode.dataset if encode is not None else config.dataset
 
 
-def _point(metrics):
+def _point(metrics: Dict[str, Any]) -> Dict[str, Any]:
     """Trim a metrics dict to the history fields we persist."""
     return {
         "step": metrics["step"],
@@ -38,26 +41,30 @@ def _point(metrics):
 class TrainingService:
     """Bridge a blocking training loop into an asyncio-friendly queue."""
 
-    def __init__(self, loop: asyncio.AbstractEventLoop):
+    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Bind the service to the loop that owns the send queue."""
         self._loop = loop
         self._engine: Optional[TrainingEngine] = None
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
-        self._history: list = []
+        self._history: List[Dict[str, Any]] = []
         self.queue: asyncio.Queue = asyncio.Queue()
 
     @property
-    def engine(self):
+    def engine(self) -> Optional[TrainingEngine]:
+        """Return the active training engine, if any."""
         return self._engine
 
     @property
-    def input_mode(self):
+    def input_mode(self) -> str:
         """Return the active engine's input mode, defaulting to raw."""
         if self._engine is None:
             return "raw"
         return self._engine.input_mode
 
-    def infer(self, spikes, true_label=None):
+    def infer(
+        self, spikes: torch.Tensor, true_label: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
         """Score encoded spikes with the active engine, if any."""
         if self._engine is None:
             return None
@@ -65,14 +72,17 @@ class TrainingService:
 
     @property
     def is_running(self) -> bool:
+        """Return True while the worker thread is alive."""
         return self._thread is not None and self._thread.is_alive()
 
-    def clear(self):
+    def clear(self) -> None:
         """Stop training and drop the active engine."""
         self.stop()
         self._engine = None
 
-    def start(self, config, encode=None):
+    def start(
+        self, config: TrainConfig, encode: Optional[EncodeConfig] = None
+    ) -> None:
         """Spawn a worker that builds the engine, then trains."""
         self._stop.clear()
         self._history = []
@@ -81,7 +91,9 @@ class TrainingService:
         )
         self._thread.start()
 
-    def _build_and_run(self, config, encode):
+    def _build_and_run(
+        self, config: TrainConfig, encode: Optional[EncodeConfig]
+    ) -> None:
         """Build the engine off the event loop, then stream metrics."""
         try:
             engine = self._make_engine(config, encode, config.checkpoint)
@@ -94,21 +106,26 @@ class TrainingService:
         self._engine = engine
         self._run(engine)
 
-    def adopt(self, checkpoint, config, encode=None):
+    def adopt(
+        self,
+        checkpoint: str,
+        config: TrainConfig,
+        encode: Optional[EncodeConfig] = None,
+    ) -> TrainingEngine:
         """Load a checkpoint, restoring its metric history too."""
         self._stop.clear()
         self._engine = self._make_engine(config, encode, checkpoint)
-        meta = _checkpoint_meta(checkpoint)
-        self._history = model_store.load(checkpoint).get("history", []) \
-            if meta else []
+        history = model_store.load(checkpoint).get("history", [])
+        self._history = history if _checkpoint_meta(checkpoint) else []
         return self._engine
 
-    def save(self, name):
+    def save(self, name: str) -> str:
         """Persist the active model together with its metric history."""
         return self._engine.save(name, self._history)
 
     @staticmethod
-    def _make_engine(config, encode, checkpoint):
+    def _make_engine(config: TrainConfig, encode: Optional[EncodeConfig],
+                     checkpoint: Optional[str]) -> TrainingEngine:
         """Build a TrainingEngine, honoring a checkpoint's architecture."""
         meta = _checkpoint_meta(checkpoint)
         dataset = meta.get("dataset") or _dataset_from(config, encode)
@@ -126,16 +143,17 @@ class TrainingService:
             device=config.device,
         )
 
-    def stop(self):
+    def stop(self) -> None:
         """Signal the worker to stop after the current batch."""
         self._stop.set()
 
-    def _run(self, engine: TrainingEngine):
+    def _run(self, engine: TrainingEngine) -> None:
         """Iterate metrics in the worker and push them to the queue."""
         try:
             last = time.perf_counter()
             for metrics in engine.train(should_stop=self._stop.is_set):
-                metrics["step_ms"] = round((time.perf_counter() - last) * 1000.0, 1)
+                elapsed = (time.perf_counter() - last) * 1000.0
+                metrics["step_ms"] = round(elapsed, 1)
                 last = time.perf_counter()
                 metrics["device"] = engine.device
                 self._history.append(_point(metrics))
@@ -147,12 +165,12 @@ class TrainingService:
         finally:
             self._thread = None
 
-    def _state(self, reason, engine):
+    def _state(self, reason: str, engine: TrainingEngine) -> None:
         """Queue a stopped train_state carrying the active device."""
         self._put({"type": "train_state",
                    "payload": {"running": False, "reason": reason,
                                "device": engine.device}})
 
-    def _put(self, message):
+    def _put(self, message: Dict[str, Any]) -> None:
         """Thread-safe enqueue onto the event loop."""
         self._loop.call_soon_threadsafe(self.queue.put_nowait, message)

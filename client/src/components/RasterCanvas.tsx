@@ -121,8 +121,13 @@ export function RasterCanvas({
 
     (highlightRows ?? []).forEach((row) => {
       if (row < 0 || row >= neurons) return;
-      ctx.fillStyle = "rgba(63, 185, 80, 0.14)";
-      ctx.fillRect(padL, yFor(rank[row], neurons, plotH) - bandH / 2, plotW, bandH);
+      ctx.fillStyle = colors.highlight;
+      ctx.fillRect(
+        padL,
+        yFor(rank[row], neurons, plotH) - bandH / 2,
+        plotW,
+        bandH,
+      );
     });
 
     ctx.fillStyle = colors.dot;

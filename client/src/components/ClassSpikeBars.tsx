@@ -1,4 +1,3 @@
-import type { InferencePayload } from "../types";
 import { LineChart } from "./LineChart";
 import { confidenceSeries, cumulativeTotals } from "./readoutMath";
 
@@ -23,6 +22,9 @@ const PALETTE = [
   "#d2a8ff",
   "#ffa657",
 ];
+
+/** Green, matching the "ok"/correct semantic used elsewhere in the UI. */
+const CONFIDENCE_COLOR = PALETTE[2];
 
 /** One series per output class so the chart shows the spike race. */
 function toSeries(matrix: number[][]) {
@@ -97,31 +99,19 @@ export function ClassSpikeBars({
       {confidence && (
         <LineChart
           title="Confidence over time"
-          series={[{ label: "confidence", color: "#3fb950", values: confidence, max: 100 }]}
+          series={[
+            {
+              label: "confidence",
+              color: CONFIDENCE_COLOR,
+              values: confidence,
+              max: 100,
+            },
+          ]}
           width={320}
           height={100}
           cursorIndex={cursorIndex}
         />
       )}
     </div>
-  );
-}
-
-/** Convenience: build the component straight from an inference payload. */
-export function ClassSpikeBarsFromInference({
-  inference,
-  timeStep = null,
-}: {
-  inference: InferencePayload;
-  timeStep?: number | null;
-}) {
-  return (
-    <ClassSpikeBars
-      classSpikes={inference.class_spikes}
-      predicted={inference.predicted}
-      trueLabel={inference.true_label}
-      outputOverTime={inference.output_over_time}
-      timeStep={timeStep}
-    />
   );
 }

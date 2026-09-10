@@ -1,5 +1,10 @@
 import { useTheme } from "../theme";
 
+/** Synapse edges connecting the three input nodes to the output node. */
+const LOGO_PATHS =
+  "M5.7 6.5 10.3 8.6M5.7 11.4 10.3 9.4M5.7 12.6 10.3 14.6" +
+  "M5.7 17.6 10.3 15.4M13.7 9.4 18.3 11.4M13.7 14.6 18.3 12.6";
+
 /** App header: a compact 24x24 logo mark and the light/dark toggle. */
 export function TopBar() {
   const { theme, toggle } = useTheme();
@@ -21,7 +26,7 @@ export function TopBar() {
           <circle cx="12" cy="9" r="1.7" fill="currentColor" stroke="none" />
           <circle cx="12" cy="15" r="1.7" fill="currentColor" stroke="none" />
           <circle cx="20" cy="12" r="1.7" fill="currentColor" stroke="none" />
-          <path d="M5.7 6.5 10.3 8.6M5.7 11.4 10.3 9.4M5.7 12.6 10.3 14.6M5.7 17.6 10.3 15.4M13.7 9.4 18.3 11.4M13.7 14.6 18.3 12.6" />
+          <path d={LOGO_PATHS} />
         </svg>
       </span>
 

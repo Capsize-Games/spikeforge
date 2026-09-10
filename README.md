@@ -120,17 +120,33 @@ main.py                      Thin entry point: rate pipeline -> exporters
 main_encodings.py            Extra tutorial-1 encodings (latency/delta/random)
 setup.py                     Packaging metadata + web extra
 snn_interpreter/
-  trainer.py                 SSNTrainer: MNIST loading + rate coding
-  latency_trainer.py         LatencyTrainer (tutorial 2.3)
-  delta_trainer.py           DeltaTrainer (tutorial 2.4)
-  random_spikegen.py         RandomSpikeGenerator (tutorial 3)
-  datasets.py                Dataset registry (MNIST/Fashion/KMNIST/...)
-  spiking_net.py             SpikingNet: fully-connected LIF model
-  training_engine.py         TrainingEngine: train loop yielding metrics
-  model_store.py             Save/load/list/delete model checkpoints
-  *_exporter.py              matplotlib exporters -> build/
-  plot_utils.py              shared fig/GIF helpers
-  exporter.py                Exporter base + build/ output resolution
+  config.py                  Paths/settings resolved from the environment
+  data/                      Dataset registry, loaders, sample access
+    datasets.py              Dataset registry (MNIST/Fashion/KMNIST/...)
+    data_loader.py           Loader construction with subset reduction
+    sample_source.py         Single transformed images/labels for the viewer
+  encoding/                  Spike-encoding transforms
+    spike_encoder.py         SpikeEncoder: rate/latency/delta/random
+    latency_trainer.py       LatencyTrainer (tutorial 2.3)
+    delta_trainer.py         DeltaTrainer (tutorial 2.4)
+    random_spikegen.py       RandomSpikeGenerator (tutorial 3)
+  network/                   Model, inference, and persistence
+    spiking_net.py           SpikingNet: fully-connected LIF model
+    inference.py             Per-sample prediction + layer activity
+    model_store.py           Save/load/list/delete model checkpoints
+  training/                  Training loop and its collaborators
+    trainer.py               SSNTrainer: MNIST loading + rate coding
+    logger.py                SNNTrainerLogger: diagnostic prints
+    training_engine.py       TrainingEngine: train loop yielding metrics
+    checkpoint_mixin.py      Checkpoint save/restore behaviour
+    encoding_mixin.py        Raw-pixel / spike input encoding
+  exporters/                 matplotlib/GIF/MP4 output -> build/
+    exporter.py              Exporter base + build/ output resolution
+    plot_utils.py            shared fig/GIF helpers
+    *_exporter.py            per-visual exporters
+  runtime/                   Compute environment
+    device.py                CPU/GPU selection + auto benchmark
+    system_stats.py          CPU RAM / GPU VRAM snapshots
 server/
   app.py                     FastAPI app + WebSocket endpoint
   handlers.py                Inbound message routing (encode + train)
@@ -138,15 +154,21 @@ server/
   encoder.py                 Config -> encoder engine (JSON payloads)
   training.py                Threaded training bridge -> asyncio queue
   session.py                 Per-connection state (engine/train/stream)
-  schemas.py                 Pydantic WS message/config schemas
+  schemas/                   Pydantic WS message/config schemas
+    encode_config.py         EncodeConfig + CodingType
+    train_config.py          TrainConfig
+    client_message.py        ClientMessage
+    server_message.py        ServerMessage
 client/                      Vite + React + TypeScript dashboard
-  src/                       dark grid UI, canvas panels, WS hook
-  src/components/            controls, charts, panels (incl. training)
+  src/                       app shell, theme, types, WS/training hooks
+  src/hooks/                 viewer state, encode config, model actions
+  src/components/            controls, charts, canvas panels (incl. training)
+  src/styles/                split stylesheet (base/sections/controls/...)
 ```
 
-Code is kept tidy by construction: each Python file is under 200 lines,
-every Python function stays under 20 lines, and each class lives in its own
-file.
+Code is kept tidy by construction: modules are grouped into focused
+subpackages, each Python file is under 200 lines, every Python function
+stays under 20 lines, and each class lives in its own file.
 
 ## Notes
 

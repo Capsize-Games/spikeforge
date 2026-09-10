@@ -1,0 +1,20 @@
+"""Input encoding for the training engine (raw pixels or spike codes)."""
+
+import torch
+
+
+class EncodingMixin:
+    """Turn a batch of images into [T,B,784] spikes for the network."""
+
+    def _encode_batch(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Return [T,B,784] spikes for the configured input mode."""
+        if self._encoder is None or self._input_mode == "raw":
+            return self._repeat_pixels(inputs).to(self._device)
+        if self._input_mode == "random":
+            raise ValueError("random coding carries no label signal")
+        return self._encoder.encode(inputs).to(self._device)
+
+    def _repeat_pixels(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Legacy raw path: repeat normalised pixels across steps."""
+        flat = inputs.view(inputs.size(0), -1)
+        return flat.unsqueeze(0).repeat(self._num_steps, 1, 1)

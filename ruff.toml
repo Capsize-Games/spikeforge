@@ -1,0 +1,26 @@
+# Ruff configuration mirroring the Python style rules in ``rules.md``.
+
+line-length = 79
+target-version = "py38"
+
+[lint]
+select = [
+    "A",    # flake8-builtins
+    "ANN",  # flake8-annotations (type hints on every signature)
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "D",    # pydocstyle (public docstrings)
+    "E",    # pycodestyle errors (incl. E501 line length)
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
+]
+ignore = [
+    "D203",    # conflicts with D211 (blank line before class docstring)
+    "D213",    # conflicts with D212 (summary on the closing-quote line)
+    "ANN401",  # Any is used deliberately for duck-typed config/trainer inputs
+]

@@ -1,0 +1,159 @@
+/* --- prediction badge over the input sample --- */
+.sample-wrap {
+  position: relative;
+}
+
+.pred-badge {
+  position: absolute;
+  top: 42px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--overlay);
+  font-size: 11px;
+  line-height: 1.25;
+  pointer-events: none;
+}
+
+.pred-badge.ok {
+  border-color: color-mix(in srgb, var(--ok) 70%, transparent);
+  color: var(--ok);
+}
+
+.pred-badge.bad {
+  border-color: color-mix(in srgb, var(--bad) 70%, transparent);
+  color: var(--bad);
+}
+
+.pred-badge-main {
+  font-weight: 700;
+}
+
+.pred-badge-conf,
+.pred-badge-true {
+  color: var(--muted);
+}
+
+/* --- checkpoint compatibility banner --- */
+.mismatch {
+  margin: 6px 0 10px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--warn) 60%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mismatch-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+/* --- per-class output spike bars --- */
+.class-spike-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.class-bars {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 96px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--canvas-bg);
+}
+
+.class-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.class-bar-fill {
+  width: 100%;
+  min-height: 1px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+
+.class-bar.pred .class-bar-fill {
+  background: var(--ok);
+}
+
+.class-bar.true {
+  outline: 1px solid var(--warn);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+.class-bar-label {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+/* --- footer resource bar (single row) --- */
+.res-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.res-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.res-label {
+  color: var(--muted);
+}
+
+.res-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.res-track {
+  display: block;
+  width: 90px;
+  height: 6px;
+  overflow: hidden;
+  background: var(--canvas-bg);
+  border: 1px solid var(--border);
+}
+
+.res-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ok), var(--accent));
+  transition: width 400ms ease;
+}
+
+.res-muted {
+  color: var(--muted);
+}
+
+.res-warn {
+  color: var(--warn);
+}
+

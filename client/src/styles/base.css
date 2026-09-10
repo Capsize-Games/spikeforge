@@ -1,0 +1,163 @@
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-alt: #12171e;
+  --panel-head: #0b0f14;
+  --popup: #1c2128;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --on-accent: #0d1117;
+  --ok: #3fb950;
+  --bad: #f85149;
+  --warn: #e3b341;
+  --canvas-bg: #0d1117;
+  --overlay: rgba(13, 17, 23, 0.85);
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  --on-danger: #ffffff;
+  color-scheme: dark;
+}
+
+/* --- light theme (toggled via <html data-theme="light">) --- */
+[data-theme="light"] {
+  --bg: #f6f8fa;
+  --panel: #ffffff;
+  --panel-alt: #ffffff;
+  --panel-head: #f6f8fa;
+  --popup: #ffffff;
+  --border: #d0d7de;
+  --text: #1f2328;
+  --muted: #59636e;
+  --accent: #0969da;
+  --on-accent: #ffffff;
+  --ok: #1a7f37;
+  --bad: #cf222e;
+  --warn: #9a6700;
+  --canvas-bg: #ffffff;
+  --overlay: rgba(255, 255, 255, 0.85);
+  --shadow: 0 6px 20px rgba(31, 35, 40, 0.15);
+  --on-danger: #ffffff;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Fixed shell: header and footer stay put, only .app-main scrolls. */
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-header {
+  flex: 0 0 auto;
+  padding: 12px 12px 0;
+}
+
+.app-header .topbar {
+  margin-bottom: 0;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 0;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.conn.ok {
+  color: var(--ok);
+}
+
+.conn.bad {
+  color: var(--bad);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.theme-toggle {
+  margin-left: auto;
+  width: 30px;
+  height: 24px;
+  font-size: 13px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot.ok {
+  background: var(--ok);
+}
+
+.dot.bad {
+  background: var(--bad);
+}
+
+.status {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 380px;
+  gap: 12px;
+  align-items: start;
+  flex: 1 0 auto;
+}
+

@@ -20,6 +20,8 @@ export interface CanvasColors {
   accent: string;
   accentSoft: string;
   dot: string;
+  /** Translucent band drawn behind highlighted rows. */
+  highlight: string;
 }
 
 export const CANVAS_COLORS: Record<Theme, CanvasColors> = {
@@ -30,6 +32,7 @@ export const CANVAS_COLORS: Record<Theme, CanvasColors> = {
     accent: "#79c0ff",
     accentSoft: "rgba(88, 166, 255, 0.16)",
     dot: "#e3b341",
+    highlight: "rgba(63, 185, 80, 0.14)",
   },
   light: {
     bg: "#ffffff",
@@ -38,6 +41,7 @@ export const CANVAS_COLORS: Record<Theme, CanvasColors> = {
     accent: "#0969da",
     accentSoft: "rgba(9, 105, 218, 0.12)",
     dot: "#9a6700",
+    highlight: "rgba(26, 127, 55, 0.14)",
   },
 };
 
@@ -90,7 +94,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [theme, toggle],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export function useTheme(): ThemeContextValue {

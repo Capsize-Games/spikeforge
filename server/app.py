@@ -5,13 +5,12 @@ from typing import Dict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from snn_interpreter import device as device_mod
-
 from server.handlers import dispatch
 from server.messages import send_locked
 from server.schemas import ClientMessage
 from server.session import Session
 from server.web import mount_client
+from snn_interpreter.runtime import device as device_mod
 
 app = FastAPI(title="snn-interpreter server")
 
@@ -25,14 +24,16 @@ mount_client(app)
 _sessions: Dict[int, Session] = {}
 
 
-async def _drain_training(ws, session: Session):
+async def _drain_training(ws: WebSocket, session: Session) -> None:
     """Forward worker-produced training messages to the socket."""
     while True:
         message = await session.training.queue.get()
         await send_locked(ws, session, message)
 
 
-async def _cleanup(session: Session, drain, session_id):
+async def _cleanup(
+    session: Session, drain: asyncio.Task, session_id: int
+) -> None:
     """Stop training/streaming and forget the session."""
     session.training.stop()
     drain.cancel()
@@ -40,7 +41,7 @@ async def _cleanup(session: Session, drain, session_id):
     _sessions.pop(session_id, None)
 
 
-async def _serve(ws: WebSocket, session: Session):
+async def _serve(ws: WebSocket, session: Session) -> None:
     """Receive-and-dispatch loop for one connection."""
     while True:
         raw = await ws.receive_json()
@@ -53,7 +54,8 @@ async def _serve(ws: WebSocket, session: Session):
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket):
+async def websocket_endpoint(ws: WebSocket) -> None:
+    """Accept a client, run its session, and always clean up."""
     await ws.accept()
     session_id = id(ws)
     session = Session(asyncio.get_running_loop())
@@ -72,5 +74,6 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 @app.get("/health")
-async def health():
+async def health() -> Dict[str, str]:
+    """Liveness probe for container/orchestrator health checks."""
     return {"status": "ok"}

@@ -16,12 +16,17 @@ function summarize(raster: RasterPayload | null): string | undefined {
   if (!raster) return undefined;
   const total = raster.time.length;
   const unique = new Set(raster.neurons).size;
-  const perStep = raster.num_steps ? (total / raster.num_steps).toFixed(1) : "0";
+  const perStep = raster.num_steps
+    ? (total / raster.num_steps).toFixed(1)
+    : "0";
   const pct = raster.num_neurons
     ? Math.round((unique / raster.num_neurons) * 100)
     : 0;
   const silent = Math.max(0, raster.num_neurons - unique);
-  return `${perStep} spikes/step · ${unique}/${raster.num_neurons} active (${pct}%) · ${silent} silent`;
+  return (
+    `${perStep} spikes/step · ${unique}/${raster.num_neurons} active` +
+    ` (${pct}%) · ${silent} silent`
+  );
 }
 
 /**

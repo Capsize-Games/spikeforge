@@ -1,0 +1,169 @@
+/* --- help tooltip --- */
+.help-tip {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+}
+
+.help-tip:hover,
+.help-tip:focus {
+  color: var(--accent);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.help-popup {
+  position: absolute;
+  top: 130%;
+  right: 0;
+  z-index: 20;
+  width: 220px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--popup);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+.help-tip:hover .help-popup,
+.help-tip:focus .help-popup {
+  opacity: 1;
+  visibility: visible;
+}
+
+.field select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.field.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.field.check .field-label {
+  flex: 1;
+}
+
+.field-label > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.apply {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.apply.stop {
+  background: var(--bad);
+  color: var(--on-danger);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Train / stop sit side by side, each taking half the row. */
+.actions .apply {
+  width: auto;
+  flex: 1;
+  margin-top: 0;
+}
+
+.error {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--bad);
+  border-radius: 6px;
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 10%, transparent);
+}
+
+/* --- dataset / sample-index controls --- */
+.sample-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sample-row .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-btn {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.step-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.step-btn:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.field.mirror {
+  color: var(--muted);
+}
+
+.mirror-note {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.panel-title .help-tip {
+  margin-left: 4px;
+}
+

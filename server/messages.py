@@ -1,15 +1,24 @@
 """Outbound WebSocket message helpers."""
 
+from typing import Any, Dict
+
+from fastapi import WebSocket
+
+from server.schemas import EncodeConfig
 from server.session import Session
 
 
-async def send_locked(ws, session: Session, message: dict):
+async def send_locked(
+    ws: WebSocket, session: Session, message: Dict[str, Any]
+) -> None:
     """Serialize sends so the stream task and loop never interleave."""
     async with session.lock:
         await ws.send_json(message)
 
 
-async def send_initial(ws, session: Session, cfg):
+async def send_initial(
+    ws: WebSocket, session: Session, cfg: EncodeConfig
+) -> None:
     """Push the static payloads: ack, sample, recon, raster, status."""
     engine = session.engine
     await send_locked(ws, session, {
@@ -23,14 +32,14 @@ async def send_initial(ws, session: Session, cfg):
     await send_status(ws, session, cfg)
 
 
-async def send_image(ws, session):
+async def send_image(ws: WebSocket, session: Session) -> None:
     """Send the sample input image when the coding type has one."""
     image = session.engine.sample_image()
     if image is not None:
         await send_locked(ws, session, {"type": "image", "payload": image})
 
 
-async def send_reconstruction(ws, session):
+async def send_reconstruction(ws: WebSocket, session: Session) -> None:
     """Send gain=1 and low-gain averaged reconstructions for rate."""
     recon = session.engine.reconstruction()
     if recon is None:
@@ -43,7 +52,9 @@ async def send_reconstruction(ws, session):
     })
 
 
-async def send_status(ws, session, cfg):
+async def send_status(
+    ws: WebSocket, session: Session, cfg: EncodeConfig
+) -> None:
     """Send the run status summary to the client."""
     engine = session.engine
     await send_locked(ws, session, {
@@ -59,7 +70,9 @@ async def send_status(ws, session, cfg):
     })
 
 
-async def send_run_state(ws, session, running: bool, reason: str = ""):
+async def send_run_state(
+    ws: WebSocket, session: Session, running: bool, reason: str = ""
+) -> None:
     """Tell the client whether a stream is currently running."""
     await send_locked(ws, session, {
         "type": "run_state",
@@ -67,7 +80,9 @@ async def send_run_state(ws, session, running: bool, reason: str = ""):
     })
 
 
-async def send_train_state(ws, session, running: bool, reason: str = ""):
+async def send_train_state(
+    ws: WebSocket, session: Session, running: bool, reason: str = ""
+) -> None:
     """Tell the client whether training is currently running."""
     await send_locked(ws, session, {
         "type": "train_state",
@@ -75,7 +90,13 @@ async def send_train_state(ws, session, running: bool, reason: str = ""):
     })
 
 
-async def emit_frame(ws, session, engine, step, source="input"):
+async def emit_frame(
+    ws: WebSocket,
+    session: Session,
+    engine: Any,
+    step: int,
+    source: str = "input",
+) -> None:
     """Send one spike frame for the given step and activity source."""
     await send_locked(ws, session, {
         "type": "spike_frame",
@@ -85,13 +106,17 @@ async def emit_frame(ws, session, engine, step, source="input"):
     })
 
 
-async def send_inference(ws, session, result):
+async def send_inference(
+    ws: WebSocket, session: Session, result: Dict[str, Any]
+) -> None:
     """Send the inference payload with private raster keys stripped."""
     payload = {k: v for k, v in result.items() if not k.startswith("_")}
     await send_locked(ws, session, {"type": "inference", "payload": payload})
 
 
-async def send_activity(ws, session, result):
+async def send_activity(
+    ws: WebSocket, session: Session, result: Dict[str, Any]
+) -> None:
     """Send hidden/output rasters carried by an inference result."""
     rasters = result.get("_rasters", {})
     for source in ("hidden", "output"):
