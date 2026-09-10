@@ -65,8 +65,8 @@ class TrainingEngine(device_mod.DeviceMixin):
             meta = ckpt.get("meta", {})
             self._input_mode = meta.get("input_mode", "raw")
 
-    def save(self, name):
-        """Persist the current model and its metadata."""
+    def save(self, name, history=None):
+        """Persist the current model, its metadata, and metric history."""
         meta = {
             "dataset": self._dataset,
             "hidden": self._hidden,
@@ -79,7 +79,7 @@ class TrainingEngine(device_mod.DeviceMixin):
             "device": self._device.type,
             "encode": self._encode.model_dump() if self._encode else None,
         }
-        return model_store.save(name, self._net, meta)
+        return model_store.save(name, self._net, meta, history)
 
     # --- encoding --------------------------------------------------------
 

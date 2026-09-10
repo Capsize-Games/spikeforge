@@ -146,10 +146,20 @@ export interface Compatibility {
   current_coding: string;
 }
 
+/** One persisted training-metric sample. */
+export interface HistoryPoint {
+  step: number;
+  epoch: number;
+  loss: number;
+  train_accuracy: number;
+  test_accuracy: number | null;
+}
+
 export interface ModelLoadedPayload {
   name: string;
   dataset: string;
   accuracy: number;
+  history?: HistoryPoint[];
   input_mode?: string;
   coding?: string;
   hidden?: number;

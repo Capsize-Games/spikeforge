@@ -24,6 +24,17 @@ def _dataset_from(config, encode):
     return encode.dataset if encode is not None else config.dataset
 
 
+def _point(metrics):
+    """Trim a metrics dict to the history fields we persist."""
+    return {
+        "step": metrics["step"],
+        "epoch": metrics["epoch"],
+        "loss": metrics["loss"],
+        "train_accuracy": metrics["train_accuracy"],
+        "test_accuracy": metrics["test_accuracy"],
+    }
+
+
 class TrainingService:
     """Bridge a blocking training loop into an asyncio-friendly queue."""
 
@@ -32,6 +43,7 @@ class TrainingService:
         self._engine: Optional[TrainingEngine] = None
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        self._history: list = []
         self.queue: asyncio.Queue = asyncio.Queue()
 
     @property
@@ -63,6 +75,7 @@ class TrainingService:
     def start(self, config, encode=None):
         """Spawn a worker that builds the engine, then trains."""
         self._stop.clear()
+        self._history = []
         self._thread = threading.Thread(
             target=self._build_and_run, args=(config, encode), daemon=True
         )
@@ -82,10 +95,17 @@ class TrainingService:
         self._run(engine)
 
     def adopt(self, checkpoint, config, encode=None):
-        """Load a checkpoint into a ready-to-continue engine."""
+        """Load a checkpoint, restoring its metric history too."""
         self._stop.clear()
         self._engine = self._make_engine(config, encode, checkpoint)
+        meta = _checkpoint_meta(checkpoint)
+        self._history = model_store.load(checkpoint).get("history", []) \
+            if meta else []
         return self._engine
+
+    def save(self, name):
+        """Persist the active model together with its metric history."""
+        return self._engine.save(name, self._history)
 
     @staticmethod
     def _make_engine(config, encode, checkpoint):
@@ -118,17 +138,20 @@ class TrainingService:
                 metrics["step_ms"] = round((time.perf_counter() - last) * 1000.0, 1)
                 last = time.perf_counter()
                 metrics["device"] = engine.device
+                self._history.append(_point(metrics))
                 self._put({"type": "train_metrics", "payload": metrics})
-            self._put({"type": "train_state",
-                       "payload": {"running": False, "reason": "finished",
-                                   "device": engine.device}})
+            self._state("finished", engine)
         except Exception as exc:  # surface worker errors to the client
             self._put({"type": "error", "payload": str(exc)})
-            self._put({"type": "train_state",
-                       "payload": {"running": False, "reason": "error",
-                                   "device": engine.device}})
+            self._state("error", engine)
         finally:
             self._thread = None
+
+    def _state(self, reason, engine):
+        """Queue a stopped train_state carrying the active device."""
+        self._put({"type": "train_state",
+                   "payload": {"running": False, "reason": reason,
+                               "device": engine.device}})
 
     def _put(self, message):
         """Thread-safe enqueue onto the event loop."""

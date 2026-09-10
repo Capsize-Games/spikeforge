@@ -79,9 +79,20 @@ export function useTraining() {
           datasets: msg.payload.datasets,
         }));
         return true;
-      case "model_loaded":
-        setState((s) => ({ ...s, loaded: msg.payload }));
+      case "model_loaded": {
+        const h = msg.payload.history ?? [];
+        setState((s) => ({
+          ...s,
+          loaded: msg.payload,
+          loss: h.map((p) => p.loss),
+          trainAccuracy: h.map((p) => p.train_accuracy * 100),
+          testAccuracy: h
+            .filter((p) => p.test_accuracy !== null)
+            .map((p) => p.test_accuracy as number),
+          last: h.length ? { ...h[h.length - 1], total: h.length } : s.last,
+        }));
         return true;
+      }
       case "model_cleared":
         setState((s) => ({
           ...s,

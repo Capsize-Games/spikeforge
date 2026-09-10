@@ -29,13 +29,14 @@ def path_for(name):
     return os.path.join(MODEL_DIR, base)
 
 
-def save(name, net, meta):
-    """Save model weights plus training metadata to disk."""
+def save(name, net, meta, history=None):
+    """Save model weights, training metadata, and metric history to disk."""
     _ensure_dir()
     filepath = path_for(name)
     torch.save({
         "state_dict": net.state_dict(),
         "meta": meta,
+        "history": history or [],
         "saved_at": time.time(),
     }, filepath)
     return filepath

@@ -120,7 +120,7 @@ async def handle_save_model(ws, session: Session, name):
             "type": "error", "payload": "no trained model to save",
         })
         return
-    path = engine.save(name)
+    path = session.training.save(name)
     await send_locked(ws, session, {
         "type": "model_saved", "payload": {"name": name, "path": path},
     })
@@ -145,11 +145,9 @@ async def handle_load_model(ws, session: Session, name, cfg):
     if encode is not None:
         session.set_config(encode)
     engine = session.training.adopt(name, cfg, encode)
-    await send_locked(ws, session, {
-        "type": "model_loaded",
-        "payload": model_loaded_payload(
-            engine, name, encode, engine.evaluate()),
-    })
+    payload = model_loaded_payload(engine, name, encode, engine.evaluate())
+    payload["history"] = model_store.load(name).get("history", [])
+    await send_locked(ws, session, {"type": "model_loaded", "payload": payload})
 
 
 async def handle_delete_model(ws, session: Session, name):
