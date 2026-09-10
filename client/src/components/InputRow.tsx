@@ -1,0 +1,80 @@
+import type { CodingType, InferencePayload } from "../types";
+import { HeatmapCanvas } from "./HeatmapCanvas";
+
+interface Props {
+  sample: number[][] | null;
+  spikeFrame: number[][] | null;
+  reconGain1: number[][] | null;
+  inference: InferencePayload | null;
+  coding: CodingType;
+}
+
+/** Predicted vs true badge shown while a model has scored the sample. */
+function PredictionBadge({ inference }: { inference: InferencePayload }) {
+  const trueLabel = inference.true_label;
+  const correct = trueLabel === null || trueLabel === inference.predicted;
+  return (
+    <div className={`pred-badge ${correct ? "ok" : "bad"}`}>
+      <span className="pred-badge-main">pred {inference.predicted}</span>
+      <span className="pred-badge-conf">
+        {(inference.confidence * 100).toFixed(1)}%
+      </span>
+      {trueLabel !== null && (
+        <span className="pred-badge-true">true {trueLabel}</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The input panel: the raw sample, its spike frame, and (for rate coding) the
+ * decoded reconstruction. Lives above the training column so the center column
+ * can stay focused on the raster activity.
+ */
+export function InputRow({
+  sample,
+  spikeFrame,
+  reconGain1,
+  inference,
+  coding,
+}: Props) {
+  const rateCoding = coding === "rate";
+
+  return (
+    <div className="viz-row">
+      <div className="panel grow">
+        <div className={`pair grow${rateCoding ? " three" : ""}`}>
+          <div className="sample-wrap grow">
+            <HeatmapCanvas
+              data={sample}
+              palette="binary"
+              label="Sample"
+              width={224}
+              height={224}
+              fluid
+            />
+            {inference && sample && <PredictionBadge inference={inference} />}
+          </div>
+          <HeatmapCanvas
+            data={spikeFrame}
+            palette="plasma"
+            label="Spike frame"
+            width={224}
+            height={224}
+            fluid
+          />
+          {rateCoding && (
+            <HeatmapCanvas
+              data={reconGain1}
+              palette="binary"
+              label="Decoded"
+              width={224}
+              height={224}
+              fluid
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

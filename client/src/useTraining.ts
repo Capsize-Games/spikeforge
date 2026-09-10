@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type {
   DatasetInfo,
@@ -9,7 +9,8 @@ import type {
   TrainConfig,
   TrainMetrics,
 } from "./types";
-import { defaultTrainConfig } from "./types";
+import { readJson, STORAGE_KEYS, writeJson } from "./storage";
+import { defaultConfig, defaultTrainConfig } from "./types";
 
 interface TrainingState {
   config: TrainConfig;
@@ -41,9 +42,27 @@ const initial: TrainingState = {
   status: null,
 };
 
+/** Restore persisted training settings, filling in any missing defaults. */
+function loadTrainConfig(): TrainConfig {
+  const saved = readJson<Partial<TrainConfig>>(STORAGE_KEYS.train, {});
+  return {
+    ...defaultTrainConfig,
+    ...saved,
+    encode: { ...defaultConfig, ...(saved.encode ?? {}) },
+  };
+}
+
 /** Track training config, live metrics, and saved models. */
 export function useTraining() {
-  const [state, setState] = useState<TrainingState>(initial);
+  const [state, setState] = useState<TrainingState>(() => ({
+    ...initial,
+    config: loadTrainConfig(),
+  }));
+
+  // Persist model settings so a page reload restores them.
+  useEffect(() => {
+    writeJson(STORAGE_KEYS.train, state.config);
+  }, [state.config]);
 
   const handleMessage = useCallback((msg: ServerMsg): boolean => {
     switch (msg.type) {

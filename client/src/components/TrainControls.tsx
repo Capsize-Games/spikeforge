@@ -1,25 +1,21 @@
 interface Props {
   running: boolean;
   connected: boolean;
-  canInfer: boolean;
   onTrain: () => void;
   onStop: () => void;
-  onInfer: () => void;
 }
 
-/** Section-4 content: training and prediction actions. */
+/** Train & inspect section content: training actions on a single row. */
 export function TrainControls({
   running,
   connected,
-  canInfer,
   onTrain,
   onStop,
-  onInfer,
 }: Props) {
   const busy = !connected || running;
 
   return (
-    <>
+    <div className="actions">
       <button className="apply" onClick={onTrain} disabled={busy}>
         {running ? "Training…" : "⚡ Train model"}
       </button>
@@ -30,13 +26,6 @@ export function TrainControls({
       >
         ■ Stop training
       </button>
-      <button
-        className="apply ghost"
-        onClick={onInfer}
-        disabled={busy || !canInfer}
-      >
-        🔎 Predict displayed sample
-      </button>
-    </>
+    </div>
   );
 }

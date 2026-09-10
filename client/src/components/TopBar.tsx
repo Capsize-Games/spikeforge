@@ -1,5 +1,8 @@
-/** App header: a compact 24x24 logo mark, no title text. */
+import { useTheme } from "../theme";
+
+/** App header: a compact 24x24 logo mark and the light/dark toggle. */
 export function TopBar() {
+  const { theme, toggle } = useTheme();
   return (
     <header className="topbar">
       <span className="logo" role="img" aria-label="SNN Interpreter">
@@ -21,6 +24,18 @@ export function TopBar() {
           <path d="M5.7 6.5 10.3 8.6M5.7 11.4 10.3 9.4M5.7 12.6 10.3 14.6M5.7 17.6 10.3 15.4M13.7 9.4 18.3 11.4M13.7 14.6 18.3 12.6" />
         </svg>
       </span>
+
+      <button
+        type="button"
+        className="icon-btn theme-toggle"
+        onClick={toggle}
+        title={
+          theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+        }
+        aria-label="Toggle color theme"
+      >
+        {theme === "dark" ? "☀" : "☾"}
+      </button>
     </header>
   );
 }

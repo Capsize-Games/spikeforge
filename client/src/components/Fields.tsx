@@ -13,6 +13,7 @@ export function SliderField({
   max,
   step,
   help,
+  disabled,
   onChange,
 }: {
   label: string;
@@ -21,6 +22,7 @@ export function SliderField({
   max: number;
   step: number;
   help: string;
+  disabled?: boolean;
   onChange: (v: number) => void;
 }) {
   return (
@@ -37,6 +39,7 @@ export function SliderField({
         max={max}
         step={step}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
       />
     </label>
@@ -47,11 +50,13 @@ export function CheckField({
   label,
   checked,
   help,
+  disabled,
   onChange,
 }: {
   label: string;
   checked: boolean;
   help: string;
+  disabled?: boolean;
   onChange: (v: boolean) => void;
 }) {
   return (
@@ -61,6 +66,7 @@ export function CheckField({
           <input
             type="checkbox"
             checked={checked}
+            disabled={disabled}
             onChange={(e) => onChange(e.target.checked)}
           />
           {label}

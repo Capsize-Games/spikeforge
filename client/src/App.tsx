@@ -14,7 +14,15 @@ import type {
   ServerMsg,
   StatusPayload,
   SystemStatsPayload,
+  TrainConfig,
 } from "./types";
+import {
+  readBool,
+  readJson,
+  STORAGE_KEYS,
+  writeBool,
+  writeJson,
+} from "./storage";
 import { defaultConfig } from "./types";
 import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
@@ -55,7 +63,9 @@ const initial: ViewerState = {
 };
 
 export default function App() {
-  const [config, setConfig] = useState<EncodeConfig>(defaultConfig);
+  const [config, setConfig] = useState<EncodeConfig>(() =>
+    readJson(STORAGE_KEYS.encode, defaultConfig),
+  );
   const [state, setState] = useState<ViewerState>(initial);
   const [stats, setStats] = useState<SystemStatsPayload | null>(null);
   const [modelLoading, setModelLoading] = useState(false);
@@ -64,12 +74,27 @@ export default function App() {
     Record<number, number[][]>
   >({});
   const training = useTraining();
+  const [autoPredict, setAutoPredict] = useState<boolean>(() =>
+    readBool(STORAGE_KEYS.autoPredict, false),
+  );
 
   // Keep the latest encode config reachable from debounced callbacks.
   const configRef = useRef(config);
   useEffect(() => {
     configRef.current = config;
   }, [config]);
+
+  // Persist encode settings so a page reload restores them.
+  useEffect(() => {
+    writeJson(STORAGE_KEYS.encode, config);
+  }, [config]);
+
+  // Event handlers read auto-predict synchronously, so mirror it into a ref.
+  const autoPredictRef = useRef(autoPredict);
+  useEffect(() => {
+    autoPredictRef.current = autoPredict;
+    writeBool(STORAGE_KEYS.autoPredict, autoPredict);
+  }, [autoPredict]);
 
   const handleMessage = useCallback(
     (msg: ServerMsg) => {
@@ -85,6 +110,8 @@ export default function App() {
         msg.type === "train_state" &&
         msg.payload.running === false &&
         msg.payload.reason === "finished";
+      // Always refresh the layer-activity rasters when a model appears; only
+      // the prediction display itself is gated by the auto-predict toggle.
       if (msg.type === "model_loaded" || trained) {
         window.setTimeout(
           () => sendInfer(configRef.current, training.state.config),
@@ -142,7 +169,11 @@ export default function App() {
           break;
         }
         case "inference":
-          setState((s) => ({ ...s, inference: msg.payload }));
+          // While auto-predict is off we ignore predictions; the server still
+          // streams the layer-activity rasters, which keep updating.
+          if (autoPredictRef.current) {
+            setState((s) => ({ ...s, inference: msg.payload }));
+          }
           break;
         case "run_state":
           setState((s) => ({ ...s, running: msg.payload.running }));
@@ -239,12 +270,41 @@ export default function App() {
 
   const saveModel = (name: string) => sendNamed("save_model", name);
 
+  /** Apply a checkpoint's saved architecture/encoding, then load it. */
   const loadModel = (name: string) => {
     setModelLoading(true);
-    training.patch({ checkpoint: name });
-    const merged = {
+    const saved = training.state.models.find((m) => m.name === name);
+    const meta = (saved?.meta ?? {}) as {
+      encode?: Partial<EncodeConfig>;
+      dataset?: string;
+      hidden?: number;
+      beta?: number;
+    };
+    // Restore the exact encoding the checkpoint was trained with so the
+    // server's compatibility check passes, then lock the controls.
+    const nextEncode: EncodeConfig = meta.encode
+      ? {
+          ...defaultConfig,
+          ...meta.encode,
+          sample_index: configRef.current.sample_index,
+        }
+      : { ...configRef.current };
+    configRef.current = nextEncode;
+    setConfig(nextEncode);
+
+    const patch: Partial<TrainConfig> = {
+      checkpoint: name,
+      encode: nextEncode,
+    };
+    if (meta.dataset) patch.dataset = meta.dataset;
+    if (typeof meta.hidden === "number") patch.hidden = meta.hidden;
+    if (typeof meta.beta === "number") patch.beta = meta.beta;
+    training.patch(patch);
+
+    const merged: TrainConfig = {
       ...training.state.config,
       ...sharedPatch,
+      ...patch,
       checkpoint: name,
     };
     sendTrain("load_model", merged, name);
@@ -269,7 +329,20 @@ export default function App() {
   const compatibility = training.state.loaded?.compatibility;
   const hasModel =
     training.state.loaded !== null || training.state.last !== null;
-  const canInfer = connected && hasModel && (compatibility?.dataset_match ?? true);
+  const canAutoPredict =
+    connected && hasModel && (compatibility?.dataset_match ?? true);
+  const locked = training.state.loaded !== null;
+
+  /** Toggle auto-prediction: run now when enabled, clear the panel when off. */
+  const toggleAutoPredict = () => {
+    const next = !autoPredict;
+    setAutoPredict(next);
+    if (next) {
+      if (canAutoPredict) runInference();
+    } else {
+      setState((s) => ({ ...s, inference: null }));
+    }
+  };
 
   return (
     <div className="app">
@@ -297,13 +370,12 @@ export default function App() {
             gpuAvailable={gpuAvailable}
             connected={connected}
             trainRunning={training.state.running}
-            canInfer={canInfer}
+            locked={locked}
             onChange={patchConfig}
             onModelChange={training.patch}
             onSelectSample={selectSample}
             onTrain={train}
             onStopTrain={stopTrain}
-            onInfer={runInference}
           />
         </div>
 
@@ -313,6 +385,7 @@ export default function App() {
           reconGain1={state.reconGain1}
           rasters={state.rasters}
           inference={state.inference}
+          loaded={training.state.loaded}
           coding={config.coding}
           sampleIndex={config.sample_index}
           timeStep={timeStep}
@@ -331,8 +404,11 @@ export default function App() {
             last={training.state.last}
             device={training.state.device}
             inference={state.inference}
-            prediction={training.state.prediction}
+            timeStep={timeStep}
             loaded={training.state.loaded}
+            autoPredict={autoPredict}
+            canAutoPredict={canAutoPredict}
+            onToggleAutoPredict={toggleAutoPredict}
           />
         </div>
 

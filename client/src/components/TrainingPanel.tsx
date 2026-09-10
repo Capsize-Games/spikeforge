@@ -1,14 +1,16 @@
+import { useMemo } from "react";
+
 import type {
   Compatibility,
   InferencePayload,
   ModelLoadedPayload,
-  PredictionPayload,
   TrainMetrics,
 } from "../types";
-import { TRAIN_HELP } from "../helpText";
+import { HELP } from "../helpText";
 import { ClassSpikeBarsFromInference } from "./ClassSpikeBars";
 import { HelpTip } from "./HelpTip";
 import { LineChart } from "./LineChart";
+import { confidenceSeries } from "./readoutMath";
 
 interface Props {
   loss: number[];
@@ -17,8 +19,14 @@ interface Props {
   last: TrainMetrics | null;
   device: string | null;
   inference: InferencePayload | null;
-  prediction: PredictionPayload | null;
+  /** Shared time cursor step; drives the cumulative output bars. */
+  timeStep: number | null;
   loaded: ModelLoadedPayload | null;
+  /** Whether auto-prediction is switched on. */
+  autoPredict: boolean;
+  /** Whether a prediction can run at all (model + connection). */
+  canAutoPredict: boolean;
+  onToggleAutoPredict: () => void;
 }
 
 function MismatchBanner({ compatibility }: { compatibility: Compatibility }) {
@@ -42,6 +50,39 @@ function MismatchBanner({ compatibility }: { compatibility: Compatibility }) {
   );
 }
 
+/** One-line result: verdict mark, input label, prediction, confidence. */
+function PredictionReadout({
+  inference,
+  confidencePct,
+}: {
+  inference: InferencePayload;
+  /** Confidence to show; follows the cursor while it is active. */
+  confidencePct: number;
+}) {
+  const correct =
+    inference.true_label === null ||
+    inference.true_label === inference.predicted;
+  return (
+    <div className="pred-row">
+      <span
+        className={`pred-mark ${correct ? "ok" : "bad"}`}
+        title={correct ? "match" : "mismatch"}
+      >
+        {correct ? "✓" : "✗"}
+      </span>
+      <span>
+        Input: <b>{inference.true_label ?? "—"}</b>
+      </span>
+      <span>
+        Prediction: <b>{inference.predicted}</b>
+      </span>
+      <span>
+        Confidence: <b>{confidencePct.toFixed(1)}%</b>
+      </span>
+    </div>
+  );
+}
+
 export function TrainingPanel({
   loss,
   trainAccuracy,
@@ -49,9 +90,26 @@ export function TrainingPanel({
   last,
   device,
   inference,
-  prediction,
+  timeStep,
   loaded,
+  autoPredict,
+  canAutoPredict,
+  onToggleAutoPredict,
 }: Props) {
+  // Per-step confidence trace, so the readout can count up/down with the
+  // cursor instead of always showing the final value.
+  const confSeries = useMemo(
+    () =>
+      inference && inference.output_over_time.length > 1
+        ? confidenceSeries(inference.output_over_time)
+        : null,
+    [inference],
+  );
+  const cursorConfidence =
+    confSeries && timeStep !== null && timeStep !== undefined
+      ? confSeries[Math.max(0, Math.min(timeStep, confSeries.length - 1))]
+      : null;
+
   const compatibility = loaded?.compatibility;
   const mismatch =
     compatibility !== undefined &&
@@ -67,61 +125,45 @@ export function TrainingPanel({
         <MismatchBanner compatibility={compatibility} />
       )}
 
-      {loaded && (
-        <div className="panel">
-          <div className="panel-title">
-            <span>Loaded model</span>
-            <HelpTip text={TRAIN_HELP.input_mode} />
-          </div>
-          <div className="metrics">
-            <div>{loaded.name}</div>
-            <div>{loaded.dataset}</div>
-            <div>acc {loaded.accuracy.toFixed(1)}%</div>
-            <div>input {loaded.input_mode ?? "raw"}</div>
-            <div>hidden {loaded.hidden ?? "—"}</div>
-            <div>device {loaded.device ?? "—"}</div>
-          </div>
-        </div>
-      )}
-
       <div className="panel displayed-sample">
-        <div className="panel-title">Prediction (displayed sample)</div>
-        {inference ? (
+        <div className="panel-title row-title">
+          <span>Prediction (displayed sample)</span>
+          <span className="panel-actions">
+            <HelpTip text={HELP.inference} />
+            <label className="toggle" title="Auto-predict the displayed sample">
+              <input
+                type="checkbox"
+                checked={autoPredict}
+                onChange={onToggleAutoPredict}
+                aria-label="Auto-predict the displayed sample"
+              />
+              <span className="toggle-track" aria-hidden="true" />
+            </label>
+          </span>
+        </div>
+        {autoPredict && inference ? (
           <>
-            <div className="metrics">
-              <div>predicted {inference.predicted}</div>
-              <div>confidence {(inference.confidence * 100).toFixed(1)}%</div>
-              <div>
-                true {inference.true_label !== null ? inference.true_label : "—"}
-              </div>
-              <div>
-                {inference.true_label === null ||
-                inference.true_label === inference.predicted
-                  ? "match ✓"
-                  : "mismatch ✗"}
-              </div>
-            </div>
+            <PredictionReadout
+              inference={inference}
+              confidencePct={cursorConfidence ?? inference.confidence * 100}
+            />
             {!inference.dataset_match && (
               <div className="mismatch">
                 Inference dataset differs from the checkpoint's training dataset.
               </div>
             )}
-            <ClassSpikeBarsFromInference inference={inference} />
+            <ClassSpikeBarsFromInference
+              inference={inference}
+              timeStep={timeStep}
+            />
           </>
-        ) : prediction ? (
-          <div className="predictions">
-            {prediction.digits.map((d, i) => (
-              <span
-                key={i}
-                className={d === prediction.labels[i] ? "pred ok" : "pred bad"}
-              >
-                {d}/{prediction.labels[i]}
-              </span>
-            ))}
-          </div>
         ) : (
           <div className="muted">
-            Expand section 4 and click “Predict displayed sample”.
+            {!autoPredict
+              ? "Auto-predict is off."
+              : canAutoPredict
+                ? "Waiting for the model to score the sample…"
+                : "Train or load a model to see predictions."}
           </div>
         )}
       </div>

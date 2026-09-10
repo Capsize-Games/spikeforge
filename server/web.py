@@ -26,4 +26,15 @@ def mount_client(app: FastAPI):
     assets = dist / "assets"
     if assets.exists():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
-    app.get("/")(lambda: FileResponse(dist / "index.html"))
+
+    index = dist / "index.html"
+
+    @app.get("/")
+    async def index_page():
+        # Always revalidate the HTML so a fresh build is picked up right away;
+        # the content-hashed assets under /assets can stay cached.
+        return FileResponse(
+            index, headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
+
+    return index_page

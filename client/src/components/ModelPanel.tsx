@@ -46,7 +46,19 @@ export function ModelPanel({
             </span>
           ) : (
             <span className={`model-chip ${current ? "on" : ""}`}>
-              {current ?? "none"}
+              <span className="model-chip-name">{current ?? "none"}</span>
+              {current && (
+                <button
+                  type="button"
+                  className="model-chip-x"
+                  onClick={onNew}
+                  disabled={!connected || loading}
+                  title="Unload model"
+                  aria-label="Unload model"
+                >
+                  ✕
+                </button>
+              )}
             </span>
           )}
         </span>
@@ -100,15 +112,6 @@ export function ModelPanel({
               Load
             </button>
           </div>
-
-          <button
-            type="button"
-            className="link model-new"
-            onClick={onNew}
-            disabled={!connected}
-          >
-            ✕ New model (clear current)
-          </button>
         </div>
       ) : (
         <div className="model-block">

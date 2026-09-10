@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 
+import { useTheme } from "../theme";
+
 interface Props {
   data: number[][] | null;
   /** Heatmap color ramp name. */
@@ -32,6 +34,7 @@ export function HeatmapCanvas({
   label,
   fluid = false,
 }: Props) {
+  const { colors } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // A larger drawing buffer keeps fluid canvases sharp when scaled up.
   const buffer = fluid ? Math.max(width, height, 448) : undefined;
@@ -48,7 +51,7 @@ export function HeatmapCanvas({
     const cols = rows > 0 ? data[0].length : 0;
     if (rows === 0 || cols === 0) return;
 
-    ctx.fillStyle = "#0d1117";
+    ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const cw = canvas.width / cols;
     const ch = canvas.height / rows;
@@ -59,7 +62,7 @@ export function HeatmapCanvas({
         ctx.fillRect(c * cw, r * ch, Math.ceil(cw), Math.ceil(ch));
       }
     }
-  }, [data, palette, w, h]);
+  }, [data, palette, w, h, colors]);
 
   return (
     <div className={fluid ? "panel grow" : "panel"}>

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 
+import { useTheme } from "../theme";
+
 interface Series {
   label: string;
   color: string;
@@ -13,6 +15,8 @@ interface Props {
   title?: string;
   width?: number;
   height?: number;
+  /** Draw a vertical marker at this sample index (e.g. the time cursor). */
+  cursorIndex?: number | null;
   /** Render only the canvas, for nesting inside another panel. */
   bare?: boolean;
 }
@@ -22,8 +26,10 @@ export function LineChart({
   title,
   width = 340,
   height = 150,
+  cursorIndex = null,
   bare = false,
 }: Props) {
+  const { colors } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -32,14 +38,15 @@ export function LineChart({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = "#0d1117";
+    ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const pad = 28;
-    const w = canvas.width - pad * 2;
-    const h = canvas.height - pad;
 
-    ctx.strokeStyle = "#30363d";
-    ctx.strokeRect(pad, 8, w, h);
+    // No frame and no padding: the plot fills the canvas, leaving only a thin
+    // strip at the bottom for the legend.
+    const top = 2;
+    const legendH = 16;
+    const w = canvas.width;
+    const h = canvas.height - top - legendH;
 
     series.forEach((s) => {
       if (s.values.length < 2) return;
@@ -48,33 +55,58 @@ export function LineChart({
       ctx.strokeStyle = s.color;
       ctx.lineWidth = 1.5;
       s.values.forEach((v, i) => {
-        const x = pad + (i / (s.values.length - 1)) * w;
-        const y = 8 + h - (Math.max(0, v) / max) * h;
+        const x = (i / (s.values.length - 1)) * w;
+        const y = top + h - (Math.max(0, v) / max) * h;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
       ctx.stroke();
     });
 
+    // Vertical marker tying the trace to the shared time cursor.
+    const count = series[0]?.values.length ?? 0;
+    if (cursorIndex !== null && count > 1) {
+      const idx = Math.max(0, Math.min(cursorIndex, count - 1));
+      const x = (idx / (count - 1)) * w;
+      ctx.strokeStyle = colors.accent;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, top + h);
+      ctx.stroke();
+    }
+
     ctx.font = "10px sans-serif";
-    let legendX = pad;
+    let legendX = 2;
     series.forEach((s) => {
       ctx.fillStyle = s.color;
       ctx.fillRect(legendX, canvas.height - 12, 8, 8);
-      ctx.fillStyle = "#8b949e";
+      ctx.fillStyle = colors.text;
       ctx.fillText(s.label, legendX + 12, canvas.height - 5);
       legendX += ctx.measureText(s.label).width + 34;
     });
-  }, [series, width, height]);
+  }, [series, width, height, cursorIndex, colors]);
 
   if (bare) {
-    return <canvas ref={canvasRef} width={width} height={height} />;
+    return (
+      <canvas
+        ref={canvasRef}
+        className="chart-canvas"
+        width={width}
+        height={height}
+      />
+    );
   }
 
   return (
     <div className="panel">
       {title && <div className="panel-title">{title}</div>}
-      <canvas ref={canvasRef} width={width} height={height} />
+      <canvas
+        ref={canvasRef}
+        className="chart-canvas"
+        width={width}
+        height={height}
+      />
     </div>
   );
 }

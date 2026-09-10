@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { useTheme } from "../theme";
 import type { RasterPayload } from "../types";
 
 interface Props {
@@ -22,6 +23,11 @@ interface Props {
   sortByRate?: boolean;
   /** Small caption rendered under the canvas. */
   summary?: string;
+  /**
+   * Render without the outer panel chrome, for stacking several rasters
+   * inside one shared panel (label + summary become one compact header row).
+   */
+  bare?: boolean;
 }
 
 /** Neuron draw order on the y-axis (top = most active when sorted). */
@@ -56,7 +62,9 @@ export function RasterCanvas({
   highlightRows,
   sortByRate = false,
   summary,
+  bare = false,
 }: Props) {
+  const { colors } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [plotWidth, setPlotWidth] = useState(width);
@@ -80,11 +88,11 @@ export function RasterCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = "#0d1117";
+    ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (!raster) {
       if (emptyNote) {
-        ctx.fillStyle = "#8b949e";
+        ctx.fillStyle = colors.text;
         ctx.font = "12px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(emptyNote, canvas.width / 2, canvas.height / 2);
@@ -102,7 +110,7 @@ export function RasterCanvas({
     const plotH = canvas.height - padB - 14;
     const bandH = plotH / neurons;
 
-    ctx.strokeStyle = "#30363d";
+    ctx.strokeStyle = colors.grid;
     ctx.strokeRect(padL, 8, plotW, plotH);
 
     const order = rowOrder(raster, sortByRate);
@@ -117,7 +125,7 @@ export function RasterCanvas({
       ctx.fillRect(padL, yFor(rank[row], neurons, plotH) - bandH / 2, plotW, bandH);
     });
 
-    ctx.fillStyle = "#e3b341";
+    ctx.fillStyle = colors.dot;
     for (let i = 0; i < raster.time.length; i++) {
       const x = padL + (raster.time[i] / steps) * plotW;
       const y = yFor(rank[raster.neurons[i]] ?? 0, neurons, plotH);
@@ -128,16 +136,16 @@ export function RasterCanvas({
       const idx = Math.max(0, Math.min(highlightStep, steps - 1));
       const x0 = padL + (idx / steps) * plotW;
       const bandW = Math.max(2, plotW / steps);
-      ctx.fillStyle = "rgba(88, 166, 255, 0.16)";
+      ctx.fillStyle = colors.accentSoft;
       ctx.fillRect(x0, 8, bandW, plotH);
-      ctx.fillStyle = "#79c0ff";
+      ctx.fillStyle = colors.accent;
       for (let i = 0; i < raster.time.length; i++) {
         if (raster.time[i] !== idx) continue;
         const x = padL + (raster.time[i] / steps) * plotW;
         const y = yFor(rank[raster.neurons[i]] ?? 0, neurons, plotH);
         ctx.fillRect(x, y, 2.4, 2.4);
       }
-      ctx.strokeStyle = "rgba(88, 166, 255, 0.8)";
+      ctx.strokeStyle = colors.accent;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x0 + bandW / 2, 8);
@@ -146,7 +154,7 @@ export function RasterCanvas({
     }
 
     ctx.font = "10px sans-serif";
-    ctx.fillStyle = "#8b949e";
+    ctx.fillStyle = colors.text;
     ctx.fillText("Time step", plotW / 2 - 18, canvas.height - 6);
     ctx.fillText(String(steps), plotW - 20, canvas.height - 6);
   }, [
@@ -158,6 +166,7 @@ export function RasterCanvas({
     yLabels,
     highlightRows,
     sortByRate,
+    colors,
   ]);
 
   // Rail labels mirror the canvas row geometry so they line up with dots.
@@ -173,6 +182,44 @@ export function RasterCanvas({
         }))
       : [];
 
+  // The rail sits outside the body (absolutely, to its left) so it never
+  // narrows or shifts the canvas — every layer's plot keeps the same width.
+  const body = (
+    <div className="raster-plot">
+      {railLabels.length > 0 && (
+        <div className="raster-rail" style={{ height }}>
+          {railLabels.map(({ key, text, top }) => (
+            <span key={key} className="rail-label" style={{ top }}>
+              {text}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="raster-body">
+        <div className="raster-wrap" ref={wrapRef}>
+          <canvas ref={canvasRef} width={plotWidth} height={height} />
+        </div>
+      </div>
+    </div>
+  );
+
+  // Bare mode shares one panel header with sibling rasters, so the label and
+  // summary collapse into a single thin header line above the canvas.
+  if (bare) {
+    return (
+      <div className="raster-row">
+        {(label || summary || actions) && (
+          <div className="raster-row-head">
+            {label && <span className="raster-row-label">{label}</span>}
+            {summary && <span className="raster-row-summary">{summary}</span>}
+            {actions && <span className="panel-actions">{actions}</span>}
+          </div>
+        )}
+        {body}
+      </div>
+    );
+  }
+
   return (
     <div className="panel">
       {(label || actions) && (
@@ -181,20 +228,7 @@ export function RasterCanvas({
           {actions && <span className="panel-actions">{actions}</span>}
         </div>
       )}
-      <div className="raster-body">
-        {railLabels.length > 0 && (
-          <div className="raster-rail" style={{ height }}>
-            {railLabels.map(({ key, text, top }) => (
-              <span key={key} className="rail-label" style={{ top }}>
-                {text}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="raster-wrap" ref={wrapRef}>
-          <canvas ref={canvasRef} width={plotWidth} height={height} />
-        </div>
-      </div>
+      {body}
       {summary && <div className="raster-summary">{summary}</div>}
     </div>
   );

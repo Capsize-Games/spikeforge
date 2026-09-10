@@ -1,11 +1,14 @@
 import type { InferencePayload } from "../types";
 import { LineChart } from "./LineChart";
+import { confidenceSeries, cumulativeTotals } from "./readoutMath";
 
 interface Props {
   classSpikes: number[];
   predicted?: number | null;
   trueLabel?: number | null;
   outputOverTime?: number[][];
+  /** Active time step; when set, bars accumulate up to and including it. */
+  timeStep?: number | null;
 }
 
 const PALETTE = [
@@ -33,22 +36,40 @@ function toSeries(matrix: number[][]) {
   }));
 }
 
-/** Per-class output spike totals as bars, plus an over-time line chart. */
+/** Per-class output spike totals as bars, plus over-time line charts. */
 export function ClassSpikeBars({
   classSpikes,
   predicted = null,
   trueLabel = null,
   outputOverTime,
+  timeStep = null,
 }: Props) {
-  const max = Math.max(1e-6, ...classSpikes);
-  const series = outputOverTime && outputOverTime.length > 1
-    ? toSeries(outputOverTime)
-    : null;
+  // While the cursor is active, show the evidence accumulated up to that step
+  // so the bars race as the animation plays; otherwise show the sample totals.
+  const active =
+    timeStep !== null &&
+    timeStep !== undefined &&
+    outputOverTime !== undefined &&
+    outputOverTime.length > 0;
+  const bars =
+    active && outputOverTime
+      ? cumulativeTotals(outputOverTime, timeStep as number)
+      : classSpikes;
+  const max = Math.max(1e-6, ...bars);
+  const series =
+    outputOverTime && outputOverTime.length > 1
+      ? toSeries(outputOverTime)
+      : null;
+  const confidence =
+    outputOverTime && outputOverTime.length > 1
+      ? confidenceSeries(outputOverTime)
+      : null;
+  const cursorIndex = active ? (timeStep as number) : null;
 
   return (
     <div className="class-spike-wrap">
       <div className="class-bars">
-        {classSpikes.map((value, i) => {
+        {bars.map((value, i) => {
           const cls =
             "class-bar" +
             (i === predicted ? " pred" : "") +
@@ -70,6 +91,16 @@ export function ClassSpikeBars({
           series={series}
           width={320}
           height={130}
+          cursorIndex={cursorIndex}
+        />
+      )}
+      {confidence && (
+        <LineChart
+          title="Confidence over time"
+          series={[{ label: "confidence", color: "#3fb950", values: confidence, max: 100 }]}
+          width={320}
+          height={100}
+          cursorIndex={cursorIndex}
         />
       )}
     </div>
@@ -79,8 +110,10 @@ export function ClassSpikeBars({
 /** Convenience: build the component straight from an inference payload. */
 export function ClassSpikeBarsFromInference({
   inference,
+  timeStep = null,
 }: {
   inference: InferencePayload;
+  timeStep?: number | null;
 }) {
   return (
     <ClassSpikeBars
@@ -88,6 +121,7 @@ export function ClassSpikeBarsFromInference({
       predicted={inference.predicted}
       trueLabel={inference.true_label}
       outputOverTime={inference.output_over_time}
+      timeStep={timeStep}
     />
   );
 }
