@@ -5,6 +5,7 @@ from typing import Dict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from server.downloads import manager
 from server.handlers import dispatch
 from server.messages import send_locked
 from server.schemas import ClientMessage
@@ -31,26 +32,49 @@ async def _drain_training(ws: WebSocket, session: Session) -> None:
         await send_locked(ws, session, message)
 
 
+async def _dispatch_inbox(ws: WebSocket, session: Session) -> None:
+    """Process queued client messages one at a time."""
+    while True:
+        message = await session.inbox.get()
+        try:
+            await dispatch(ws, session, message)
+        except Exception as exc:  # keep the connection alive on bad input
+            await send_locked(ws, session, {
+                "type": "error", "payload": str(exc),
+            })
+
+
 async def _cleanup(
-    session: Session, drain: asyncio.Task, session_id: int
+    session: Session,
+    drain: asyncio.Task,
+    worker: asyncio.Task,
+    session_id: int,
 ) -> None:
-    """Stop training/streaming and forget the session."""
+    """Stop background work and forget the session."""
     session.training.stop()
     drain.cancel()
+    worker.cancel()
     await session.cancel()
     _sessions.pop(session_id, None)
 
 
 async def _serve(ws: WebSocket, session: Session) -> None:
-    """Receive-and-dispatch loop for one connection."""
+    """Read client messages, giving downloads their own cancel path."""
     while True:
         raw = await ws.receive_json()
         try:
-            await dispatch(ws, session, ClientMessage.model_validate(raw))
+            message = ClientMessage.model_validate(raw)
         except Exception as exc:  # keep the connection alive on bad input
             await send_locked(ws, session, {
                 "type": "error", "payload": str(exc),
             })
+            continue
+        # Cancel must bypass the queue so it lands while a download blocks the
+        # dispatcher on its progress stream.
+        if message.type == "cancel_download":
+            manager.cancel()
+            continue
+        await session.inbox.put(message)
 
 
 @app.websocket("/ws")
@@ -61,6 +85,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     session = Session(asyncio.get_running_loop())
     _sessions[session_id] = session
     drain = asyncio.create_task(_drain_training(ws, session))
+    worker = asyncio.create_task(_dispatch_inbox(ws, session))
     try:
         await _serve(ws, session)
     except WebSocketDisconnect:
@@ -70,7 +95,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             "type": "error", "payload": str(exc),
         })
     finally:
-        await _cleanup(session, drain, session_id)
+        await _cleanup(session, drain, worker, session_id)
 
 
 @app.get("/health")

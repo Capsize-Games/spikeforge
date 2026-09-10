@@ -69,13 +69,15 @@ def dataset_info(name: str) -> Tuple[int, str]:
     return num_classes, desc
 
 
-def build_dataset(name: str, train: bool = True) -> tv_datasets.VisionDataset:
-    """Instantiate a dataset, downloading it into the data dir."""
+def build_dataset(
+    name: str, train: bool = True, download: bool = True
+) -> tv_datasets.VisionDataset:
+    """Instantiate a dataset, optionally downloading it into the data dir."""
     cls, kwargs, _, _ = _REGISTRY[_resolve(name)]
     return cls(
         DATA_DIR,
         train=train,
-        download=True,
+        download=download,
         transform=transform(),
         **kwargs,
     )

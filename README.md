@@ -113,6 +113,20 @@ dev server proxies `/ws` to the FastAPI server on port 8877 (see
 [`client/vite.config.ts`](client/vite.config.ts) and
 [`server/__main__.py`](server/__main__.py)).
 
+## Developer script
+
+[`scripts/dev.sh`](scripts/dev.sh) bundles the common tasks (setup, lint,
+tests, dev servers, dataset cache, Docker):
+
+```bash
+scripts/dev.sh help          # list every command
+scripts/dev.sh check         # ruff + client type-check + client build
+scripts/dev.sh dev           # run the API and Vite dev server together
+scripts/dev.sh data          # show the dataset cache and sizes
+scripts/dev.sh data-clear    # clear dataset caches (keeps models)
+scripts/dev.sh docker-reset  # rebuild the Docker volume from scratch
+```
+
 ## Project layout
 
 ```
@@ -172,7 +186,15 @@ stays under 20 lines, and each class lives in its own file.
 
 ## Notes
 
+- Dataset downloads run in an isolated worker process, so the dashboard stays
+  responsive: it shows a progress overlay with a live byte counter and a
+  **Cancel** button instead of appearing frozen.
 - The Bernoulli encoder in `spikegen.rate` is stochastic, so the reported
   spiking percentage and spike patterns vary run to run — expected.
 - Larger `num_steps` values (e.g., 100) produce longer, richer animations;
   `subset`/`batch_size` trade dataset coverage for encode speed.
+
+## License
+
+Released under the BSD 3-Clause License — see [`LICENSE`](LICENSE) and
+[`AUTHORS`](AUTHORS).

@@ -13,7 +13,7 @@ class ServerMessage(BaseModel):
         "curve", "error", "config_ack", "run_state",
         "train_metrics", "train_state", "prediction",
         "model_saved", "model_list", "model_loaded", "model_cleared",
-        "inference", "system_stats",
+        "inference", "system_stats", "download_state",
     ]
     payload: Any = None
     source: Optional[str] = None

@@ -1,4 +1,5 @@
 import type {
+  DownloadState,
   InferencePayload,
   RasterPayload,
   RasterSource,
@@ -26,6 +27,7 @@ export interface ViewerState {
   error: string | null;
   running: boolean;
   framesByStep: Record<number, number[][]>;
+  download: DownloadState | null;
 }
 
 export type ViewerAction =
@@ -52,6 +54,7 @@ export function createInitialViewerState(autoPredict: boolean): ViewerState {
     error: null,
     running: false,
     framesByStep: {},
+    download: null,
   };
 }
 
@@ -134,6 +137,8 @@ function applyMessage(state: ViewerState, msg: ServerMsg): ViewerState {
       return { ...state, running: msg.payload.running };
     case "status":
       return applyStatus(state, msg.payload);
+    case "download_state":
+      return { ...state, download: msg.payload };
     case "error":
       return { ...state, error: msg.payload, running: false };
     default:

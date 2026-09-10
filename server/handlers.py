@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import WebSocket
 
-from server.encoder import EncoderEngine
+from server.engine_factory import build_encoder, ensure_dataset
 from server.messages import (
     emit_frame,
     send_activity,
@@ -40,8 +40,8 @@ async def handle_run(
     ws: WebSocket, session: Session, cfg: EncodeConfig
 ) -> None:
     """Start streaming frames as a cancellable background task."""
-    if session.engine is None:
-        session.set_engine(EncoderEngine(cfg), cfg)
+    if session.engine is None and not await build_encoder(ws, session, cfg):
+        return
     await send_run_state(ws, session, running=True)
     await session.start(stream_frames(ws, session, cfg))
 
@@ -57,7 +57,8 @@ async def handle_configure(
 ) -> None:
     """Cancel any active stream and push fresh static payloads."""
     await session.cancel()
-    session.set_engine(EncoderEngine(cfg), cfg)
+    if not await build_encoder(ws, session, cfg):
+        return
     await send_initial(ws, session, cfg)
     await handle_run(ws, session, cfg)
     if session.training.engine is not None:
@@ -69,7 +70,8 @@ async def handle_select_sample(
 ) -> None:
     """Rebuild the engine for a new sample and replay the preview."""
     await session.cancel()
-    session.set_engine(EncoderEngine(cfg), cfg)
+    if not await build_encoder(ws, session, cfg):
+        return
     await send_initial(ws, session, cfg)
     await handle_run(ws, session, cfg)
     if session.training.engine is not None:
@@ -114,6 +116,9 @@ async def handle_train(
         return
     if encode is None and "encode" in cfg.model_fields_set:
         encode = cfg.encode
+    dataset = encode.dataset if encode is not None else cfg.dataset
+    if not await ensure_dataset(ws, session, dataset):
+        return
     session.training.start(cfg, encode)
     await send_train_state(ws, session, running=True)
 
@@ -158,17 +163,18 @@ async def handle_list_models(ws: WebSocket, session: Session) -> None:
     })
 
 
-async def handle_load_model(
-    ws: WebSocket,
-    session: Session,
-    name: Optional[str],
-    cfg: TrainConfig,
-) -> None:
+async def handle_load_model(ws: WebSocket, session: Session,
+                            name: Optional[str],
+                            cfg: TrainConfig) -> None:
     """Load a checkpoint and make it the active training engine."""
     encode = (cfg.encode if "encode" in cfg.model_fields_set
               else session.encode_config)
     if encode is not None:
         session.set_config(encode)
+    meta = model_store.load(name).get("meta", {}) if name else {}
+    dataset = meta.get("dataset") or cfg.dataset
+    if not await ensure_dataset(ws, session, dataset):
+        return
     engine = session.training.adopt(name, cfg, encode)
     payload = model_loaded_payload(engine, name, encode, engine.evaluate())
     payload["history"] = model_store.load(name).get("history", [])

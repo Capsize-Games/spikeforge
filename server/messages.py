@@ -90,6 +90,15 @@ async def send_train_state(
     })
 
 
+async def send_download_state(
+    ws: WebSocket, session: Session, state: Dict[str, Any]
+) -> None:
+    """Send a dataset-download progress snapshot to the client."""
+    await send_locked(ws, session, {
+        "type": "download_state", "payload": state,
+    })
+
+
 async def emit_frame(
     ws: WebSocket,
     session: Session,

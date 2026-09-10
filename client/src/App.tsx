@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import { Controls } from "./components/Controls";
+import { DownloadProgress } from "./components/DownloadProgress";
 import { ModelPanel } from "./components/ModelPanel";
 import { StatusBar } from "./components/StatusBar";
 import { TopBar } from "./components/TopBar";
@@ -68,6 +69,11 @@ export default function App() {
       viewer.clearInference();
     }
   };
+
+  const downloading =
+    viewer.state.download?.status === "downloading"
+      ? viewer.state.download
+      : null;
 
   return (
     <div className="app">
@@ -149,6 +155,13 @@ export default function App() {
         requested={training.state.config.device}
         connected={ws.connected}
       />
+
+      {downloading && (
+        <DownloadProgress
+          download={downloading}
+          onCancel={ws.sendCancelDownload}
+        />
+      )}
     </div>
   );
 }

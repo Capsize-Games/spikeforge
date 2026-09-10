@@ -18,6 +18,7 @@ class Session:
         self._task: Optional[asyncio.Task] = None
         self._drain_task: Optional[asyncio.Task] = None
         self.training = TrainingService(loop)
+        self.inbox: asyncio.Queue = asyncio.Queue()
         self.lock = asyncio.Lock()
 
     @property

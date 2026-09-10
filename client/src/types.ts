@@ -206,6 +206,13 @@ export interface SystemStatsPayload {
   device: DeviceStatus;
 }
 
+/** Dataset-download progress streamed from the server. */
+export interface DownloadState {
+  dataset: string;
+  status: "idle" | "downloading" | "done" | "cancelled" | "error";
+  bytes: number;
+}
+
 export type ServerMsg =
   | { type: "config_ack"; payload: EncodeConfig }
   | { type: "status"; payload: StatusPayload | string }
@@ -227,4 +234,5 @@ export type ServerMsg =
   | { type: "model_loaded"; payload: ModelLoadedPayload }
   | { type: "model_cleared"; payload?: null }
   | { type: "system_stats"; payload: SystemStatsPayload }
+  | { type: "download_state"; payload: DownloadState }
   | { type: "error"; payload: string };

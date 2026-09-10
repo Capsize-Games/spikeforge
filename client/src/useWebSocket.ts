@@ -71,6 +71,10 @@ export function useWebSocket({ onMessage }: Options) {
     wsRef.current?.send(JSON.stringify({ type: "stats" }));
   }, []);
 
+  const sendCancelDownload = useCallback(() => {
+    wsRef.current?.send(JSON.stringify({ type: "cancel_download" }));
+  }, []);
+
   return {
     connected,
     send,
@@ -79,5 +83,6 @@ export function useWebSocket({ onMessage }: Options) {
     sendSelectSample,
     sendInfer,
     sendStats,
+    sendCancelDownload,
   };
 }
