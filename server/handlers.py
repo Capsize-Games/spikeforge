@@ -144,7 +144,10 @@ async def handle_list_models(ws, session: Session):
 
 async def handle_load_model(ws, session: Session, name, cfg):
     """Load a checkpoint and make it the active training engine."""
-    encode = session.encode_config
+    encode = (cfg.encode if "encode" in cfg.model_fields_set
+              else session.encode_config)
+    if encode is not None:
+        session.set_config(encode)
     engine = session.training.adopt(name, cfg, encode)
     await send_locked(ws, session, {
         "type": "model_loaded",
