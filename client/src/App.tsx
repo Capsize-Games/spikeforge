@@ -237,9 +237,9 @@ export default function App() {
         ]}
       />
       <p className="intro">
-        Work left to right: pick a sample, preview its spikes, set the model,
-        then train. The middle shows what the data looks like; the right column
-        shows the results.
+        Expand a numbered section on the left to change settings — 1 Data · 2
+        Encoding · 3 Model · 4 Train & inspect. The middle shows what the
+        data looks like; the right column shows the results.
       </p>
 
       <div className="grid">
@@ -248,14 +248,23 @@ export default function App() {
             config={config}
             model={training.state.config}
             datasets={training.state.datasets}
+            models={training.state.models}
             gpuAvailable={gpuAvailable}
             connected={connected}
-            running={state.running}
+            encodeRunning={state.running}
+            trainRunning={training.state.running}
+            canInfer={canInfer}
             onChange={patchConfig}
             onModelChange={training.patch}
             onSelectSample={selectSample}
             onRun={run}
             onStop={stop}
+            onTrain={train}
+            onStopTrain={stopTrain}
+            onInfer={runInference}
+            onSave={saveModel}
+            onLoad={loadModel}
+            onDelete={deleteModel}
           />
         </div>
 
@@ -269,10 +278,6 @@ export default function App() {
         />
 
         <TrainingPanel
-          models={training.state.models}
-          running={training.state.running}
-          connected={connected}
-          canInfer={canInfer}
           stats={stats}
           requestedDevice={training.state.config.device}
           loss={training.state.loss}
@@ -283,12 +288,6 @@ export default function App() {
           inference={state.inference}
           prediction={training.state.prediction}
           loaded={training.state.loaded}
-          onTrain={train}
-          onStop={stopTrain}
-          onInfer={runInference}
-          onSave={saveModel}
-          onLoad={loadModel}
-          onDelete={deleteModel}
         />
       </div>
 

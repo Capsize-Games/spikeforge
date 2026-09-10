@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import type { SavedModel } from "../types";
-import { SectionHeader } from "./Stepper";
 
 interface Props {
   models: SavedModel[];
@@ -16,6 +15,7 @@ interface Props {
   onDelete: (name: string) => void;
 }
 
+/** Section-4 content: training actions and saved-model management. */
 export function TrainControls({
   models,
   running,
@@ -32,13 +32,7 @@ export function TrainControls({
   const busy = !connected || running;
 
   return (
-    <div className="panel controls">
-      <SectionHeader
-        step="4"
-        title="Train & inspect"
-        hint="fit the network, then read the results"
-      />
-
+    <>
       <button className="apply" onClick={onTrain} disabled={busy}>
         {running ? "Training…" : "⚡ Train model"}
       </button>
@@ -87,6 +81,6 @@ export function TrainControls({
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

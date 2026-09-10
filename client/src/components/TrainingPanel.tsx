@@ -4,7 +4,6 @@ import type {
   InferencePayload,
   ModelLoadedPayload,
   PredictionPayload,
-  SavedModel,
   SystemStatsPayload,
   TrainMetrics,
 } from "../types";
@@ -13,13 +12,8 @@ import { ClassSpikeBarsFromInference } from "./ClassSpikeBars";
 import { HelpTip } from "./HelpTip";
 import { LineChart } from "./LineChart";
 import { ResourceMonitor } from "./ResourceMonitor";
-import { TrainControls } from "./TrainControls";
 
 interface Props {
-  models: SavedModel[];
-  running: boolean;
-  connected: boolean;
-  canInfer: boolean;
   stats: SystemStatsPayload | null;
   requestedDevice: DeviceChoice;
   loss: number[];
@@ -30,12 +24,6 @@ interface Props {
   inference: InferencePayload | null;
   prediction: PredictionPayload | null;
   loaded: ModelLoadedPayload | null;
-  onTrain: () => void;
-  onStop: () => void;
-  onInfer: () => void;
-  onSave: (name: string) => void;
-  onLoad: (name: string) => void;
-  onDelete: (name: string) => void;
 }
 
 function MismatchBanner({ compatibility }: { compatibility: Compatibility }) {
@@ -60,10 +48,6 @@ function MismatchBanner({ compatibility }: { compatibility: Compatibility }) {
 }
 
 export function TrainingPanel({
-  models,
-  running,
-  connected,
-  canInfer,
   stats,
   requestedDevice,
   loss,
@@ -74,12 +58,6 @@ export function TrainingPanel({
   inference,
   prediction,
   loaded,
-  onTrain,
-  onStop,
-  onInfer,
-  onSave,
-  onLoad,
-  onDelete,
 }: Props) {
   const compatibility = loaded?.compatibility;
   const mismatch =
@@ -92,18 +70,12 @@ export function TrainingPanel({
 
   return (
     <div className="col-training">
-      <TrainControls
-        models={models}
-        running={running}
-        connected={connected}
-        canInfer={canInfer}
-        onTrain={onTrain}
-        onStop={onStop}
-        onInfer={onInfer}
-        onSave={onSave}
-        onLoad={onLoad}
-        onDelete={onDelete}
-      />
+      <div className="panel">
+        <div className="panel-title">Results</div>
+        <div className="muted">
+          Run a section from the left column to see output here.
+        </div>
+      </div>
 
       <ResourceMonitor stats={stats} requested={requestedDevice} />
 
@@ -165,13 +137,13 @@ export function TrainingPanel({
           </div>
         ) : (
           <div className="muted">
-            Click “Predict displayed sample” to score the current image.
+            Expand section 4 and click “Predict displayed sample”.
           </div>
         )}
       </div>
 
       <div className="panel">
-        <div className="panel-title">Status</div>
+        <div className="panel-title">Training status</div>
         {last ? (
           <div className="metrics">
             <div>step {last.step} / {last.total}</div>
