@@ -710,24 +710,31 @@ canvas,
   border-radius: 0;
 }
 
-/* --- fluid viewer: Input and Reconstruction fill the width only --- */
+/* --- viewer rows: deterministic equal columns --- */
 .viz-row {
-  flex-wrap: nowrap;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
 .viz-row > .panel {
-  flex: 1 1 0;
   min-width: 0;
 }
 
 .pair.grow {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
 }
 
-.pair.grow > .grow {
-  flex: 1 1 0;
+.pair.grow > * {
   min-width: 0;
+}
+
+.sample-wrap.grow {
+  position: relative;
 }
 
 .sample-wrap.grow > .panel {
@@ -735,7 +742,9 @@ canvas,
 }
 
 canvas.heatmap-fluid {
+  display: block;
   width: 100%;
   height: auto;
+  max-width: 100%;
   aspect-ratio: 1 / 1;
 }
