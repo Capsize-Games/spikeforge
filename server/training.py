@@ -22,33 +22,43 @@ class TrainingService:
         return self._engine
 
     @property
+    def input_mode(self):
+        """Return the active engine's input mode, defaulting to raw."""
+        if self._engine is None:
+            return "raw"
+        return self._engine.input_mode
+
+    def infer(self, spikes, true_label=None):
+        """Score encoded spikes with the active engine, if any."""
+        if self._engine is None:
+            return None
+        return self._engine.infer(spikes, true_label)
+
+    @property
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
 
-    def start(self, config):
+    def start(self, config, encode=None):
         """Spawn a worker thread that trains and enqueues metrics."""
         self._stop.clear()
-        self._engine = TrainingEngine(
-            dataset=config.dataset,
-            hidden=config.hidden,
-            beta=config.beta,
-            lr=config.lr,
-            epochs=config.epochs,
-            num_steps=config.num_steps,
-            subset=config.subset,
-            batch_size=config.batch_size,
-            checkpoint=config.checkpoint,
-        )
+        self._engine = self._make_engine(config, encode, None)
         self._thread = threading.Thread(
             target=self._run, args=(self._engine,), daemon=True
         )
         self._thread.start()
 
-    def adopt(self, checkpoint, config):
+    def adopt(self, checkpoint, config, encode=None):
         """Load a checkpoint into a ready-to-continue engine."""
         self._stop.clear()
-        self._engine = TrainingEngine(
-            dataset=config.dataset,
+        self._engine = self._make_engine(config, encode, checkpoint)
+        return self._engine
+
+    @staticmethod
+    def _make_engine(config, encode, checkpoint):
+        """Build a TrainingEngine, mirroring dataset from the encode cfg."""
+        dataset = encode.dataset if encode is not None else config.dataset
+        return TrainingEngine(
+            dataset=dataset,
             hidden=config.hidden,
             beta=config.beta,
             lr=config.lr,
@@ -57,8 +67,8 @@ class TrainingService:
             subset=config.subset,
             batch_size=config.batch_size,
             checkpoint=checkpoint,
+            encode=encode,
         )
-        return self._engine
 
     def stop(self):
         """Signal the worker to stop after the current batch."""

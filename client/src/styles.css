@@ -368,3 +368,159 @@ canvas {
   color: var(--bad);
   background: rgba(248, 81, 73, 0.1);
 }
+
+/* --- dataset / sample-index controls --- */
+.sample-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sample-row .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-btn {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.step-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.step-btn:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.field.mirror {
+  color: var(--muted);
+}
+
+.mirror-note {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.panel-title .help-tip {
+  margin-left: 4px;
+}
+
+/* --- prediction badge over the input sample --- */
+.sample-wrap {
+  position: relative;
+}
+
+.pred-badge {
+  position: absolute;
+  top: 42px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(13, 17, 23, 0.85);
+  font-size: 11px;
+  line-height: 1.25;
+  pointer-events: none;
+}
+
+.pred-badge.ok {
+  border-color: rgba(63, 185, 80, 0.7);
+  color: var(--ok);
+}
+
+.pred-badge.bad {
+  border-color: rgba(248, 81, 73, 0.7);
+  color: var(--bad);
+}
+
+.pred-badge-main {
+  font-weight: 700;
+}
+
+.pred-badge-conf,
+.pred-badge-true {
+  color: var(--muted);
+}
+
+/* --- checkpoint compatibility banner --- */
+.mismatch {
+  margin: 6px 0 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(227, 179, 65, 0.6);
+  border-radius: 6px;
+  background: rgba(227, 179, 65, 0.1);
+  color: #e3b341;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mismatch-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+/* --- per-class output spike bars --- */
+.class-spike-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.class-bars {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 96px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #0d1117;
+}
+
+.class-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.class-bar-fill {
+  width: 100%;
+  min-height: 1px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+
+.class-bar.pred .class-bar-fill {
+  background: var(--ok);
+}
+
+.class-bar.true {
+  outline: 1px solid #e3b341;
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+.class-bar-label {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--muted);
+}

@@ -69,6 +69,8 @@ def _describe(entry):
     return {
         "name": entry.name[: -len(".pt")],
         "meta": meta,
+        "input_mode": meta.get("input_mode", "raw"),
+        "coding": meta.get("coding", "raw"),
         "saved_at": saved_at,
     }
 

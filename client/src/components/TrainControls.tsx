@@ -1,22 +1,29 @@
 import { useState } from "react";
 
 import { TRAIN_HELP } from "../helpText";
-import type { DatasetInfo, SavedModel, TrainConfig } from "../types";
+import type {
+  Compatibility,
+  EncodeConfig,
+  SavedModel,
+  TrainConfig,
+} from "../types";
 import { HelpTip } from "./HelpTip";
 
 interface Props {
   config: TrainConfig;
-  datasets: DatasetInfo[];
+  encode: EncodeConfig;
   models: SavedModel[];
+  compatibility?: Compatibility | null;
   onChange: (patch: Partial<TrainConfig>) => void;
   onTrain: () => void;
   onStop: () => void;
-  onPredict: () => void;
+  onInfer: () => void;
   onSave: (name: string) => void;
   onLoad: (name: string) => void;
   onDelete: (name: string) => void;
   running: boolean;
   connected: boolean;
+  canInfer: boolean;
 }
 
 function NumberField({
@@ -56,51 +63,100 @@ function NumberField({
   );
 }
 
+/** Read-only mirror of an encoding value owned by the LEFT controls. */
+function MirrorField({
+  label,
+  value,
+  help,
+}: {
+  label: string;
+  value: string | number;
+  help: string;
+}) {
+  return (
+    <div className="field mirror">
+      <span className="field-label">
+        <span>
+          {label}: <b>{value}</b>
+        </span>
+        <HelpTip text={help} />
+      </span>
+      <span className="mirror-note">set in Controls (left)</span>
+    </div>
+  );
+}
+
+/** Warning shown when a loaded checkpoint disagrees with the encoding. */
+function MismatchBanner({ compatibility }: { compatibility: Compatibility }) {
+  const legacy = compatibility.expected_input_mode === "raw";
+  return (
+    <div className="mismatch">
+      <div className="mismatch-title">⚠ Checkpoint mismatch</div>
+      {legacy ? (
+        <div>Legacy raw checkpoint — the encoding controls are ignored.</div>
+      ) : (
+        <div>
+          Trained with “{compatibility.expected_input_mode}” coding; current
+          control is “{compatibility.current_coding}”.
+        </div>
+      )}
+      {!compatibility.dataset_match && (
+        <div>Dataset differs — inference is disabled until they match.</div>
+      )}
+      {!compatibility.num_steps_match && <div>Time-step count differs.</div>}
+    </div>
+  );
+}
+
 export function TrainControls({
   config,
-  datasets,
+  encode,
   models,
+  compatibility,
   onChange,
   onTrain,
   onStop,
-  onPredict,
+  onInfer,
   onSave,
   onLoad,
   onDelete,
   running,
   connected,
+  canInfer,
 }: Props) {
   const [saveName, setSaveName] = useState("my_model");
   const set = (patch: Partial<TrainConfig>) => onChange(patch);
   const busy = !connected || running;
+  const mismatch =
+    compatibility !== undefined &&
+    compatibility !== null &&
+    (!compatibility.coding_match ||
+      !compatibility.dataset_match ||
+      !compatibility.num_steps_match ||
+      compatibility.expected_input_mode === "raw");
 
   return (
     <div className="panel controls">
       <div className="panel-title">Training</div>
 
-      <label className="field">
-        <span className="field-label">
-          <span>Dataset</span>
-          <HelpTip text={TRAIN_HELP.dataset} />
-        </span>
-        <select
-          value={config.dataset}
-          onChange={(e) => set({ dataset: e.target.value })}
-          disabled={running}
-        >
-          {datasets.map((d) => (
-            <option key={d.name} value={d.name}>
-              {d.name} ({d.classes} classes)
-            </option>
-          ))}
-        </select>
-      </label>
+      {mismatch && compatibility && (
+        <MismatchBanner compatibility={compatibility} />
+      )}
+
+      {compatibility && (
+        <div className="metrics">
+          <div>input_mode: {compatibility.expected_input_mode}</div>
+          <div>coding: {compatibility.current_coding}</div>
+        </div>
+      )}
+
+      <MirrorField label="Dataset" value={encode.dataset} help={TRAIN_HELP.dataset} />
 
       <NumberField label="hidden" value={config.hidden} min={16} max={512} step={16} help={TRAIN_HELP.hidden} onChange={(v) => set({ hidden: v })} />
       <NumberField label="beta" value={config.beta} min={0.1} max={0.95} step={0.05} help={TRAIN_HELP.beta} onChange={(v) => set({ beta: v })} />
       <NumberField label="lr" value={config.lr} min={0.001} max={0.05} step={0.001} help={TRAIN_HELP.lr} onChange={(v) => set({ lr: v })} />
       <NumberField label="epochs" value={config.epochs} min={1} max={10} step={1} help={TRAIN_HELP.epochs} onChange={(v) => set({ epochs: v })} />
-      <NumberField label="num_steps" value={config.num_steps} min={2} max={50} step={1} help={TRAIN_HELP.num_steps} onChange={(v) => set({ num_steps: v })} />
+      <MirrorField label="num_steps" value={encode.num_steps} help={TRAIN_HELP.num_steps} />
       <NumberField label="subset" value={config.subset} min={1} max={100} step={1} help={TRAIN_HELP.subset} onChange={(v) => set({ subset: v })} />
       <NumberField label="batch_size" value={config.batch_size} min={8} max={256} step={8} help={TRAIN_HELP.batch_size} onChange={(v) => set({ batch_size: v })} />
 
@@ -110,8 +166,13 @@ export function TrainControls({
       <button className="apply stop" onClick={onStop} disabled={!connected || !running}>
         ■ Stop Training
       </button>
-      <button className="apply ghost" onClick={onPredict} disabled={busy}>
-        Predict sample
+      <button
+        className="apply ghost"
+        onClick={onInfer}
+        disabled={busy || !canInfer}
+        title={TRAIN_HELP.compatibility}
+      >
+        Infer on displayed sample
       </button>
 
       <div className="panel-title subsection">Model</div>

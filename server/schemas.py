@@ -26,6 +26,7 @@ class EncodeConfig(BaseModel):
     off_spike: bool = False
     delta_threshold: float = 4.0
     random_scale: float = 0.5
+    random_seed: Optional[int] = None
     interval_ms: int = 100
 
 
@@ -41,6 +42,9 @@ class TrainConfig(BaseModel):
     subset: int = 10
     batch_size: int = 64
     checkpoint: Optional[str] = None  # load this model to continue
+    # Encoding settings for spike-input training; num_steps wins over the
+    # legacy field above when a coding other than "raw" is active.
+    encode: EncodeConfig = Field(default_factory=EncodeConfig)
 
 
 class ClientMessage(BaseModel):
@@ -48,7 +52,8 @@ class ClientMessage(BaseModel):
 
     type: Literal[
         "configure", "run", "stop", "train", "stop_train", "predict",
-        "save_model", "list_models", "load_model", "delete_model",
+        "select_sample", "infer", "save_model", "list_models",
+        "load_model", "delete_model",
     ] = "configure"
     config: EncodeConfig = Field(default_factory=EncodeConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
@@ -62,6 +67,7 @@ class ServerMessage(BaseModel):
         "status", "image", "raster", "spike_frame",
         "curve", "error", "config_ack", "run_state",
         "train_metrics", "train_state", "prediction",
-        "model_saved", "model_list", "model_loaded",
+        "model_saved", "model_list", "model_loaded", "inference",
     ]
     payload: Any = None
+    source: Optional[str] = None

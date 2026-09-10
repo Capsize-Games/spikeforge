@@ -11,6 +11,7 @@ class Session:
 
     def __init__(self, loop: asyncio.AbstractEventLoop):
         self._engine = None
+        self._encode_config = None
         self._task: Optional[asyncio.Task] = None
         self._drain_task: Optional[asyncio.Task] = None
         self.training = TrainingService(loop)
@@ -20,8 +21,19 @@ class Session:
     def engine(self):
         return self._engine
 
-    def set_engine(self, engine):
+    def set_engine(self, engine, config=None):
         self._engine = engine
+        if config is not None:
+            self._encode_config = config
+
+    def set_config(self, config):
+        """Remember the latest EncodeConfig for payload context."""
+        self._encode_config = config
+
+    @property
+    def encode_config(self):
+        """Return the most recent EncodeConfig, if any."""
+        return self._encode_config
 
     @property
     def is_running(self) -> bool:

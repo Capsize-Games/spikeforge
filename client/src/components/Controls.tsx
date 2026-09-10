@@ -1,10 +1,17 @@
+import { useEffect, useRef, useState } from "react";
+
 import { HELP } from "../helpText";
-import type { EncodeConfig } from "../types";
+import type { DatasetInfo, EncodeConfig } from "../types";
 import { HelpTip } from "./HelpTip";
 
 interface Props {
   config: EncodeConfig;
+  datasets: DatasetInfo[];
   onChange: (patch: Partial<EncodeConfig>) => void;
+  onSelectSample: (patch: Partial<EncodeConfig>) => void;
+  onInfer: () => void;
+  canInfer: boolean;
+  connected: boolean;
 }
 
 function SliderField({
@@ -72,11 +79,113 @@ function CheckField({
   );
 }
 
-export function Controls({ config, onChange }: Props) {
+export function Controls({
+  config,
+  datasets,
+  onChange,
+  onSelectSample,
+  onInfer,
+  canInfer,
+  connected,
+}: Props) {
   const set = (patch: Partial<EncodeConfig>) => onChange(patch);
+  const [indexText, setIndexText] = useState(String(config.sample_index));
+  const debounce = useRef<number | null>(null);
+
+  useEffect(() => {
+    setIndexText(String(config.sample_index));
+  }, [config.sample_index]);
+
+  useEffect(
+    () => () => {
+      if (debounce.current !== null) window.clearTimeout(debounce.current);
+    },
+    [],
+  );
+
+  /** Debounce typed indices so each keystroke doesn't rebuild the engine. */
+  const onIndexInput = (value: string) => {
+    setIndexText(value);
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+    if (debounce.current !== null) window.clearTimeout(debounce.current);
+    debounce.current = window.setTimeout(() => {
+      onSelectSample({ sample_index: Math.max(0, Math.round(parsed)) });
+    }, 350);
+  };
+
   return (
     <div className="panel controls">
       <div className="panel-title">Controls</div>
+
+      <label className="field">
+        <span className="field-label">
+          <span>Dataset (encoding)</span>
+          <HelpTip text={HELP.dataset} />
+        </span>
+        <select
+          value={config.dataset}
+          onChange={(e) =>
+            onSelectSample({ dataset: e.target.value, sample_index: 0 })
+          }
+        >
+          {datasets.length === 0 && (
+            <option value={config.dataset}>{config.dataset}</option>
+          )}
+          {datasets.map((d) => (
+            <option key={d.name} value={d.name}>
+              {d.name} ({d.classes} classes)
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="field">
+        <span className="field-label">
+          <span>Sample index</span>
+          <HelpTip text={HELP.sample_index} />
+        </span>
+        <div className="sample-row">
+          <button
+            className="step-btn"
+            onClick={() =>
+              onSelectSample({
+                sample_index: Math.max(0, config.sample_index - 1),
+              })
+            }
+            disabled={config.sample_index <= 0}
+            aria-label="Previous sample"
+          >
+            ◀
+          </button>
+          <input
+            className="text-input"
+            type="number"
+            min={0}
+            value={indexText}
+            onChange={(e) => onIndexInput(e.target.value)}
+          />
+          <button
+            className="step-btn"
+            onClick={() =>
+              onSelectSample({ sample_index: config.sample_index + 1 })
+            }
+            aria-label="Next sample"
+          >
+            ▶
+          </button>
+        </div>
+      </div>
+
+      <button
+        className="apply ghost"
+        onClick={onInfer}
+        disabled={!connected || !canInfer}
+      >
+        ⚡ Infer on this sample
+      </button>
+
+      <div className="panel-title subsection">Encoding</div>
 
       <label className="field">
         <span className="field-label">
@@ -92,7 +201,7 @@ export function Controls({ config, onChange }: Props) {
           <option value="rate">Rate</option>
           <option value="latency">Latency</option>
           <option value="delta">Delta</option>
-          <option value="random">Random</option>
+          <option value="random">Random (noise baseline)</option>
         </select>
       </label>
 

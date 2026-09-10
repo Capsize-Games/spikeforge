@@ -1,11 +1,9 @@
-"""Factory producing encoded spike payloads from a client config."""
+"""Render raw samples and encoded spike volumes from a client config."""
 
 import torch
 
-from snn_interpreter.delta_trainer import DeltaTrainer
-from snn_interpreter.latency_trainer import LatencyTrainer
-from snn_interpreter.random_spikegen import RandomSpikeGenerator
-from snn_interpreter.trainer import SSNTrainer
+from snn_interpreter.sample_source import SampleSource
+from snn_interpreter.spike_encoder import SpikeEncoder
 
 from server.schemas import EncodeConfig
 
@@ -16,146 +14,72 @@ def to_list(tensor):
 
 
 class EncoderEngine:
-    """Build trainers from config and expose JSON-serialisable data."""
+    """Build a dataset-backed sample and its encoded spike volume."""
 
     def __init__(self, config: EncodeConfig):
         self._config = config
-        self._trainer = _build_trainer(config)
+        self._source = SampleSource(config.dataset)
+        self._index = self._source.clamp(config.sample_index)
+        self._encoder = SpikeEncoder.from_encode_config(config)
+        self._image = self._source.image(self._index)
+        self._spikes = self._encoder.encode_image(self._image)
 
     # --- payload builders -------------------------------------------------
 
     def sample_image(self):
-        """Return the raw input image (single channel grid) as nested list."""
-        if self._config.coding in ("delta", "random"):
-            return None
-        tensor = self._trainer.input_data[self._config.sample_index][0]
-        return to_list(tensor)
+        """Return the raw input image grid as a nested list."""
+        return to_list(self._image[0])
 
     def reconstruction(self):
-        """Return gain=1 and low-gain averaged reconstructions."""
+        """Return averaged spike reconstructions for the rate coding."""
         if self._config.coding != "rate":
             return None
-        trainer = self._trainer
-        sample = trainer.spike_data[:, 0, 0]
-        low = trainer.spike_data_low_gain[:, 0, 0]
-        return {
-            "gain1": to_list(sample.mean(dim=0)),
-            "low": to_list(low.mean(dim=0)),
-            "size": list(trainer.data_size),
-        }
+        gain1 = self._spikes.mean(dim=0)[0].reshape(28, 28)
+        low = gain1 * self._config.gain
+        return {"gain1": to_list(gain1), "low": to_list(low),
+                "size": [28, 28]}
 
-    def spike_frame(self, step: int):
-        """Return one 2-D frame of spike activity for sample 0."""
-        if self._config.coding == "delta":
-            return to_list(self._trainer.spike_data)
-        if self._config.coding == "random":
-            return to_list(self._trainer.spike_rand[step])
-        return to_list(self._raw_spike_data()[step, 0, 0])
+    def spike_frame(self, step):
+        """Return one 2-D spike frame of the selected sample."""
+        index = min(max(int(step), 0), self._spikes.size(0) - 1)
+        return to_list(self._spikes[index, 0].reshape(28, 28))
 
     def spike_tensor(self):
-        """Return the full spike volume for a trainer."""
-        if self._config.coding == "delta":
-            return self._trainer.spike_data
-        if self._config.coding == "random":
-            return self._trainer.spike_rand
-        return self._raw_spike_data()
+        """Return the full [T,1,784] spike volume."""
+        return self._spikes
 
     def raster(self, max_neurons=784):
-        """Return (time, neuron) spike coordinate pairs for the raster."""
-        spikes = self._spike_sample_matrix()
-        time_idx, neuron_idx = torch.where(spikes > 0)
+        """Return (time, neuron) spike coordinates for the sample."""
+        matrix = self._spikes[:, 0, :]
+        time_idx, neuron_idx = torch.where(matrix > 0)
         return {
             "time": to_list(time_idx),
             "neurons": to_list(neuron_idx),
-            "num_steps": int(spikes.size(0)),
-            "num_neurons": int(spikes.size(1)),
+            "num_steps": int(matrix.size(0)),
+            "num_neurons": int(matrix.size(1)),
         }
 
     def num_steps(self):
-        """Return the number of time steps in the encoded data."""
-        if self._config.coding == "delta":
-            return int(self._trainer.data.numel())
-        if self._config.coding == "random":
-            return int(self._trainer.num_steps)
-        return int(self._trainer.num_steps)
+        """Return the number of encoded time steps."""
+        return int(self._spikes.size(0))
 
     def target_label(self):
-        """Return the first target label when available."""
-        trainer = getattr(self._trainer, "latency_targets", None)
-        if trainer is not None and self._config.coding == "latency":
-            return int(self._trainer.latency_targets[0].item())
-        targets = getattr(self._trainer, "_spike_targets", None)
-        if targets is not None:
-            return int(targets[0].item())
-        return None
+        """Return the label of the selected sample."""
+        return self.sample_label()
 
-    def _raw_spike_data(self):
-        """Select which latency/rate volume to expose based on flags."""
-        coding = self._config.coding
-        trainer = self._trainer
-        if coding == "latency":
-            data = trainer.latency_data
-            key = "base"
-            if self._config.linear:
-                key = "linear" if not self._config.normalize else "normalized"
-            if self._config.clip:
-                key = "clip"
-            return data[key]
-        if coding == "random":
-            return trainer.spike_rand
-        return trainer.spike_data
+    def sample_label(self):
+        """Return the label of the selected sample."""
+        return self._source.label(self._index)
 
-    def _spike_sample_matrix(self):
-        """Reduce the sample-0 spikes to a (time x neurons) 0/1 matrix."""
-        spikes = self._raw_spike_data()
-        if self._config.coding == "delta":
-            return spikes.unsqueeze(1)  # 1-D -> (time, 1 neuron)
-        if spikes.dim() == 5:  # [T, B, C, H, W] -> sample 0
-            spikes = spikes[:, 0, 0]
-        elif spikes.dim() == 4:  # [T, C, H, W] -> drop channel
-            spikes = spikes[:, 0]
-        return spikes.reshape(spikes.size(0), -1)
+    def sample_index(self):
+        """Return the clamped index of the selected sample."""
+        return self._index
 
+    def spike_input(self):
+        """Return the [T,1,784] spikes for training/inference."""
+        return self._spikes
 
-def _build_trainer(cfg: EncodeConfig):
-    """Instantiate the trainer matching a coding type."""
-    return {
-        "rate": lambda: _rate_trainer(cfg),
-        "latency": lambda: _latency_trainer(cfg),
-        "delta": lambda: _delta_trainer(cfg),
-        "random": lambda: _random_trainer(cfg),
-    }[cfg.coding]()
-
-
-def _rate_trainer(cfg: EncodeConfig):
-    return SSNTrainer(
-        batch_size=cfg.batch_size,
-        subset=cfg.subset,
-        vectorization_num_steps=cfg.num_steps,
-        vector_value=cfg.vector_value,
-        reconstruction_gain=cfg.gain,
-        animation_interval=cfg.interval_ms,
-    )
-
-
-def _latency_trainer(cfg: EncodeConfig):
-    return LatencyTrainer(
-        batch_size=cfg.batch_size,
-        subset=cfg.subset,
-        vectorization_num_steps=cfg.num_steps,
-        animation_interval=cfg.interval_ms,
-        tau=cfg.tau,
-        threshold=cfg.threshold,
-    )
-
-
-def _delta_trainer(cfg: EncodeConfig):
-    return DeltaTrainer(
-        threshold=cfg.delta_threshold, off_spike=cfg.off_spike
-    )
-
-
-def _random_trainer(cfg: EncodeConfig):
-    return RandomSpikeGenerator(
-        num_steps=cfg.num_steps, scale=cfg.random_scale
-    )
+    @property
+    def dataset(self):
+        """Return the registry key of the loaded sample source."""
+        return self._source.dataset

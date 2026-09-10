@@ -1,5 +1,8 @@
 export type CodingType = "rate" | "latency" | "delta" | "random";
 
+/** Which layer produced a raster / spike frame. */
+export type RasterSource = "input" | "hidden" | "output";
+
 export interface EncodeConfig {
   coding: CodingType;
   dataset: string;
@@ -17,6 +20,7 @@ export interface EncodeConfig {
   off_spike: boolean;
   delta_threshold: number;
   random_scale: number;
+  random_seed: number | null;
   interval_ms: number;
 }
 
@@ -37,6 +41,7 @@ export const defaultConfig: EncodeConfig = {
   off_spike: false,
   delta_threshold: 4,
   random_scale: 0.5,
+  random_seed: null,
   interval_ms: 100,
 };
 
@@ -51,6 +56,9 @@ export interface StatusPayload {
   coding: CodingType;
   num_steps: number;
   target: number | null;
+  dataset?: string;
+  sample_index?: number;
+  true_label?: number | null;
 }
 
 export interface RunStatePayload {
@@ -68,6 +76,8 @@ export interface TrainConfig {
   subset: number;
   batch_size: number;
   checkpoint: string | null;
+  /** Encoding settings used for spike-input training. */
+  encode: EncodeConfig;
 }
 
 export const defaultTrainConfig: TrainConfig = {
@@ -80,6 +90,7 @@ export const defaultTrainConfig: TrainConfig = {
   subset: 10,
   batch_size: 64,
   checkpoint: null,
+  encode: { ...defaultConfig },
 };
 
 export interface DatasetInfo {
@@ -118,22 +129,58 @@ export interface ModelListPayload {
   datasets: DatasetInfo[];
 }
 
+/** How a loaded checkpoint relates to the current encoding controls. */
+export interface Compatibility {
+  dataset_match: boolean;
+  coding_match: boolean;
+  num_steps_match: boolean;
+  expected_input_mode: string;
+  current_coding: string;
+}
+
 export interface ModelLoadedPayload {
   name: string;
   dataset: string;
   accuracy: number;
+  input_mode?: string;
+  coding?: string;
+  hidden?: number;
+  beta?: number;
+  num_steps?: number;
+  num_classes?: number;
+  meta?: Record<string, unknown>;
+  compatibility?: Compatibility;
+}
+
+/** Result of inferring on the currently displayed sample. */
+export interface InferencePayload {
+  predicted: number;
+  confidence: number;
+  true_label: number | null;
+  class_spikes: number[];
+  output_over_time: number[][];
+  coding: string;
+  input_mode: string;
+  num_steps: number;
+  dataset_match: boolean;
 }
 
 export type ServerMsg =
   | { type: "config_ack"; payload: EncodeConfig }
   | { type: "status"; payload: StatusPayload | string }
   | { type: "image"; payload: number[][]; kind?: string }
-  | { type: "raster"; payload: RasterPayload }
-  | { type: "spike_frame"; payload: number[][]; step?: number }
+  | { type: "raster"; payload: RasterPayload; source?: RasterSource }
+  | {
+      type: "spike_frame";
+      payload: number[][];
+      step?: number;
+      source?: RasterSource;
+    }
   | { type: "run_state"; payload: RunStatePayload }
   | { type: "train_metrics"; payload: TrainMetrics }
   | { type: "train_state"; payload: TrainStatePayload }
   | { type: "prediction"; payload: PredictionPayload }
+  | { type: "inference"; payload: InferencePayload }
   | { type: "model_saved"; payload: { name: string; path: string } }
   | { type: "model_list"; payload: ModelListPayload }
   | { type: "model_loaded"; payload: ModelLoadedPayload }

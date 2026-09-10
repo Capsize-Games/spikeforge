@@ -2,23 +2,15 @@
 
 import torch
 import torch.nn.functional as F
-from snntorch import utils
-from torch.utils.data import DataLoader
 
-from snn_interpreter import model_store
-from snn_interpreter.datasets import build_dataset, dataset_info
+from snn_interpreter import inference, model_store
+from snn_interpreter.data_loader import build_loader
+from snn_interpreter.datasets import dataset_info
+from snn_interpreter.spike_encoder import SpikeEncoder
 from snn_interpreter.spiking_net import SpikingNet
 
 EVAL_EVERY = 5       # evaluate the held-out set every N steps
 EVAL_BATCHES = 4     # number of test batches to score
-
-
-def build_loader(dataset="mnist", subset=10, batch_size=64, train=True):
-    """Create a normalised loader reduced by the subset factor."""
-    data = build_dataset(dataset, train=train)
-    if subset > 1:
-        data = utils.data_subset(data, subset)
-    return DataLoader(data, batch_size=batch_size, shuffle=train)
 
 
 class TrainingEngine:
@@ -26,7 +18,7 @@ class TrainingEngine:
 
     def __init__(self, dataset="mnist", hidden=128, beta=0.5, lr=1e-2,
                  epochs=1, num_steps=10, subset=10, batch_size=64,
-                 checkpoint=None):
+                 checkpoint=None, encode=None, input_mode=None):
         self._dataset = dataset
         self._num_classes, _ = dataset_info(dataset)
         self._hidden = hidden
@@ -37,25 +29,36 @@ class TrainingEngine:
         self._subset = subset
         self._batch_size = batch_size
         self._checkpoint = checkpoint
+        self._encode = encode
+        self._setup_input(encode, input_mode)
         self._build(lr)
         if checkpoint:
             self._restore(checkpoint)
+
+    def _setup_input(self, encode, input_mode):
+        """Resolve the encoder and the effective input mode."""
+        self._encoder = (SpikeEncoder.from_encode_config(encode)
+                         if encode is not None else None)
+        self._explicit_mode = input_mode
+        coding = encode.coding if encode is not None else "raw"
+        self._input_mode = input_mode or coding
 
     def _build(self, lr):
         """Create the network, optimiser, and lazy test-batch cache."""
         self._net = SpikingNet(hidden=self._hidden, beta=self._beta,
                                num_classes=self._num_classes)
-        self._optimizer = torch.optim.Adam(
-            self._net.parameters(), lr=lr
-        )
+        self._optimizer = torch.optim.Adam(self._net.parameters(), lr=lr)
         self._test_batches = None
 
     # --- checkpointing ---------------------------------------------------
 
     def _restore(self, checkpoint):
-        """Load weights from a saved checkpoint to continue training."""
+        """Load weights and, unless overridden, the input mode."""
         ckpt = model_store.load(checkpoint)
         self._net.load_state_dict(ckpt["state_dict"])
+        if self._explicit_mode is None:
+            meta = ckpt.get("meta", {})
+            self._input_mode = meta.get("input_mode", "raw")
 
     def save(self, name):
         """Persist the current model and its metadata."""
@@ -64,10 +67,28 @@ class TrainingEngine:
             "hidden": self._hidden,
             "beta": self._beta,
             "lr": self._lr,
-            "num_steps": self._num_steps,
+            "num_steps": self.num_steps,
             "num_classes": self._num_classes,
+            "input_mode": self._input_mode,
+            "coding": self._input_mode,
+            "encode": self._encode.model_dump() if self._encode else None,
         }
         return model_store.save(name, self._net, meta)
+
+    # --- encoding --------------------------------------------------------
+
+    def _encode_batch(self, inputs):
+        """Return [T,B,784] spikes for the configured input mode."""
+        if self._encoder is None or self._input_mode == "raw":
+            return self._repeat_pixels(inputs)
+        if self._input_mode == "random":
+            raise ValueError("random coding carries no label signal")
+        return self._encoder.encode(inputs)
+
+    def _repeat_pixels(self, inputs):
+        """Legacy raw path: repeat normalised pixels across steps."""
+        flat = inputs.view(inputs.size(0), -1)
+        return flat.unsqueeze(0).repeat(self._num_steps, 1, 1)
 
     # --- evaluation ------------------------------------------------------
 
@@ -90,10 +111,9 @@ class TrainingEngine:
         return 100.0 * correct / max(total, 1)
 
     def _maybe_evaluate(self, step, total):
-        """Evaluate on held-out data periodically and on the final step."""
-        if step == 1 or step == total or step % EVAL_EVERY == 0:
-            return self.evaluate()
-        return None
+        """Evaluate periodically and on the final step."""
+        due = step == 1 or step == total or step % EVAL_EVERY == 0
+        return self.evaluate() if due else None
 
     # --- training --------------------------------------------------------
 
@@ -112,14 +132,12 @@ class TrainingEngine:
                 step += 1
                 metrics.update({"epoch": epoch, "step": step,
                                 "total": total})
-                metrics["test_accuracy"] = self._maybe_evaluate(
-                    step, total
-                )
+                metrics["test_accuracy"] = self._maybe_evaluate(step, total)
                 yield metrics
 
     def _train_batch(self, inputs, targets):
         """Run one optimisation step and return loss/accuracy."""
-        outputs = self._net(inputs, self._num_steps)
+        outputs = self._net.forward_spikes(self._encode_batch(inputs))
         loss = F.cross_entropy(outputs, targets)
         self._optimizer.zero_grad()
         loss.backward()
@@ -132,19 +150,23 @@ class TrainingEngine:
     def predict(self, inputs):
         """Return predicted digits for a batch of images."""
         with torch.no_grad():
-            outputs = self._net(inputs, self._num_steps)
+            outputs = self._net.forward_spikes(self._encode_batch(inputs))
         return outputs.argmax(dim=1)
 
     def predict_sample(self):
         """Return digits/labels for one held-out batch."""
-        inputs, targets = next(iter(
-            build_loader(self._dataset, 1, 32, train=False)
-        ))
+        inputs, targets = next(iter(build_loader(self._dataset, 1, 32,
+                                                 train=False)))
         preds = self.predict(inputs)
-        return {
-            "digits": [int(p) for p in preds[:10]],
-            "labels": [int(t) for t in targets[:10]],
-        }
+        return {"digits": [int(p) for p in preds[:10]],
+                "labels": [int(t) for t in targets[:10]]}
+
+    def infer(self, spikes, true_label=None):
+        """Score the displayed sample's spikes for the active model."""
+        return inference.infer_spikes(self._net, spikes, self._num_classes,
+                                      true_label, self.input_mode)
+
+    # --- accessors -------------------------------------------------------
 
     @property
     def net(self):
@@ -152,7 +174,22 @@ class TrainingEngine:
 
     @property
     def num_steps(self):
+        """Return effective time steps (encoder wins in spike mode)."""
+        if self._encoder is not None and self._input_mode != "raw":
+            return self._encoder.num_steps
         return self._num_steps
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def input_mode(self):
+        return self._input_mode
+
+    @property
+    def coding(self):
+        return self._input_mode
 
     @property
     def dataset(self):

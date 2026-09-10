@@ -1,52 +1,60 @@
 import type {
-  DatasetInfo,
+  EncodeConfig,
+  InferencePayload,
   ModelLoadedPayload,
   PredictionPayload,
   SavedModel,
   TrainConfig,
   TrainMetrics,
 } from "../types";
+import { ClassSpikeBarsFromInference } from "./ClassSpikeBars";
+import { HelpTip } from "./HelpTip";
 import { LineChart } from "./LineChart";
 import { TrainControls } from "./TrainControls";
+import { TRAIN_HELP } from "../helpText";
 
 interface Props {
   config: TrainConfig;
-  datasets: DatasetInfo[];
+  encode: EncodeConfig;
   models: SavedModel[];
   onChange: (patch: Partial<TrainConfig>) => void;
   onTrain: () => void;
   onStop: () => void;
-  onPredict: () => void;
+  onInfer: () => void;
   onSave: (name: string) => void;
   onLoad: (name: string) => void;
   onDelete: (name: string) => void;
   running: boolean;
   connected: boolean;
+  canInfer: boolean;
   loss: number[];
   trainAccuracy: number[];
   testAccuracy: number[];
   last: TrainMetrics | null;
+  inference: InferencePayload | null;
   prediction: PredictionPayload | null;
   loaded: ModelLoadedPayload | null;
 }
 
 export function TrainingPanel({
   config,
-  datasets,
+  encode,
   models,
   onChange,
   onTrain,
   onStop,
-  onPredict,
+  onInfer,
   onSave,
   onLoad,
   onDelete,
   running,
   connected,
+  canInfer,
   loss,
   trainAccuracy,
   testAccuracy,
   last,
+  inference,
   prediction,
   loaded,
 }: Props) {
@@ -54,29 +62,78 @@ export function TrainingPanel({
     <div className="col-training">
       <TrainControls
         config={config}
-        datasets={datasets}
+        encode={encode}
         models={models}
+        compatibility={loaded?.compatibility}
         onChange={onChange}
         onTrain={onTrain}
         onStop={onStop}
-        onPredict={onPredict}
+        onInfer={onInfer}
         onSave={onSave}
         onLoad={onLoad}
         onDelete={onDelete}
         running={running}
         connected={connected}
+        canInfer={canInfer}
       />
 
       {loaded && (
         <div className="panel">
-          <div className="panel-title">Loaded model</div>
+          <div className="panel-title">
+            <span>Loaded model</span>
+            <HelpTip text={TRAIN_HELP.input_mode} />
+          </div>
           <div className="metrics">
             <div>{loaded.name}</div>
             <div>{loaded.dataset}</div>
             <div>acc {loaded.accuracy.toFixed(1)}%</div>
+            <div>input {loaded.input_mode ?? "raw"}</div>
+            <div>coding {loaded.coding ?? "raw"}</div>
+            {loaded.hidden !== undefined && <div>hidden {loaded.hidden}</div>}
+            {loaded.num_steps !== undefined && <div>steps {loaded.num_steps}</div>}
           </div>
         </div>
       )}
+
+      <div className="panel displayed-sample">
+        <div className="panel-title">Prediction (displayed sample)</div>
+        {inference ? (
+          <>
+            <div className="metrics">
+              <div>predicted {inference.predicted}</div>
+              <div>confidence {(inference.confidence * 100).toFixed(1)}%</div>
+              <div>
+                true {inference.true_label !== null ? inference.true_label : "—"}
+              </div>
+              <div>
+                {inference.true_label === null ||
+                inference.true_label === inference.predicted
+                  ? "match ✓"
+                  : "mismatch ✗"}
+              </div>
+            </div>
+            {!inference.dataset_match && (
+              <div className="mismatch">
+                Inference dataset differs from the checkpoint's training dataset.
+              </div>
+            )}
+            <ClassSpikeBarsFromInference inference={inference} />
+          </>
+        ) : prediction ? (
+          <div className="predictions">
+            {prediction.digits.map((d, i) => (
+              <span
+                key={i}
+                className={d === prediction.labels[i] ? "pred ok" : "pred bad"}
+              >
+                {d}/{prediction.labels[i]}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="muted">Run "Infer on this sample"</div>
+        )}
+      </div>
 
       <LineChart
         title="Loss (training)"
@@ -117,26 +174,6 @@ export function TrainingPanel({
           </div>
         ) : (
           <div className="muted">Not training</div>
-        )}
-      </div>
-
-      <div className="panel">
-        <div className="panel-title">Predictions (pred / true)</div>
-        {prediction ? (
-          <div className="predictions">
-            {prediction.digits.map((d, i) => (
-              <span
-                key={i}
-                className={
-                  d === prediction.labels[i] ? "pred ok" : "pred bad"
-                }
-              >
-                {d}/{prediction.labels[i]}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div className="muted">Run "Predict sample"</div>
         )}
       </div>
     </div>

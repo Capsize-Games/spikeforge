@@ -18,7 +18,7 @@ async def send_initial(ws, session: Session, cfg):
     await send_image(ws, session)
     await send_reconstruction(ws, session)
     await send_locked(ws, session, {
-        "type": "raster", "payload": engine.raster(),
+        "type": "raster", "payload": engine.raster(), "source": "input",
     })
     await send_status(ws, session, cfg)
 
@@ -52,6 +52,9 @@ async def send_status(ws, session, cfg):
             "coding": cfg.coding,
             "num_steps": engine.num_steps(),
             "target": engine.target_label(),
+            "dataset": engine.dataset,
+            "sample_index": engine.sample_index(),
+            "true_label": engine.sample_label(),
         },
     })
 
@@ -72,10 +75,28 @@ async def send_train_state(ws, session, running: bool, reason: str = ""):
     })
 
 
-async def emit_frame(ws, session, engine, step):
-    """Send one spike frame for the given step."""
+async def emit_frame(ws, session, engine, step, source="input"):
+    """Send one spike frame for the given step and activity source."""
     await send_locked(ws, session, {
         "type": "spike_frame",
         "payload": engine.spike_frame(step),
         "step": step,
+        "source": source,
     })
+
+
+async def send_inference(ws, session, result):
+    """Send the inference payload with private raster keys stripped."""
+    payload = {k: v for k, v in result.items() if not k.startswith("_")}
+    await send_locked(ws, session, {"type": "inference", "payload": payload})
+
+
+async def send_activity(ws, session, result):
+    """Send hidden/output rasters carried by an inference result."""
+    rasters = result.get("_rasters", {})
+    for source in ("hidden", "output"):
+        raster = rasters.get(source)
+        if raster is not None:
+            await send_locked(ws, session, {
+                "type": "raster", "payload": raster, "source": source,
+            })

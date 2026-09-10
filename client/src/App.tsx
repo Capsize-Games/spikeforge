@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Controls } from "./components/Controls";
 import { TopBar } from "./components/TopBar";
@@ -6,7 +6,9 @@ import { TrainingPanel } from "./components/TrainingPanel";
 import { ViewerPanels } from "./components/ViewerPanels";
 import type {
   EncodeConfig,
+  InferencePayload,
   RasterPayload,
+  RasterSource,
   ServerMsg,
   StatusPayload,
 } from "./types";
@@ -14,23 +16,34 @@ import { defaultConfig } from "./types";
 import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
 
+/** Spike frames are only streamed for input/hidden; output is raster-only. */
+type FrameSource = "input" | "hidden";
+
+type RasterMap = Record<RasterSource, RasterPayload | null>;
+type FrameMap = Record<FrameSource, number[][] | null>;
+
 interface ViewerState {
   sample: number[][] | null;
-  spikeFrame: number[][] | null;
+  spikeFrames: FrameMap;
   reconGain1: number[][] | null;
   reconLow: number[][] | null;
-  raster: RasterPayload | null;
+  rasters: RasterMap;
+  inference: InferencePayload | null;
   status: StatusPayload | null;
   error: string | null;
   running: boolean;
 }
 
+const emptyRasters: RasterMap = { input: null, hidden: null, output: null };
+const emptyFrames: FrameMap = { input: null, hidden: null };
+
 const initial: ViewerState = {
   sample: null,
-  spikeFrame: null,
+  spikeFrames: emptyFrames,
   reconGain1: null,
   reconLow: null,
-  raster: null,
+  rasters: emptyRasters,
+  inference: null,
   status: null,
   error: null,
   running: false,
@@ -41,6 +54,12 @@ export default function App() {
   const [state, setState] = useState<ViewerState>(initial);
   const training = useTraining();
 
+  // Keep the latest encode config reachable from debounced callbacks.
+  const configRef = useRef(config);
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
+
   const handleMessage = useCallback(
     (msg: ServerMsg) => {
       if (training.handleMessage(msg)) return;
@@ -50,9 +69,11 @@ export default function App() {
             ...s,
             error: null,
             sample: null,
-            spikeFrame: null,
+            spikeFrames: emptyFrames,
             reconGain1: null,
             reconLow: null,
+            rasters: emptyRasters,
+            inference: null,
           }));
           break;
         case "image": {
@@ -66,11 +87,25 @@ export default function App() {
           }
           break;
         }
-        case "raster":
-          setState((s) => ({ ...s, raster: msg.payload }));
+        case "raster": {
+          const source: RasterSource = msg.source ?? "input";
+          setState((s) => ({
+            ...s,
+            rasters: { ...s.rasters, [source]: msg.payload },
+          }));
           break;
-        case "spike_frame":
-          setState((s) => ({ ...s, spikeFrame: msg.payload }));
+        }
+        case "spike_frame": {
+          const source: FrameSource =
+            msg.source === "hidden" ? "hidden" : "input";
+          setState((s) => ({
+            ...s,
+            spikeFrames: { ...s.spikeFrames, [source]: msg.payload },
+          }));
+          break;
+        }
+        case "inference":
+          setState((s) => ({ ...s, inference: msg.payload }));
           break;
         case "run_state":
           setState((s) => ({ ...s, running: msg.payload.running }));
@@ -91,9 +126,14 @@ export default function App() {
     [training],
   );
 
-  const { connected, send, sendTrain, sendNamed } = useWebSocket({
-    onMessage: handleMessage,
-  });
+  const {
+    connected,
+    send,
+    sendTrain,
+    sendNamed,
+    sendSelectSample,
+    sendInfer,
+  } = useWebSocket({ onMessage: handleMessage });
 
   useEffect(() => {
     if (connected) sendNamed("list_models", "");
@@ -101,6 +141,19 @@ export default function App() {
 
   const patchConfig = (patch: Partial<EncodeConfig>) =>
     setConfig((c) => ({ ...c, ...patch }));
+
+  /** Patch the encode config and rebuild the server-side sample. */
+  const selectSample = (patch: Partial<EncodeConfig>) => {
+    const next = { ...configRef.current, ...patch };
+    configRef.current = next;
+    setConfig(next);
+    sendSelectSample(next);
+  };
+
+  /** Score the currently displayed sample with the loaded model. */
+  const runInference = () => {
+    sendInfer(configRef.current, training.state.config);
+  };
 
   const run = () => {
     setState((s) => ({ ...s, error: null }));
@@ -114,9 +167,11 @@ export default function App() {
   };
 
   const train = () => {
+    const merged = { ...training.state.config, dataset: config.dataset, encode: config };
+    training.patch({ dataset: config.dataset, encode: config });
     training.reset();
     training.setRunning(true);
-    sendTrain("train", training.state.config);
+    sendTrain("train", merged);
   };
 
   const stopTrain = () => {
@@ -124,17 +179,25 @@ export default function App() {
     sendTrain("stop_train", training.state.config);
   };
 
-  const predict = () => sendTrain("predict", training.state.config);
-
-  const saveModel = (name: string) =>
-    sendNamed("save_model", name);
+  const saveModel = (name: string) => sendNamed("save_model", name);
 
   const loadModel = (name: string) => {
     training.patch({ checkpoint: name });
-    sendTrain("load_model", { ...training.state.config, checkpoint: name }, name);
+    const merged = {
+      ...training.state.config,
+      dataset: config.dataset,
+      encode: config,
+      checkpoint: name,
+    };
+    sendTrain("load_model", merged, name);
   };
 
   const deleteModel = (name: string) => sendNamed("delete_model", name);
+
+  const compatibility = training.state.loaded?.compatibility;
+  const hasModel =
+    training.state.loaded !== null || training.state.last !== null;
+  const canInfer = connected && hasModel && (compatibility?.dataset_match ?? true);
 
   return (
     <div className="app">
@@ -142,7 +205,15 @@ export default function App() {
 
       <div className="grid">
         <div className="col-controls">
-          <Controls config={config} onChange={patchConfig} />
+          <Controls
+            config={config}
+            datasets={training.state.datasets}
+            onChange={patchConfig}
+            onSelectSample={selectSample}
+            onInfer={runInference}
+            canInfer={canInfer}
+            connected={connected}
+          />
           <div className="panel actions">
             <button
               className="apply"
@@ -163,29 +234,32 @@ export default function App() {
 
         <ViewerPanels
           sample={state.sample}
-          spikeFrame={state.spikeFrame}
+          spikeFrame={state.spikeFrames.input}
           reconGain1={state.reconGain1}
           reconLow={state.reconLow}
-          raster={state.raster}
+          rasters={state.rasters}
+          inference={state.inference}
         />
 
         <TrainingPanel
           config={training.state.config}
-          datasets={training.state.datasets}
+          encode={config}
           models={training.state.models}
           onChange={training.patch}
           onTrain={train}
           onStop={stopTrain}
-          onPredict={predict}
+          onInfer={runInference}
           onSave={saveModel}
           onLoad={loadModel}
           onDelete={deleteModel}
           running={training.state.running}
           connected={connected}
+          canInfer={canInfer}
           loss={training.state.loss}
           trainAccuracy={training.state.trainAccuracy}
           testAccuracy={training.state.testAccuracy}
           last={training.state.last}
+          inference={state.inference}
           prediction={training.state.prediction}
           loaded={training.state.loaded}
         />

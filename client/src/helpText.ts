@@ -44,6 +44,18 @@ export const HELP: Record<string, string> = {
   random_scale:
     "Upper bound on the random spiking probability before conversion. " +
     "Higher values give denser random spike trains.",
+  dataset:
+    "Dataset the encoder reads the displayed sample from. Training uses " +
+    "the same dataset so the network sees the encodings it is shown. " +
+    "Changing it resets to sample index 0.",
+  sample_index:
+    "Which sample to display and encode. Prev/next step through the " +
+    "dataset; the model is re-run on the new sample when one is loaded, " +
+    "so the sample, its spikes, and the prediction stay in sync.",
+  inference:
+    "Run the loaded model on the currently encoded sample and report its " +
+    "prediction, confidence, and the output-layer spike activity for each " +
+    "class. Needs a trained or loaded model.",
 };
 
 export const TRAIN_HELP: Record<string, string> = {
@@ -65,4 +77,14 @@ export const TRAIN_HELP: Record<string, string> = {
     "Dataset reduction factor for training. Higher subset = less data = " +
     "faster runs.",
   batch_size: "Number of samples per training batch.",
+  input_mode:
+    "How the checkpoints feeds samples into the network: a spike coding " +
+    "(rate/latency/delta) or the legacy raw-pixel mode. Inference must " +
+    "match the checkpoint's input mode.",
+  compatibility:
+    "A loaded checkpoint stores the dataset, coding, and step count it was " +
+    "trained with. If the current encoding controls disagree, the banner " +
+    "warns you: legacy raw checkpoints ignore the encoding controls, and a " +
+    "dataset mismatch makes the output class count unsafe to compare, so " +
+    "inference is disabled.",
 };

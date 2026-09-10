@@ -40,5 +40,13 @@ export function useWebSocket({ onMessage }: Options) {
     wsRef.current?.send(JSON.stringify({ type, name }));
   }, []);
 
-  return { connected, send, sendTrain, sendNamed };
+  const sendSelectSample = useCallback((config: EncodeConfig) => {
+    wsRef.current?.send(JSON.stringify({ type: "select_sample", config }));
+  }, []);
+
+  const sendInfer = useCallback((config: EncodeConfig, train: TrainConfig) => {
+    wsRef.current?.send(JSON.stringify({ type: "infer", config, train }));
+  }, []);
+
+  return { connected, send, sendTrain, sendNamed, sendSelectSample, sendInfer };
 }
