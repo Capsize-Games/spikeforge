@@ -45,6 +45,29 @@ nav:
       - Cookbook: COOKBOOK.md
       - Examples: examples.md
       - Open-source checklist: OPEN_SOURCE_CHECKLIST.md
+  - Long-form reference:
+      - Overview: documentation.md
+      - Quickstart: quickstart.md
+      - Requirements: requirements.md
+      - Usage: usage.md
+      - Development: development.md
+      - Architecture: architecture.md
+      - Project layout: project-layout.md
+      - Features: features.md
+      - Interpreter spine: interpreter-spine.md
+      - Introspection: introspection.md
+      - Dashboard: dashboard.md
+      - Event datasets: event-datasets.md
+      - Targets and interoperability: targets-and-interop.md
+      - Production workflows: production-workflows.md
+      - Model hub: model-hub.md
+      - Backend execution: backend-execution.md
+      - Sequence primitives: sequence-primitives.md
+      - Event runtime and energy: event-runtime-and-energy.md
+      - Operational maturity: operational-maturity.md
+      - Interop fold-ins: interop-foldins.md
+      - Implications and boundaries: implications-and-boundaries.md
+      - Notes: notes.md
   - Roadmap:
       - Professionalization roadmap: professional_roadmap.md
       - Ecosystem roadmap: ecosystem_roadmap.md

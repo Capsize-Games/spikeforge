@@ -156,7 +156,7 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
   the docs landing page ([`plans/index.md`](plans/index.md)), and the MkDocs
   nav.
 - [x] **Honest-limits narrative exists.** The README's [Implications and
-  boundaries](README.md#implications-and-boundaries) section states the *why*
+  boundaries](documentation/implications-and-boundaries.md) section states the *why*
   and *consequence* of each deliberate limit.
 - [x] **Architecture diagrams exist.** The workstream plans and the
   professionalization roadmap carry Mermaid diagrams rendered by the docs site,
