@@ -63,6 +63,7 @@ nav:
       - Model hub: model-hub.md
       - Backend execution: backend-execution.md
       - Sequence primitives: sequence-primitives.md
+      - Streaming time series: streaming-timeseries.md
       - Event runtime and energy: event-runtime-and-energy.md
       - Operational maturity: operational-maturity.md
       - Interop fold-ins: interop-foldins.md

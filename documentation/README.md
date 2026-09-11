@@ -31,6 +31,7 @@ Start with the [architecture](architecture.md) and
 - [Model hub (WS-A)](model-hub.md) — curated catalog, downloads, inspect → compat → promote.
 - [Backend execution (WS-B)](backend-execution.md) — substitutions and the reference/Norse/Lava backends.
 - [Sequence primitives (WS-C)](sequence-primitives.md) — per-stage neurons and attention presets.
+- [Streaming time series (UC-1)](streaming-timeseries.md) — windowing, a synthetic stream, train/eval, and bundle serving parity.
 - [Event runtime and energy (WS-D)](event-runtime-and-energy.md) — sparse runner and SOP/MAC/AC accounting.
 - [Operational maturity (WS-E)](operational-maturity.md) — persisted metrics, tracking sinks, determinism, docs site.
 - [Interop fold-ins (WS-F)](interop-foldins.md) — event training, ONNX bridge, `nirtorch` extraction, quantization.
@@ -46,7 +47,7 @@ Read these before trusting a number:
 
 - [Project rules](../rules.md) — code style, hard limits, and design invariants.
 - [Cookbook](../COOKBOOK.md) — copy-pasteable recipes.
-- [Examples](../examples/README.md) — ten runnable end-to-end scripts.
+- [Examples](../examples/README.md) — eleven runnable end-to-end scripts.
 - [Protocol contract](../protocol/) — the WebSocket JSON Schema source of truth.
 - [Open-source checklist](../OPEN_SOURCE_CHECKLIST.md) — pre-release readiness.
 - `plans/` — the ARCH-0001 repository-split design, roadmaps, and workstream plans; use that folder's `index.md` as its table of contents.
