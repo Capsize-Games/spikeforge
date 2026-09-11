@@ -6,8 +6,9 @@ import pytest
 import torch
 
 from spikeforge.runtime.execution_mode import ExecutionMode
-from spikeforge.serving import bundle_manifest
+from spikeforge.serving import bundle_manifest, preprocess
 from spikeforge.serving.bundle import DeploymentBundle
+from spikeforge.serving.encode_spec import EncodeSpec
 from spikeforge.serving.errors import BundleFormatError, StateError
 from spikeforge.serving.session import InferenceSession
 from spikeforge.simulator import input_shape
@@ -126,3 +127,27 @@ def test_streaming_does_not_accumulate_an_autograd_graph() -> None:
     assert prediction is not None
     assert prediction.logits.requires_grad is False
     assert prediction.class_totals.grad_fn is None
+
+
+def test_encode_uses_the_frozen_bundle_spec() -> None:
+    """``InferenceSession.encode`` delegates to the shared pure encoder."""
+    spec, module = registry.build_topology(
+        "recurrent_net", {"hidden": 6, "beta": 0.9, "num_classes": 4}
+    )
+    bundle = DeploymentBundle(
+        manifest={
+            "format": bundle_manifest.BUNDLE_FORMAT,
+            "version": bundle_manifest.BUNDLE_VERSION,
+            "spec": spec.to_dict(),
+        },
+        weights=module.state_dict(),
+        encode_config=EncodeSpec(coding="latency", num_steps=4).to_dict(),
+    )
+    session = InferenceSession.load(bundle)
+    sample = torch.rand(1, 28, 28)
+    encoded = session.encode(sample)
+    expected = preprocess.encode(
+        sample, bundle.encode_spec(), spec, geometry=None
+    )
+    assert torch.equal(encoded, expected)
+    assert encoded.shape == (4, 1, 28 * 28)

@@ -6,18 +6,23 @@ import os
 import platform
 import tempfile
 import zipfile
-from dataclasses import dataclass, field
-from typing import Any, Dict, Mapping, Optional, Union
+from dataclasses import dataclass, field, replace
+from typing import Any, Dict, Mapping, Optional, Tuple, Union
 
 import torch
 
 from spikeforge.network import model_store
 from spikeforge.serving import bundle_manifest as bm
+from spikeforge.serving.encode_spec import (
+    ENCODE_SPEC_VERSION,
+    EncodeSpec,
+)
 from spikeforge.serving.errors import (
     BundleCompatibilityError,
     BundleFormatError,
     BundleIntegrityError,
     BundleNotFoundError,
+    EncodeSpecError,
 )
 from spikeforge.topology.builder import build_module
 from spikeforge.topology.spec import TopologySpec
@@ -109,6 +114,57 @@ def _check_compatibility(
             )
 
 
+def _check_encode(
+    path: str, manifest: Mapping[str, Any], encode_config: Any, strict: bool
+) -> EncodeSpec:
+    """Validate a bundle's frozen encode spec and pin its contract version.
+
+    An empty ``encode_config`` (a legacy in-memory bundle) resolves to the
+    defaults, preserving the current behaviour. A non-empty spec must parse
+    and validate, and its manifest ``encode_spec_version`` must match this
+    runtime; a mismatch is refused under ``strict`` rather than re-encoded.
+    """
+    spec = EncodeSpec.from_mapping(encode_config or {})
+    try:
+        spec.validate()
+    except EncodeSpecError as error:
+        raise BundleFormatError(
+            path, f"invalid encode spec: {error}"
+        ) from None
+    recorded = manifest.get("encode_spec_version")
+    if recorded is None:
+        return spec
+    if int(recorded) != ENCODE_SPEC_VERSION and strict:
+        raise BundleCompatibilityError(
+            path,
+            f"encode spec version {recorded!r} does not match the runtime's "
+            f"{ENCODE_SPEC_VERSION!r}",
+        )
+    return spec
+
+
+def _meta_input_size(meta: Mapping[str, Any]) -> Optional[Tuple[int, int]]:
+    """Return the frozen sensor ``(H, W)`` geometry a checkpoint records.
+
+    The normalised ``encode_spec`` a trained checkpoint stores is preferred;
+    a legacy checkpoint may instead carry an ``input_size`` on the meta or the
+    topology params. Only an explicit pair is a geometry, so a flat feature
+    count (which is not an ``(H, W)`` sensor) is ignored.
+    """
+    frozen = meta.get("encode_spec") or {}
+    candidates = (
+        frozen.get("input_size"),
+        meta.get("input_size"),
+        (meta.get("topology_params") or {}).get("input_size"),
+    )
+    for value in candidates:
+        if value is None:
+            continue
+        if isinstance(value, (list, tuple)) and len(value) == 2:
+            return (int(value[0]), int(value[1]))
+    return None
+
+
 def _read_archive(path: str) -> Dict[str, bytes]:
     """Return every entry of the zip at ``path``, or raise a typed error."""
     if not os.path.exists(path):
@@ -173,6 +229,29 @@ class DeploymentBundle:
         """Return the topology spec the bundle rebuilds."""
         return TopologySpec.from_dict(self.manifest["spec"])
 
+    def has_encode(self) -> bool:
+        """Return True when the bundle carries a frozen encode config."""
+        return bool(self.encode_config)
+
+    def encode_spec(self) -> EncodeSpec:
+        """Return the frozen, validated encode spec.
+
+        An empty config resolves to the defaults, so a bundle that predates
+        the contract still answers with a usable spec.
+        """
+        spec = EncodeSpec.from_mapping(self.encode_config or {})
+        spec.validate()
+        return spec
+
+    def preprocess_spec(self) -> EncodeSpec:
+        """Return the encode spec after a version check (MVP: check only).
+
+        The full preprocessing/windowing contract is deferred; for now this
+        only asserts the frozen encode spec validates against this runtime's
+        :data:`ENCODE_SPEC_VERSION`.
+        """
+        return self.encode_spec()
+
     def build_module(
         self, device: Union[str, torch.device] = "cpu"
     ) -> Any:
@@ -229,15 +308,17 @@ class DeploymentBundle:
         _check_compatibility(
             path, manifest.get("library_versions") or {}, strict
         )
+        encode_config = _load_json(
+            path, payloads[bm.ENCODE_NAME], "encode_config"
+        )
+        _check_encode(path, manifest, encode_config, strict)
         graph = None
         if bm.GRAPH_NAME in payloads:
             graph = _load_json(path, payloads[bm.GRAPH_NAME], "graph")
         return cls(
             manifest=manifest,
             weights=_load_weights(path, payloads[bm.WEIGHTS_NAME]),
-            encode_config=_load_json(
-                path, payloads[bm.ENCODE_NAME], "encode_config"
-            ),
+            encode_config=encode_config,
             preprocessing=_load_json(
                 path, payloads[bm.PREPROCESSING_NAME], "preprocessing"
             ),
@@ -261,6 +342,27 @@ def _checkpoint_parts(
     return meta, spec, state_dict, dict(stored.get("manifest") or {})
 
 
+def _frozen_encode(
+    encode_config: Optional[Mapping[str, Any]], meta: Mapping[str, Any]
+) -> Dict[str, Any]:
+    """Return the canonical encode config frozen into a bundle.
+
+    An explicit ``encode_config`` wins; otherwise the checkpoint's own
+    ``meta['encode']`` is used. Either way the config is normalised through
+    :class:`EncodeSpec` so the stored JSON always carries ``spec_version``,
+    and the sensor geometry is injected when the checkpoint knows it but the
+    config does not.
+    """
+    base = encode_config if encode_config is not None else meta.get("encode")
+    resolved = EncodeSpec.from_mapping(base)
+    if resolved.input_size is None:
+        size = _meta_input_size(meta)
+        if size is not None:
+            resolved = replace(resolved, input_size=size)
+    resolved.validate()
+    return resolved.to_dict()
+
+
 def build(
     checkpoint: str,
     out: Optional[str] = None,
@@ -279,7 +381,7 @@ def build(
     graph envelope and needs the ``nir`` extra.
     """
     meta, spec, state_dict, provenance = _checkpoint_parts(checkpoint)
-    encode = dict(encode_config or {})
+    encode = _frozen_encode(encode_config, meta)
     preprocess = dict(preprocessing or {})
     manifest = bm.new_manifest(
         spec=spec,
@@ -291,6 +393,7 @@ def build(
         label_map=dict(label_map or {}),
         expected_metrics=dict(expected_metrics or {}),
         protocol_version=protocol_version,
+        encode_spec_version=encode["spec_version"],
     )
     graph = None
     if include_nir:

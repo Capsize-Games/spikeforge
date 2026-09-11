@@ -21,6 +21,7 @@ from spikeforge.serving.errors import (
     BundleNotFoundError,
 )
 from spikeforge.training.training_engine import TrainingEngine
+from spikeforge.topology import registry
 
 _NAME = "serving_ckpt"
 
@@ -114,7 +115,10 @@ def test_manifest_records_spec_versions_and_entries(tmp_path: Any) -> None:
     assert stages["fc2"]["params"]["out_features"] == 3
     assert manifest["spec"]["input"] == "flatten"
     assert manifest["library_versions"]["torch"]
-    assert loaded.encode_config == {}
+    assert manifest["encode_spec_version"] == bm.ENCODE_SPEC_VERSION
+    assert loaded.encode_config["spec_version"] == bm.ENCODE_SPEC_VERSION
+    assert loaded.encode_config["coding"] == "rate"
+    assert loaded.has_encode() is True
     assert loaded.preprocessing == {}
     with zipfile.ZipFile(loaded.path or "") as archive:
         assert set(bm.REQUIRED_ENTRIES) <= set(archive.namelist())
@@ -217,3 +221,36 @@ def test_strict_can_be_relaxed_for_compatibility(tmp_path: Any) -> None:
     _rewrite(out, lambda entries: _with_torch(entries, "0.0.1"))
     loaded = DeploymentBundle.load(out, strict=False)
     assert loaded.manifest["library_versions"]["torch"] == "0.0.1"
+
+
+def test_encode_spec_defaults_for_an_empty_bundle() -> None:
+    """A directly-built bundle with no config answers with valid defaults."""
+    spec, module = registry.build_topology(
+        "fc_small", {"hidden": 5, "num_classes": 3}
+    )
+    bundle = DeploymentBundle(
+        manifest={
+            "format": bm.BUNDLE_FORMAT,
+            "version": bm.BUNDLE_VERSION,
+            "spec": spec.to_dict(),
+        },
+        weights=module.state_dict(),
+    )
+    assert bundle.has_encode() is False
+    resolved = bundle.encode_spec()
+    assert resolved.coding == "rate"
+    assert resolved.spec_version == bm.ENCODE_SPEC_VERSION
+    assert bundle.preprocess_spec().spec_version == bm.ENCODE_SPEC_VERSION
+
+
+def test_rejects_an_unsupported_encode_spec_version(tmp_path: Any) -> None:
+    """A bundle pinning another encode contract is refused under ``strict``."""
+    out = _written(tmp_path)
+    _rewrite(
+        out,
+        lambda entries: _with_manifest(entries, encode_spec_version=999),
+    )
+    with pytest.raises(BundleCompatibilityError):
+        DeploymentBundle.load(out)
+    relaxed = DeploymentBundle.load(out, strict=False)
+    assert relaxed.manifest["encode_spec_version"] == 999

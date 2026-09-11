@@ -60,7 +60,13 @@ class CheckpointMixin:
         }
 
     def _meta(self) -> Dict[str, Any]:
-        """Return the checkpoint metadata card for the current model."""
+        """Return the checkpoint metadata card for the current model.
+
+        ``encode_spec`` is the normalised, versioned encode contract a bundle
+        can freeze verbatim; the legacy ``encode`` key is kept unchanged so
+        existing readers keep working.
+        """
+        geometry = self._input_geometry()
         return {
             "dataset": self._dataset,
             "hidden": self._hidden,
@@ -72,6 +78,12 @@ class CheckpointMixin:
             "coding": self._input_mode,
             "device": self._device.type,
             "encode": self._encode.model_dump() if self._encode else None,
+            "encode_spec": self._encode_spec_meta(),
+            "input_size": (
+                None
+                if geometry is None
+                else [int(geometry[0]), int(geometry[1])]
+            ),
             "topology": self._topology,
             "topology_params": dict(self._architecture),
             "stage_neurons": self._stage_neurons(),

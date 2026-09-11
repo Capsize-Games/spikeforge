@@ -71,6 +71,19 @@ class BundleCompatibilityError(BundleError):
         super().__init__(path, f"incompatible bundle: {detail}")
 
 
+class EncodeSpecError(ServingError):
+    """Raised when an encode spec is malformed or an unsupported version.
+
+    The offending ``detail`` is stored as an attribute so a caller can show
+    which parameter or version was refused without parsing the message.
+    """
+
+    def __init__(self, detail: str) -> None:
+        """Record ``detail`` and build a clear message."""
+        super().__init__(f"invalid encode spec: {detail}")
+        self.detail: str = detail
+
+
 class StateError(ServingError):
     """Raised when a carried state does not match the session's spec."""
 

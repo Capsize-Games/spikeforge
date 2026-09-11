@@ -14,7 +14,7 @@ from typing import (
 import torch
 
 from spikeforge.runtime.execution_mode import ExecutionMode
-from spikeforge.serving import tensor_codec
+from spikeforge.serving import preprocess, tensor_codec
 from spikeforge.serving.bundle import DeploymentBundle
 from spikeforge.serving.errors import StateError
 from spikeforge.serving.prediction import Prediction
@@ -110,6 +110,28 @@ class InferenceSession:
         """Yield one :class:`Prediction` per frame, carrying state."""
         for frame in frames:
             yield self.step(frame)
+
+    def encode(self, sample: Any) -> torch.Tensor:
+        """Encode a raw sample with the bundle's frozen encode spec.
+
+        The shared :func:`~spikeforge.serving.preprocess.encode` is used, and
+        ``topology_spec`` is supplied so the served spikes land in the same
+        ``[T, B, ...]`` shape training produced. The spec is the one frozen in
+        the bundle, so a stream cannot re-encode with a different contract.
+        """
+        spec = self._bundle.encode_spec()
+        return preprocess.encode(
+            sample, spec, self._spec, geometry=spec.input_size
+        )
+
+    def step_sample(self, sample: Any) -> Prediction:
+        """Encode one raw sample and advance one step over its spike train."""
+        return self.step(self.encode(sample))
+
+    def run_samples(self, samples: Iterable[Any]) -> Iterator[Prediction]:
+        """Yield one :class:`Prediction` per raw sample, carrying state."""
+        for sample in samples:
+            yield self.step_sample(sample)
 
     def state(self) -> Dict[str, Any]:
         """Return the session's serializable carried state."""

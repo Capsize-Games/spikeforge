@@ -11,6 +11,7 @@ import json
 import time
 from typing import Any, Dict, Mapping, Optional
 
+from spikeforge.serving.encode_spec import ENCODE_SPEC_VERSION
 from spikeforge.serving.errors import BundleFormatError
 
 #: Marker identifying a deployment bundle.
@@ -97,14 +98,25 @@ def new_manifest(
     label_map: Mapping[str, Any],
     expected_metrics: Mapping[str, Any],
     protocol_version: Optional[str],
+    encode_spec_version: Optional[int] = None,
     created_at: Optional[float] = None,
 ) -> Dict[str, Any]:
-    """Assemble the self-describing manifest written into a bundle."""
+    """Assemble the self-describing manifest written into a bundle.
+
+    ``encode_spec_version`` records which encode contract the ``encode_config``
+    was frozen under; it defaults to the runtime's current version and is
+    additive to the entry set, so older readers ignore it.
+    """
     return {
         "format": BUNDLE_FORMAT,
         "version": BUNDLE_VERSION,
         "created_at": time.time() if created_at is None else float(created_at),
         "protocol_version": protocol_version,
+        "encode_spec_version": (
+            ENCODE_SPEC_VERSION
+            if encode_spec_version is None
+            else int(encode_spec_version)
+        ),
         "library_versions": dict(versions),
         "spec": dict(spec),
         "topology": meta.get("topology"),

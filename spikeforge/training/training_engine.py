@@ -10,6 +10,7 @@ from spikeforge.encoding.spike_encoder import SpikeEncoder
 from spikeforge.network import inference
 from spikeforge.runtime import device as device_mod
 from spikeforge.runtime.execution_mode import ExecutionMode
+from spikeforge.serving.encode_spec import EncodeSpec
 from spikeforge.simulator.runner import run
 from spikeforge.simulator.trajectory import Trajectory
 from spikeforge.topology import registry
@@ -39,6 +40,7 @@ class TrainingEngine(
     """Run a cancellable training loop that emits metric dicts."""
 
     _encoder: Optional[SpikeEncoder]
+    _encode_spec: EncodeSpec
     _explicit_mode: Optional[str]
     _input_mode: str
     _mode: ExecutionMode
@@ -106,6 +108,7 @@ class TrainingEngine(
             if encode is not None
             else None
         )
+        self._encode_spec = EncodeSpec.from_mapping(encode)
         self._explicit_mode = input_mode
         coding = encode.coding if encode is not None else "raw"
         self._input_mode = input_mode or coding
