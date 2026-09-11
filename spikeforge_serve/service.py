@@ -16,6 +16,7 @@ from spikeforge.runtime.execution_mode import ExecutionMode
 from spikeforge.serving.bundle import DeploymentBundle
 from spikeforge.serving.prediction import Prediction
 from spikeforge.serving.session import InferenceSession
+from spikeforge_serve import metrics as serve_metrics
 
 #: Session id used when a request does not name one.
 DEFAULT_SESSION = "default"
@@ -89,7 +90,12 @@ class ServingService:
         """Advance the session over ``frames``; one prediction per frame."""
         with self._lock:
             session = self.session(session_id)
-            return [self._step(session, frame, encoded) for frame in frames]
+            before = session.steps
+            predictions = [
+                self._step(session, frame, encoded) for frame in frames
+            ]
+            serve_metrics.count_steps(session.steps - before)
+            return predictions
 
     def stream(
         self,
@@ -101,7 +107,10 @@ class ServingService:
         with self._lock:
             session = self.session(session_id)
             for frame in frames:
-                yield self._step(session, frame, encoded)
+                before = session.steps
+                prediction = self._step(session, frame, encoded)
+                serve_metrics.count_steps(session.steps - before)
+                yield prediction
 
     def _ensure_bundle(self) -> DeploymentBundle:
         """Return the cached bundle, loading it once from the path."""

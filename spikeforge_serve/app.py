@@ -8,20 +8,26 @@ routes are intentionally thin wrappers over
 status instead of a stack trace.
 """
 
+import hmac
+import os
+import time
 from typing import Any, Dict, Mapping, Optional, Tuple, Union
 
 from fastapi import (
     FastAPI,
     HTTPException,
     Request,
+    Response,
     WebSocket,
     WebSocketDisconnect,
 )
 from fastapi.responses import JSONResponse
 
+from spikeforge.observability import prometheus
 from spikeforge.runtime.execution_mode import ExecutionMode
 from spikeforge.serving.bundle import DeploymentBundle
 from spikeforge.serving.errors import ServingError
+from spikeforge_serve import metrics as serve_metrics
 from spikeforge_serve.errors import error_body, status_for
 from spikeforge_serve.payloads import (
     encoded_flag,
@@ -34,6 +40,68 @@ from spikeforge_serve.service import DEFAULT_SESSION, ServingService
 #: Version of the HTTP surface (distinct from the package version).
 SERVE_VERSION = "0.1.0"
 
+#: Environment variable that opts ``/metrics`` into bearer auth when no token
+#: is passed to :func:`create_app`. An empty value leaves the route open.
+METRICS_TOKEN_ENV = "SPIKEFORGE_SERVE_METRICS_TOKEN"
+
+
+class MetricsMiddleware:
+    """Record request count, latency, errors, and in-flight for HTTP calls.
+
+    A tiny pure-ASGI wrapper rather than a framework middleware, so it works
+    with the dependency-free ASGI driver the tests use. The ``/metrics``
+    scrape itself is passed through untouched so a scrape never inflates the
+    counters it is reading.
+    """
+
+    def __init__(self, app: Any) -> None:
+        """Wrap the ASGI ``app`` below this middleware."""
+        self._app = app
+
+    async def __call__(
+        self, scope: Any, receive: Any, send: Any
+    ) -> None:
+        """Instrument one ASGI call when it is an ordinary HTTP request."""
+        path = scope.get("path")
+        if scope.get("type") != "http" or path == serve_metrics.METRICS_PATH:
+            await self._app(scope, receive, send)
+            return
+        status = {"code": 500}
+
+        async def send_wrapper(message: Any) -> None:
+            """Capture the response status before forwarding it."""
+            if message.get("type") == "http.response.start":
+                status["code"] = int(message.get("status", 500))
+            await send(message)
+
+        start = time.perf_counter()
+        with serve_metrics.track_in_flight():
+            try:
+                await self._app(scope, receive, send_wrapper)
+            finally:
+                serve_metrics.observe_request(
+                    status["code"], serve_metrics.elapsed_since(start)
+                )
+
+
+def _resolve_token(metrics_token: Optional[str]) -> Optional[str]:
+    """Return the configured ``/metrics`` token, or None when auth is off."""
+    if metrics_token is not None:
+        return metrics_token or None
+    return os.environ.get(METRICS_TOKEN_ENV) or None
+
+
+def _authorized(header: Optional[str], token: Optional[str]) -> bool:
+    """Return True when ``header`` carries the expected bearer ``token``."""
+    if not token:
+        return True
+    if not header:
+        return False
+    scheme, _, value = header.partition(" ")
+    if scheme.lower() != "bearer":
+        return False
+    return hmac.compare_digest(value.strip(), token)
+
 
 def create_app(
     bundle: Union[str, DeploymentBundle],
@@ -42,16 +110,23 @@ def create_app(
     service: Optional[ServingService] = None,
     title: str = "spikeforge-serve",
     version: str = SERVE_VERSION,
+    metrics_token: Optional[str] = None,
 ) -> FastAPI:
     """Build the ASGI app that serves ``bundle`` without binding a port.
 
     Tests hand the returned app to any ASGI client. The bundle is loaded
     lazily, so a missing or malformed artifact is reported as a typed HTTP
     error rather than crashing the process before the first request.
+
+    When ``metrics_token`` (or ``SPIKEFORGE_SERVE_METRICS_TOKEN``) is set,
+    ``/metrics`` requires a matching ``Authorization: Bearer`` header; with
+    no token the route is open, preserving the existing behaviour.
     """
     serving = service or ServingService(bundle, device=device, mode=mode)
     app = FastAPI(title=title, version=version)
     app.state.serving = serving
+    app.state.metrics_token = _resolve_token(metrics_token)
+    app.add_middleware(MetricsMiddleware)
     _install_handlers(app)
     _install_routes(app, serving)
     return app
@@ -77,6 +152,22 @@ def _install_routes(app: FastAPI, serving: ServingService) -> None:
     async def health() -> Dict[str, str]:
         """Liveness probe: the process is up."""
         return {"status": "ok"}
+
+    @app.get("/metrics")
+    async def metrics_endpoint(request: Request) -> Response:
+        """Expose the shared registry as Prometheus text, gated by auth."""
+        token = getattr(request.app.state, "metrics_token", None)
+        if not _authorized(request.headers.get("authorization"), token):
+            return Response(
+                content="unauthorized\n",
+                status_code=401,
+                media_type="text/plain",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return Response(
+            content=serve_metrics.render_text(),
+            media_type=prometheus.CONTENT_TYPE,
+        )
 
     @app.get("/ready")
     async def ready() -> Any:
@@ -151,6 +242,7 @@ def _install_routes(app: FastAPI, serving: ServingService) -> None:
         try:
             while True:
                 message = await ws.receive_json()
+                serve_metrics.count_stream_frames()
                 session_id, reply = _stream_reply(
                     serving, session_id, message
                 )

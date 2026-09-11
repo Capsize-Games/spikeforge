@@ -39,13 +39,26 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
         default="cpu",
         help="torch device the sessions run on (default: cpu)",
     )
+    parser.add_argument(
+        "--metrics-token",
+        dest="metrics_token",
+        default=None,
+        help=(
+            "bearer token required by /metrics (also read from "
+            "SPIKEFORGE_SERVE_METRICS_TOKEN; unset leaves /metrics open)"
+        ),
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
     """Build the app for ``--bundle`` and run it under uvicorn."""
     args = _parse_args(argv)
-    app = create_app(args.bundle, device=args.device)
+    app = create_app(
+        args.bundle,
+        device=args.device,
+        metrics_token=args.metrics_token,
+    )
     uvicorn.run(app, host=args.host, port=args.port)
 
 
