@@ -44,12 +44,15 @@
   such in `origin`/`description` and is never passed off as a recording.
   (4) Event datasets need the optional `events` extra; without it they show
   as unavailable and the loader raises `EventsExtraMissingError`.
-- **Target limitations (Phase 5, updated in WS-B/WS-F).** (1) The in-process
-  `reference` target is always available. `norse` and `lava_loihi2` now have
-  real backends and compile and run when their extras (`norse`, `lava`) are
-  installed; without them they report `available: false` and `run` returns
-  `status: "unavailable"`. `spinnaker2`, `speck`, and `xylo` remain
-  declared-only placeholders. (2) Substitutions are now *executed* by the
+- **Target limitations (Phase 5, updated in WS-B/WS-F and PT-W8).** (1) The
+  in-process `reference` target is always available. `norse` and `lava_loihi2`
+  have real backends and compile and run when their extras (`norse`, `lava`)
+  are installed; without them they report `available: false` and `run` returns
+  `status: "unavailable"`. `speck` (`sinabs`), `xylo` (`rockpool`), and
+  `spinnaker2` now have isolated probes and backends too, so the test-deploy
+  matrix runs them when their SDK is present and otherwise reports
+  `available: false` with a named reason; every run is an `estimate`, never a
+  device measurement. (2) Substitutions are now *executed* by the
   rewrite executor with a report and a post-rewrite drift check (WS-B), so a
   declared substitute is applied, not merely stated. (3) No on-device runtime
   is wired: `lava_loihi2` requires the Lava SDK and no physical device is

@@ -14,7 +14,8 @@ and nothing is guessed at:
   a reason that says so, rather than being reported as a failure or skipped.
 
 No simulator run is a device measurement, so the matrix carries
-``estimate: true`` at the top level and every backend names its own ``path``.
+``estimate: true`` at the top level (and on every cell) and every backend names
+its own ``path``.
 """
 
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
@@ -90,23 +91,28 @@ def _declared_only(
 
 
 def _cell(name: str, graph: Any, spikes: Any) -> DeployCell:
-    """Return the test-deploy cell for ``name`` over a graph and spikes."""
+    """Return the test-deploy cell for ``name`` over a graph and spikes.
+
+    When an executable backend is wired, its own capability-checked
+    availability is what the cell reports; a target with no backend falls back
+    to the registry probe and names that gap rather than reporting a failure.
+    """
     spec = get_target(name)
-    available_flag = available(name)
     capability = classify(graph, spec).to_dict()
     backend = backend_for(name)
     if backend is None:
-        return _declared_only(spec, available_flag, capability)
+        return _declared_only(spec, available(name), capability)
     result = compile_run(spec, graph, spikes)
     parity = result.compare if result.status == STATUS_OK else None
     return DeployCell(
         target=spec.name,
         kind=spec.kind,
-        available=available_flag,
+        available=backend.available(),
         backend=True,
         status=result.status,
         path=result.path,
         reason=_reason(result),
+        estimate=result.estimate,
         parity=parity,
         parity_ok=_parity_ok(parity),
         capability=capability,

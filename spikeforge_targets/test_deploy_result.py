@@ -7,6 +7,9 @@ backend is wired at all, and ``status`` is ``ok`` only for a completed run.
 An absent SDK or a declared-only simulator lands in ``unavailable`` with a
 named ``reason`` rather than being reported as a failure or silently dropped,
 so the matrix is a capability report and not a success/failure verdict.
+
+``estimate`` is ``true`` for every cell: no simulator or emulator run is a
+device measurement, so a cell never reads as measured hardware.
 """
 
 from dataclasses import dataclass
@@ -29,6 +32,7 @@ class DeployCell:
     status: str
     path: Optional[str] = None
     reason: Optional[str] = None
+    estimate: bool = True
     parity: Optional[Mapping[str, Any]] = None
     parity_ok: Optional[bool] = None
     capability: Optional[Mapping[str, Any]] = None
@@ -48,6 +52,7 @@ class DeployCell:
             "status": self.status,
             "path": self.path,
             "reason": self.reason,
+            "estimate": bool(self.estimate),
             "parity_ok": self.parity_ok,
             "parity": None if self.parity is None else dict(self.parity),
             "capability": (

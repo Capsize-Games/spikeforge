@@ -128,10 +128,21 @@ The matrix is deliberately honest, matching the availability model above:
 - an available backend that refuses the graph reports `status: "error"` with
   the offending node and kind named.
 
+Every catalog target now has exactly one executable backend. Besides
+`reference`, `norse`, and `lava_loihi2`, the vendor simulators are wired
+through isolated probes and backends: **Speck**
+(`sinabs`), **Xylo** (`rockpool`), and **SpiNNaker2** (`spinnaker2`). Each
+probes its SDK by a lazy import plus a minimal capability check, lowers a
+linear chain with the shared lowering, and runs through an isolated SDK
+touch-point that names its `path` (`speck_simulator`, `xylo_simulator`,
+`spinnaker2_simulator`). A present SDK yields `available: true` and
+`status: "ok"|"error"`; an absent or unrecognised SDK yields
+`available: false` with a named reason.
+
 `ok` is true when the reference ran and no *available* backend errored, so a
-missing optional SDK never fails the matrix. `estimate` is always `true`: a
-simulator or emulator run is never a device measurement, and hardware energy
-and latency stay declared estimates.
+missing optional SDK never fails the matrix. `estimate` is always `true` — at
+the matrix level and on every cell: a simulator or emulator run is never a
+device measurement, and hardware energy and latency stay declared estimates.
 
 ```bash
 python -m spikeforge.cli.verify test-deploy --topology fc_legacy

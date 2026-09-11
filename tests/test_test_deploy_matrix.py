@@ -20,10 +20,10 @@ from spikeforge_targets.test_deploy import run_matrix
 
 pytest.importorskip("nir")
 
-#: Targets that are declared but have no simulator backend wired yet.
-DECLARED_ONLY = ("speck", "xylo", "spinnaker2")
-#: Targets backed by an optional SDK extra.
-SDK_BACKED = ("norse", "lava_loihi2")
+#: Targets backed by an optional simulator/vendor SDK extra.
+SDK_BACKED = ("norse", "lava_loihi2", "speck", "xylo", "spinnaker2")
+#: Every registered target now has exactly one executable backend wired.
+WIRED = ("reference", "norse", "lava_loihi2", "speck", "xylo", "spinnaker2")
 
 
 def _graph() -> Any:
@@ -132,18 +132,31 @@ def test_absent_sdk_is_unavailable_with_named_reason(no_sdks: None) -> None:
         assert cell.status == "unavailable"
         assert cell.reason
         assert cell.ok() is False
+        assert cell.estimate is True
         assert cell.parity is None
 
 
-def test_declared_only_targets_are_unavailable_not_error() -> None:
-    """A declared-only simulator names its missing backend, not a failure."""
+def test_every_target_has_an_executable_backend() -> None:
+    """Every registered target now has a wired backend, none declared-only."""
     cells = run_matrix(_graph(), _spikes()).by_target()
-    for name in DECLARED_ONLY:
-        cell = cells[name]
-        assert cell.backend is False
-        assert cell.status == "unavailable"
-        assert cell.status != "error"
-        assert cell.reason and name in cell.reason
+    assert set(cells) == set(WIRED)
+    for name in registry.target_names():
+        assert cells[name].backend is True
+
+
+def test_unwired_target_is_named_not_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A target with no backend names that gap, not a failure or a skip."""
+    monkeypatch.setattr(
+        "spikeforge_targets.test_deploy.backend_for", lambda name: None
+    )
+    cells = run_matrix(_graph(), _spikes()).by_target()
+    cell = cells["speck"]
+    assert cell.backend is False
+    assert cell.status == "unavailable"
+    assert cell.status != "error"
+    assert cell.reason and "speck" in cell.reason
 
 
 def test_absent_sdks_do_not_fail_the_matrix(no_sdks: None) -> None:

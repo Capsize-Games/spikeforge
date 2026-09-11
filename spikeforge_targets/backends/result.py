@@ -8,6 +8,9 @@ membrane traces mirror
 :class:`~spikeforge.nir_bridge.interpreter_result.InterpreterResult`.
 ``path`` names which execution path ran (for example a Lava emulator versus
 an attached device) so a caller never mistakes a simulation for a measurement.
+``estimate`` is ``True`` for every simulator or emulator run and only turns
+``False`` when a real device reported its own result, so a caller can never
+read a simulated trajectory as a measurement.
 """
 
 from dataclasses import dataclass, field
@@ -33,6 +36,7 @@ class BackendResult:
     membranes: Mapping[str, torch.Tensor] = field(default_factory=dict)
     notes: Tuple[str, ...] = ()
     path: Optional[str] = None
+    estimate: bool = True
     rewritten: Optional[Mapping[str, Any]] = None
     compare: Optional[Mapping[str, Any]] = None
     quantization: Optional[Mapping[str, Any]] = None
@@ -54,6 +58,7 @@ class BackendResult:
             "status": self.status,
             "steps": int(self.steps),
             "path": self.path,
+            "estimate": bool(self.estimate),
             "readout": self._readout(),
             "spike_nodes": sorted(self.spikes),
             "membrane_nodes": sorted(self.membranes),
