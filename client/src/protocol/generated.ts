@@ -22,6 +22,13 @@ export interface ProtocolContract {
   ModelQuery?: ModelQuery;
   ServerPayload?: ServerPayload;
   TrainConfig?: TrainConfig;
+  BundleInfo?: BundleInfo;
+  PredictRequest?: PredictRequest;
+  PredictResponse?: PredictResponse;
+  ResetResponse?: ResetResponse;
+  ServePrediction?: ServePrediction;
+  StreamMessage?: StreamMessage;
+  TensorValue?: TensorValue;
   ServerMessage?: ServerMessage;
 }
 /**
@@ -180,6 +187,91 @@ export interface AnimationStatePayload {
   available: boolean;
   reason: string;
   source?: "hidden";
+  [k: string]: unknown;
+}
+/**
+ * The GET /v1/bundle response: the loaded bundle's self-describing metadata.
+ */
+export interface BundleInfo {
+  format?: string | null;
+  version?: string | number | null;
+  path: string;
+  topology?: string | null;
+  topology_params?: {};
+  spec?: {} | null;
+  protocol_version?: string | null;
+  encode_spec_version?: number | null;
+  encode_spec?: {};
+  encode_digest?: string | null;
+  input_size?: number | null;
+  num_classes?: number | null;
+  num_steps?: number | null;
+  label_map?: {};
+  expected_metrics?: {};
+  library_versions?: {};
+  [k: string]: unknown;
+}
+/**
+ * The POST /v1/predict body: a non-empty list of raw samples or pre-encoded frames.
+ */
+export interface PredictRequest {
+  /**
+   * @minItems 1
+   */
+  frames: [unknown, ...unknown[]];
+  encoded?: boolean;
+  session_id?: string | null;
+  [k: string]: unknown;
+}
+/**
+ * The POST /v1/predict response: the session id, the accumulated step count, and one prediction per frame.
+ */
+export interface PredictResponse {
+  session_id: string;
+  steps: number;
+  predictions: ServePrediction[];
+  [k: string]: unknown;
+}
+/**
+ * Mirrors spikeforge_serve.payloads.prediction_json: one frame's readout plus the session's cumulative evidence.
+ */
+export interface ServePrediction {
+  steps: number;
+  label: number;
+  predicted: number;
+  logits: TensorValue;
+  mean_logits: TensorValue;
+  class_totals: TensorValue;
+  spikes: {
+    [k: string]: TensorValue;
+  };
+  [k: string]: unknown;
+}
+/**
+ * Mirrors spikeforge_serve.payloads.tensor_json: a torch tensor rendered as a dtype, a shape, and nested numeric values.
+ */
+export interface TensorValue {
+  dtype: string;
+  shape: number[];
+  values: unknown[];
+  [k: string]: unknown;
+}
+/**
+ * The POST /v1/reset response: the cleared session id and its zeroed step count.
+ */
+export interface ResetResponse {
+  session_id: string;
+  steps: number;
+  [k: string]: unknown;
+}
+/**
+ * One reply from WS /v1/stream: a discriminator and its payload.
+ */
+export interface StreamMessage {
+  type: "prediction" | "reset" | "session" | "error";
+  payload: {
+    [k: string]: unknown;
+  };
   [k: string]: unknown;
 }
 /**

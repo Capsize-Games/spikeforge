@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spikeforge.dev/protocol/1.0/serve/bundle_info.schema.json",
+  "title": "BundleInfo",
+  "description": "The GET /v1/bundle response: the loaded bundle's self-describing metadata.",
+  "type": "object",
+  "properties": {
+    "format": { "type": ["string", "null"] },
+    "version": { "type": ["string", "integer", "null"] },
+    "path": { "type": "string" },
+    "topology": { "type": ["string", "null"] },
+    "topology_params": { "type": "object" },
+    "spec": { "type": ["object", "null"] },
+    "protocol_version": { "type": ["string", "null"] },
+    "encode_spec_version": { "type": ["integer", "null"] },
+    "encode_spec": { "type": "object" },
+    "encode_digest": { "type": ["string", "null"] },
+    "input_size": { "type": ["integer", "null"] },
+    "num_classes": { "type": ["integer", "null"] },
+    "num_steps": { "type": ["integer", "null"] },
+    "label_map": { "type": "object" },
+    "expected_metrics": { "type": "object" },
+    "library_versions": { "type": "object" }
+  },
+  "required": ["path"],
+  "additionalProperties": true
+}

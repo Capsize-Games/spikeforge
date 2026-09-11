@@ -80,6 +80,10 @@ _EXPECTED_HUB_DEPS = {
     "torch>=2.5",
     "huggingface_hub>=0.20",
 }
+_CLIENTS = _ROOT / "packages" / "spikeforge-clients" / "pyproject.toml"
+_EXPECTED_CLIENTS_SCRIPTS = {
+    "spikeforge-clients",
+}
 
 
 def _pyproject(path: Path) -> Dict[str, Any]:
@@ -211,6 +215,37 @@ def test_hub_owns_only_the_hub_root() -> None:
     assert "spikeforge" in find["exclude"]
     assert "server*" in find["exclude"]
     assert "spikeforge_targets*" in find["exclude"]
+
+
+def test_clients_distribution_owns_the_client_surface() -> None:
+    """The clients distribution declares its script and no core runtime."""
+    project = _pyproject(_CLIENTS)["project"]
+    assert set(project["scripts"]) == _EXPECTED_CLIENTS_SCRIPTS
+    # A client install must never pull the torch-backed core.
+    assert project["dependencies"] == []
+    assert "spikeforge~=0.3.0" not in set(project["dependencies"])
+
+
+def test_clients_console_script_resolves_to_the_new_root() -> None:
+    """The client CLI resolves inside the ``spikeforge_clients`` root."""
+    scripts = _pyproject(_CLIENTS)["project"]["scripts"]
+    assert scripts["spikeforge-clients"] == "spikeforge_clients.cli:main"
+
+
+def test_clients_owns_only_the_clients_root() -> None:
+    """Clients discovery is independent of every other distribution."""
+    find = _pyproject(_CLIENTS)["tool"]["setuptools"]["packages"]["find"]
+    assert find["include"] == ["spikeforge_clients*"]
+    for other in (
+        "spikeforge",
+        "spikeforge.*",
+        "server*",
+        "tests*",
+        "spikeforge_targets*",
+        "spikeforge_hub*",
+        "spikeforge_serve*",
+    ):
+        assert other in find["exclude"]
 
 
 def _compose() -> Dict[str, Any]:
