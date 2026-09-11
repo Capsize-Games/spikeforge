@@ -138,6 +138,34 @@ describe the local source tree.
   rather than shipped. The Hugging Face ingestion path and the `hub` extra are
   unchanged.
 
+### Phase 4 status
+
+- **`snn-hub` extraction shipped.** ARCH-0001 Phase 4 moved the model hub to the
+  `snn_hub` import root and the `packages/snn-hub` distribution, and published
+  the private satellite repository
+  [`w4ffl35/snn-hub`](https://github.com/w4ffl35/snn-hub) (see Added/Changed
+  above). The hub extraction was executed per the Phase 4 directive; the T3
+  catalog-stability clause still reads *unavailable* because no release baseline
+  exists yet (`scripts/topology_metrics.py`).
+- **`snn-server` extraction: no-go — `w4ffl35/snn-server` was not created.** Per
+  [`plans/arch-0001-decision-metrics.md`](plans/arch-0001-decision-metrics.md)
+  the server is extracted only when trigger **T4** fires, which requires *all*
+  of: (a) server-only release demand ≥ 3 in the trailing 90 days, (b) ≥ 2 core
+  pin conflicts in the window, and (c) isolated `server/` change sets ≥ 20% of
+  core commits over a quarter. On 2026-09-11 only clause (b) held;
+  `scripts/topology_metrics.py` reported verbatim:
+
+  ```text
+  T4 snn-server (Phase 4 conditional): not fired
+      [         no] server-only release demand >= 3
+      [        yes] core pin conflicts >= 2 in window
+      [         no] isolated server change sets >= 20% of core commits
+  ```
+
+  With T4 not fired, the no-go stands and the server stays in the monorepo as
+  the `snn-interpreter-server` distribution. The trigger is re-measured each
+  release cycle.
+
 ## [0.2.0] - 2026-09-10
 
 The professionalization program (workstreams WS-A…WS-F) plus the first
@@ -148,7 +176,7 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
 ### Added
 
 - **Model hub (WS-A).** A bundled, offline-first curated catalog
-  (`snn_hub/models.json`, 10 verified entries across five
+  (`snn_interpreter/hub/models.json`, 10 verified entries across five
   frameworks),
   optional live Hugging Face access behind the `hub` extra, an isolated
   download worker with progress/cancel and checksum verification, and an
