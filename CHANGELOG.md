@@ -25,6 +25,17 @@ describe the local source tree.
   as a passthrough at inference). Reaches training the same way
   every other `conv_net` param does, via `topology_params`.
 
+### Fixed
+
+- **`sequence_mlp` CUDA warmup crashed with a shape mismatch.**
+  `TopologyMixin._input_features()` only ever checked `input_size`
+  (the image-shaped presets' param name); `sequence_mlp` has no
+  `input_size` at all and names the same concept `features`, so it
+  silently fell through to the historical `28 * 28` MNIST-shaped
+  default. Invisible on CPU (`device.warmup()` no-ops there), but a
+  real CUDA run's warmup pass forwarded a wrongly-shaped dummy tensor
+  and crashed. Now checks `features` before that fallback.
+
 ## [spikeforge-targets-v0.1.1] - 2026-09-11
 
 A `spikeforge-targets`-only follow-up release. Core stays `0.3.0` and every

@@ -52,12 +52,22 @@ class TopologyMixin:
         return self._to_input_shape(frames)
 
     def _input_features(self) -> int:
-        """Return the flat feature count the input stage consumes."""
+        """Return the flat feature count the input stage consumes.
+
+        ``input_size`` names this for the image-shaped presets
+        (``fc_legacy``, ``fc_small``, ``conv_net``, ``recurrent_net``);
+        ``sequence_mlp`` has no ``input_size`` param at all and names
+        the same thing ``features`` instead, so that is checked before
+        falling back to the historical MNIST-shaped default.
+        """
         value = self._architecture.get("input_size")
         shape = input_shape.spatial_shape(self._spec, value)
         if shape is not None:
             return shape[0] * shape[1]
-        return int(value) if value is not None else 28 * 28
+        if value is not None:
+            return int(value)
+        features = self._architecture.get("features")
+        return int(features) if features is not None else 28 * 28
 
     @property
     def topology(self) -> str:
