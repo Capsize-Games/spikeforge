@@ -10,6 +10,15 @@ describe the local source tree.
 
 ## [Unreleased]
 
+### Added
+
+- **`weight_decay` on `TrainingEngine`.** A new constructor parameter
+  (default `0.0`, matching prior behaviour) is forwarded straight into
+  the Adam optimizer and recorded in checkpoint metadata and the
+  reproducibility manifest's hyperparameter block, alongside `lr`.
+  Every subclass (`EventTrainingEngine` included) already forwards
+  unrecognised keyword arguments, so no subclass changes were needed.
+
 ## [spikeforge-targets-v0.1.1] - 2026-09-11
 
 A `spikeforge-targets`-only follow-up release. Core stays `0.3.0` and every
