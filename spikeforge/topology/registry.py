@@ -53,6 +53,7 @@ _CONV_DEFAULTS: Dict[str, Any] = {
     "input_size": 28,
     "neuron": _DEFAULT_NEURON,
     "surrogate": _DEFAULT_SURROGATE,
+    "dropout": 0.0,
     **_OVERRIDE_KEYS,
 }
 _RECURRENT_DEFAULTS: Dict[str, Any] = {
