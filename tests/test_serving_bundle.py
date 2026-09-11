@@ -20,8 +20,8 @@ from spikeforge.serving.errors import (
     BundleIntegrityError,
     BundleNotFoundError,
 )
-from spikeforge.training.training_engine import TrainingEngine
 from spikeforge.topology import registry
+from spikeforge.training.training_engine import TrainingEngine
 
 _NAME = "serving_ckpt"
 

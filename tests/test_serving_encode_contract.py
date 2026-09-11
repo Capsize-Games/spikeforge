@@ -24,8 +24,8 @@ from spikeforge.serving.encode_spec import (
 )
 from spikeforge.serving.errors import BundleCompatibilityError
 from spikeforge.serving.session import InferenceSession
-from spikeforge.training.training_engine import TrainingEngine
 from spikeforge.topology import registry
+from spikeforge.training.training_engine import TrainingEngine
 
 _NAME = "encode_contract_ckpt"
 _RECURRENT = {"hidden": 6, "beta": 0.9, "num_classes": 4}
@@ -169,7 +169,10 @@ def test_build_defaults_encode_from_checkpoint_meta() -> None:
 
 
 def test_build_prefers_an_explicit_encode_config() -> None:
-    """An explicit config overrides the checkpoint default and is normalised."""
+    """An explicit config overrides the checkpoint default.
+
+    The resulting encode config is normalised.
+    """
     TrainingEngine(
         dataset="mnist",
         num_steps=4,
