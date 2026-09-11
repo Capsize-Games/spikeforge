@@ -18,6 +18,13 @@ install, extras, CLI, and the honest limitations — start with the README.
 - [Ecosystem roadmap](plans/ecosystem_roadmap.md) — the earlier ecosystem
   plan this program builds on.
 
+## Architecture
+
+- [Repo topology and split](plans/repo_topology_plan.md) — the component
+  inventory, dependency layers, and the staged recommendation for whether (and
+  when) to split the client, server, and interpreter/deploy layers into
+  separate repositories.
+
 ## Focused workstream designs
 
 - [Interpreter spine](plans/interpreter_spine_plan.md) — the `TopologySpec`

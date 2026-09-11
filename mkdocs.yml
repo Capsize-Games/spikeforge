@@ -48,6 +48,8 @@ nav:
   - Roadmap:
       - Professionalization roadmap: professional_roadmap.md
       - Ecosystem roadmap: ecosystem_roadmap.md
+  - Architecture:
+      - Repo topology and split: repo_topology_plan.md
   - Workstreams:
       - Interpreter spine: interpreter_spine_plan.md
       - Model hub: model_hub_plan.md
