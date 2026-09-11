@@ -1,17 +1,20 @@
 # ARCH-0001 migration plan
 
-**Status: accepted (proposed for maintainer sign-off).**
+**Status: accepted — implemented.**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
 **Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
 
 ## Decision
 
-Execute the split in four ordered phases. **Phase 1 moves no code and is the
-only mandatory phase**; Phases 2–4 each fire only when their trigger
+The split was executed in four ordered phases. Phase 1 (multiple distributions in
+one repository) was mandatory and landed; Phases 2–4 fired only when their
+trigger
 ([`plans/arch-0001-decision-metrics.md`](plans/arch-0001-decision-metrics.md))
-is met. Every phase is **additive before subtractive** and **reversible**: the
-new repository is created and pushed from git history before anything is deleted
-here, and the pre-phase commit is the rollback point.
+was met. Phase 2 (dashboard), Phase 3 (`spikeforge-targets`), and Phase 4
+(`spikeforge-hub`) shipped; the Phase 4 `spikeforge-server` extraction did not
+fire (T4 no-go). Every phase was **additive before subtractive** and
+**reversible**: the new repository was created and pushed from git history before
+anything was deleted here, and the pre-phase commit is the rollback point.
 
 ## Phase 1 — monorepo, multiple distributions (no repo moves)
 
@@ -38,7 +41,7 @@ Goal: make the boundaries real without moving a file.
 **Rollback:** revert the Phase 1 PR. Core packaging returns to `setup.py`; the
 protocol work is additive and can remain.
 
-## Phase 2 — extract the dashboard (trigger T1)
+## Phase 2 — extracted the dashboard (trigger T1)
 
 1. On a throwaway clone, `git subtree split --prefix=client -b spikeforge-dashboard-split`
    and push to a new `capsize-games/spikeforge-dashboard`.
@@ -57,39 +60,42 @@ artifact rather than a live `client/` checkout.
 **Rollback:** restore `client/` from the mirror (or from the pre-phase tag); the
 server build reverts to in-repo `client/`.
 
-## Phase 3 — extract `spikeforge-targets` (trigger T2)
+## Phase 3 — extracted `spikeforge-targets` (trigger T2)
 
-1. On a throwaway clone, run the `git filter-repo` multi-prefix extraction from
+1. On a throwaway clone, ran the `git filter-repo` multi-prefix extraction from
    [`plans/arch-0001-packaging-versioning.md`](plans/arch-0001-packaging-versioning.md)
-   and push to a new `capsize-games/spikeforge-targets` with import root `spikeforge_targets`.
-2. Delete `spikeforge/{targets,energy,event_runtime}` from core; add the
-   `spikeforge-targets` pinned dev dependency and the lazy re-export shim.
-3. Move console-script ownership of `spikeforge-energy` and `spikeforge-targets` to the new
+   and pushed to `capsize-games/spikeforge-targets` with import root `spikeforge_targets`.
+2. Deleted the four legacy submodules (`targets`, `energy`, `event_runtime`,
+   plus `hub`) and `targets/backends` from the core package, and added the
+   `spikeforge-targets` pinned dev dependency. Because the project is pre-1.0 and
+   unpublished, **no re-export shim was added** (see "No back-compat aliases").
+3. Moved console-script ownership of `spikeforge-energy` and `spikeforge-targets` to the new
    distribution.
-4. Move the tests for the moved code into `spikeforge-targets`; the server updates its
-   imports from `spikeforge.energy` / `.event_runtime` / `.targets` to
-   `spikeforge_targets.*`.
+4. Moved the tests for the moved code into `spikeforge-targets`; the server's
+   imports now use `spikeforge_targets.*` (`spikeforge_targets.energy`,
+   `spikeforge_targets.event_runtime`).
 
 **Test relocation rule:** tests move with their subject. Tests that reference
-`targets`, `energy`, or `event_runtime` relocate to `capsize-games/spikeforge-targets`. Tests
+`targets`, `energy`, or `event_runtime` relocated to `capsize-games/spikeforge-targets`. Tests
 that exercise the *seam* (the server driving a target through the protocol) stay
 in the cross-package integration suite described below.
 
-**Rollback:** restore the four prefixes from the pre-phase tag; drop the pin and
-shim.
+**Rollback:** restore the four prefixes from the pre-phase tag and drop the pin.
 
-## Phase 4 — extract `spikeforge-hub` (go) and `spikeforge-server` (conditional)
+## Phase 4 — extracted `spikeforge-hub` (go) and `spikeforge-server` (no-go)
 
-- **`spikeforge-hub` (go, trigger T3).** Single-directory `git subtree split` of
-  `spikeforge/hub` to `capsize-games/spikeforge-hub` with import root `spikeforge_hub`; move the
-  `spikeforge-hub` console script and hub tests; keep `spikeforge.hub` as a lazy
-  shim.
-- **`spikeforge-server` (conditional, trigger T4).** Only when the server must release
-  on its own cadence: `git subtree split --prefix=server` to
-  `capsize-games/spikeforge-server`. The server keeps import root `server`
-  ([`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)).
-  Its 17 server-touching test files and the `server/schemas/*` modules move with
-  it.
+- **`spikeforge-hub` (go, trigger T3; extracted).** Single-directory
+  `git subtree split` of `spikeforge_hub` to `capsize-games/spikeforge-hub` with
+  import root `spikeforge_hub`; moved the `spikeforge-hub` console script and hub
+  tests. No re-export shim was retained.
+- **`spikeforge-server` (conditional, trigger T4; no-go).** T4 did not fire, so
+  no `capsize-games/spikeforge-server` repository was created. The split would
+  run only when the server must release on its own cadence —
+  `git subtree split --prefix=server` to `capsize-games/spikeforge-server`. The
+  server keeps import root `server`
+  ([`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)),
+  and its 17 server-touching test files and the `server/schemas/*` modules would
+  move with it.
 
 **Protocol ownership after Phase 4 (if it fires):** `protocol/` remains in
 `capsize-games/spikeforge` as the contract authority. The server and dashboard
@@ -118,22 +124,26 @@ repositories carry only a minimal `README.md` and link back to the core docs
 site for shared design. If extraction reaches Phase 4 and the site must build
 per repo, the core site remains the hub page; no `plans/` content is duplicated.
 
-## Deprecation and shim policy for moved import paths
+## No back-compat aliases
 
-| Old path | New path | Phase | Shim lifetime |
-|---|---|---|---|
-| `spikeforge.targets.*` | `spikeforge_targets.*` | 3 | 1 minor release after extraction |
-| `spikeforge.targets.backends.*` | `spikeforge_targets.backends.*` | 3 | 1 minor release |
-| `spikeforge.energy.*` | `spikeforge_targets.energy.*` | 3 | 1 minor release |
-| `spikeforge.event_runtime.*` | `spikeforge_targets.event_runtime.*` | 3 | 1 minor release |
-| `spikeforge.hub.*` | `spikeforge_hub.*` | 4 | 1 minor release |
+The extraction shipped **without** legacy import-path aliases. Because the
+project is pre-1.0, unpublished, and has no external importers to protect, the
+old `spikeforge.{targets,energy,event_runtime,hub}` module paths were deleted
+outright rather than kept alive as a deprecated re-export shim:
 
-Shims emit `DeprecationWarning` naming the new path, import the satellite
-lazily, and raise a clear `ImportError` when it is not installed. Shims are
-removed at the next MAJOR bump (or at 1.0), whichever comes first. Legacy
-WebSocket payload keys, `main.py`, `main_encodings.py`, and the legacy checkpoint
-keys `_fc1/_lif1/_fc2/_lif2` are **not** affected and remain stable throughout —
-this migration is about packaging topology, not the public runtime surface.
+| Removed core submodule | Replacement root |
+|---|---|
+| `targets` | `spikeforge_targets` |
+| `targets.backends` | `spikeforge_targets.backends` |
+| `energy` | `spikeforge_targets.energy` |
+| `event_runtime` | `spikeforge_targets.event_runtime` |
+| `hub` | `spikeforge_hub` |
+
+There is no `DeprecationWarning` window, no "1 minor release" shim lifetime, and
+no alias to retire later. Legacy WebSocket payload keys, `main.py`,
+`main_encodings.py`, and the legacy checkpoint keys `_fc1/_lif1/_fc2/_lif2` are
+**not** affected and remain stable throughout — this migration is about
+packaging topology, not the public runtime surface.
 
 ## Reversibility summary
 

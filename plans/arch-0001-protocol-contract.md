@@ -1,6 +1,6 @@
 # ARCH-0001 protocol contract
 
-**Status: accepted (proposed for maintainer sign-off).**
+**Status: accepted — implemented.**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
 **Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)
 
@@ -162,7 +162,7 @@ Corrections).
 - **MAJOR bump (breaking).** Removing or renaming a `type`, removing or
   retyping an existing field, or changing required-ness is a MAJOR bump
   (`1.x` → `2.0`). MAJOR bumps require a coordinated release of the server and
-  the dashboard and a shim window (below).
+  the dashboard and the negotiated-version window (below).
 
 ### Negotiation and the missing-field transition
 
@@ -170,11 +170,11 @@ Corrections).
   component of an inbound `protocol_version` with its own. Matching MAJOR is
   accepted; a mismatching MAJOR is rejected with a `type: "error"` message
   carrying `payload.code = "protocol_version_mismatch"`.
-- **Transition window (Phase 1 only):** an inbound message *lacking*
-  `protocol_version` is treated as legacy `"0.x"`, accepted with a one-line
-  deprecation log, and answered with a `config_ack` that states
-  `protocol_version: "1.0"`. From Phase 2 onward, a missing `protocol_version`
-  is a `protocol_version_mismatch` error.
+- **Transition window (Phase 1 only; now closed):** during Phase 1 an inbound
+  message *lacking* `protocol_version` was treated as legacy `"0.x"`, accepted
+  with a one-line deprecation log, and answered with a `config_ack` stating
+  `protocol_version: "1.0"`. That window is closed: a missing
+  `protocol_version` is now a `protocol_version_mismatch` error.
 - The server always stamps its own `protocol_version` on every outbound
   message, so an old client can detect a newer server.
 

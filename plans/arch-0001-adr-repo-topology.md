@@ -1,30 +1,34 @@
 # ARCH-0001 ADR: repository topology
 
-**Status: accepted (proposed for maintainer sign-off).**
+**Status: accepted — implemented.**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
 **Owner:** Capsize Games (maintainer) · **Extends:** [`plans/repo_topology_plan.md`](plans/repo_topology_plan.md)
 
 ## Context
 
-The repository is one Python distribution (`spikeforge` version `0.2.0`,
-declared only in [`setup.py`](setup.py:22)), one FastAPI + WebSocket adapter
-(`server/`), and one React dashboard (`client/`, npm package
-`spikeforge-dashboard`). The source analysis in
+The repository is the `spikeforge` core distribution (`spikeforge` version
+`0.3.0`, defined by the PEP 621 files under `packages/`), one FastAPI +
+WebSocket adapter (`server/`, the `spikeforge-server` distribution), and a
+React dashboard (`client/`, npm package `spikeforge-dashboard`, now extracted to
+its own repository). The source analysis in
 [`plans/repo_topology_plan.md`](plans/repo_topology_plan.md) establishes that the
 component seams are real but that the right first move is *multiple
 distributions in one repository*, not multiple repositories. This ADR records
-the accepted topology and the conditions under which that decision is revisited.
+the accepted topology — since implemented — and the conditions under which that
+decision is revisited.
 
-Two facts about the current tree sharpen the decision:
+The decision was sharpened by two facts about the pre-split tree, both now
+resolved by the implemented split:
 
-- `find_packages(exclude=("tests", "tests.*"))` today also packages `server/`,
-  so the library and the server are **not** separate distributions despite the
-  plan's component table calling the server a "separate dist today"
-  (see Corrections below).
-- Every optional SDK is already confined to a lazy, degrading shim
-  (`nir_bridge/api.py`, `onnx_bridge/api.py`, `targets/backends/api.py`,
-  `events/tonic_api.py`, `hub/probe.py`, `targets/probe.py`, `tracking/*_sink.py`),
-  so a headless core install is a packaging change, not a rewrite.
+- `find_packages(exclude=("tests", "tests.*"))` also packaged `server/` into
+  core, so the library and the server were **not** separate distributions. The
+  `packages/` workspace now defines a separate `spikeforge-server` distribution
+  and core no longer ships `server/`.
+- Every optional SDK was already confined to a lazy, degrading module
+  (`nir_bridge/api.py`, `onnx_bridge/api.py`,
+  `spikeforge_targets/backends/api.py`, `events/tonic_api.py`,
+  `spikeforge_hub/probe.py`, `spikeforge_targets/probe.py`, `tracking/*_sink.py`),
+  so a headless core install was a packaging change, not a rewrite.
 
 ## Decision
 
@@ -54,7 +58,7 @@ fires.
 | CI/release overhead | about 1x | about 3x | about 4x | about 5x |
 | Atomic cross-cutting changes | Easy | Hard | Hard | Very hard |
 | Protocol ownership | One repo | One repo | One repo | Split risk |
-| Fits a 0.2.0 beta with a small team | Best | Later | Later | Much later |
+| Fits a 0.3.0 beta with a small team | Best | Later | Later | Much later |
 
 The decisive asymmetry is that Option 0 already delivers the user-visible win
 ("install the interpreter layer without the server or the dashboard") at close
@@ -97,12 +101,14 @@ repository as a separate distribution. No repository is created speculatively.
   ([`plans/arch-0001-protocol-contract.md`](plans/arch-0001-protocol-contract.md));
   and packaging, versioning and release are defined once up front
   ([`plans/arch-0001-packaging-versioning.md`](plans/arch-0001-packaging-versioning.md)).
-- **Negative.** Release cadence stays coupled until a trigger fires, and the
-  monorepo must carry deliberate compat shims for moved import paths
+- **Negative.** Release cadence stays coupled until a trigger fires. The
+  extraction shipped **without back-compat aliases**: because the project is
+  pre-1.0 and was never published, the legacy `spikeforge.{targets,energy,
+  event_runtime,hub}` import paths were deleted rather than kept as shims
   ([`plans/arch-0001-migration-plan.md`](plans/arch-0001-migration-plan.md)).
-- **Neutral.** The `spikeforge` import root is not renamed by this ADR; the
-  project rename noted in `plans/repo_topology_plan.md` §4 stays out of scope
-  for ARCH-0001.
+- **Landed rename.** The project was renamed to `spikeforge` and moved under the
+  [`capsize-games`](https://github.com/capsize-games) organization, so the core
+  distribution, its import root, and its repository all read `spikeforge`.
 
 ## Corrections to the source plan
 

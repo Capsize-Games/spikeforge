@@ -1,6 +1,6 @@
 # ARCH-0001 decision metrics
 
-**Status: accepted (proposed for maintainer sign-off).**
+**Status: accepted — implemented.**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
 **Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
 
@@ -22,8 +22,8 @@ release cycle. Definitions:
 - **Unplanned core release** = a `spikeforge` tag whose changelog names only
   a backend-SDK or other satellite-owned cause.
 - **Isolated change set** = a merged PR whose changed paths fall entirely inside
-  one component's prefix (`client/`, or `spikeforge/{targets,energy,event_runtime}/`,
-  or `spikeforge/hub/`, or `server/`).
+  one component's prefix (`client/`, or `spikeforge_targets/` (including
+  `energy/` and `event_runtime/`), or `spikeforge_hub/`, or `server/`).
 - **Rolling window** = the trailing 90 days.
 - **CI wall-clock share** = component build/step time divided by total pipeline
   time, from the workflow run timing API.
@@ -70,10 +70,11 @@ CI run. A non-zero value blocks the release.
 
 ## Baseline note
 
-At the time of writing there is no baseline for the `topology_metrics.py`
-inputs, because measurement begins in Phase 1. The first computed table is
-recorded in the review that follows the Phase 1 release, and every threshold
-above is then re-checked against it before any later phase is considered.
+`scripts/topology_metrics.py` is implemented and run each review cycle. T1
+(dashboard), T2 (`spikeforge-targets`), and T3 (`spikeforge-hub`) fired and
+their extractions shipped; T4 (`spikeforge-server`) did not fire, so the server
+extraction remains on the shelf and the trigger is re-measured every release
+cycle.
 
 ## Related decisions
 

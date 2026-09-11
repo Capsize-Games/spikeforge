@@ -11,8 +11,10 @@ The short answer: the seams are already good enough to split cleanly, but the
 right first step is *multiple distributions in one repo*, not multiple repos.
 Go multi-repo only where release cadence actually diverges. Details below.
 
-> Status — **proposed.** No code has moved. This is a decision document, and
-> the recommendation is deliberately staged.
+> Status — **implemented.** The staged recommendation below was executed: the
+> core boundary, the versioned protocol, and the `spikeforge-targets`,
+> `spikeforge-hub`, and dashboard extractions all shipped. The document is kept
+> as the original decision analysis.
 
 ## 1. Component inventory
 
@@ -39,7 +41,7 @@ You named four; here is what each maps to in the tree.
 - **Inference code** — `spikeforge/simulator/` (one temporal loop,
   runners, compiled step), `spikeforge/network/` (inference, model
   store/search/diff), and `spikeforge/runtime/` (device, execution mode).
-- **Model hub downloader** — `spikeforge/hub/` (catalog, Hugging Face API,
+- **Model hub downloader** — `spikeforge_hub/` (catalog, Hugging Face API,
   cache, download progress, compatibility, inspect, import).
 
 ### 1.2 What else is in here
@@ -59,11 +61,11 @@ ones that most affect a split.
 | Config | `spikeforge/config.py` | `SPIKEFORGE_*` env-driven paths (data, models, hub, metrics, tracking) | stdlib | core |
 | NIR interpreter | `spikeforge/nir_bridge/` | `TopologySpec` ⇄ `nir.NIRGraph`, independent interpreter, drift, validation | nir, nirtorch, torch (lazy) | `nir` extra |
 | ONNX bridge | `spikeforge/onnx_bridge/` | ONNX export/import/roundtrip, step module, metadata | onnx (lazy) | `onnx` extra |
-| Deploy targets | `spikeforge/targets/` | Capability matrix, rewrite/substitute/quantize, reports, node views | nir, torch | core + `nir` |
-| Deploy backends | `spikeforge/targets/backends/` | Reference, Norse, Lava backends; lowering, compare | norse, lava-nc (lazy) | `norse` / `lava` extras |
-| Energy accounting | `spikeforge/energy/` | SOP/MAC/AC estimates, cost tables (JSON per platform), probe, report | torch, stdlib | core |
-| Event runtime | `spikeforge/event_runtime/` | Sparse execution, dense compare, spike views, counters | torch | core (events) |
-| Model hub | `spikeforge/hub/` | Catalog, HF API, cache, downloads, compat/probe, import, verify | huggingface_hub (lazy), nir | `hub` extra |
+| Deploy targets | `spikeforge_targets/` | Capability matrix, rewrite/substitute/quantize, reports, node views | nir, torch | core + `nir` |
+| Deploy backends | `spikeforge_targets/backends/` | Reference, Norse, Lava backends; lowering, compare | norse, lava-nc (lazy) | `norse` / `lava` extras |
+| Energy accounting | `spikeforge_targets/energy/` | SOP/MAC/AC estimates, cost tables (JSON per platform), probe, report | torch, stdlib | core |
+| Event runtime | `spikeforge_targets/event_runtime/` | Sparse execution, dense compare, spike views, counters | torch | core (events) |
+| Model hub | `spikeforge_hub/` | Catalog, HF API, cache, downloads, compat/probe, import, verify | huggingface_hub (lazy), nir | `hub` extra |
 | Introspection | `spikeforge/introspection/` | Firing rate, ISI, sparsity, histograms, surrogate, encoding decode | torch, snntorch | core |
 | Observability | `spikeforge/observability/` | Structured logging, metrics registry, persistence, snapshots | stdlib | core |
 | Tracking | `spikeforge/tracking/` | Checkpoint manifest, determinism, seeds, sinks | tensorboard/wandb (lazy) | `tracking` extras |
@@ -71,7 +73,7 @@ ones that most affect a split.
 | Benchmark | `spikeforge/benchmark/` | Suite, harness, config, energy, CLI | torch | core |
 | CLI | `spikeforge/cli/` + per-package `cli.py` | `spikeforge-verify`, `spikeforge-records`, `spikeforge-targets`, `spikeforge-hub`, `spikeforge-energy`, `spikeforge-benchmark` | — | core |
 | Entry scripts | `main.py`, `main_encodings.py` | Tutorial rate pipeline and extra encodings | matplotlib, snntorch | core |
-| Server | `server/` | FastAPI app, WS protocol, sessions, handlers, schemas, static mount | fastapi, pydantic, uvicorn | `web` extra (separate dist today) |
+| Server | `server/` | FastAPI app, WS protocol, sessions, handlers, schemas, static mount | fastapi, pydantic, uvicorn | `spikeforge-server` distribution |
 | Client | `client/` | React dashboard, hand-written protocol types, tours | react, vite (npm) | separate npm package |
 | Tooling | `scripts/`, `.github/workflows/`, `Dockerfile`, `docker-compose.yml` | Dev runner, docs build, CI (lint/test/extras/blocked-deps/docs/client), images | — | repo-level |
 | Docs | `plans/`, `README.md`, `COOKBOOK.md`, `mkdocs.yml` | Authoritative design docs, generated site | mkdocs-material | `docs` extra |
@@ -108,13 +110,13 @@ flowchart TB
     end
 
     subgraph DEPLOY["Deployment (optional extras)"]
-        targets["targets/ + targets/backends/"]
-        energy["energy/"]
-        events["event_runtime/"]
+        targets["spikeforge_targets/ + backends/"]
+        energy["spikeforge_targets/energy/"]
+        events["spikeforge_targets/event_runtime/"]
     end
 
-    hub["hub/ — model hub (hub extra)"]
-    server["server/ — FastAPI + WS (web extra)"]
+    hub["spikeforge_hub/ — model hub (spikeforge-hub)"]
+    server["server/ — FastAPI + WS (spikeforge-server)"]
     client["client/ — React dashboard (npm)"]
 
     torch --> CORE
@@ -157,10 +159,10 @@ The codebase is closer to splittable than its single distribution suggests:
 - **Optional imports are lazy** behind `api.py` shims:
   [`nir_bridge/api.py`](../spikeforge/nir_bridge/api.py),
   [`onnx_bridge/api.py`](../spikeforge/onnx_bridge/api.py),
-  [`targets/backends/api.py`](../spikeforge/targets/backends/api.py),
+  [`targets/backends/api.py`](../spikeforge_targets/backends/api.py),
   [`events/tonic_api.py`](../spikeforge/events/tonic_api.py),
-  [`hub/probe.py`](../spikeforge/hub/probe.py),
-  [`targets/probe.py`](../spikeforge/targets/probe.py).
+  [`hub/probe.py`](../spikeforge_hub/probe.py),
+  [`targets/probe.py`](../spikeforge_targets/probe.py).
 - **The client is already isolated** — its own npm package and build; it talks
   to the server over one WebSocket protocol on a single port (Vite proxies
   `/ws` and `/health` to `:8877`).
@@ -205,7 +207,7 @@ reversible.
 
 ### Option 1 — Three repos: core | targets | dashboard
 
-- `snn-core` — Layers 0–2 + hub as an extra.
+- `spikeforge` — Layers 0–2 + hub as an extra.
 - `spikeforge-targets` — Layer 3 (targets/backends, energy, event runtime); carries
   the `norse`/`lava` extras and their fast-moving SDK churn.
 - `spikeforge-dashboard` — `server/` + `client/` together (protocol stays internal to
@@ -239,17 +241,17 @@ already-isolated client mean the seams are real.
 
 **Should we split now? No — do Option 0 first, then split by cadence.** Concretely:
 
-### Phase 1 — now (monorepo, multiple distributions)
+### Phase 1 — done (monorepo, multiple distributions)
 
-1. Publish/define `spikeforge` core that excludes `server/`, `hub/`,
-   `targets/`, `onnx_bridge/`, `tracking/` sinks — the "interpreter layer" that
-   installs and runs headless.
-2. Make `server/` a separate distribution (`spikeforge-server`) with the
-   `web` extra as its base deps.
-3. Introduce a **versioned protocol contract** (`protocol_version` in every WS
-   message; JSON Schema source of truth) and generate/validate the TS types so
+1. Published/defined `spikeforge` core that excludes `server/`,
+   `spikeforge_hub/`, `spikeforge_targets/`, `onnx_bridge/`, and `tracking/`
+   sinks — the "interpreter layer" that installs and runs headless.
+2. Made `server/` a separate distribution (`spikeforge-server`) with the
+   FastAPI stack as its base deps.
+3. Introduced a **versioned protocol contract** (`protocol_version` in every WS
+   message; JSON Schema source of truth) and generated/validated the TS types so
    `client/` stops hand-mirroring.
-4. Keep the client in-repo for now; CI already builds it.
+4. The client stayed in-repo through Phase 1, then was extracted in Phase 2.
 
 ### Phase 2 — extract `client/` (dashboard repo)
 
@@ -258,30 +260,31 @@ independently. The server serves a pinned prebuilt bundle (or the client is
 served statically). This is the safest standalone extraction because the npm
 package is already isolated.
 
-### Phase 3 — extract `spikeforge-targets` (interpreter/deploy library)
+### Phase 3 — extracted `spikeforge-targets` (interpreter/deploy library)
 
-Move `targets/`, `targets/backends/`, `energy/`, and `event_runtime/` into a
-`spikeforge-targets` repo that depends on `snn-core`. Justify it with the volatile
-backend SDKs (`norse`, `lava-nc`) and their own release cadence.
+Moved `spikeforge_targets/` (including `backends/`), `spikeforge_targets/energy/`,
+and `spikeforge_targets/event_runtime/` into the `capsize-games/spikeforge-targets` repo
+that depends on core (`spikeforge`). Justified by the volatile backend SDKs
+(`norse`, `lava-nc`) and their own release cadence.
 
-### Phase 4 — optional
+### Phase 4 — hub extracted; server on the shelf
 
-Extract `spikeforge-hub` (network I/O + curation) and, only if it must release
-separately, `spikeforge-server`. Do not split the hub out before it has a stable
-catalog format.
+Extracted `spikeforge-hub` (network I/O + curation) to
+`capsize-games/spikeforge-hub`. The `spikeforge-server` split stays on the shelf
+because trigger T4 did not fire, so no `capsize-games/spikeforge-server` repository
+exists; the server ships as a distribution in the core repo.
 
 ### Naming/namespace note
 
-If repos split, each distribution should own its **own top-level import root**
-(e.g., `spikeforge` core, `spikeforge_targets`, `spikeforge_hub`, `spikeforge_server`). Do not
-ship two distributions into the same `spikeforge.*` namespace unless using
-a deliberate PEP 420 namespace package. Also decide the project's punchy name
-**before** creating repos, so the import roots and distribution names are
-chosen once.
+Each distribution owns its **own top-level import root**: `spikeforge` (core),
+`spikeforge_targets`, `spikeforge_hub`, and `server` (the `spikeforge-server`
+import root). No two distributions ship into the same `spikeforge.*` namespace.
+The project name was fixed as `spikeforge` under the `capsize-games` organization,
+so the repo, distribution, and import-root names were chosen once.
 
 ## 5. Costs and risks of splitting
 
-- **Version drift.** `snn-core`, `spikeforge-targets`, and the dashboard must pin
+- **Version drift.** `spikeforge`, `spikeforge-targets`, and the dashboard must pin
   compatible versions; a protocol change can break client/server across repos.
 - **CI and release overhead.** Today's five jobs become per-repo pipelines;
   cross-repo changes need coordinated PRs and tags.

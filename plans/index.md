@@ -27,9 +27,11 @@ install, extras, CLI, and the honest limitations — start with the README.
 
 ### ARCH-0001 — phased repo split
 
-The accepted architecture for one repository with multiple distributions. These
-documents are the design of record for the split; the implementation phase
-follows them.
+The architecture for one repository with multiple distributions, now
+implemented. These documents are the design of record for the split; the
+`spikeforge` rename, the `capsize-games` organization move, and the
+`spikeforge-targets`, `spikeforge-hub`, and dashboard extractions have shipped.
+The `spikeforge-server` extraction did not fire (T4 no-go).
 
 - [ADR: repository topology](plans/arch-0001-adr-repo-topology.md) — the
   accepted Option 0 decision, the comparison against Options 1–3, and the named
@@ -45,7 +47,7 @@ follows them.
   extras-to-package mapping, console-script ownership, pinning, and release
   automation.
 - [Migration plan](plans/arch-0001-migration-plan.md) — the reversible Phases
-  1–4, test/fixture relocation, and the deprecation/shim policy.
+  1–4, test/fixture relocation, and the no-back-compat-alias policy.
 - [Risk register](plans/arch-0001-risk-register.md) — every split cost with a
   mitigation and an owner.
 - [Decision metrics](plans/arch-0001-decision-metrics.md) — the numeric

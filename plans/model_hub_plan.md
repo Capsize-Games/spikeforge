@@ -20,7 +20,7 @@ rejected; it is never silently loaded wrong.
 
 **Bundled curated catalog first, optional live Hugging Face Hub second.**
 
-- A local JSON catalog (`spikeforge/hub/models.json`) enumerates known
+- A local JSON catalog (`spikeforge_hub/models.json`) enumerates known
   models across snnTorch, NIR, SpikingJelly, Norse, and Lava. It renders fully
   offline and ships only **verified** entries; the Hugging Face ingestion path
   (`hub/hf_api.py`, `hub/download_cli.py`, and the `hub` extra) downloads any
@@ -29,7 +29,7 @@ rejected; it is never silently loaded wrong.
   (`huggingface_hub`), isolated in one module so its absence is reported, not
   raised. This mirrors the `tonic`/`events` precedent
   ([`datasets.py`](spikeforge/data/datasets.py:51)) and the isolated SDK
-  probe precedent ([`probe.py`](spikeforge/targets/probe.py:14)).
+  probe precedent ([`probe.py`](spikeforge_targets/probe.py:14)).
 
 Why not live-search-only: network dependence, no offline story, and no way to
 keep the honesty rule (an uncurated hit is not a verified, runnable SNN). Why
@@ -79,10 +79,10 @@ compatibility is verified (Phase A3).
 
 ## 3. Module layout
 
-New package `spikeforge/hub/` (one class per file, files under 250 lines):
+New package `spikeforge_hub/` (one class per file, files under 250 lines):
 
 ```
-spikeforge/hub/
+spikeforge_hub/
   __init__.py          public API: catalog, search, download, inspect, import_model
   entry.py             HubEntry dataclass: id, name, framework, kind, source...
   catalog.py           load/validate models.json; list + filter
@@ -132,7 +132,7 @@ New client files: `client/src/hubTypes.ts`,
 ## 4. The catalog schema
 
 `hub/models.json` is a versioned list of entries. Each entry is validated into
-a `HubEntry` ([`hub/entry.py`](spikeforge/hub/entry.py)). Required fields:
+a `HubEntry` ([`hub/entry.py`](spikeforge_hub/entry.py)). Required fields:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -153,7 +153,7 @@ a `HubEntry` ([`hub/entry.py`](spikeforge/hub/entry.py)). Required fields:
 The catalog loader validates every entry and **reports** unknown frameworks
 rather than dropping them (honesty rule). `catalog.list()` returns JSON-able
 dicts with an additive `available` flag computed from
-[`hub/probe.py`](spikeforge/hub/probe.py), exactly as
+[`hub/probe.py`](spikeforge_hub/probe.py), exactly as
 [`datasets.catalog()`](spikeforge/data/datasets.py:143) does.
 
 Proposed seed entries (≥12 across ≥5 frameworks): the four shipped presets as
@@ -169,11 +169,11 @@ Reuse the **isolated child-process worker** pattern verbatim
 [`downloads.py`](server/downloads.py:87)) so a download never blocks the
 FastAPI event loop and can be terminated to cancel in flight.
 
-- [`hub/download_cli.py`](spikeforge/hub/download_cli.py) downloads one
+- [`hub/download_cli.py`](spikeforge_hub/download_cli.py) downloads one
   entry (or HF repo) into the cache, then verifies checksum and size via
-  [`hub/verify.py`](spikeforge/hub/verify.py). Non-zero exit on
+  [`hub/verify.py`](spikeforge_hub/verify.py). Non-zero exit on
   verification failure.
-- [`hub/downloads.py`](spikeforge/hub/downloads.py) mirrors
+- [`hub/downloads.py`](spikeforge_hub/downloads.py) mirrors
   `DownloadManager`: `ensure`, `_poll`, `_finish`, `snapshot`, `cancel`, with a
   `hub_download_state` payload carrying `{id, status, bytes, total_bytes,
   verified}`. Terminal states stay `{idle, downloading, done, cancelled,
@@ -191,21 +191,21 @@ FastAPI event loop and can be terminated to cancel in flight.
 Import is a three-gate funnel; a model must pass each gate or be explicitly
 rejected with a typed reason.
 
-1. **Inspect** ([`hub/inspect.py`](spikeforge/hub/inspect.py)): detect the
+1. **Inspect** ([`hub/inspect.py`](spikeforge_hub/inspect.py)): detect the
    artifact kind (`nir_graph`, `state_dict`, `framework_weights`) and describe
    its structure without committing. NIR artifacts are summarized with
    [`graph_summary`](spikeforge/nir_bridge/exporter.py:86); state dicts are
    described by key/shape. Unknown or unreadable artifacts are rejected with
    `HubArtifactError`.
-2. **Compat** ([`hub/compat.py`](spikeforge/hub/compat.py)): compare the
+2. **Compat** ([`hub/compat.py`](spikeforge_hub/compat.py)): compare the
    inspected structure against the shipped presets in
    [`topology/registry.py`](spikeforge/topology/registry.py:78). Produce a
    `CompatibilityVerdict`: `exact`, `mappable` (with the stage mapping), or
    `incompatible` (with the specific mismatches named).
-3. **Promote** ([`hub/import_model.py`](spikeforge/hub/import_model.py)):
+3. **Promote** ([`hub/import_model.py`](spikeforge_hub/import_model.py)):
    only on `exact`/`mappable`, build the preset via
    [`build_topology`](spikeforge/topology/registry.py:129), load weights via
-   [`hub/weight_map.py`](spikeforge/hub/weight_map.py), run a drift check
+   [`hub/weight_map.py`](spikeforge_hub/weight_map.py), run a drift check
    with [`validate`](spikeforge/nir_bridge/__init__.py:39), and only then
    save into `MODEL_DIR` with hub provenance recorded in `meta`.
 
@@ -242,7 +242,7 @@ incompatible, so the client can render *why*.
 
 ## 8. CLI surface (`spikeforge-hub`)
 
-[`hub/cli.py`](spikeforge/hub/cli.py), mirroring the argparse style of
+[`hub/cli.py`](spikeforge_hub/cli.py), mirroring the argparse style of
 [`target_cli.py`](spikeforge/cli/target_cli.py:166):
 
 ```
@@ -285,7 +285,7 @@ Types live in `client/src/hubTypes.ts` (no `any`, 80-column).
 - **Deliverables:** `hub/entry.py`, `hub/catalog.py`, `hub/models.json`,
   `hub/probe.py`, `hub/cache.py`, `hub/errors.py`, `hub/__init__.py`; `config.py`
   `HUB_CACHE_DIR`; `models.json` schema validation.
-- **Acceptance:** `python -m spikeforge.hub.cli list` prints ≥10 entries with
+- **Acceptance:** `python -m spikeforge_hub.cli list` prints ≥10 entries with
   `available` flags; a malformed entry is reported (not silently skipped); no
   `huggingface_hub` import occurs without the extra.
 

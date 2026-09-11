@@ -1,6 +1,6 @@
 # ARCH-0001 risk register
 
-**Status: accepted (proposed for maintainer sign-off).**
+**Status: accepted — implemented.**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
 **Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-migration-plan.md`](plans/arch-0001-migration-plan.md)
 

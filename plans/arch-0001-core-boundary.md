@@ -1,6 +1,6 @@
 # ARCH-0001 core boundary
 
-**Status: accepted (proposed for maintainer sign-off).**
+**Status: accepted — implemented.**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
 **Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)
 
@@ -44,21 +44,23 @@ if it breaks tier 1 or tier 2; tier 3 is explicitly permitted.
 2. **Tier 2 — never imported at import time.** No core module may perform a
    top-level `import fastapi`, `from pydantic import ...`, and so on. A core
    module that needs an optional SDK must import it *inside a function*, through
-   one of the existing lazy shims, and degrade honestly when it is absent.
-3. **Tier 3 — lazy access is allowed.** The established shims
-   (`nir_bridge/api.py`, `onnx_bridge/api.py`, `targets/backends/api.py`,
-   `events/tonic_api.py`, `hub/probe.py`, `targets/probe.py`,
-   `tracking/tensorboard_sink.py`, `tracking/wandb_sink.py`) may import a
-   forbidden SDK inside a function and report availability rather than raise.
-   These modules are the only sanctioned exception sites and are enumerated in
-   the static scan's allow-list.
+   one of the existing lazy modules, and degrade honestly when it is absent.
+3. **Tier 3 — lazy access is allowed.** The core-owned lazy modules
+   (`nir_bridge/api.py`, `onnx_bridge/api.py`, `events/tonic_api.py`,
+   `tracking/tensorboard_sink.py`, `tracking/wandb_sink.py`,
+   `tracking/sink_probe.py`) may import a forbidden SDK inside a function and
+   report availability rather than raise. These modules are the only sanctioned
+   exception sites and are enumerated in the static scan's allow-list. The
+   backend and hub probes (`spikeforge_targets/probe.py`,
+   `spikeforge_targets/backends/api.py`, `spikeforge_hub/probe.py`) moved out of
+   core with their distributions and are no longer core exception sites.
 
 The server distribution is exempt by construction: `fastapi`, `pydantic`, and
 `uvicorn` are its *base* dependencies
 ([`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)).
-That is why Phase 1 removes `server/` from the core distribution — today it is
-packaged into core by [`setup.py`](setup.py:37), which is the single largest
-boundary violation in the tree.
+That is why core no longer packages `server/` — the pre-split tree did, via
+`setup.py`, which was the single largest boundary violation in the tree; the
+core distribution now excludes `server/` in its package discovery.
 
 ## CI enforcement
 
@@ -119,16 +121,15 @@ check_core_boundary.py
   forbidden = {fastapi, pydantic, uvicorn, huggingface_hub, nir, nirtorch,
                onnx, onnxruntime, norse, lava, tonic, tensorboard, wandb}
   scan roots = spikeforge/**  and  main.py, main_encodings.py
+  exclude    = server*, tests*, spikeforge_targets*, spikeforge_hub*
   rule       = no module-level import of a forbidden root, anywhere
   rule       = no function-level import of a forbidden root outside
                {"spikeforge.nir_bridge.api",
                 "spikeforge.onnx_bridge.api",
-                "spikeforge.targets.backends.api",
                 "spikeforge.events.tonic_api",
-                "spikeforge.hub.probe",
-                "spikeforge.targets.probe",
                 "spikeforge.tracking.tensorboard_sink",
-                "spikeforge.tracking.wandb_sink"}
+                "spikeforge.tracking.wandb_sink",
+                "spikeforge.tracking.sink_probe"}
 ```
 
 ### 3. Headless install proof
@@ -155,19 +156,19 @@ asserting no `server/` entry is present.
 
 ## Corrections and findings
 
-- **The current `blocked-deps` gate has a blind spot.** `sitecustomize.py`
-  blocks the SDKs but not `fastapi`/`pydantic`/`uvicorn`, so today the gate would
-  not catch a core-code import of the server stack even if `server/` were
-  removed. Extending `BLOCKED` as above is part of this decision.
-- **The `web` extra is the wrong home for the server stack.** `setup.py` §extras
-  declares `web = [fastapi, uvicorn, websockets, pydantic]`. Phase 1 promotes
-  those to the base dependencies of the `spikeforge-server` distribution
-  and removes `web` from core
+- **The old `blocked-deps` gate had a blind spot.** `sitecustomize.py` blocked
+  the SDKs but not `fastapi`/`pydantic`/`uvicorn`, so it could not catch a
+  core-code import of the server stack. `BLOCKED` now includes the server stack.
+- **The `web` extra was the wrong home for the server stack.** The old
+  `setup.py` extras declared `web = [fastapi, uvicorn, websockets, pydantic]`;
+  those are now the base dependencies of the `spikeforge-server` distribution and
+  `web` is gone from core
   ([`plans/arch-0001-packaging-versioning.md`](plans/arch-0001-packaging-versioning.md)).
-- **`nir` and `huggingface_hub` remain core-optional, not core-required.** The
-  `nir_bridge`, `hub`, and `targets` subpackages stay in the core distribution
-  until Phases 3–4; they satisfy the boundary because their SDK imports are
-  lazy. They are forbidden only as *required* deps.
+- **`nir` stays core-optional, not core-required.** `nir_bridge` stays in the
+  core distribution and satisfies the boundary because its SDK imports are lazy.
+  `huggingface_hub` and the backend SDKs moved out of core with `spikeforge-hub`
+  and `spikeforge-targets` respectively. They are forbidden only as *required*
+  deps of core.
 
 ## Related decisions
 

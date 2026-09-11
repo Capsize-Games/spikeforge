@@ -32,7 +32,7 @@ timing. Every `EnergyReport` carries an explicit `estimate: true` field and a
 | Benchmark harness | Time/memory only | [`harness.py`](spikeforge/benchmark/harness.py:1) |
 | Op counting | None | n/a |
 | Energy model | None | n/a |
-| Target cost data | Constraints only (dtype, quantization) | [`target_spec.py`](spikeforge/targets/target_spec.py:28) |
+| Target cost data | Constraints only (dtype, quantization) | [`target_spec.py`](spikeforge_targets/target_spec.py:28) |
 | Sparse input | Input is already binary spikes | [`input_shape.py`](spikeforge/simulator/input_shape.py) |
 
 ### 1.1 Invariants that must not break
@@ -70,7 +70,7 @@ sparse inference. Training continues to use the dense path.
 ### 2.2 Module layout
 
 ```
-spikeforge/event_runtime/
+spikeforge_targets/event_runtime/
   __init__.py
   spike_view.py      SparseSpikes: indices/values per frame; density helpers
   ops.py             event-driven linear/conv/pool applied to sparse spikes
@@ -111,7 +111,7 @@ timestep. Stored as bundled JSON next to the catalog and surfaced through the
 same `TargetSpec` shape, so a target's costs travel with its capability matrix.
 
 ```
-spikeforge/energy/costs/
+spikeforge_targets/energy/costs/
   reference.json     in-process estimates
   norse.json         simulator estimates
   lava_loihi2.json   declared device estimates
@@ -135,7 +135,7 @@ A target with no bundled table still produces a report with `basis:
 ### 3.2 Module layout
 
 ```
-spikeforge/energy/
+spikeforge_targets/energy/
   __init__.py
   cost_table.py      load/validate a target's declared costs
   target_costs.py    bundled per-target table lookup
@@ -188,7 +188,7 @@ Routed via [`protocol_handlers.py`](server/protocol_handlers.py:19) to a new
 
 ### 4.3 CLI
 
-New console script `spikeforge-energy` ([`energy/cli.py`](spikeforge/energy/cli.py)):
+New console script `spikeforge-energy` ([`energy/cli.py`](spikeforge_targets/energy/cli.py)):
 
 ```
 spikeforge-energy account --topology conv_net --target reference [--sparse]

@@ -31,7 +31,7 @@ scope and noted as deferred.
 | Module factories | Fixed builder table | [`stage_modules.py`](spikeforge/topology/stage_modules.py:59) |
 | NIR builders | Fixed builder table | [`mapper.py`](spikeforge/nir_bridge/mapper.py:20), [`node_builders.py`](spikeforge/nir_bridge/node_builders.py) |
 | Unexportable precedent | `alpha` -> typed error | [`neuron_nodes.py`](spikeforge/nir_bridge/neuron_nodes.py:51), [`mapper.py`](spikeforge/nir_bridge/mapper.py:58) |
-| Emitted primitives | Fixed set | [`primitives.py`](spikeforge/targets/primitives.py:12) |
+| Emitted primitives | Fixed set | [`primitives.py`](spikeforge_targets/primitives.py:12) |
 | Input shape | Feature vs. spatial only | [`input_shape.py`](spikeforge/simulator/input_shape.py), [`frames.py`](spikeforge/simulator/frames.py) |
 | Sequence / attention | None | n/a |
 
@@ -164,7 +164,7 @@ already does this with `ops_linear.py`/`ops_neuron.py`).
 ### 3.3 Target coverage
 
 New emitted primitives (e.g. `Conv1d`) are added to
-[`EMITTED_PRIMITIVES`](spikeforge/targets/primitives.py:12) only when a
+[`EMITTED_PRIMITIVES`](spikeforge_targets/primitives.py:12) only when a
 mapper can actually emit them, so the capability matrix and the mapper agree on
 one vocabulary.
 

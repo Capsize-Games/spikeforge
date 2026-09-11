@@ -12,6 +12,22 @@ describe the local source tree.
 
 ### Added
 
+- **Project rename to `spikeforge`.** The project, its core distribution, its
+  import root, and its console scripts all read `spikeforge`; the earlier
+  bring-up name is gone from every package, repo, and document.
+- **Move to the `capsize-games` organization (four repositories).** The project
+  now lives under [`capsize-games`](https://github.com/capsize-games):
+  [`capsize-games/spikeforge`](https://github.com/capsize-games/spikeforge)
+  (core; ARCH-0001 issue #1),
+  [`capsize-games/spikeforge-dashboard`](https://github.com/capsize-games/spikeforge-dashboard),
+  [`capsize-games/spikeforge-targets`](https://github.com/capsize-games/spikeforge-targets),
+  and [`capsize-games/spikeforge-hub`](https://github.com/capsize-games/spikeforge-hub).
+  The `spikeforge-server` repository is a deliberate no-go (trigger T4 did not
+  fire); the server ships as a distribution in the core repository.
+- **One-command install.** [`install.sh`](install.sh) installs all four
+  distributions editable from a clone; once the distributions are published,
+  `pip install "spikeforge[all]"` installs the library bundle (core + targets +
+  hub) and `pip install spikeforge-server` adds the server.
 - Open-source readiness scaffolding: [`CONTRIBUTING.md`](CONTRIBUTING.md),
   [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md),
   [`NOTICE.md`](NOTICE.md), issue and pull-request templates, and a
@@ -52,9 +68,9 @@ describe the local source tree.
   import root, packaged as `packages/spikeforge-targets` (`spikeforge-targets` `0.1.0`,
   depending on `spikeforge~=0.3.0`). The `norse` and `lava` extras moved
   with the code they gate, and the server pins `spikeforge-targets~=0.1.0`. The
-  `spikeforge.{targets,energy,event_runtime}` import paths remain as
-  deprecated re-export shims that emit a `DeprecationWarning` and raise a clear
-  `ImportError` when `spikeforge-targets` is not installed.
+  old `spikeforge.{targets,energy,event_runtime}` import paths were deleted
+  outright — the project is pre-1.0 and unpublished, so no back-compat shim was
+  added.
 - The standalone [`capsize-games/spikeforge-targets`](https://github.com/capsize-games/spikeforge-targets)
   satellite repository (ARCH-0001 Phase 3): created (private) and populated from
   this repository's history with `git subtree split --prefix=spikeforge_targets`, it
@@ -70,9 +86,8 @@ describe the local source tree.
   packaged as `packages/spikeforge-hub` (`spikeforge-hub` `0.1.0`, depending on
   `spikeforge~=0.3.0`). `huggingface_hub` is now a base dependency of this
   distribution rather than a core `hub` extra, and the server pins
-  `spikeforge-hub~=0.1.0`. The `spikeforge.hub` import path remains a deprecated
-  re-export shim that emits a `DeprecationWarning` and raises a clear
-  `ImportError` when `spikeforge-hub` is not installed.
+  `spikeforge-hub~=0.1.0`. The old core-relative hub import path was deleted
+  outright rather than kept as a deprecated re-export shim.
 - The standalone [`capsize-games/spikeforge-hub`](https://github.com/capsize-games/spikeforge-hub)
   satellite repository (ARCH-0001 Phase 4): created (private) and populated
   from this repository's history with `git subtree split --prefix=spikeforge_hub`, it
@@ -89,14 +104,27 @@ describe the local source tree.
 
 ### Changed
 
+- **License holder is `Capsize Games`.** The BSD 3-Clause [`LICENSE`](LICENSE)
+  and [`AUTHORS`](AUTHORS) name Capsize Games, and every distribution's
+  `pyproject.toml` lists `Capsize Games <contact@capsizegames.com>` as author and
+  maintainer.
+- **Documentation finalized to the delivered state (R4).** The plan documents now
+  describe the landed `spikeforge` rename and the `capsize-games` move, the four
+  distributions and their import roots, and the shim-free extraction. Stale
+  core-relative module paths were rewritten to the real `spikeforge_targets/`
+  and `spikeforge_hub/` trees.
+- **No back-compat aliases.** The legacy
+  `spikeforge.{targets,energy,event_runtime,hub}` import paths were deleted, not
+  kept as deprecated re-export shims: the project is pre-1.0 and was never
+  published, so no compatibility window is needed.
 - Console-script ownership of `spikeforge-energy` and `spikeforge-targets` moved to the
   `spikeforge-targets` distribution and `spikeforge-hub` moved to the `spikeforge-hub` distribution,
   resolving to `spikeforge_targets.energy.cli:main`, `spikeforge_targets.cli.target_cli:main`,
   and `spikeforge_hub.cli:main`; core keeps the five remaining scripts
   (`spikeforge`, `spikeforge-encodings`, `spikeforge-verify`, `spikeforge-records`,
-  `spikeforge-benchmark`). The `spikeforge_targets` and `spikeforge_hub` import roots, not
-  `spikeforge.{targets,hub}`, are now the canonical paths; the old paths
-  are deprecated shims.
+  `spikeforge-benchmark`). The `spikeforge_targets` and `spikeforge_hub` import roots
+  are the only paths; the old `spikeforge.{targets,energy,event_runtime,hub}`
+  paths were deleted.
 - The maintainer contact address is now `contact@capsizegames.com` in
   [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md), and
   the `packages/` packaging metadata; the `<maintainer@example.com>` placeholder
@@ -176,7 +204,7 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
 ### Added
 
 - **Model hub (WS-A).** A bundled, offline-first curated catalog
-  (`spikeforge/hub/models.json`, 10 verified entries across five
+  (`spikeforge_hub/models.json`, 10 verified entries across five
   frameworks),
   optional live Hugging Face access behind the `hub` extra, an isolated
   download worker with progress/cancel and checksum verification, and an

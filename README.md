@@ -98,14 +98,24 @@ prebuilt bundle when `SPIKEFORGE_DASHBOARD_DIST` is set. The versioned WebSocket
 contract lives under `protocol/` (see its `README.md`).
 
 The deploy layer — deploy backends, quantization, energy accounting, and the
-sparse event runtime — is likewise extracted to
+sparse event runtime — is extracted to
 [`capsize-games/spikeforge-targets`](https://github.com/capsize-games/spikeforge-targets)
-(ARCH-0001 Phase 3; distribution `spikeforge-targets`, import root `spikeforge_targets`). It
-depends on core (`spikeforge~=0.3.0`) but core never depends on it. The
+(ARCH-0001 Phase 3; distribution `spikeforge-targets`, import root `spikeforge_targets`).
+It depends on core (`spikeforge~=0.3.0`) but core never depends on it. The
 top-level `spikeforge_targets/` package stays here as the `packages/spikeforge-targets`
-workspace distribution, and the legacy
-`spikeforge.{targets,energy,event_runtime}` paths remain as deprecated
-re-export shims.
+workspace distribution.
+
+The model hub is likewise extracted to
+[`capsize-games/spikeforge-hub`](https://github.com/capsize-games/spikeforge-hub)
+(ARCH-0001 Phase 4; distribution `spikeforge-hub`, import root `spikeforge_hub`),
+also depending on `spikeforge~=0.3.0`. Core itself lives at
+[`capsize-games/spikeforge`](https://github.com/capsize-games/spikeforge); the
+`spikeforge-server` distribution (import root `server`) stays in that repository
+because its extraction trigger T4 did not fire.
+
+Because the project is pre-1.0 and unpublished, the extraction shipped without
+back-compat aliases: the old `spikeforge.{targets,energy,event_runtime,hub}`
+import paths were deleted rather than kept as shims.
 
 ## Features
 
@@ -601,8 +611,8 @@ import/export surface with a round-trip fidelity guarantee. Every surface
 
 ### Target registry and availability model
 
-[`spikeforge/targets/`](spikeforge/targets/__init__.py:1) declares
-what each target *can* run as a [`TargetSpec`](spikeforge/targets/target_spec.py:10):
+[`spikeforge_targets/`](spikeforge_targets/__init__.py:1) declares
+what each target *can* run as a [`TargetSpec`](spikeforge_targets/target_spec.py:10):
 its kind, the pip `extra` that would install its SDK, the primitives it
 supports, its substitutions, and its constraints (dtype, timestep,
 quantization). The registry ships:
@@ -618,8 +628,8 @@ quantization). The registry ships:
 
 SDKs are optional and are reported **honestly**. Availability is resolved on
 demand through isolated probes
-([`targets/probe.py`](spikeforge/targets/probe.py:1) and
-[`targets/backends/api.py`](spikeforge/targets/backends/api.py:1) — the
+([`targets/probe.py`](spikeforge_targets/probe.py:1) and
+[`targets/backends/api.py`](spikeforge_targets/backends/api.py:1) — the
 only modules that import a backend SDK; both import nothing at module load
 time). A target whose SDK is absent is returned with `"available": false` and
 named in the report notes; it is never hidden or silently treated as ready.
@@ -628,9 +638,9 @@ executable backends when their extras are installed (see WS-B above).
 
 ### Capability matrix
 
-[`classify(graph_or_spec, target)`](spikeforge/targets/capability_matrix.py:13)
+[`classify(graph_or_spec, target)`](spikeforge_targets/capability_matrix.py:13)
 places every node of a graph in exactly one
-[`CapabilityMatrix`](spikeforge/targets/matrix_result.py:10) bucket:
+[`CapabilityMatrix`](spikeforge_targets/matrix_result.py:10) bucket:
 
 - **supported** — the target runs the node's primitive natively.
 - **substituted** — the target lacks the primitive but declares a replacement
@@ -645,7 +655,7 @@ dropped**.
 
 ### Deployment report and `deployable`
 
-[`deployment_report(spec_or_graph, target)`](spikeforge/targets/report.py:47)
+[`deployment_report(spec_or_graph, target)`](spikeforge_targets/report.py:47)
 returns JSON carrying the classified `nodes` (with per-bucket counts), the
 target's `constraints`, an optional `validation` drift section, and
 human-readable `notes`. `deployable` is true **only** when the target is
@@ -920,8 +930,9 @@ whose `huggingface_hub` dependency is isolated in
 [`spikeforge_hub/hf_api.py`](spikeforge_hub/hf_api.py:1) and
 [`spikeforge_hub/probe.py`](spikeforge_hub/probe.py:1). When `huggingface_hub` is absent,
 `search` returns `available: false` with an explicit reason — never an error
-and never a fabricated hit. The legacy `spikeforge.hub` import path
-remains a `DeprecationWarning` re-export shim for one minor release.
+and never a fabricated hit. There is no legacy core-relative hub import path:
+the extraction shipped without a shim, so importers use `spikeforge_hub`
+directly.
 
 ### Downloading
 
@@ -982,9 +993,9 @@ Capability *declaration* becomes executable *deployment*.
 
 ### Substitution executor
 
-[`targets/rewrite.py`](spikeforge/targets/rewrite.py:1) applies a target's
+[`targets/rewrite.py`](spikeforge_targets/rewrite.py:1) applies a target's
 **declared** substitutions to produce a target-ready graph and reports what
-changed ([`rewrite_report.py`](spikeforge/targets/rewrite_report.py:1)):
+changed ([`rewrite_report.py`](spikeforge_targets/rewrite_report.py:1)):
 `applied`, `skipped`, `unfixable`. Two rules ship — `IF`→`beta=0` `LIF` for
 `norse` and `AvgPool2d`→`SumPool2d`+`Scale` for `lava_loihi2`. An unfixable
 primitive is named, never dropped, and a post-rewrite **drift check** quantifies
@@ -992,7 +1003,7 @@ any residual.
 
 ### Real backends: reference, norse, lava_loihi2
 
-[`targets/backends.compile_run()`](spikeforge/targets/backends/__init__.py:137)
+[`targets/backends.compile_run()`](spikeforge_targets/backends/__init__.py:137)
 is the single entry point. It rewrites, optionally quantizes, gates on the
 backend's availability, then compiles, runs, and compares the result to the
 reference interpreter — returning a `BackendResult` whose `status` is `ok`,
@@ -1006,7 +1017,7 @@ reference interpreter — returning a `BackendResult` whose `status` is `ok`,
 
 An absent SDK yields `status: "unavailable"` with a note naming the extra. SDK
 imports are confined to
-[`backends/api.py`](spikeforge/targets/backends/api.py:1).
+[`backends/api.py`](spikeforge_targets/backends/api.py:1).
 
 ### `deploy` / `rewrite` / `run`
 
@@ -1069,21 +1080,21 @@ production LLM training.
 
 ### Sparse runner
 
-[`event_runtime.sparse_run()`](spikeforge/event_runtime/sparse_runner.py:1)
+[`event_runtime.sparse_run()`](spikeforge_targets/event_runtime/sparse_runner.py:1)
 is a parallel, training-free inference path that propagates spike events
 instead of dense MACs. It returns a `SparseResult` with the same readout
 contract as the dense `Trajectory`, and
-[`dense_compare`](spikeforge/event_runtime/dense_compare.py:1) proves
+[`dense_compare`](spikeforge_targets/event_runtime/dense_compare.py:1) proves
 parity within tolerance. The dense path stays the untouched default.
 
-[`SynapticCounter`](spikeforge/event_runtime/counters.py:1) tallies **SOP**
+[`SynapticCounter`](spikeforge_targets/event_runtime/counters.py:1) tallies **SOP**
 (synaptic ops), **MAC** (dense baseline), **AC**, and timesteps; for a sparse
 input `SOP < MAC` by the active-spike ratio.
 
 ### Declared per-target cost tables
 
 Each target carries a declared cost table under
-[`energy/costs/`](spikeforge/energy/costs/reference.json:1) (`reference`,
+[`energy/costs/`](spikeforge_targets/energy/costs/reference.json:1) (`reference`,
 `norse`, `lava_loihi2`, `spinnaker2`, `speck`, `xylo`), giving energy per
 SOP/MAC/AC and latency per timestep. Every table is `"measured": false` and
 carries its `source`.
@@ -1193,7 +1204,7 @@ spikeforge-targets extract --module model.pt
 
 ### Quantization
 
-[`targets/quantize.py`](spikeforge/targets/quantize.py:103) applies a
+[`targets/quantize.py`](spikeforge_targets/quantize.py:103) applies a
 target's **declared** scheme (`none`, `weight_int8`, `weight_uint8`) to a
 graph's weights, reporting per-layer before/after ranges and the induced drift.
 It is **weight-level only** (no activations, no device), a `none` target is a
@@ -1619,7 +1630,6 @@ spikeforge/
     neuron_nodes.py          Neuron-kind -> NIR node(s); alpha precedent
     stage_builders.py        Builder table for the new stage kinds
     stages_unmappable.py     kind -> honest reason export cannot map it
-  targets/                   DEPRECATED shim -> spikeforge_targets (Phase 3)
   tracking/                  Reproducibility: manifest, hash, seed, versions
     manifest.py              ReproducibilityManifest: config/seed/history
     config_hash.py           Canonical-JSON SHA-256 of the run config
@@ -1630,9 +1640,6 @@ spikeforge/
     tensorboard_sink.py      TensorBoard SummaryWriter sink (tracking extra)
     wandb_sink.py            Weights & Biases sink (tracking-wandb extra)
     sink_probe.py            Isolated tensorboard / wandb probes
-  hub/                       DEPRECATED shim -> spikeforge_hub (Phase 4)
-  energy/                    DEPRECATED shim -> spikeforge_targets.energy (Phase 3)
-  event_runtime/             DEPRECATED shim -> spikeforge_targets.event_runtime
   onnx_bridge/               Optional ONNX import/export (onnx extra)
     api.py                   The only module importing onnx/onnxruntime
     export.py                One-step topology export with spec metadata

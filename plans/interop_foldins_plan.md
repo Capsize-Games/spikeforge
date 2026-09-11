@@ -23,7 +23,7 @@ animation** in the client. Each is a small, independently verifiable phase.
 | Event loading | `EventSampleSource`, bridge, frames exist | [`event_source.py`](spikeforge/events/event_source.py), [`event_bridge.py`](spikeforge/events/event_bridge.py) |
 | ONNX | Absent | [`setup.py`](setup.py:46) |
 | `nirtorch` extraction | Probe exists, extraction deferred | [`api.py`](spikeforge/nir_bridge/api.py:63) |
-| Quantization | Declared in constraints only | [`target_spec.py`](spikeforge/targets/target_spec.py:28) |
+| Quantization | Declared in constraints only | [`target_spec.py`](spikeforge_targets/target_spec.py:28) |
 | Geometry | 28x28 / square conv math hardcoded | [`presets.py`](spikeforge/topology/presets.py:128), [`datasets.py`](spikeforge/data/datasets.py:73) |
 | Hidden-layer animation | Raster snapshots only | [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md:21) |
 
@@ -32,7 +32,7 @@ animation** in the client. Each is a small, independently verifiable phase.
 - The image training path is unchanged; event training is additive behind the
   `events` extra ([`datasets.py`](spikeforge/data/datasets.py:51)).
 - ONNX and extraction are opt-in extras; their absence is reported, never raised
-  at import ([`probe.py`](spikeforge/targets/probe.py:1) pattern).
+  at import ([`probe.py`](spikeforge_targets/probe.py:1) pattern).
 - Quantization is only **applied** where the target declares support; otherwise
   it is reported as unapplied.
 - Existing presets remain exactly 28x28 by default; geometry changes are
@@ -127,14 +127,14 @@ interprets; an unsupported node raises the typed error naming it.
 ## 5. F4 — Target quantization application
 
 **Gap.** Targets declare `quantization` in constraints
-([`catalog.py`](spikeforge/targets/catalog.py:51)) but nothing applies it.
+([`catalog.py`](spikeforge_targets/catalog.py:51)) but nothing applies it.
 
 **Design.** `targets/quantize.py` applies a target's declared quantization to a
 built module's weights:
 
 - Supported schemes (seed): `none` (no-op), `weight_int8`, `weight_uint8`
   (per-tensor symmetric/asymmetric, matching the declared constraint strings in
-  [`catalog.py`](spikeforge/targets/catalog.py:86)).
+  [`catalog.py`](spikeforge_targets/catalog.py:86)).
 - Applied **only** where the target declares support; a target that declares
   `none` gets a no-op report; an unknown scheme is reported unapplied, never
   guessed.

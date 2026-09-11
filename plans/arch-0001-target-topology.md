@@ -1,6 +1,6 @@
 # ARCH-0001 target topology
 
-**Status: accepted (proposed for maintainer sign-off).**
+**Status: accepted — implemented.**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
 **Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
 
@@ -14,29 +14,28 @@ escape hatch (`plans/repo_topology_plan.md` §4) is deliberately **not** used.
 |---|---|---|---|
 | `spikeforge` | `spikeforge` | `spikeforge/` (minus any extracted subpackages) | Phase 1 |
 | `spikeforge-server` | `server` (kept) | `server/` | Phase 1 |
-| `spikeforge-targets` | `spikeforge_targets` | `spikeforge.targets`, `spikeforge.targets.backends`, `spikeforge.energy`, `spikeforge.event_runtime` | Phase 3 |
-| `spikeforge-hub` | `spikeforge_hub` | `spikeforge.hub` | Phase 4 (go) |
+| `spikeforge-targets` | `spikeforge_targets` | `spikeforge_targets`, `spikeforge_targets.backends`, `spikeforge_targets.energy`, `spikeforge_targets.event_runtime` | Phase 3 |
+| `spikeforge-hub` | `spikeforge_hub` | `spikeforge_hub` | Phase 4 (go) |
 | `spikeforge-dashboard` (npm `spikeforge-dashboard`, private) | n/a — npm | `client/` | Phase 2 |
 
 ### Core import root
 
-The core distribution keeps the import root `spikeforge`. **The project
-rename is explicitly out of scope for ARCH-0001.** No aliasing, no shim, no
-namespace package is introduced for core.
+The core distribution owns the import root `spikeforge`. The project rename
+**landed**: the bring-up project was renamed to `spikeforge` and moved under the
+[`capsize-games`](https://github.com/capsize-games) organization, so the core
+distribution, its import root, and its repository all read `spikeforge`. No
+alias, shim, or namespace package is used for core.
 
 ### Server import root
 
-Adopt the recommendation and **keep the existing top-level package `server`** as
-the `spikeforge-server` import root. Rationale: `server/` is already a
-top-level package with 30 modules and every one of its 24 library-importing
-files imports `spikeforge`, so keeping `server` avoids churn in CI, Docker,
-and the WS entry point while the boundary is being made real.
-
-A future rename to `spikeforge_server` is **documented as a possibility, not
-scheduled**, and if it is ever performed it MUST follow this shim policy: ship
-`spikeforge_server/` as the new import root, retain `server/` as a deprecated alias
-package that re-exports `spikeforge_server` and emits `DeprecationWarning`, keep both
-paths working for at least one minor release, and only then remove `server/`.
+The `spikeforge-server` distribution keeps the existing top-level package
+`server` as its import root (end state: distribution `spikeforge-server`, import
+root `server`). Rationale: `server/` is already a top-level package and every one
+of its library-importing files imports `spikeforge`, so keeping `server` avoids
+churn in CI, Docker, and the WS entry point. The `spikeforge-server` repository
+is a deliberate no-go (trigger T4 did not fire), so the server stays in this
+repository as a separate distribution; no `spikeforge_server/` rename is planned
+and no alias package is used.
 
 ### Targets, hub, and dashboard import roots
 
@@ -53,14 +52,15 @@ paths working for at least one minor release, and only then remove `server/`.
 
 | Repository | Phase | Status |
 |---|---|---|
-| `capsize-games/spikeforge-dashboard` | Phase 2 | create when T1 fires |
-| `capsize-games/spikeforge-targets` | Phase 3 | create when T2 fires |
-| `capsize-games/spikeforge-hub` | Phase 4 | **go** — create when T3 fires |
-| `capsize-games/spikeforge-server` | Phase 4 | **conditional** — create only when T4 fires |
-| `capsize-games/spikeforge` | — | existing core repository; not renamed |
+| `capsize-games/spikeforge-dashboard` | Phase 2 | **extracted** (T1 fired) |
+| `capsize-games/spikeforge-targets` | Phase 3 | **extracted** (T2 fired) |
+| `capsize-games/spikeforge-hub` | Phase 4 | **extracted** (T3 fired) |
+| `capsize-games/spikeforge-server` | Phase 4 | **no-go** — T4 did not fire |
+| `capsize-games/spikeforge` | — | the core repository (renamed to `spikeforge`) |
 
-New repositories use hyphenated names; the existing core repository keeps its
-underscored name as published in [`setup.py`](setup.py:33).
+All repositories live under the [`capsize-games`](https://github.com/capsize-games)
+organization and use hyphenated `spikeforge*` names; the core repository is
+[`capsize-games/spikeforge`](https://github.com/capsize-games/spikeforge).
 
 ## Dependency direction
 
@@ -89,9 +89,9 @@ flowchart TB
 
 Reading the edges as "depends on": `spikeforge-targets`, `spikeforge-hub`, and
 `spikeforge-server` each depend on core; the server additionally depends on
-`targets` and `hub` because 24 of its files import those capability roots today
-(via `spikeforge.*` until Phase 3/4); and both the server and the dashboard
-depend on the `protocol/` contract, never on each other's code.
+`spikeforge_targets` and `spikeforge_hub` because its files import those
+capability roots; and both the server and the dashboard depend on the
+`protocol/` contract, never on each other's code.
 
 ### Why this direction is stable
 
@@ -111,8 +111,8 @@ depend on the `protocol/` contract, never on each other's code.
 Each distribution is defined by its own PEP 621
 [`pyproject.toml`](plans/arch-0001-packaging-versioning.md) under a top-level
 `packages/` workspace directory. The distribution's build config selects its
-import root via `package-dir`, so **Phase 1 moves no source files**: the
-packages remain at their current paths and extraction is a later, explicit step.
+import root via `package-dir`; the extraction is **done**, so each import root
+now lives at its own top-level path in this repository and in its satellite.
 
 ```text
 packages/
@@ -120,10 +120,10 @@ packages/
     pyproject.toml            # distribution spikeforge, import root spikeforge
   spikeforge-server/
     pyproject.toml            # distribution spikeforge-server, import root server
-  spikeforge-targets/                # created in Phase 3
-    pyproject.toml
-  spikeforge-hub/                    # created in Phase 4
-    pyproject.toml
+  spikeforge-targets/
+    pyproject.toml            # distribution spikeforge-targets, import root spikeforge_targets
+  spikeforge-hub/
+    pyproject.toml            # distribution spikeforge-hub, import root spikeforge_hub
 ```
 
 The core distribution's `find` configuration explicitly excludes the roots it
