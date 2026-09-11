@@ -80,3 +80,9 @@ zip-safe = false
 where = ["."]
 include = ["snn_hub*"]
 exclude = ["snn_interpreter*", "server*", "snn_targets*", "tests*"]
+
+[tool.setuptools.package-data]
+# The catalog and its curation policy are runtime data, not code: without
+# these lines a `pip install snn-hub` wheel would ship `snn_hub/` with no
+# `models.json`, so the offline catalog could not load.
+snn_hub = ["models.json", "CURATION.md"]
