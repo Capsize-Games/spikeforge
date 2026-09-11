@@ -37,6 +37,17 @@ HUB_CACHE_DIR = (
     or os.path.join(DATA_DIR, "hub")
 )
 
+# Registry governance (PT-W7): the signable promotion registry that records
+# stage (dev/staging/prod), approver, and lineage for an artifact. Kept
+# separate from the model store and the hub cache so a promotion ledger is
+# never confused with the artifact bytes. Override with
+# SPIKEFORGE_REGISTRY_DIR.
+REGISTRY_DIR = (
+    os.environ.get("SPIKEFORGE_REGISTRY_DIR")
+    or os.environ.get("SNN_REGISTRY_DIR")
+    or os.path.join(DATA_DIR, "registry")
+)
+
 # Persisted metrics: JSON snapshots of the in-process registry, written only
 # when persistence is opted into (SPIKEFORGE_METRICS_PERSIST). The root
 # defaults to DATA_DIR/metrics and is relocatable with SPIKEFORGE_METRICS_DIR.

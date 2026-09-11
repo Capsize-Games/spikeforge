@@ -24,7 +24,8 @@ Usage::
         --serve-wheel dist/spikeforge_serve-*.whl \
         --clients-wheel dist/spikeforge_clients-*.whl \
         --targets-wheel dist/spikeforge_targets-*.whl \
-        --hub-wheel dist/spikeforge_hub-*.whl
+        --hub-wheel dist/spikeforge_hub-*.whl \
+        --io-wheel dist/spikeforge_io-*.whl
 """
 
 import argparse
@@ -48,6 +49,7 @@ SERVE_DISTRIBUTION = "spikeforge-serve"
 CLIENTS_DISTRIBUTION = "spikeforge-clients"
 TARGETS_DISTRIBUTION = "spikeforge-targets"
 HUB_DISTRIBUTION = "spikeforge-hub"
+IO_DISTRIBUTION = "spikeforge-io"
 CORE_PYPROJECT = REPO_ROOT / "packages" / CORE_DISTRIBUTION / "pyproject.toml"
 SERVER_PYPROJECT = (
     REPO_ROOT / "packages" / SERVER_DISTRIBUTION / "pyproject.toml"
@@ -62,6 +64,7 @@ TARGETS_PYPROJECT = (
     REPO_ROOT / "packages" / TARGETS_DISTRIBUTION / "pyproject.toml"
 )
 HUB_PYPROJECT = REPO_ROOT / "packages" / HUB_DISTRIBUTION / "pyproject.toml"
+IO_PYPROJECT = REPO_ROOT / "packages" / IO_DISTRIBUTION / "pyproject.toml"
 COMPATIBILITY = REPO_ROOT / "compatibility.json"
 
 
@@ -226,6 +229,7 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     parser.add_argument("--clients-wheel", type=Path, default=None)
     parser.add_argument("--targets-wheel", type=Path, default=None)
     parser.add_argument("--hub-wheel", type=Path, default=None)
+    parser.add_argument("--io-wheel", type=Path, default=None)
     return parser.parse_args(argv)
 
 
@@ -239,6 +243,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         CLIENTS_DISTRIBUTION: CLIENTS_PYPROJECT,
         TARGETS_DISTRIBUTION: TARGETS_PYPROJECT,
         HUB_DISTRIBUTION: HUB_PYPROJECT,
+        IO_DISTRIBUTION: IO_PYPROJECT,
     }
     wheels = {
         CORE_DISTRIBUTION: args.core_wheel,
@@ -247,6 +252,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         CLIENTS_DISTRIBUTION: args.clients_wheel,
         TARGETS_DISTRIBUTION: args.targets_wheel,
         HUB_DISTRIBUTION: args.hub_wheel,
+        IO_DISTRIBUTION: args.io_wheel,
     }
     if all(wheels.values()):
         roots_by_distribution = {

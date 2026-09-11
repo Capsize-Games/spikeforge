@@ -71,7 +71,10 @@ _EXPECTED_TARGETS_DEPS = {
     "torch>=2.5",
 }
 _EXPECTED_HUB_SCRIPTS = {
+    # PT-W7 registry governance ships as a hub-owned script (the plan's
+    # "extend hub" option) rather than a separate distribution.
     "spikeforge-hub",
+    "spikeforge-registry",
 }
 _EXPECTED_HUB_EXTRAS = {
     "dev",
@@ -83,6 +86,14 @@ _EXPECTED_HUB_DEPS = {
 _CLIENTS = _ROOT / "packages" / "spikeforge-clients" / "pyproject.toml"
 _EXPECTED_CLIENTS_SCRIPTS = {
     "spikeforge-clients",
+}
+_IO = _ROOT / "packages" / "spikeforge-io" / "pyproject.toml"
+_EXPECTED_IO_SCRIPTS = {
+    "spikeforge-io",
+}
+_EXPECTED_IO_DEPS = {
+    "torch>=2.5",
+    "numpy>=1.26",
 }
 
 
@@ -203,9 +214,11 @@ def test_hub_distribution_owns_the_moved_surface() -> None:
 
 
 def test_hub_console_script_targets_resolve_to_the_new_root() -> None:
-    """The moved console script resolves inside the ``spikeforge_hub`` root."""
+    """The hub's own scripts resolve inside the ``spikeforge_hub`` root."""
     scripts = _pyproject(_HUB)["project"]["scripts"]
     assert scripts["spikeforge-hub"] == "spikeforge_hub.cli:main"
+    # PT-W7: the registry CLI is owned by the hub distribution.
+    assert scripts["spikeforge-registry"] == "spikeforge_hub.registry_cli:main"
 
 
 def test_hub_owns_only_the_hub_root() -> None:
@@ -244,6 +257,39 @@ def test_clients_owns_only_the_clients_root() -> None:
         "spikeforge_targets*",
         "spikeforge_hub*",
         "spikeforge_serve*",
+    ):
+        assert other in find["exclude"]
+
+
+def test_io_distribution_owns_the_io_surface() -> None:
+    """PT-W7's spikeforge-io owns one script, one root, and a core pin."""
+    project = _pyproject(_IO)["project"]
+    assert set(project["scripts"]) == _EXPECTED_IO_SCRIPTS
+    deps = set(project["dependencies"])
+    assert deps >= _EXPECTED_IO_DEPS
+    assert "spikeforge~=0.3.0" in deps
+    assert project["version"] == "0.1.0"
+
+
+def test_io_console_script_resolves_to_the_new_root() -> None:
+    """The I/O CLI resolves inside the ``spikeforge_io`` root."""
+    scripts = _pyproject(_IO)["project"]["scripts"]
+    assert scripts["spikeforge-io"] == "spikeforge_io.cli:main"
+
+
+def test_io_owns_only_the_io_root() -> None:
+    """I/O discovery is independent of every other distribution."""
+    find = _pyproject(_IO)["tool"]["setuptools"]["packages"]["find"]
+    assert find["include"] == ["spikeforge_io*"]
+    for other in (
+        "spikeforge",
+        "spikeforge.*",
+        "server*",
+        "tests*",
+        "spikeforge_targets*",
+        "spikeforge_hub*",
+        "spikeforge_serve*",
+        "spikeforge_clients*",
     ):
         assert other in find["exclude"]
 

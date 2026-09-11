@@ -29,8 +29,34 @@ from spikeforge_hub.errors import (
 )
 from spikeforge_hub.import_model import import_model as _run_import
 from spikeforge_hub.inspect import inspect_artifact, resolve_path
+from spikeforge_hub.registry import (
+    REGISTRY_SCHEMA_VERSION,
+    STAGES,
+    STATUSES,
+    Registry,
+    RegistryEntry,
+    lineage_report,
+    promote,
+    sign_entry,
+    verify_artifact,
+    verify_entry,
+)
+from spikeforge_hub.registry_errors import (
+    RegistryApprovalError,
+    RegistryCompatibilityError,
+    RegistryError,
+    RegistryIntegrityError,
+    RegistryLifecycleError,
+    RegistryPromotionError,
+    RegistrySchemaError,
+    RegistrySignatureError,
+    RegistryVersionError,
+)
 
 __all__ = [
+    "REGISTRY_SCHEMA_VERSION",
+    "STAGES",
+    "STATUSES",
     "HubArtifactError",
     "HubCatalogError",
     "HubDownloadCancelledError",
@@ -39,6 +65,17 @@ __all__ = [
     "HubError",
     "HubExtraMissingError",
     "HubImportError",
+    "Registry",
+    "RegistryApprovalError",
+    "RegistryCompatibilityError",
+    "RegistryEntry",
+    "RegistryError",
+    "RegistryIntegrityError",
+    "RegistryLifecycleError",
+    "RegistryPromotionError",
+    "RegistrySchemaError",
+    "RegistrySignatureError",
+    "RegistryVersionError",
     "available",
     "catalog",
     "download",
@@ -47,7 +84,12 @@ __all__ = [
     "import_model",
     "inspect",
     "issues",
+    "lineage_report",
+    "promote",
     "search",
+    "sign_entry",
+    "verify_artifact",
+    "verify_entry",
 ]
 
 

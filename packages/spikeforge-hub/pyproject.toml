@@ -67,6 +67,11 @@ dev = [
 
 [project.scripts]
 spikeforge-hub = "spikeforge_hub.cli:main"
+# PT-W7 registry governance. The plan offers `spikeforge-registry` as a new
+# distribution *or* an extension of the hub; this "extend hub" option owns the
+# script here, so the promotion registry (stages/approver/signature/lineage)
+# ships without a separate import root.
+spikeforge-registry = "spikeforge_hub.registry_cli:main"
 
 [project.urls]
 Homepage = "https://github.com/capsize-games/spikeforge"

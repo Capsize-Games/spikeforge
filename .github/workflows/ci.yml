@@ -54,12 +54,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install core + targets + hub + server editable
+      - name: Install core + targets + hub + server + io editable
         run: |
           pip install -e "./packages/spikeforge[dev,nir]" \
                       -e ./packages/spikeforge-targets \
                       -e ./packages/spikeforge-hub \
-                      -e ./packages/spikeforge-server
+                      -e ./packages/spikeforge-server \
+                      -e ./packages/spikeforge-io
 
       - name: Test (pytest)
         run: pytest
@@ -343,6 +344,7 @@ jobs:
           python -m build ./packages/spikeforge-clients
           python -m build ./packages/spikeforge-targets
           python -m build ./packages/spikeforge-hub
+          python -m build ./packages/spikeforge-io
 
       - name: Run the packaging guards
         run: |
@@ -352,4 +354,5 @@ jobs:
             --serve-wheel packages/spikeforge-serve/dist/spikeforge_serve-*.whl \
             --clients-wheel packages/spikeforge-clients/dist/spikeforge_clients-*.whl \
             --targets-wheel packages/spikeforge-targets/dist/spikeforge_targets-*.whl \
-            --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl
+            --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl \
+            --io-wheel packages/spikeforge-io/dist/spikeforge_io-*.whl
