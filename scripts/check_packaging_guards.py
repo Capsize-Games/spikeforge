@@ -21,6 +21,7 @@ Usage::
     python scripts/check_packaging_guards.py \
         --core-wheel dist/spikeforge-*.whl \
         --server-wheel dist/spikeforge_server-*.whl \
+        --serve-wheel dist/spikeforge_serve-*.whl \
         --targets-wheel dist/spikeforge_targets-*.whl \
         --hub-wheel dist/spikeforge_hub-*.whl
 """
@@ -42,11 +43,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 CORE_DISTRIBUTION = "spikeforge"
 SERVER_DISTRIBUTION = "spikeforge-server"
+SERVE_DISTRIBUTION = "spikeforge-serve"
 TARGETS_DISTRIBUTION = "spikeforge-targets"
 HUB_DISTRIBUTION = "spikeforge-hub"
 CORE_PYPROJECT = REPO_ROOT / "packages" / CORE_DISTRIBUTION / "pyproject.toml"
 SERVER_PYPROJECT = (
     REPO_ROOT / "packages" / SERVER_DISTRIBUTION / "pyproject.toml"
+)
+SERVE_PYPROJECT = (
+    REPO_ROOT / "packages" / SERVE_DISTRIBUTION / "pyproject.toml"
 )
 TARGETS_PYPROJECT = (
     REPO_ROOT / "packages" / TARGETS_DISTRIBUTION / "pyproject.toml"
@@ -212,6 +217,7 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     )
     parser.add_argument("--core-wheel", type=Path, default=None)
     parser.add_argument("--server-wheel", type=Path, default=None)
+    parser.add_argument("--serve-wheel", type=Path, default=None)
     parser.add_argument("--targets-wheel", type=Path, default=None)
     parser.add_argument("--hub-wheel", type=Path, default=None)
     return parser.parse_args(argv)
@@ -223,12 +229,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     pyprojects = {
         CORE_DISTRIBUTION: CORE_PYPROJECT,
         SERVER_DISTRIBUTION: SERVER_PYPROJECT,
+        SERVE_DISTRIBUTION: SERVE_PYPROJECT,
         TARGETS_DISTRIBUTION: TARGETS_PYPROJECT,
         HUB_DISTRIBUTION: HUB_PYPROJECT,
     }
     wheels = {
         CORE_DISTRIBUTION: args.core_wheel,
         SERVER_DISTRIBUTION: args.server_wheel,
+        SERVE_DISTRIBUTION: args.serve_wheel,
         TARGETS_DISTRIBUTION: args.targets_wheel,
         HUB_DISTRIBUTION: args.hub_wheel,
     }
