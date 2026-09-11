@@ -10,8 +10,47 @@ describe the local source tree.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-11
+
+The hardware-free production toolkit (workstreams PT-W1…PT-W8) and the
+streaming time-series use case UC-1, on top of the ARCH-0001
+repository-topology work recorded below. Every capability below is additive:
+the wire protocol stays at `1.0`, the core import root stays `spikeforge`,
+and the existing WebSocket payload keys are preserved.
+
 ### Added
 
+- **Serving runtime and the `.spkf` deployment bundle (PT-W1).** A stateful
+  inference runtime with a `StateTree` that carries per-layer neuron state
+  across steps, and the `.spkf` `DeploymentBundle` that packages a trained
+  model with its frozen encode configuration and target plan.
+- **Frozen encode-at-inference contract (PT-W2).** The window → normalize →
+  encode pipeline is serialized into the bundle and replayed byte-for-byte at
+  inference, so a served model encodes inputs exactly as it did in training.
+- **Headless `spikeforge-serve` (PT-W3).** A REST/WebSocket inference service
+  that loads a `.spkf` bundle and exposes `/v1/encode`, `/v1/predict`, and
+  `/v1/stream`, packaged as the `spikeforge-serve` distribution.
+- **Client SDKs (PT-W4).** Python, TypeScript, and CLI clients for
+  `spikeforge-serve` in the dependency-light `spikeforge-clients`
+  distribution, validated against the `protocol/serve/` schemas so an install
+  never pulls the torch-based core.
+- **Compression and quantization (PT-W5).** Delta/spike codecs plus activation
+  and membrane quantization of a deployed model, with reports that record the
+  scheme and the achieved size/accuracy trade-off.
+- **Observability and serving benchmarks (PT-W6).** Prometheus and JSON
+  exporters for the serving metrics and a benchmark harness that measures
+  encode, inference, and end-to-end latency for a bundle.
+- **Registry governance and I/O adapters (PT-W7).** Stage/approver/signature/
+  lineage governance for model promotion in `spikeforge-hub`, and the
+  `spikeforge-io` recorded-stream adapters (CSV/JSON/NPY/in-memory and the
+  dataset hook) that feed the frozen windowing contract and replay into
+  `/v1/stream`.
+- **Simulator-backed test-deploy matrix (PT-W8).** A matrix that lowers each
+  target through the reference/norse/lava simulators and records the per-target
+  deploy outcome before a bundle is promoted.
+- **Streaming time-series use case (UC-1).** An end-to-end
+  classification/anomaly-detection MVP that trains, bundles, serves, and
+  replays a sliding-window time-series signal.
 - **Project rename to `spikeforge`.** The project, its core distribution, its
   import root, and its console scripts all read `spikeforge`; the earlier
   bring-up name is gone from every package, repo, and document.
@@ -277,6 +316,7 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
   a searchable checkpoint registry, opt-in scale-ups, a stored benchmark
   suite, JSON logging, packaged console scripts, and Docker CPU/GPU profiles.
 
-[Unreleased]: https://github.com/capsize-games/spikeforge/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/capsize-games/spikeforge/compare/spikeforge-v0.3.0...HEAD
+[0.3.0]: https://github.com/capsize-games/spikeforge/compare/v0.2.0...spikeforge-v0.3.0
 [0.2.0]: https://github.com/capsize-games/spikeforge/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/capsize-games/spikeforge/releases/tag/v0.1.0
