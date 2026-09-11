@@ -33,7 +33,18 @@ describe the local source tree.
   core). `packages/*/pyproject.toml` is now the packaging authority.
 - [`compatibility.json`](compatibility.json) at the repository root, recording
   the `protocol_version` (`"1.0"`), the released distribution versions, and the
-  pinned dashboard bundle version.
+  pinned dashboard bundle version (`dashboard: "0.1.0"`, now built in
+  `w4ffl35/snn-dashboard`).
+- The dashboard extraction (ARCH-0001 Phase 2): the browser UI now lives in its
+  own repository,
+  [`w4ffl35/snn-dashboard`](https://github.com/w4ffl35/snn-dashboard), created
+  from this repository's history with `git subtree split --prefix=client`.
+  `client/` remains here for one release as a read-only mirror.
+- `SNN_DASHBOARD_DIST` (see [`snn_interpreter/config.py`](snn_interpreter/config.py))
+  lets the server serve a pinned prebuilt dashboard bundle instead of the
+  in-repo `client/dist`; [`server/web.py`](server/web.py) prefers it when
+  present and otherwise keeps today's resolution, covered by
+  [`tests/test_dashboard_bundle.py`](tests/test_dashboard_bundle.py).
 
 ### Changed
 
@@ -56,6 +67,16 @@ describe the local source tree.
   port mapping.
 - [`requirements.txt`](requirements.txt) no longer lists the FastAPI server
   stack, so a core dev install stays headless.
+- **Strict protocol-version enforcement (ARCH-0001 Phase 2).** An inbound
+  message that omits `protocol_version` is now rejected with a `type: "error"`
+  frame carrying `payload.code = "protocol_version_mismatch"`, closing the
+  Phase 1 legacy-acceptance window ([`server/app.py`](server/app.py),
+  [`protocol/README.md`](protocol/README.md)), covered by
+  [`tests/test_protocol_negotiation.py`](tests/test_protocol_negotiation.py).
+- The core CI `client` job is reduced to the protocol-codegen guard
+  (`npm ci`; `npm run gen:protocol`; `git diff --exit-code --
+  client/src/protocol/generated.ts`); the full dashboard build is now owned by
+  `w4ffl35/snn-dashboard`.
 
 ### Removed
 

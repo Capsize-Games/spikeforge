@@ -177,6 +177,10 @@ jobs:
         run: bash scripts/build_docs.sh --check
 
   client:
+    # `client/` is a read-only mirror for one release; the full build now lives
+    # in w4ffl35/snn-dashboard (its own CI runs `npm run build`). Core keeps
+    # only the protocol-codegen guard so a schema change without regenerated
+    # types is still caught here.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -197,10 +201,6 @@ jobs:
 
       - name: The generated protocol types must be current
         run: git diff --exit-code -- client/src/protocol/generated.ts
-
-      - name: Build client
-        working-directory: client
-        run: npm run build
 
   core-boundary:
     # The static half of the core boundary: no module-level import of a

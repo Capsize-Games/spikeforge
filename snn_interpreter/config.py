@@ -34,3 +34,10 @@ METRICS_DIR = os.environ.get(
 TRACKING_DIR = os.environ.get(
     "SNN_TRACKING_DIR", os.path.join(DATA_DIR, "tracking")
 )
+
+# Pinned dashboard bundle. When SNN_DASHBOARD_DIST points at a built dashboard
+# `dist/`, e.g. a versioned artifact published by w4ffl35/snn-dashboard, the
+# server serves it instead of the in-repo `client/dist`. Leaving it unset keeps
+# the legacy behaviour, so the read-only `client/` mirror still works for a
+# release.
+DASHBOARD_DIST = os.environ.get("SNN_DASHBOARD_DIST") or None

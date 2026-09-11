@@ -57,10 +57,9 @@ and a generated-type change without a schema change fails too.
 | New `type` enum value | MINOR | ignore unknown `type` |
 | Remove / rename / retype / re-required | MAJOR | coordinate a release |
 
-**Missing `protocol_version`.** During Phase 1 only, an inbound message
-without `protocol_version` is treated as legacy `"0.x"`, accepted with a
-one-line deprecation log, and answered with a `config_ack` stating `"1.0"`.
-From Phase 2 onward a missing version is a `protocol_version_mismatch` error.
-A present value whose MAJOR component differs from the server's is always
-rejected with a `type: "error"` message carrying
-`payload.code = "protocol_version_mismatch"`.
+**Missing `protocol_version`.** An inbound message without
+`protocol_version` is rejected with a `type: "error"` message carrying
+`payload.code = "protocol_version_mismatch"`, exactly like a present value
+whose MAJOR component differs from the server's. (Phase 1 accepted a missing
+version as legacy `"0.x"` with a one-line deprecation log; that transition
+window is closed as of Phase 2.)

@@ -72,6 +72,14 @@ flowchart LR
 The same spine powers the recipes in [`COOKBOOK.md`](COOKBOOK.md) and the
 scripts in [`examples/`](examples/).
 
+The browser dashboard is extracted to its own repository,
+[`w4ffl35/snn-dashboard`](https://github.com/w4ffl35/snn-dashboard)
+(ARCH-0001 Phase 2). [`client/`](client) stays here for one release as a
+read-only mirror; the pinned dashboard bundle version is recorded in
+[`compatibility.json`](compatibility.json), and the server serves a pinned
+prebuilt bundle when `SNN_DASHBOARD_DIST` is set. The versioned WebSocket
+contract lives under `protocol/` (see its `README.md`).
+
 ## Features
 
 - MNIST loading + `snntorch.utils.data_subset` reduction

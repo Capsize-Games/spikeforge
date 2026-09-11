@@ -7,13 +7,34 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from snn_interpreter import config
+
 # In Docker this is /app/client/dist; local fallback is client/dist.
 _CLIENT_DIST = Path("/app/client/dist")
 _LOCAL_DIST = Path(__file__).resolve().parent.parent / "client" / "dist"
 
 
+def pinned_dist() -> Optional[Path]:
+    """Return the pinned prebuilt dashboard bundle when it is present."""
+    if config.DASHBOARD_DIST:
+        candidate = Path(config.DASHBOARD_DIST)
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def client_dist() -> Optional[Path]:
-    """Return the client build directory if present, else None."""
+    """Return the dashboard build directory, preferring a pinned bundle.
+
+    ``SNN_DASHBOARD_DIST`` (see :mod:`snn_interpreter.config`) lets a deploy
+    serve a ``dist/`` published by ``w4ffl35/snn-dashboard`` without rebuilding
+    ``client/`` in-repo. When it is unset or absent, the legacy resolution --
+    the Docker ``/app/client/dist`` then the in-repo ``client/dist`` -- is
+    unchanged.
+    """
+    pinned = pinned_dist()
+    if pinned is not None:
+        return pinned
     if _CLIENT_DIST.exists():
         return _CLIENT_DIST
     if _LOCAL_DIST.exists():

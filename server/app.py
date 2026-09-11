@@ -1,7 +1,6 @@
 """FastAPI application exposing the encoding engine over WebSocket."""
 
 import asyncio
-import logging
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -27,25 +26,28 @@ mount_client(app)
 # One session per connected client.
 _sessions: Dict[int, Session] = {}
 
-logger = logging.getLogger(__name__)
-
-#: Payload code returned when an inbound MAJOR version does not match ours.
+#: Payload code returned when an inbound version is missing or mismatched.
 VERSION_MISMATCH = "protocol_version_mismatch"
 
 
 def _version_error(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Return a mismatch payload, or None when the inbound version fits.
 
-    A missing ``protocol_version`` is the Phase 1 legacy signal (``0.x``):
-    it is accepted with a one-line deprecation log. From Phase 2 onward a
-    missing version becomes a mismatch instead.
+    From Phase 2 onward ``protocol_version`` is required: a message that
+    omits it -- or carries one whose MAJOR component differs from ours -- is
+    rejected with ``payload.code = "protocol_version_mismatch"``.
     """
     incoming = raw.get("protocol_version")
     if incoming is None:
-        logger.warning(
-            "legacy client message without protocol_version; assuming 0.x"
-        )
-        return None
+        return {
+            "code": VERSION_MISMATCH,
+            "message": (
+                "client message is missing protocol_version; server "
+                f"protocol is {PROTOCOL_VERSION}"
+            ),
+            "client": None,
+            "server": PROTOCOL_VERSION,
+        }
     major = str(incoming).split(".", 1)[0]
     if major == PROTOCOL_MAJOR:
         return None
