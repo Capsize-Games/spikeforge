@@ -16,7 +16,7 @@ commands are ``snn-hub list``, ``snn-hub inspect nir/fc_legacy`` and
 
 from typing import Any, Dict, List
 
-from snn_interpreter.hub import available, catalog, get, import_model, inspect
+from snn_hub import available, catalog, get, import_model, inspect
 
 #: Bundled NIR entry exercised by this example.
 ENTRY_ID = "nir/fc_legacy"

@@ -13,9 +13,9 @@ import subprocess
 import sys
 from typing import Any, Awaitable, Callable, Dict, Optional
 
-from snn_interpreter.hub import cache
-from snn_interpreter.hub.catalog import get as catalog_get
-from snn_interpreter.hub.errors import (
+from snn_hub import cache
+from snn_hub.catalog import get as catalog_get
+from snn_hub.errors import (
     HubDownloadCancelledError,
     HubDownloadError,
 )
@@ -28,7 +28,7 @@ Emit = Callable[[Dict[str, Any]], Awaitable[None]]
 def _spawn(entry_id: str) -> subprocess.Popen:
     """Start the isolated hub downloader child process."""
     return subprocess.Popen(
-        [sys.executable, "-m", "snn_interpreter.hub.download_cli", entry_id],
+        [sys.executable, "-m", "snn_hub.download_cli", entry_id],
         stdout=subprocess.PIPE,
         text=True,
     )

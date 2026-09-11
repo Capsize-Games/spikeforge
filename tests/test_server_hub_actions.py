@@ -13,7 +13,7 @@ from server.handlers import dispatch
 from server.protocol_handlers import PROTOCOL_ACTIONS
 from server.schemas import ClientMessage, HubQuery
 from server.session import Session
-from snn_interpreter.hub import cache
+from snn_hub import cache
 from snn_interpreter.network import model_store
 
 pytest.importorskip("nir")

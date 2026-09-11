@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from snn_interpreter.hub import cache
+from snn_hub import cache
 
 #: Verification status values, matching the honest report vocabulary.
 VERIFIED = "verified"

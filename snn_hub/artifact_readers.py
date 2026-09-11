@@ -11,7 +11,7 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 import torch
 
-from snn_interpreter.hub.artifact_report import (
+from snn_hub.artifact_report import (
     FRAMEWORK_WEIGHTS,
     NIR_GRAPH,
     NIR_SUFFIXES,
@@ -21,7 +21,7 @@ from snn_interpreter.hub.artifact_report import (
     ArtifactReport,
     normalize_nodes,
 )
-from snn_interpreter.hub.errors import HubArtifactError
+from snn_hub.errors import HubArtifactError
 
 
 def _load_torch(path: str) -> Any:

@@ -17,7 +17,7 @@ describe the local source tree.
   [`NOTICE.md`](NOTICE.md), issue and pull-request templates, and a
   `py.typed` marker.
 - A hub catalog curation policy,
-  [`snn_interpreter/hub/CURATION.md`](snn_interpreter/hub/CURATION.md): remote
+  [`snn_hub/CURATION.md`](snn_hub/CURATION.md): remote
   entries must name a real repository/reference plus a verified license (and a
   checksum where available), and unverified candidates must be marked
   `unverified-candidate` and reported `available: false`.
@@ -64,6 +64,24 @@ describe the local source tree.
   modules that exercise `snn_targets`. Core has not been pushed and no
   distribution is on PyPI yet, so the satellite CI installs core from its git
   remote as a temporary stopgap until `snn-interpreter` `0.3.0` is published.
+- The `snn-hub` distribution (ARCH-0001 Phase 4): the model hub — the curated
+  catalog, cache, isolated download worker, and the inspect → compat → promote
+  import funnel — moved out of core into the top-level `snn_hub` import root,
+  packaged as `packages/snn-hub` (`snn-hub` `0.1.0`, depending on
+  `snn-interpreter~=0.3.0`). `huggingface_hub` is now a base dependency of this
+  distribution rather than a core `hub` extra, and the server pins
+  `snn-hub~=0.1.0`. The `snn_interpreter.hub` import path remains a deprecated
+  re-export shim that emits a `DeprecationWarning` and raises a clear
+  `ImportError` when `snn-hub` is not installed.
+- The standalone [`w4ffl35/snn-hub`](https://github.com/w4ffl35/snn-hub)
+  satellite repository (ARCH-0001 Phase 4): created (private) and populated
+  from this repository's history with `git subtree split --prefix=snn_hub`, it
+  lays out the `snn_hub/` package at its root alongside `pyproject.toml`
+  (`snn-hub` `0.1.0`, core pin `snn-interpreter~=0.3.0`, a `dev` extra),
+  `README.md`, `LICENSE`, `.gitignore`, a Python 3.10–3.13 CI workflow, and the
+  hub test modules that exercise `snn_hub`. Its CI uses the same PyPI-or-git
+  core-install stopgap as `w4ffl35/snn-targets` until `snn-interpreter` `0.3.0`
+  is published.
 - Removed the stray, unreferenced `packages/snn_interpreter/` duplicate (263
   tracked files) that shadowed the real `snn_interpreter/` package; no
   `pyproject.toml`, CI job, test, or build script referenced it (the builds use
@@ -72,12 +90,13 @@ describe the local source tree.
 ### Changed
 
 - Console-script ownership of `snn-energy` and `snn-targets` moved to the
-  `snn-targets` distribution, resolving to `snn_targets.energy.cli:main` and
-  `snn_targets.cli.target_cli:main`; core keeps the six remaining scripts
+  `snn-targets` distribution and `snn-hub` moved to the `snn-hub` distribution,
+  resolving to `snn_targets.energy.cli:main`, `snn_targets.cli.target_cli:main`,
+  and `snn_hub.cli:main`; core keeps the five remaining scripts
   (`snn-interpreter`, `snn-interpreter-encodings`, `snn-verify`, `snn-records`,
-  `snn-hub`, `snn-benchmark`). The `snn-targets` import root, not
-  `snn_interpreter.targets`, is now the canonical path; the old paths are
-  deprecated shims.
+  `snn-benchmark`). The `snn_targets` and `snn_hub` import roots, not
+  `snn_interpreter.{targets,hub}`, are now the canonical paths; the old paths
+  are deprecated shims.
 - The maintainer contact address is now `contact@capsizegames.com` in
   [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md), and
   the `packages/` packaging metadata; the `<maintainer@example.com>` placeholder
@@ -129,7 +148,7 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
 ### Added
 
 - **Model hub (WS-A).** A bundled, offline-first curated catalog
-  (`snn_interpreter/hub/models.json`, 10 verified entries across five
+  (`snn_hub/models.json`, 10 verified entries across five
   frameworks),
   optional live Hugging Face access behind the `hub` extra, an isolated
   download worker with progress/cancel and checksum verification, and an

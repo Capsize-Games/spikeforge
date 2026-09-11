@@ -91,7 +91,6 @@ ALLOWED_LOCAL_IMPORTERS: Set[str] = frozenset(
         "snn_interpreter.nir_bridge.api",
         "snn_interpreter.onnx_bridge.api",
         "snn_interpreter.events.tonic_api",
-        "snn_interpreter.hub.probe",
         "snn_interpreter.tracking.tensorboard_sink",
         "snn_interpreter.tracking.wandb_sink",
         "snn_interpreter.tracking.sink_probe",

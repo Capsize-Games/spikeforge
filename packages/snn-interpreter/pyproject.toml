@@ -77,9 +77,6 @@ onnx = [
     "onnx>=1.14",
     "onnxruntime>=1.16",
 ]
-hub = [
-    "huggingface_hub>=0.20",
-]
 tracking = [
     "tensorboard>=2.0",
 ]
@@ -95,7 +92,6 @@ snn-interpreter = "main:main"
 snn-interpreter-encodings = "main_encodings:main"
 snn-verify = "snn_interpreter.cli.verify:main"
 snn-records = "snn_interpreter.cli.records_cli:main"
-snn-hub = "snn_interpreter.hub.cli:main"
 snn-benchmark = "snn_interpreter.benchmark.cli:main"
 
 [project.urls]

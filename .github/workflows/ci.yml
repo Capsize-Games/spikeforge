@@ -54,26 +54,61 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install core + targets + server editable
+      - name: Install core + targets + hub + server editable
         run: |
           pip install -e "./packages/snn-interpreter[dev,nir]" \
                       -e ./packages/snn-targets \
+                      -e ./packages/snn-hub \
                       -e ./packages/snn-interpreter-server
 
       - name: Test (pytest)
         run: pytest
+
+  hub:
+    # The `hub` core extra is gone: the hub now ships as the `snn-hub`
+    # distribution (`snn_hub` import root) and this job proves it installs from
+    # source and its offline catalog/CLI work.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install torch CPU wheels
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
+
+      - name: Install core + targets + hub + server editable
+        run: |
+          pip install -e "./packages/snn-interpreter[dev,nir]" \
+                      -e ./packages/snn-targets \
+                      -e ./packages/snn-hub \
+                      -e ./packages/snn-interpreter-server
+
+      - name: Exercise the snn-hub distribution
+        run: |
+          python -c "import snn_hub, snn_hub.cli; print('snn_hub OK')"
+          python -m snn_hub.cli list > /dev/null
+          pytest tests/test_hub_catalog.py tests/test_hub_cache.py \
+                 tests/test_hub_verify.py tests/test_hub_inspect.py \
+                 tests/test_cli_hub.py
 
   extras:
     # Prove every advertised extra still installs and does not rot.
     # `web` is gone: the server stack is now the server distribution's base
     # dependencies. `norse`/`lava` now live on `snn-targets`; `norse` is
     # install-only here (the suite asserts the SDK-gated backends are
-    # *absent*), and `docs` builds the site.
+    # *absent*), and `docs` builds the site. `hub` is gone too: it is the
+    # `snn-hub` distribution, exercised by the `hub` job above.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        extra: ["events", "onnx", "hub", "norse", "tracking", "docs"]
+        extra: ["events", "onnx", "norse", "tracking", "docs"]
     steps:
       - uses: actions/checkout@v4
 
@@ -138,11 +173,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install core + targets + server editable with the extras
+      - name: Install core + targets + hub + server editable with the extras
         run: |
           pip install \
-            -e "./packages/snn-interpreter[dev,nir,events,onnx,hub,tracking,tracking-wandb]" \
+            -e "./packages/snn-interpreter[dev,nir,events,onnx,tracking,tracking-wandb]" \
             -e ./packages/snn-targets \
+            -e ./packages/snn-hub \
             -e ./packages/snn-interpreter-server
 
       - name: Test with the optional extras and the server stack blocked
@@ -280,7 +316,8 @@ jobs:
           with zipfile.ZipFile(wheel) as archive:
               leaked = [
                   name for name in archive.namelist()
-                  if name.split("/", 1)[0] in ("server", "snn_targets")
+                  if name.split("/", 1)[0]
+                  in ("server", "snn_targets", "snn_hub")
               ]
           assert not leaked, f"core wheel contains satellite roots: {leaked}"
           print("wheel is satellite-free:", wheel.name)
@@ -297,16 +334,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build all three wheels
+      - name: Build all four wheels
         run: |
           python -m pip install --upgrade pip build
           python -m build ./packages/snn-interpreter
           python -m build ./packages/snn-interpreter-server
           python -m build ./packages/snn-targets
+          python -m build ./packages/snn-hub
 
       - name: Run the packaging guards
         run: |
           python scripts/check_packaging_guards.py \
             --core-wheel packages/snn-interpreter/dist/snn_interpreter-*.whl \
             --server-wheel packages/snn-interpreter-server/dist/snn_interpreter_server-*.whl \
-            --targets-wheel packages/snn-targets/dist/snn_targets-*.whl
+            --targets-wheel packages/snn-targets/dist/snn_targets-*.whl \
+            --hub-wheel packages/snn-hub/dist/snn_hub-*.whl

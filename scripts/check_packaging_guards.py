@@ -12,16 +12,17 @@ Three release-blocking health metrics from
   equal the core version recorded in ``compatibility.json``.
 
 Import roots and scripts are read from each distribution's ``pyproject.toml``.
-When built wheels are passed with ``--core-wheel`` and ``--server-wheel`` the
-import-root check runs against the actual archives instead, so CI proves the
-artifact and not just the intent.
+When built wheels are passed with ``--core-wheel``, ``--server-wheel``,
+``--targets-wheel``, and ``--hub-wheel`` the import-root check runs against the
+actual archives instead, so CI proves the artifact and not just the intent.
 
 Usage::
 
     python scripts/check_packaging_guards.py \
         --core-wheel dist/snn_interpreter-*.whl \
         --server-wheel dist/snn_interpreter_server-*.whl \
-        --targets-wheel dist/snn_targets-*.whl
+        --targets-wheel dist/snn_targets-*.whl \
+        --hub-wheel dist/snn_hub-*.whl
 """
 
 import argparse
@@ -42,6 +43,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CORE_DISTRIBUTION = "snn-interpreter"
 SERVER_DISTRIBUTION = "snn-interpreter-server"
 TARGETS_DISTRIBUTION = "snn-targets"
+HUB_DISTRIBUTION = "snn-hub"
 CORE_PYPROJECT = REPO_ROOT / "packages" / CORE_DISTRIBUTION / "pyproject.toml"
 SERVER_PYPROJECT = (
     REPO_ROOT / "packages" / SERVER_DISTRIBUTION / "pyproject.toml"
@@ -49,6 +51,7 @@ SERVER_PYPROJECT = (
 TARGETS_PYPROJECT = (
     REPO_ROOT / "packages" / TARGETS_DISTRIBUTION / "pyproject.toml"
 )
+HUB_PYPROJECT = REPO_ROOT / "packages" / HUB_DISTRIBUTION / "pyproject.toml"
 COMPATIBILITY = REPO_ROOT / "compatibility.json"
 
 
@@ -196,6 +199,7 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     parser.add_argument("--core-wheel", type=Path, default=None)
     parser.add_argument("--server-wheel", type=Path, default=None)
     parser.add_argument("--targets-wheel", type=Path, default=None)
+    parser.add_argument("--hub-wheel", type=Path, default=None)
     return parser.parse_args(argv)
 
 
@@ -206,11 +210,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         CORE_DISTRIBUTION: CORE_PYPROJECT,
         SERVER_DISTRIBUTION: SERVER_PYPROJECT,
         TARGETS_DISTRIBUTION: TARGETS_PYPROJECT,
+        HUB_DISTRIBUTION: HUB_PYPROJECT,
     }
     wheels = {
         CORE_DISTRIBUTION: args.core_wheel,
         SERVER_DISTRIBUTION: args.server_wheel,
         TARGETS_DISTRIBUTION: args.targets_wheel,
+        HUB_DISTRIBUTION: args.hub_wheel,
     }
     if all(wheels.values()):
         roots_by_distribution = {

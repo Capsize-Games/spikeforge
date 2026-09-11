@@ -1,6 +1,6 @@
 """Typed errors raised by the energy/latency accounting package.
 
-Grouping them here mirrors :mod:`snn_interpreter.hub.errors`: a malformed
+Grouping them here mirrors :mod:`snn_hub.errors`: a malformed
 declared cost table is a named failure rather than a bare traceback, so a bad
 bundled table is reported by target instead of silently ignored.
 """

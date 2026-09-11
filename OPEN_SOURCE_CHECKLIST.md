@@ -35,12 +35,12 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
   in the README, the roadmap (§12 decision 1), and now a top-level
   `NOTICE.md` so a redistributor sees it without reading the README.
 - [x] **Third-party license audit for catalog entries — resolved by removal.**
-  [`snn_interpreter/hub/models.json`](snn_interpreter/hub/models.json) now ships
+  [`snn_hub/models.json`](snn_hub/models.json) now ships
   **10 entries, all `"license": "BSD-3-Clause"`** (this project's own NIR preset
   graphs). The four former `"license": "see upstream"` entries were invented
   "seed" ids under a fictional `snn-community/*` namespace with no real
   upstream; rather than ship unverifiable ids they were **removed**. The schema
-  now rejects free-text licenses (see `snn_interpreter/hub/CURATION.md`), so an
+  now rejects free-text licenses (see `snn_hub/CURATION.md`), so an
   unverified candidate must be marked `"unverified-candidate"` and is reported
   `available: false`.
 

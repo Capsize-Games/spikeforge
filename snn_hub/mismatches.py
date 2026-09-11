@@ -4,7 +4,7 @@ These helpers turn a structural difference into one readable record naming the
 stage and reason, which is what makes a rejected import explain *why* rather
 than reporting a generic failure. Names carry no underscore because they are
 this module's small public vocabulary for
-:mod:`snn_interpreter.hub.compat`.
+:mod:`snn_hub.compat`.
 """
 
 from typing import Any, Dict, List, Mapping, Sequence, Tuple

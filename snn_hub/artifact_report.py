@@ -1,7 +1,7 @@
 """The structural report produced by artifact inspection.
 
 Kept separate from the readers so a report can be built and compared by
-:mod:`snn_interpreter.hub.compat` without importing any reader machinery. A
+:mod:`snn_hub.compat` without importing any reader machinery. A
 report describes structure only: node kinds and parameter shapes, or key names
 and tensor shapes. No tensor value ever survives into it.
 """

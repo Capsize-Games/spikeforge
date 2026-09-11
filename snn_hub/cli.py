@@ -10,12 +10,12 @@ import argparse
 import json
 from typing import Any, Dict, List, Optional
 
-from snn_interpreter.hub import download as hub_download
-from snn_interpreter.hub import probe
-from snn_interpreter.hub.catalog import get, issues, list_entries, search
-from snn_interpreter.hub.errors import HubArtifactError, HubError
-from snn_interpreter.hub.import_model import import_model
-from snn_interpreter.hub.inspect import inspect_artifact, resolve_path
+from snn_hub import download as hub_download
+from snn_hub import probe
+from snn_hub.catalog import get, issues, list_entries, search
+from snn_hub.errors import HubArtifactError, HubError
+from snn_hub.import_model import import_model
+from snn_hub.inspect import inspect_artifact, resolve_path
 
 #: Reason reported when live Hugging Face search is unavailable.
 _EXTRA_REASON = "requires the `hub` extra (huggingface_hub)"

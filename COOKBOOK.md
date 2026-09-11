@@ -54,7 +54,8 @@ pip install -e ./packages/snn-interpreter
 pip install -e ./packages/snn-interpreter-server
 
 # A representative "everything" install
-pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,hub,norse,tracking,docs]"
+pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,norse,tracking,docs]"
+pip install -e ./packages/snn-hub
 pip install -e ./packages/snn-interpreter-server
 
 # Development (pytest, pytest-cov, ruff, jsonschema)
@@ -65,14 +66,16 @@ pip install -e "./packages/snn-interpreter[dev]"
 [`packages/snn-interpreter/pyproject.toml`](packages/snn-interpreter/pyproject.toml)):
 
 The dashboard/WebSocket server is not a core extra; it is the
-`packages/snn-interpreter-server` distribution.
+`packages/snn-interpreter-server` distribution. The model hub is its own
+distribution too — `packages/snn-hub` (import root `snn_hub`) — and its
+`huggingface_hub` dependency is a base dependency of that distribution rather
+than a core `hub` extra.
 
 | Extra | Packages | Enables | If absent |
 |---|---|---|---|
 | `nir` | `nir`, `nirtorch` | NIR export, interpretation, `nirtorch` extraction | typed unavailable error |
 | `events` | `tonic` | Tonic event datasets (N-MNIST, DVS128 Gesture, CIFAR10-DVS, SSC) + event training | datasets reported unavailable; `EventsExtraMissingError` |
 | `onnx` | `onnx`, `onnxruntime` | ONNX export/import bridge | typed unavailable error |
-| `hub` | `huggingface_hub` | live Hugging Face search/download | catalog still works offline; live search reports unavailable |
 | `norse` | `norse` | real Norse simulator backend | `norse` target `available: false` |
 | `lava` | `lava-nc` | Lava/Loihi 2 backend path | `lava_loihi2` target `available: false` |
 | `tracking` | `tensorboard` | TensorBoard sink | local manifest remains the default |
@@ -81,8 +84,9 @@ The dashboard/WebSocket server is not a core extra; it is the
 
 > **Not executed here.** The installs above need network access and are shown
 > for reference; `nir`, `events`, `onnx`, and `docs` were already present in
-> this environment, while `hub`, `norse`, `lava`, and `tracking` were
-> intentionally absent so the recipes below can show the honest degradation.
+> this environment, while `norse`, `lava`, and `tracking` were intentionally
+> absent so the recipes below can show the honest degradation. Live hub search
+> reports unavailable whenever `huggingface_hub` cannot be imported.
 
 ### 1.2 Check what is actually available
 
@@ -94,7 +98,7 @@ importing a single optional package yourself.
 ```bash
 venv/bin/python -c "import sys; print(sys.version)"
 venv/bin/python -m snn_interpreter.cli.verify targets        # backend SDKs
-venv/bin/python -m snn_interpreter.hub.cli search fc         # huggingface_hub
+venv/bin/python -m snn_hub.cli search fc         # huggingface_hub
 venv/bin/python -c "from snn_interpreter.tracking import sinks; print(sinks.describe('tensorboard'))"
 ```
 
@@ -462,8 +466,9 @@ truncation. Requires the `nir` extra.
 
 **What it's for.** The bundled catalog renders fully offline and ships **only
 verified entries** (a real source plus a concrete license); live Hugging Face
-search needs the `hub` extra. Adding an entry requires a real repository or
-reference and a verified license — see `snn_interpreter/hub/CURATION.md`. The
+search is provided by the `snn-hub` distribution (`snn_hub`). Adding an entry
+requires a real repository or reference and a verified license — see
+`snn_hub/CURATION.md`. The
 on-demand downloader stays fully available for any vetted repository you choose
 to add.
 
@@ -883,7 +888,7 @@ Two entry points exist and they are **not** always interchangeable:
 | verify family (export/validate/targets/deploy/rewrite/run/roundtrip/ingest/extract/onnx-*) | `venv/bin/snn-verify …` or `venv/bin/python -m snn_interpreter.cli.verify …` | — |
 | records | `venv/bin/snn-records …` or `venv/bin/snn-verify records …` | `python -m snn_interpreter.cli.records_cli` (no `__main__`; prints nothing) |
 | targets/deploy/rewrite/run/extract | `venv/bin/snn-targets …` or `venv/bin/snn-verify …` | bare `python -m snn_targets.cli.target_cli` (needs a subcommand) |
-| hub | `venv/bin/snn-hub …` or `venv/bin/python -m snn_interpreter.hub.cli …` | — |
+| hub | `venv/bin/snn-hub …` or `venv/bin/python -m snn_hub.cli …` | — |
 | energy | `venv/bin/snn-energy …` or `venv/bin/python -m snn_targets.energy.cli …` | — |
 | benchmark | `venv/bin/snn-benchmark …` or `venv/bin/python -m snn_interpreter.benchmark …` | — |
 

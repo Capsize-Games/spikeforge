@@ -4,7 +4,7 @@ The catalog renders fully offline. Every entry is validated on load and any
 malformed record is reported through :func:`issues` rather than dropped, so a
 bad entry is visible in ``snn-hub list`` output instead of vanishing. The
 additive ``available`` flag is computed from
-:mod:`snn_interpreter.hub.probe`, exactly as the dataset catalog gates event
+:mod:`snn_hub.probe`, exactly as the dataset catalog gates event
 datasets on the ``events`` extra.
 """
 
@@ -12,9 +12,9 @@ import json
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Tuple
 
-from snn_interpreter.hub import cache, probe
-from snn_interpreter.hub.entry import UNVERIFIED_CANDIDATE, HubEntry
-from snn_interpreter.hub.errors import HubCatalogError
+from snn_hub import cache, probe
+from snn_hub.entry import UNVERIFIED_CANDIDATE, HubEntry
+from snn_hub.errors import HubCatalogError
 
 #: Bumped whenever the on-disk schema changes incompatibly.
 SCHEMA_VERSION = 1
@@ -106,7 +106,7 @@ def get(entry_id: str) -> Optional[HubEntry]:
 def availability(entry: HubEntry) -> Tuple[bool, Optional[str]]:
     """Return whether ``entry`` can be obtained and, if not, the reason.
 
-    An entry marked :data:`~snn_interpreter.hub.entry.UNVERIFIED_CANDIDATE` is
+    An entry marked :data:`~snn_hub.entry.UNVERIFIED_CANDIDATE` is
     never presented as ready: its upstream repository and license are not
     confirmed, so it is reported unavailable with that reason. A live Hugging
     Face entry additionally needs the ``hub`` extra; bundled and direct-URL

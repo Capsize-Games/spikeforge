@@ -56,7 +56,7 @@ COMPONENTS: Dict[str, Tuple[str, ...]] = {
         "snn_interpreter/energy/",
         "snn_interpreter/event_runtime/",
     ),
-    "hub": ("snn_interpreter/hub/",),
+    "hub": ("snn_hub/",),
     "server": ("server/",),
 }
 
@@ -68,7 +68,7 @@ BACKEND_SDK_TOKENS = ("norse", "lava")
 SERVER_PIN_PATH = "packages/snn-interpreter-server/pyproject.toml"
 
 #: File whose ``schema_version`` gates the T3(b) clause.
-CATALOG_PATH = "snn_interpreter/hub/models.json"
+CATALOG_PATH = "snn_hub/models.json"
 
 #: Release tags are ``<distribution>-v<version>``.
 TAG_RE = re.compile(r"^(?P<dist>.+)-v(?P<version>\d+\.\d+.*)$")

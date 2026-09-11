@@ -8,8 +8,8 @@ import numpy as np
 import pytest
 import torch
 
-from snn_interpreter.hub import compat
-from snn_interpreter.hub.inspect import inspect_artifact
+from snn_hub import compat
+from snn_hub.inspect import inspect_artifact
 from snn_interpreter.nir_bridge import save_graph, to_nir
 from snn_interpreter.topology.registry import build_topology
 

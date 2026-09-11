@@ -24,15 +24,18 @@ then run one headless example and launch the dashboard:
 
 ```bash
 # 1. Install the core distribution plus the extras the examples use.
-pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,hub,norse,tracking]"
+pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,norse,tracking]"
 
-# 2. Install the server distribution (pulls core + the FastAPI stack).
+# 2. Install the model hub (import root snn_hub; distribution snn-hub).
+pip install -e ./packages/snn-hub
+
+# 3. Install the server distribution (pulls core + hub + the FastAPI stack).
 pip install -e ./packages/snn-interpreter-server
 
-# 3. Run one headless example (no browser needed).
+# 4. Run one headless example (no browser needed).
 python examples/04_nir_export_validate.py
 
-# 4. Launch the dashboard (FastAPI + WebSocket on :8877).
+# 5. Launch the dashboard (FastAPI + WebSocket on :8877).
 python -m server
 ```
 
@@ -867,7 +870,7 @@ a stable name:
 | `snn-verify` | `python -m snn_interpreter.cli.verify` |
 | `snn-records` | `python -m snn_interpreter.cli.verify records` |
 | `snn-targets` | `python -m snn_targets.cli.target_cli` |
-| `snn-hub` | `python -m snn_interpreter.hub.cli` |
+| `snn-hub` | `python -m snn_hub.cli` |
 | `snn-energy` | `python -m snn_targets.energy.cli` |
 | `snn-benchmark` | `python -m snn_interpreter.benchmark` |
 
@@ -886,31 +889,33 @@ every artifact through an honest compatibility gate.
 
 ### Curated catalog + optional live Hugging Face
 
-[`snn_interpreter/hub/models.json`](snn_interpreter/hub/models.json) bundles
+[`snn_hub/models.json`](snn_hub/models.json) bundles
 **10 curated entries across five frameworks** (NIR, snnTorch, SpikingJelly,
 Norse, Lava): ten NIR graphs rendered from this project's own presets. It
 renders fully offline. Entries are validated into a
-[`HubEntry`](snn_interpreter/hub/entry.py:1); a malformed entry is *reported*
+[`HubEntry`](snn_hub/entry.py:1); a malformed entry is *reported*
 in `issues()` rather than silently skipped. The catalog ships **only verified
 entries** — a remote entry must name a real repository/reference and a concrete
 SPDX-style license, and a known-but-unverified candidate is marked
 `"unverified-candidate"` and reported `available: false`. The full policy is in
-`snn_interpreter/hub/CURATION.md`.
+`snn_hub/CURATION.md`.
 
-Live Hugging Face search/download is opt-in behind the `hub` extra
-(`huggingface_hub`), isolated in
-[`hub/hf_api.py`](snn_interpreter/hub/hf_api.py:1) and
-[`hub/probe.py`](snn_interpreter/hub/probe.py:1). Without the extra, `search`
-returns `available: false` with an explicit reason — never an error and never
-a fabricated hit.
+Live Hugging Face search/download is provided by the **`snn-hub`
+distribution** (`packages/snn-hub`, import root `snn_hub`; ARCH-0001 Phase 4),
+whose `huggingface_hub` dependency is isolated in
+[`snn_hub/hf_api.py`](snn_hub/hf_api.py:1) and
+[`snn_hub/probe.py`](snn_hub/probe.py:1). When `huggingface_hub` is absent,
+`search` returns `available: false` with an explicit reason — never an error
+and never a fabricated hit. The legacy `snn_interpreter.hub` import path
+remains a `DeprecationWarning` re-export shim for one minor release.
 
 ### Downloading
 
 Downloads reuse the isolated child-process worker pattern so the FastAPI loop
-never blocks: [`hub/download_cli.py`](snn_interpreter/hub/download_cli.py:1)
+never blocks: [`snn_hub/download_cli.py`](snn_hub/download_cli.py:1)
 fetches one entry into the offline cache and
-[`hub/verify.py`](snn_interpreter/hub/verify.py:1) checks its sha256 and size.
-[`hub/downloads.py`](snn_interpreter/hub/downloads.py:1) streams progress and
+[`snn_hub/verify.py`](snn_hub/verify.py:1) checks its sha256 and size.
+[`snn_hub/downloads.py`](snn_hub/downloads.py:1) streams progress and
 supports cancellation, exactly like the dataset downloader. The cache lives
 under `HUB_CACHE_DIR` (`SNN_HUB_DIR`, default `<DATA_DIR>/hub`), kept separate
 from the trained-model store. A source that publishes no checksum is reported
@@ -918,17 +923,17 @@ from the trained-model store. A source that publishes no checksum is reported
 
 ### Inspect → compat → promote
 
-[`hub/import_model.py`](snn_interpreter/hub/import_model.py:1) runs a
+[`snn_hub/import_model.py`](snn_hub/import_model.py:1) runs a
 three-gate funnel:
 
-1. **Inspect** ([`hub/inspect.py`](snn_interpreter/hub/inspect.py:1)) detects
+1. **Inspect** ([`snn_hub/inspect.py`](snn_hub/inspect.py:1)) detects
    the artifact kind (`nir_graph`, `state_dict`, `framework_weights`) and
    describes its structure.
-2. **Compat** ([`hub/compat.py`](snn_interpreter/hub/compat.py:1)) returns a
+2. **Compat** ([`snn_hub/compat.py`](snn_hub/compat.py:1)) returns a
    verdict — `exact`, `mappable` (with a stage mapping), or `incompatible`
    (with the specific mismatches named).
 3. **Promote** loads weights via
-   [`hub/weight_map.py`](snn_interpreter/hub/weight_map.py:1), runs a drift
+   [`snn_hub/weight_map.py`](snn_hub/weight_map.py:1), runs a drift
    check, and only then saves into `MODEL_DIR` with hub provenance in `meta`.
 
 A NIR-only artifact that matches no preset is still runnable through the
@@ -1330,14 +1335,16 @@ until it is installed.
 Every capability beyond the core is an opt-in extra; each has an isolated
 probe, so a missing package is *reported* rather than raising at import. The
 dashboard/WebSocket server is **not** a core extra: it ships as its own
-distribution, `packages/snn-interpreter-server`.
+distribution, `packages/snn-interpreter-server`. The model hub is likewise its
+own distribution, `packages/snn-hub` (import root `snn_hub`), whose
+`huggingface_hub` dependency is now a base dependency of that distribution
+rather than a core `hub` extra.
 
 | Extra | Enables | Absent behavior |
 |---|---|---|
 | `nir` | NIR export, interpretation, `nirtorch` extraction | typed unavailable error |
 | `events` | Tonic event datasets (+ event training) | datasets reported unavailable |
 | `onnx` | ONNX export/import bridge | typed unavailable error |
-| `hub` | live Hugging Face search/download | catalog still works offline |
 | `norse` | real Norse simulator backend | `norse` target `available: false` |
 | `lava` | Lava/Loihi 2 backend path | `lava_loihi2` target `available: false` |
 | `tracking` | TensorBoard sink | local manifest remains the default |
@@ -1346,7 +1353,8 @@ distribution, `packages/snn-interpreter-server`.
 | `dev` | `pytest`, `pytest-cov`, `ruff` | — |
 
 ```bash
-pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,hub,norse,tracking,docs]"
+pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,norse,tracking,docs]"
+pip install -e ./packages/snn-hub
 pip install -e ./packages/snn-interpreter-server
 ```
 
@@ -1474,6 +1482,7 @@ main_encodings.py            Extra tutorial-1 encodings (latency/delta/random)
 packages/snn-interpreter/    Core distribution (pyproject.toml authority)
 packages/snn-interpreter-server/  Server distribution (pulls core)
 packages/snn-targets/        Deploy targets distribution (pulls core)
+packages/snn-hub/            Model hub distribution (pulls core)
 examples/                    Small runnable scripts (see examples/README.md)
 snn_interpreter/
   config.py                  Paths/settings resolved from the environment
@@ -1601,16 +1610,7 @@ snn_interpreter/
     tensorboard_sink.py      TensorBoard SummaryWriter sink (tracking extra)
     wandb_sink.py            Weights & Biases sink (tracking-wandb extra)
     sink_probe.py            Isolated tensorboard / wandb probes
-  hub/                       Curated model catalog, download, import
-    models.json              Bundled catalog (10 entries, five frameworks)
-    entry.py / catalog.py    Validate and list/search the catalog
-    probe.py / hf_api.py     Isolated huggingface_hub probe + live access
-    download_cli.py          Isolated child-process downloader + verify
-    downloads.py             Async download manager: progress + cancel
-    inspect.py / compat.py   Structure report + exact/mappable/incompatible
-    weight_map.py            Load compatible weights into a preset module
-    import_model.py          inspect -> compat -> promote into MODEL_DIR
-    cli.py                   snn-hub entry point
+  hub/                       DEPRECATED shim -> snn_hub (Phase 4)
   energy/                    DEPRECATED shim -> snn_targets.energy (Phase 3)
   event_runtime/             DEPRECATED shim -> snn_targets.event_runtime
   onnx_bridge/               Optional ONNX import/export (onnx extra)
@@ -1674,6 +1674,19 @@ snn_targets/                 Deployment targets, energy, event runtime
     dense_compare.py         Sparse-vs-dense readout parity check
   cli/
     target_cli.py            targets / deploy / roundtrip / ingest
+snn_hub/                     Curated model hub (ARCH-0001 Phase 4; distribution
+                               snn-hub; extracted to w4ffl35/snn-hub)
+  models.json                Bundled catalog (10 entries, five frameworks)
+  entry.py / catalog.py      Validate and list/search the catalog
+  probe.py / hf_api.py       Isolated huggingface_hub probe + live access
+  cache.py                   HUB_CACHE_DIR resolution + entry paths
+  download_cli.py            Isolated child-process downloader + verify
+  downloads.py               Async download manager: progress + cancel
+  verify.py                  sha256 / size verification
+  inspect.py / compat.py     Structure report + exact/mappable/incompatible
+  weight_map.py              Load compatible weights into a preset module
+  import_model.py            inspect -> compat -> promote into MODEL_DIR
+  cli.py                     snn-hub entry point (snn-hub distribution)
 server/
   app.py                     FastAPI app + WebSocket endpoint
   handlers.py                Inbound message routing (encode + train)

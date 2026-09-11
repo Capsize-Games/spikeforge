@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from snn_hub import cache
 from snn_interpreter import config
-from snn_interpreter.hub import cache
 
 _ROOT = Path(__file__).resolve().parent.parent
 

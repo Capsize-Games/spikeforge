@@ -1,6 +1,6 @@
 """Typed errors raised by the sparse/event-driven runtime.
 
-Grouping them here mirrors :mod:`snn_interpreter.hub.errors`: a failure a
+Grouping them here mirrors :mod:`snn_hub.errors`: a failure a
 caller may want to react to is a named type, so an unsupported stage kind is
 reported rather than silently falling back to the dense path.
 """

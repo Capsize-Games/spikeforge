@@ -12,8 +12,8 @@ from fastapi import WebSocket
 
 from server.hub_messages import send_hub_download_state
 from server.session import Session
-from snn_interpreter.hub.downloads import HubDownloadManager
-from snn_interpreter.hub.errors import HubDownloadCancelledError
+from snn_hub.downloads import HubDownloadManager
+from snn_hub.errors import HubDownloadCancelledError
 
 #: Hub download manager singleton, reached directly by a cancelling client.
 manager = HubDownloadManager()

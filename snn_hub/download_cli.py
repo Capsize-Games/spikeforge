@@ -1,6 +1,6 @@
 """Download one hub entry in an isolated child process.
 
-Run as ``python -m snn_interpreter.hub.download_cli <entry-id>`` so the parent
+Run as ``python -m snn_hub.download_cli <entry-id>`` so the parent
 manager can terminate the process to cancel an in-flight download while
 keeping the FastAPI event loop responsive. The worker prints one JSON line
 describing the verified result; a non-zero exit means a published checksum or
@@ -14,10 +14,10 @@ import sys
 import urllib.request
 from typing import Any, Dict, List
 
-from snn_interpreter.hub import cache, hf_api, verify
-from snn_interpreter.hub.catalog import get as catalog_get
-from snn_interpreter.hub.entry import HubEntry
-from snn_interpreter.hub.errors import HubDownloadError, HubError
+from snn_hub import cache, hf_api, verify
+from snn_hub.catalog import get as catalog_get
+from snn_hub.entry import HubEntry
+from snn_hub.errors import HubDownloadError, HubError
 
 
 def _filename(url: str) -> str:

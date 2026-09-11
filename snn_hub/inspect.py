@@ -2,8 +2,8 @@
 
 Gate one of the import funnel. An artifact is classified as a ``nir_graph``, a
 ``state_dict``, or opaque ``framework_weights`` and described by its structure
-only. The readers live in :mod:`snn_interpreter.hub.artifact_readers` and the
-report type in :mod:`snn_interpreter.hub.artifact_report`; this module resolves
+only. The readers live in :mod:`snn_hub.artifact_readers` and the
+report type in :mod:`snn_hub.artifact_report`; this module resolves
 an entry to a concrete artifact (materializing a bundled preset) and dispatches
 to the right reader. An artifact that cannot be identified raises
 :class:`HubArtifactError` naming the reason.
@@ -12,21 +12,21 @@ to the right reader. An artifact that cannot be identified raises
 import os
 from typing import Optional
 
-from snn_interpreter.hub import cache
-from snn_interpreter.hub.artifact_readers import (
+from snn_hub import cache
+from snn_hub.artifact_readers import (
     inspect_dir,
     inspect_file,
     read_state_dict,
 )
-from snn_interpreter.hub.artifact_report import (
+from snn_hub.artifact_report import (
     FRAMEWORK_WEIGHTS,
     NIR_GRAPH,
     STATE_DICT,
     ArtifactReport,
     normalize_nodes,
 )
-from snn_interpreter.hub.entry import HubEntry
-from snn_interpreter.hub.errors import HubArtifactError
+from snn_hub.entry import HubEntry
+from snn_hub.errors import HubArtifactError
 
 __all__ = [
     "FRAMEWORK_WEIGHTS",

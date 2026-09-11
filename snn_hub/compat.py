@@ -23,18 +23,18 @@ from typing import (
     Tuple,
 )
 
-from snn_interpreter.hub.artifact_report import (
+from snn_hub.artifact_report import (
     NIR_GRAPH,
     STATE_DICT,
     ArtifactReport,
     normalize_nodes,
 )
-from snn_interpreter.hub.expected import (
+from snn_hub.expected import (
     candidates,
     expected_graph,
     expected_state,
 )
-from snn_interpreter.hub.mismatches import (
+from snn_hub.mismatches import (
     Record,
     edge_mismatches,
     edge_set,

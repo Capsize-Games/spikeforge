@@ -1,6 +1,6 @@
 """The preset structure an inspected artifact is compared against.
 
-Isolating preset rendering keeps :mod:`snn_interpreter.hub.compat` free of the
+Isolating preset rendering keeps :mod:`snn_hub.compat` free of the
 NIR and torch build details it only needs indirectly. Every expectation is
 best-effort: a preset that cannot be rendered returns ``None`` so the caller
 skips it rather than failing the whole classification.

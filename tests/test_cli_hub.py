@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from snn_interpreter.hub import cache, cli
+from snn_hub import cache, cli
 from snn_interpreter.network import model_store
 
 pytest.importorskip("nir")

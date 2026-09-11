@@ -2,7 +2,7 @@
 
 Each entry is validated against the schema in ``models.json`` before it is
 usable, so a malformed record is reported as a typed
-:class:`~snn_interpreter.hub.errors.HubCatalogError` instead of being
+:class:`~snn_hub.errors.HubCatalogError` instead of being
 silently skipped. Unknown frameworks, kinds, and sources are rejected by
 name, honouring the project's honesty rule.
 """
@@ -11,7 +11,7 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, Mapping, Optional, Tuple
 
-from snn_interpreter.hub.errors import HubCatalogError
+from snn_hub.errors import HubCatalogError
 
 #: Frameworks the curated catalog may declare.
 FRAMEWORKS: Tuple[str, ...] = (
@@ -30,7 +30,7 @@ SOURCES: Tuple[str, ...] = ("bundled", "url", "hf_repo")
 #: Explicit marker for a candidate whose upstream license is not verified.
 #:
 #: An entry carrying this marker is allowed to load only so it can be reported
-#: as *not ready* (see :func:`snn_interpreter.hub.catalog.availability`); it is
+#: as *not ready* (see :func:`snn_hub.catalog.availability`); it is
 #: never presented as an available, ready-to-use artifact.
 UNVERIFIED_CANDIDATE = "unverified-candidate"
 #: One SPDX-style id (no whitespace), optionally joined by SPDX operators.
@@ -147,7 +147,7 @@ def _check_license(data: Mapping[str, Any]) -> None:
     never present an unverified license as if it were a concrete one. A remote
     entry that is not yet verified must declare the explicit
     :data:`UNVERIFIED_CANDIDATE` marker, which loads but is reported
-    unavailable by :func:`snn_interpreter.hub.catalog.availability`.
+    unavailable by :func:`snn_hub.catalog.availability`.
     """
     value = data.get("license")
     if value == UNVERIFIED_CANDIDATE:

@@ -1,13 +1,13 @@
 """Isolated wrappers over the optional ``huggingface_hub`` package.
 
-Every call reaches the package through :mod:`snn_interpreter.hub.probe`, so
+Every call reaches the package through :mod:`snn_hub.probe`, so
 ``huggingface_hub`` is imported in exactly one place. A missing dependency
-raises :class:`~snn_interpreter.hub.errors.HubExtraMissingError` naming the
+raises :class:`~snn_hub.errors.HubExtraMissingError` naming the
 ``hub`` extra rather than surfacing a bare ``ImportError``.
 """
 
-from snn_interpreter.hub import probe
-from snn_interpreter.hub.errors import HubExtraMissingError
+from snn_hub import probe
+from snn_hub.errors import HubExtraMissingError
 
 
 def available() -> bool:

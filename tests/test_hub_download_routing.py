@@ -8,9 +8,9 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from snn_interpreter.hub import download_cli, downloads, hf_api, verify
-from snn_interpreter.hub.entry import HubEntry
-from snn_interpreter.hub.errors import (
+from snn_hub import download_cli, downloads, hf_api, verify
+from snn_hub.entry import HubEntry
+from snn_hub.errors import (
     HubDownloadCancelledError,
     HubDownloadError,
     HubExtraMissingError,

@@ -7,8 +7,8 @@ from typing import Any, Dict
 
 import pytest
 
-from snn_interpreter.hub import probe
-from snn_interpreter.hub.catalog import (
+from snn_hub import probe
+from snn_hub.catalog import (
     SCHEMA_VERSION,
     availability,
     entries,
@@ -18,13 +18,13 @@ from snn_interpreter.hub.catalog import (
     load_catalog,
     search,
 )
-from snn_interpreter.hub.catalog import catalog as entry_cards
-from snn_interpreter.hub.entry import (
+from snn_hub.catalog import catalog as entry_cards
+from snn_hub.entry import (
     FRAMEWORKS,
     UNVERIFIED_CANDIDATE,
     HubEntry,
 )
-from snn_interpreter.hub.errors import HubCatalogError
+from snn_hub.errors import HubCatalogError
 
 _EXPECTED_KEYS = {"huggingface_hub_available", "huggingface_hub_version"}
 

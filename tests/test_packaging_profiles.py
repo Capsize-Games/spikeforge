@@ -14,24 +14,24 @@ _ROOT = Path(__file__).resolve().parent.parent
 _CORE = _ROOT / "packages" / "snn-interpreter" / "pyproject.toml"
 _SERVER = _ROOT / "packages" / "snn-interpreter-server" / "pyproject.toml"
 _TARGETS = _ROOT / "packages" / "snn-targets" / "pyproject.toml"
+_HUB = _ROOT / "packages" / "snn-hub" / "pyproject.toml"
 
 _EXPECTED_SCRIPTS = {
     "snn-interpreter",
     "snn-interpreter-encodings",
     "snn-verify",
     "snn-records",
-    "snn-hub",
     "snn-benchmark",
 }
 # ``web`` is intentionally absent: its dependencies are now the base
 # dependencies of the ``snn-interpreter-server`` distribution. ``norse`` and
-# ``lava`` moved to ``snn-targets`` with the code they gate.
+# ``lava`` moved to ``snn-targets``; ``hub`` moved to ``snn-hub`` — each with
+# the code it gates.
 _EXPECTED_EXTRAS = {
     "dev",
     "nir",
     "events",
     "onnx",
-    "hub",
     "tracking",
     "tracking-wandb",
     "docs",
@@ -51,6 +51,7 @@ _EXPECTED_SERVER_DEPS = {
     "websockets>=12.0",
     "pydantic>=2.5",
     "snn-targets~=0.1.0",
+    "snn-hub~=0.1.0",
 }
 _EXPECTED_TARGETS_SCRIPTS = {
     "snn-energy",
@@ -63,6 +64,16 @@ _EXPECTED_TARGETS_EXTRAS = {
 _EXPECTED_TARGETS_DEPS = {
     "numpy>=1.26",
     "torch>=2.5",
+}
+_EXPECTED_HUB_SCRIPTS = {
+    "snn-hub",
+}
+_EXPECTED_HUB_EXTRAS = {
+    "dev",
+}
+_EXPECTED_HUB_DEPS = {
+    "torch>=2.5",
+    "huggingface_hub>=0.20",
 }
 
 
@@ -92,13 +103,12 @@ def test_core_dependencies_match_the_design() -> None:
 
 
 def test_console_script_targets_are_stable() -> None:
-    """The six remaining core entry points resolve to their targets."""
+    """The five remaining core entry points resolve to their targets."""
     scripts = _pyproject(_CORE)["project"]["scripts"]
     assert scripts["snn-interpreter"] == "main:main"
     assert scripts["snn-interpreter-encodings"] == "main_encodings:main"
     assert scripts["snn-verify"] == "snn_interpreter.cli.verify:main"
     assert scripts["snn-records"] == "snn_interpreter.cli.records_cli:main"
-    assert scripts["snn-hub"] == "snn_interpreter.hub.cli:main"
     assert scripts["snn-benchmark"] == "snn_interpreter.benchmark.cli:main"
 
 
@@ -108,6 +118,7 @@ def test_core_excludes_the_server_root() -> None:
     assert find["include"] == ["snn_interpreter*"]
     assert "server*" in find["exclude"]
     assert "snn_targets*" in find["exclude"]
+    assert "snn_hub*" in find["exclude"]
 
 
 def test_server_declares_base_dependencies() -> None:
@@ -147,6 +158,31 @@ def test_targets_owns_only_the_targets_root() -> None:
     assert find["include"] == ["snn_targets*"]
     assert "snn_interpreter*" in find["exclude"]
     assert "server*" in find["exclude"]
+
+
+def test_hub_distribution_owns_the_moved_surface() -> None:
+    """snn-hub owns the moved extras, script, and import root."""
+    project = _pyproject(_HUB)["project"]
+    assert set(project["optional-dependencies"]) == _EXPECTED_HUB_EXTRAS
+    assert set(project["scripts"]) == _EXPECTED_HUB_SCRIPTS
+    deps = set(project["dependencies"])
+    assert deps >= _EXPECTED_HUB_DEPS
+    assert "snn-interpreter~=0.3.0" in deps
+
+
+def test_hub_console_script_targets_resolve_to_the_new_root() -> None:
+    """The moved console script resolves inside the ``snn_hub`` root."""
+    scripts = _pyproject(_HUB)["project"]["scripts"]
+    assert scripts["snn-hub"] == "snn_hub.cli:main"
+
+
+def test_hub_owns_only_the_hub_root() -> None:
+    """Hub discovery is independent of core, targets, and the server."""
+    find = _pyproject(_HUB)["tool"]["setuptools"]["packages"]["find"]
+    assert find["include"] == ["snn_hub*"]
+    assert "snn_interpreter*" in find["exclude"]
+    assert "server*" in find["exclude"]
+    assert "snn_targets*" in find["exclude"]
 
 
 def _compose() -> Dict[str, Any]:

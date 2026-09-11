@@ -6,11 +6,11 @@ from typing import Any
 import pytest
 import torch
 
-from snn_interpreter.hub import cache
-from snn_interpreter.hub.catalog import get
-from snn_interpreter.hub.entry import HubEntry
-from snn_interpreter.hub.errors import HubArtifactError
-from snn_interpreter.hub.inspect import (
+from snn_hub import cache
+from snn_hub.catalog import get
+from snn_hub.entry import HubEntry
+from snn_hub.errors import HubArtifactError
+from snn_hub.inspect import (
     FRAMEWORK_WEIGHTS,
     NIR_GRAPH,
     STATE_DICT,

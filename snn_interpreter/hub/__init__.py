@@ -1,90 +1,25 @@
-"""Public API for the curated model hub.
+"""Deprecated alias for :mod:`snn_hub`.
 
-The offline catalog, capability probe, cache, isolated download worker, and the
-inspect/import funnel are wired here. Live Hugging Face access and artifact
-import build on this core in later phases; anything unavailable is reported,
-never faked.
+ARCH-0001 Phase 4 moved ``snn_interpreter.hub`` to the ``snn-hub``
+distribution and the ``snn_hub`` import root. This module re-exports the
+new package and is kept for one minor release; import ``snn_hub`` directly
+instead.
 """
 
-from typing import Any, Dict, List, Optional
+import warnings
 
-from snn_interpreter.hub import cache, probe
-from snn_interpreter.hub.catalog import (
-    entries,
-    get,
-    issues,
-    list_entries,
-    search,
+warnings.warn(
+    "snn_interpreter.hub moved to snn_hub; "
+    "install the 'snn-hub' distribution.",
+    DeprecationWarning,
+    stacklevel=2,
 )
-from snn_interpreter.hub.download_cli import download_entry
-from snn_interpreter.hub.entry import HubEntry
-from snn_interpreter.hub.errors import (
-    HubArtifactError,
-    HubCatalogError,
-    HubDownloadCancelledError,
-    HubDownloadError,
-    HubError,
-    HubExtraMissingError,
-    HubImportError,
-)
-from snn_interpreter.hub.import_model import import_model as _run_import
-from snn_interpreter.hub.inspect import inspect_artifact, resolve_path
 
-__all__ = [
-    "HubArtifactError",
-    "HubCatalogError",
-    "HubDownloadCancelledError",
-    "HubDownloadError",
-    "HubEntry",
-    "HubError",
-    "HubExtraMissingError",
-    "HubImportError",
-    "available",
-    "catalog",
-    "download",
-    "entries",
-    "get",
-    "import_model",
-    "inspect",
-    "issues",
-    "search",
-]
-
-
-def available() -> bool:
-    """Return True when live Hugging Face access (the ``hub`` extra) works."""
-    return probe.available()
-
-
-def catalog() -> List[Dict[str, object]]:
-    """Return every entry card, with availability and cache state."""
-    return list_entries()
-
-
-def download(entry_id: str, dest: Optional[str] = None) -> Dict[str, Any]:
-    """Download ``entry_id`` synchronously and return the worker report.
-
-    The async :class:`~snn_interpreter.hub.downloads.HubDownloadManager` runs
-    the same worker in a child process with progress and cancellation.
-    """
-    entry = get(entry_id)
-    if entry is None:
-        raise HubDownloadError(entry_id, "unknown catalog entry")
-    return download_entry(entry, dest or cache.entry_dir(entry.id))
-
-
-def inspect(entry_id: str) -> Dict[str, Any]:
-    """Return the structural report for ``entry_id``'s resolved artifact."""
-    entry = get(entry_id)
-    if entry is None:
-        raise HubArtifactError(entry_id, "unknown catalog entry")
-    return inspect_artifact(resolve_path(entry)).to_dict()
-
-
-def import_model(
-    entry_id: str,
-    topology: Optional[str] = None,
-    promote: bool = True,
-) -> Dict[str, Any]:
-    """Inspect, classify, and (when compatible) promote a catalog artifact."""
-    return _run_import(entry_id=entry_id, topology=topology, promote=promote)
+try:
+    from snn_hub import *  # noqa: F403
+except ModuleNotFoundError as error:  # pragma: no cover - satellite absent
+    raise ImportError(
+        "snn_interpreter.hub moved to the 'snn-hub' distribution "
+        "(import root 'snn_hub'); install it with "
+        "`pip install snn-hub`."
+    ) from error

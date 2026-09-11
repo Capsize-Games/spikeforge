@@ -13,11 +13,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 
-from snn_interpreter.hub import catalog
-from snn_interpreter.hub.compat import CompatibilityVerdict, classify
-from snn_interpreter.hub.entry import HubEntry
-from snn_interpreter.hub.errors import HubArtifactError, HubImportError
-from snn_interpreter.hub.inspect import (
+from snn_hub import catalog
+from snn_hub.compat import CompatibilityVerdict, classify
+from snn_hub.entry import HubEntry
+from snn_hub.errors import HubArtifactError, HubImportError
+from snn_hub.inspect import (
     NIR_GRAPH,
     STATE_DICT,
     ArtifactReport,
@@ -25,7 +25,7 @@ from snn_interpreter.hub.inspect import (
     read_state_dict,
     resolve_path,
 )
-from snn_interpreter.hub.weight_map import load_weights
+from snn_hub.weight_map import load_weights
 
 #: Deterministic probe shape for the promotion drift check.
 STEPS = 4
