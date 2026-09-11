@@ -95,6 +95,15 @@ nav:
       - Overview: production_toolkit_plan.md
       - Use cases: production_use_cases.md
       - Streaming time series: use_case_streaming_timeseries.md
+      - "Audio / keyword spotting": use_case_audio_keyword_spotting.md
+      - Event-camera vision: use_case_event_camera_vision.md
+      - Low-latency sensor stream: use_case_low_latency_sensor_stream.md
+      - Intrusion / anomaly detection: use_case_intrusion_anomaly_detection.md
+      - Bio-signal / medical monitoring: use_case_biosignal_medical_monitoring.md
+      - RL for control and robotics: use_case_rl_control_robotics.md
+      - Spiking transformers: use_case_spiking_transformers.md
+      - Edge power budgets: use_case_edge_power_budgets.md
+      - Computational neuroscience: use_case_computational_neuroscience.md
   - Reference:
       - Project rules: rules.md
       - Integration plan: INTEGRATION_PLAN.md
