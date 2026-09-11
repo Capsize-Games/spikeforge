@@ -95,6 +95,7 @@ python -m spikeforge.cli.verify deploy --topology conv_net --target reference
 python -m spikeforge.cli.verify deploy --topology conv_net --target xylo
 python -m spikeforge.cli.verify roundtrip --topology conv_net --out build/graph.json
 python -m spikeforge.cli.verify ingest --file build/graph.json
+python -m spikeforge.cli.verify test-deploy --topology fc_legacy
 ```
 
 `targets` lists the registry with live availability; `deploy` classifies a
@@ -104,6 +105,38 @@ external graph and prints its traced nodes, or a typed error with a non-zero
 exit. `ingest` reads the version-stamped JSON envelope written by
 `roundtrip --out` (or `nir_bridge.save_graph`), **not** the node/edge summary
 that `export --out` writes.
+
+### Simulator-backed test-deploy matrix
+
+[`test_deploy.run_matrix(graph, spikes)`](../spikeforge_targets/test_deploy.py:1)
+runs one graph across **every** registered target and returns a
+[`TestDeployMatrix`](../spikeforge_targets/test_deploy_result.py:60) with one
+[`DeployCell`](../spikeforge_targets/test_deploy_result.py:25) per target. Each
+cell carries the target's capability classification
+([`classify`](../spikeforge_targets/capability_matrix.py:13)) plus its
+deployment outcome: `status` (`ok`/`unavailable`/`error`), the execution
+`path` (e.g. a Lava emulator), a named `reason` when it did not complete, and
+the reference `parity` comparison.
+
+The matrix is deliberately honest, matching the availability model above:
+
+- the `reference` cell always runs in-process and compares to itself;
+- an SDK-backed simulator whose SDK is absent reports `available: false`,
+  `status: "unavailable"`, and the enabling extra in its `reason`;
+- a declared-only simulator with no backend wired reports `unavailable` with a
+  reason naming it, **never** a failure and never silently skipped;
+- an available backend that refuses the graph reports `status: "error"` with
+  the offending node and kind named.
+
+`ok` is true when the reference ran and no *available* backend errored, so a
+missing optional SDK never fails the matrix. `estimate` is always `true`: a
+simulator or emulator run is never a device measurement, and hardware energy
+and latency stay declared estimates.
+
+```bash
+python -m spikeforge.cli.verify test-deploy --topology fc_legacy
+python -m spikeforge.cli.verify test-deploy --topology fc_legacy --targets reference,norse
+```
 
 ### WebSocket actions
 
