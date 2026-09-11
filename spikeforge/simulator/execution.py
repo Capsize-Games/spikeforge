@@ -6,12 +6,12 @@ on one shared loop rather than a fork. The per-step ``step_fn`` is injected so
 the same loop drives an eager ``StageModule`` or a compiled wrapper.
 """
 
+from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
 
 from spikeforge.runtime.execution_mode import ExecutionMode
-from spikeforge.simulator.frames import normalise_frame
 from spikeforge.simulator.grad_policy import GradPolicy
 from spikeforge.simulator.module_spec import spec_of
 from spikeforge.simulator.state import (
@@ -19,6 +19,7 @@ from spikeforge.simulator.state import (
     membrane_of,
     neuron_kinds,
 )
+from spikeforge.simulator.step_stages import step_stages
 from spikeforge.simulator.trajectory import Trajectory
 from spikeforge.topology.spec import TopologySpec
 from spikeforge.topology.stage_module import CURRENT_KEY, StageModule
@@ -80,6 +81,7 @@ def _stack(frames: _FrameMap) -> Dict[str, torch.Tensor]:
 
 
 def _simulate(
+    module: StageModule,
     step_fn: _StepFn,
     spikes: torch.Tensor,
     spec: TopologySpec,
@@ -89,12 +91,18 @@ def _simulate(
     mem_frames: _FrameMap,
     cur_frames: _FrameMap,
 ) -> torch.Tensor:
-    """Step over the train under ``policy``'s gradient rules."""
+    """Step over the train under ``policy``'s gradient rules.
+
+    The per-step body is the shared
+    :func:`~spikeforge.simulator.step_stages.step_stages`, so the closed loop
+    and the stateful serving runtime advance a topology through one code path
+    rather than two that could drift apart.
+    """
     state = initial_state(spec, spikes[0])
     total: Optional[torch.Tensor] = None
+    stage_step = partial(step_stages, module, kind=kind, step_fn=step_fn)
     for index in range(int(spikes.size(0))):
-        frame = normalise_frame(spikes[index], kind)
-        outputs, state = policy.step(step_fn, frame, state)
+        outputs, state = policy.step(stage_step, spikes[index], state)
         state = policy.after_step(state, index)
         readout = outputs[spec.output]
         total = readout if total is None else total + readout
@@ -138,6 +146,6 @@ def execute(
     kind = spec.stage(spec.input).kind
     recorders = _recorders(spec, track, membrane, current, mode)
     total = _simulate(
-        step_fn, spikes, spec, kind, policy or GradPolicy(), *recorders
+        module, step_fn, spikes, spec, kind, policy or GradPolicy(), *recorders
     )
     return _trajectory(steps, total, *recorders)
