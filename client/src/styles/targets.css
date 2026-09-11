@@ -127,3 +127,15 @@
 .bucket.unsupported .bucket-head {
   color: var(--bad);
 }
+
+/* --- executed backend run --- */
+.backend-rewrite {
+  margin: 6px 0;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.backend-rewrite .panel-caption {
+  font-variant-numeric: tabular-nums;
+}

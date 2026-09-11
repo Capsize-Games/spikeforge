@@ -106,6 +106,10 @@ export function useModelActions(options: ActionsOptions) {
   const requestDeploymentReport = (target: string) =>
     ws.sendNamed("deployment_report", target);
 
+  /** Compile and run the configured topology on the named backend. */
+  const requestDeployRun = (target: string) =>
+    ws.sendTrain("deploy_run", training.state.config, target);
+
   const saveModel = (name: string) => ws.sendNamed("save_model", name);
   const newModel = () => ws.sendNamed("new_model", "");
 
@@ -142,5 +146,6 @@ export function useModelActions(options: ActionsOptions) {
     requestNirValidate,
     requestTargets,
     requestDeploymentReport,
+    requestDeployRun,
   };
 }

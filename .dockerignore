@@ -4,6 +4,17 @@ __pycache__/
 *.egg-info/
 venv/
 build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Generated documentation site source (rebuilt by scripts/build_docs.sh)
+docs/
+
+# Trained checkpoints / dataset caches (never part of the image context)
+*.pt
+*.pth
+*.ckpt
 
 # Client build artifacts & deps (rebuilt inside the image)
 client/node_modules/

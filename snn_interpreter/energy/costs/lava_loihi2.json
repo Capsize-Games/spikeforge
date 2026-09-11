@@ -1,0 +1,8 @@
+{
+  "sop_pj": 23.6,
+  "mac_pj": 23.6,
+  "ac_pj": 81.0,
+  "step_ns": 1000.0,
+  "source": "Declared estimate: order-of-magnitude from Loihi's published ~23.6 pJ per synaptic operation and ~81 pJ per neuron update (Davies et al., IEEE Micro 2018). A dense MAC is modelled at the synaptic rate because Loihi has no dense-MAC primitive. Not measured on this machine.",
+  "measured": false
+}

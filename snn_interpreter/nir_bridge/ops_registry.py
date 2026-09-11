@@ -21,6 +21,7 @@ OPS: Dict[str, NodeOp] = {
     "Affine": ops_linear.apply_affine,
     "Linear": ops_linear.apply_linear,
     "Conv2d": ops_linear.apply_conv2d,
+    "Conv1d": ops_linear.apply_conv1d,
     "Flatten": ops_linear.apply_flatten,
     "AvgPool2d": ops_linear.apply_avgpool,
     "SumPool2d": ops_linear.apply_sumpool,

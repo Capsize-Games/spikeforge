@@ -145,3 +145,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     """Parse ``argv`` and dispatch to the selected records command."""
     args = _parser().parse_args(argv)
     return int(args.handler(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

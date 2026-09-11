@@ -1,11 +1,13 @@
 import { HELP } from "../helpText";
 import type {
+  AnimationStatePayload,
   InferencePayload,
   Modality,
   RasterPayload,
   RasterSource,
 } from "../types";
 import { HelpTip } from "./HelpTip";
+import { HiddenFramePanel } from "./HiddenFramePanel";
 import { RasterCanvas } from "./RasterCanvas";
 
 interface Props {
@@ -13,6 +15,10 @@ interface Props {
   inference: InferencePayload | null;
   timeStep: number | null;
   modality: Modality;
+  /** Latest streamed hidden-layer frame, when animation is enabled. */
+  hiddenFrame: number[][] | null;
+  /** Availability of the hidden animation stream, once requested. */
+  animation: AnimationStatePayload | null;
 }
 
 /** Compact per-layer aggregate for training diagnostics. */
@@ -43,6 +49,8 @@ export function NetworkActivity({
   inference,
   timeStep,
   modality,
+  hiddenFrame,
+  animation,
 }: Props) {
   const eventInput = modality === "event";
   const inputLabel = eventInput
@@ -73,6 +81,15 @@ export function NetworkActivity({
           highlightStep={timeStep}
           emptyNote={eventInput ? "select an event sample" : undefined}
         />
+        {(animation || hiddenFrame) && (
+          <HiddenFramePanel
+            frame={hiddenFrame}
+            step={timeStep}
+            unavailable={
+              animation && !animation.available ? animation.reason : null
+            }
+          />
+        )}
         <RasterCanvas
           bare
           height={260}

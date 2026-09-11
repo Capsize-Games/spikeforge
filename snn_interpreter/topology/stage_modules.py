@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, Mapping, Optional
 import torch.nn as nn
 
 from snn_interpreter.neurons.registry import NEURONS, build_neuron
+from snn_interpreter.topology import sequence_stages
 from snn_interpreter.topology.kinds import PARAMETERLESS_KINDS
 from snn_interpreter.topology.stage import Stage
 from snn_interpreter.topology.sum_pool import SumPool2d
@@ -40,6 +41,19 @@ def _conv2d(params: Mapping[str, Any]) -> nn.Module:
     )
 
 
+def _conv1d(params: Mapping[str, Any]) -> nn.Module:
+    return nn.Conv1d(
+        int(params["in_channels"]),
+        int(params["out_channels"]),
+        kernel_size=params["kernel_size"],
+        stride=params.get("stride", 1),
+        padding=params.get("padding", 0),
+        dilation=params.get("dilation", 1),
+        groups=int(params.get("groups", 1)),
+        bias=bool(params.get("bias", True)),
+    )
+
+
 def _pool_kwargs(params: Mapping[str, Any]) -> Dict[str, Any]:
     return {
         "kernel_size": params["kernel_size"],
@@ -56,12 +70,33 @@ def _sumpool2d(params: Mapping[str, Any]) -> nn.Module:
     return SumPool2d(**_pool_kwargs(params))
 
 
+def _maxpool1d(params: Mapping[str, Any]) -> nn.Module:
+    return nn.MaxPool1d(**_pool_kwargs(params))
+
+
+def _maxpool2d(params: Mapping[str, Any]) -> nn.Module:
+    return nn.MaxPool2d(**_pool_kwargs(params))
+
+
+def _dropout(params: Mapping[str, Any]) -> nn.Module:
+    """Return an ``nn.Dropout`` that is the identity at inference."""
+    return nn.Dropout(
+        p=float(params.get("p", 0.5)),
+        inplace=bool(params.get("inplace", False)),
+    )
+
+
 _BUILDERS: Dict[str, StageBuilder] = {
     "linear": _linear,
     "flatten": _flatten,
     "conv2d": _conv2d,
+    "conv1d": _conv1d,
     "avgpool2d": _avgpool2d,
     "sumpool2d": _sumpool2d,
+    "maxpool1d": _maxpool1d,
+    "maxpool2d": _maxpool2d,
+    "dropout": _dropout,
+    **sequence_stages.BUILDERS,
 }
 
 

@@ -1,10 +1,11 @@
 """Dataset-backed source of single samples for viewing and encoding."""
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 
 from snn_interpreter.data.datasets import build_dataset
+from snn_interpreter.data.image_size import SizeLike, as_size
 
 
 class SampleSource:
@@ -15,10 +16,12 @@ class SampleSource:
         dataset: str = "mnist",
         train: bool = True,
         download: bool = True,
+        size: Optional[SizeLike] = None,
     ) -> None:
-        """Load the registry dataset backing this source."""
+        """Load the registry dataset at ``size`` (default 28x28)."""
         self._dataset = dataset
-        self._data = build_dataset(dataset, train=train)
+        self._size = as_size(size) if size is not None else (28, 28)
+        self._data = build_dataset(dataset, train=train, size=self._size)
 
     def clamp(self, index: int) -> int:
         """Wrap an index into the valid range [0, len)."""
@@ -42,7 +45,7 @@ class SampleSource:
     @property
     def size(self) -> Tuple[int, int]:
         """Return the (H, W) size of every sample."""
-        return (28, 28)
+        return self._size
 
     @property
     def dataset(self) -> str:

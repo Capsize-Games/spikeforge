@@ -82,7 +82,7 @@ class EventSpikeBridge:
         square = frames.size(3) == frames.size(4)
         if frames.size(2) == SAMPLE_CHANNELS and square:
             flat = frames.reshape(frames.size(0), frames.size(1), -1)
-            return to_input_shape(flat, spec, side=frames.size(3))
+            return to_input_shape(flat, spec, size=frames.size(3))
         return frames
 
     def _channels(self, spec: TopologySpec) -> int:

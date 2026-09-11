@@ -42,8 +42,15 @@ class ReproducibilityManifest:
         history: Optional[List[Dict[str, Any]]] = None,
         created_at: Optional[float] = None,
         versions: Optional[Mapping[str, Any]] = None,
+        tracking: Optional[Mapping[str, Any]] = None,
+        determinism: Optional[Mapping[str, Any]] = None,
     ) -> None:
-        """Store the configuration, seed, history, and library versions."""
+        """Store the configuration, seed, history, and library versions.
+
+        ``tracking`` and ``determinism`` are additive, opt-in blocks: they are
+        omitted entirely from :meth:`to_dict` unless the caller supplies them,
+        so a default run's manifest is byte-for-byte unchanged.
+        """
         self._config = dict(config)
         self._seed = None if seed is None else int(seed)
         self._history = [dict(point) for point in (history or [])]
@@ -51,6 +58,8 @@ class ReproducibilityManifest:
         self._created_at = (
             time.time() if created_at is None else float(created_at)
         )
+        self._tracking = dict(tracking) if tracking else None
+        self._determinism = dict(determinism) if determinism else None
 
     @property
     def config_hash(self) -> str:
@@ -59,7 +68,7 @@ class ReproducibilityManifest:
 
     def to_dict(self) -> Dict[str, Any]:
         """Return the JSON-able manifest persisted with a checkpoint."""
-        return {
+        payload = {
             "schema_version": SCHEMA_VERSION,
             "created_at": self._created_at,
             "config_hash": self.config_hash,
@@ -73,6 +82,11 @@ class ReproducibilityManifest:
                 "not_guaranteed": list(_NOT_GUARANTEED),
             },
         }
+        if self._tracking is not None:
+            payload["tracking"] = self._tracking
+        if self._determinism is not None:
+            payload["determinism"] = self._determinism
+        return payload
 
     @classmethod
     def from_dict(
@@ -85,4 +99,6 @@ class ReproducibilityManifest:
             history=data.get("history", []),
             created_at=data.get("created_at"),
             versions=data.get("versions"),
+            tracking=data.get("tracking"),
+            determinism=data.get("determinism"),
         )

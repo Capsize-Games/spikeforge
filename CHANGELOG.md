@@ -1,0 +1,127 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+This project has **not** been published to any package index; the versions below
+describe the local source tree.
+
+## [Unreleased]
+
+### Added
+
+- Open-source readiness scaffolding: [`CONTRIBUTING.md`](CONTRIBUTING.md),
+  [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md),
+  [`NOTICE.md`](NOTICE.md), issue and pull-request templates, and a
+  `py.typed` marker.
+- A hub catalog curation policy,
+  [`snn_interpreter/hub/CURATION.md`](snn_interpreter/hub/CURATION.md): remote
+  entries must name a real repository/reference plus a verified license (and a
+  checksum where available), and unverified candidates must be marked
+  `unverified-candidate` and reported `available: false`.
+
+### Changed
+
+- The maintainer contact address is now `contact@capsizegames.com` in
+  [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md), and
+  [`setup.py`](setup.py); the `<maintainer@example.com>` placeholder is gone.
+- The catalog schema rejects free-text licenses: an entry's `license` must be a
+  concrete SPDX-style id or the explicit `unverified-candidate` marker.
+
+### Removed
+
+- Four invented hub catalog entries under a fictional `snn-community/*`
+  namespace (`hf/snn-fc-mnist`, `hf/snn-conv-mnist`,
+  `hf/snn-recurrent-mnist`, `snntorch/fc_mnist_weights`). They declared
+  `"license": "see upstream"` and had no real upstream, so they were removed
+  rather than shipped. The Hugging Face ingestion path and the `hub` extra are
+  unchanged.
+
+## [0.2.0] - 2026-09-10
+
+The professionalization program (workstreams WS-A…WS-F) plus the first
+open-source-readiness pass. Every capability below is additive; the
+`TopologySpec` single source of truth, the legacy `_fc1/_lif1/_fc2/_lif2`
+checkpoint keys, and the existing WebSocket payload keys are preserved.
+
+### Added
+
+- **Model hub (WS-A).** A bundled, offline-first curated catalog
+  (`snn_interpreter/hub/models.json`, 10 verified entries across five
+  frameworks),
+  optional live Hugging Face access behind the `hub` extra, an isolated
+  download worker with progress/cancel and checksum verification, and an
+  inspect → compat → promote import funnel. Surfaces: the `snn-hub` CLI, six
+  additive WebSocket actions, and the `HubPanel` client browser.
+- **Backend execution (WS-B).** A substitution executor that applies a
+  target's declared rewrites with a rewrite report and a drift check, and
+  executable `reference`, `norse`, and `lava_loihi2` backends behind one
+  `compile_run` entry point. Surfaces: `deploy`/`rewrite`/`run` and the
+  `BackendRunPanel`.
+- **Sequence primitives (WS-C).** Per-stage heterogeneous neurons, ten new
+  stage kinds with explicit NIR contracts (or an explicit unexportable
+  outcome), a sequence/token data path, and the `sequence_mlp`/`sequence_attn`
+  presets.
+- **Event runtime and energy (WS-D).** A sparse/event-driven runner with a
+  dense-parity acceptance test, SOP/MAC/AC counting, and an `snn-energy` report
+  that maps op counts to a declared, per-target cost table (all tables are
+  `"measured": false` with a source).
+- **Operational maturity (WS-E).** Opt-in persisted metrics under
+  `SNN_METRICS_DIR`, optional TensorBoard/W&B tracking sinks behind extras,
+  determinism tooling, and a MkDocs Material docs site generated from
+  `plans/` by `scripts/build_docs.sh`.
+- **Interop fold-ins (WS-F).** Event-dataset training, an ONNX export/import
+  bridge, `nirtorch` extraction of third-party PyTorch modules, weight-level
+  quantization, non-square sensor geometry, and per-step hidden-layer
+  animation.
+- `CHANGELOG.md`, the community files, and `.github/` issue/PR templates.
+- A PEP 561 `py.typed` marker, shipped as package data.
+
+### Changed
+
+- Bumped the version from `0.1.0` to `0.2.0`.
+- `Development Status` classifier from `3 - Alpha` to `4 - Beta`: the planned
+  capabilities are delivered, but hardware and energy results remain
+  unmeasured and are reported as estimates.
+- `python_requires` raised from `>=3.8` to `>=3.10`, with classifiers for
+  Python 3.10–3.13 to match what is tested.
+- Reconciled `setup.py` dependency floors with `requirements.txt`
+  (`torch>=2.5`, `torchvision>=0.20`, `snntorch>=1.0`, `matplotlib>=3.8`,
+  `Pillow>=10.0`, `numpy>=1.26`) and declared `psutil`.
+- CI now runs the docs check, an optional-extras matrix, a blocked-optional-
+  dependency degradation run, a Python 3.10–3.13 matrix, and the client build
+  on every push and pull request.
+
+### Fixed
+
+- `python -m snn_interpreter.cli.records_cli` and
+  `python -m snn_interpreter.cli.target_cli` now execute under module
+  invocation, matching the other console-script modules.
+- Splitting `server/messages.py` keeps it within the project's 250-line style
+  contract; the hub message helpers moved to `server/hub_messages.py`.
+
+## [0.1.0] - 2026-09-09
+
+### Added
+
+- The initial spike-encoding playground: MNIST-subset loading, rate/latency/
+  delta/random spike encoders, matplotlib/MP4 exports, and a fully-connected
+  LIF `SpikingNet` trained with a surrogate-gradient loss.
+- The FastAPI + React dashboard: a dark-themed WebSocket UI with a training
+  panel, live charts, model management, and a CPU/GPU device picker with a
+  live resource monitor.
+- Interpreter spine (Phase 1): `TopologySpec` presets, a neuron registry, NIR
+  export, an independent NIR interpreter, and numerical drift validation.
+- Dual-mode introspection (Phase 2) and the unified dashboard (Phase 3).
+- Event datasets (Phase 4) through Tonic, behind the `events` extra.
+- Deployment targets and interop (Phase 5): a capability matrix, per-target
+  reports, external NIR import/export, and a round-trip fidelity guarantee.
+- Production workflows (Phase 6): a reproducibility manifest and config hash,
+  a searchable checkpoint registry, opt-in scale-ups, a stored benchmark
+  suite, JSON logging, packaged console scripts, and Docker CPU/GPU profiles.
+
+[Unreleased]: https://github.com/w4ffl35/snn_interpreter/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/w4ffl35/snn_interpreter/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/w4ffl35/snn_interpreter/releases/tag/v0.1.0

@@ -12,6 +12,7 @@ import torch
 
 from snn_interpreter.benchmark import memory, timing
 from snn_interpreter.benchmark.config import BenchmarkConfig, default_config
+from snn_interpreter.benchmark.energy import energy_block
 from snn_interpreter.runtime import device as device_mod
 from snn_interpreter.runtime.execution_mode import ExecutionMode
 from snn_interpreter.simulator import input_shape
@@ -175,7 +176,9 @@ def _case(
     memory_info = memory.snapshot(
         _forward_call(module, spikes, core, step_fn), device
     )
-    return _record(topology, mode, stepper, measured, memory_info)
+    record = _record(topology, mode, stepper, measured, memory_info)
+    record["energy"] = energy_block(module, spikes, config)
+    return record
 
 
 def _modes(config: BenchmarkConfig) -> List[str]:

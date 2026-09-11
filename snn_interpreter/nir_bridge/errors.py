@@ -35,6 +35,36 @@ class UnsupportedStageError(Exception):
         self.kind: str = kind
 
 
+class ExtractionExtraMissingError(Exception):
+    """Raised when ``nirtorch`` extraction is requested without its extra.
+
+    The offending ``extra`` is stored as an attribute so callers can name the
+    install to the user instead of failing with a bare ``ImportError``.
+    """
+
+    def __init__(self, extra: str = "nir") -> None:
+        """Record ``extra`` and build a clear install hint."""
+        message = (
+            f"the {extra!r} extra is required for nirtorch extraction; "
+            f"install it with: pip install snn-interpreter[{extra}]"
+        )
+        super().__init__(message)
+        self.extra: str = extra
+
+
+class ExtractionError(Exception):
+    """Raised when ``nirtorch`` cannot trace a module into a NIR graph.
+
+    ``detail`` carries the upstream reason (for example an unsupported torch
+    operation) so a failed extraction names *why* rather than dropping nodes.
+    """
+
+    def __init__(self, detail: str) -> None:
+        """Record ``detail`` and build a clear message."""
+        super().__init__(f"nirtorch could not extract the module: {detail}")
+        self.detail: str = detail
+
+
 class GraphFileError(Exception):
     """Base error for reading or writing a persisted NIR graph.
 

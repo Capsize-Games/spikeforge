@@ -11,7 +11,7 @@ def test_catalog_includes_modality_and_availability() -> None:
     entries = datasets.catalog()
     assert entries
     for entry in entries:
-        assert entry["modality"] in {"image", "event"}
+        assert entry["modality"] in {"image", "event", "sequence"}
         assert isinstance(entry["available"], bool)
         assert set(entry) == {
             "name", "classes", "description", "modality", "available",

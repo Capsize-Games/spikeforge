@@ -58,6 +58,16 @@ def _shaped(session: Session, spec: Any) -> Optional[Any]:
     return shaped_spikes(session.engine.spike_input(), spec)
 
 
+def target_pair(session: Session, cfg: TrainConfig) -> Tuple[Any, Any]:
+    """Return the active engine's ``(spec, module)`` or a configured build."""
+    return _target(session, cfg)
+
+
+def shaped_sample(session: Session, spec: Any) -> Optional[Any]:
+    """Return the configured sample's shaped spikes, or ``None``."""
+    return _shaped(session, spec)
+
+
 def _report(
     session: Session, spec: Any, module: Any, target: str
 ) -> Dict[str, Any]:

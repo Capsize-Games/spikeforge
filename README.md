@@ -9,6 +9,67 @@ FastAPI + React over WebSockets.
 
 The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_1.html).
 
+> **Read first:** the consequences of the project's deliberate limits are
+> collected in [Implications and boundaries](#implications-and-boundaries) —
+> read that section to know what a result does and does not tell you.
+> Runnable, copy-pasteable recipes live in [`COOKBOOK.md`](COOKBOOK.md), the
+> end-to-end runnable scripts are in [`examples/`](examples/), and
+> pre-release readiness is tracked in
+> [`OPEN_SOURCE_CHECKLIST.md`](OPEN_SOURCE_CHECKLIST.md).
+
+## Quickstart
+
+Install a minimal set — the core package plus the extras the examples use —
+then run one headless example and launch the dashboard:
+
+```bash
+# 1. Install core plus the extras (web dashboard, event datasets, ONNX, hub,
+#    Norse backend, tracking sinks, docs).
+pip install -e ".[web,events,onnx,hub,norse,tracking,docs]"
+
+# 2. Run one headless example (no browser needed).
+python examples/04_nir_export_validate.py
+
+# 3. Launch the dashboard (FastAPI + WebSocket on :8877).
+python -m server
+```
+
+Open <http://localhost:8877> for the single-port build, or run the Vite dev
+server for hot reload (`cd client && npm install && npm run dev`; its proxy
+target is `:8877`). Ten runnable journeys — training, encoding, NIR/ONNX,
+the hub, backends, energy, sequence experiments, and reproducibility — are
+listed in [`examples/README.md`](examples/README.md), and the
+copy-pasteable recipes are in [`COOKBOOK.md`](COOKBOOK.md).
+
+## Architecture
+
+A model is declared once as a
+[`TopologySpec`](snn_interpreter/topology/spec.py:1) and rendered twice —
+into the snnTorch module that trains and into the `nir.NIRGraph` that
+exports and validates — so the two cannot silently diverge. Every surface
+(CLI, WebSocket, dashboard) renders from the same payload shapes.
+
+```mermaid
+flowchart LR
+    A["Datasets and event streams<br/>MNIST, Fashion, N-MNIST, DVS"] --> B["SpikeEncoder /<br/>EventSpikeBridge"]
+    B --> C["TopologySpec<br/>single source of truth"]
+    C --> D["snnTorch StageModule"]
+    C --> E["nir.NIRGraph"]
+    D --> F["Simulator / training<br/>one temporal loop"]
+    E --> G["Independent NIR interpreter<br/>validation and drift"]
+    F --> G
+    E --> I["Deployment targets<br/>rewrite, quantize, backends"]
+    F --> J["Energy accounting<br/>SOP / MAC / AC estimate"]
+    C --> H["Model hub<br/>inspect, compat, import"]
+    G --> K["Dashboard and CLI<br/>WebSocket / JSON"]
+    H --> K
+    I --> K
+    J --> K
+```
+
+The same spine powers the recipes in [`COOKBOOK.md`](COOKBOOK.md) and the
+scripts in [`examples/`](examples/).
+
 ## Features
 
 - MNIST loading + `snntorch.utils.data_subset` reduction
@@ -55,6 +116,28 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
   multi-GPU), a stored benchmark suite with regression gating, opt-in JSON
   logging and a metrics snapshot, packaged console scripts, and Docker
   CPU/GPU profiles (see below)
+- **Model hub (WS-A)**: a bundled curated catalog (10 verified entries across
+  five frameworks) plus optional live Hugging Face access, an isolated
+  downloader with progress/cancel and checksum verification, and an
+  inspect → compat → promote import funnel, surfaced through `snn-hub`, six
+  WebSocket actions, and the `HubPanel` browser (see below)
+- **Backend execution (WS-B)**: a substitution executor that applies a
+  target's declared rewrites with a report and drift check, and executable
+  `reference`, `norse`, and `lava_loihi2` backends behind one `compile_run`
+  entry point, surfaced through `deploy`/`rewrite`/`run` (see below)
+- **Sequence primitives (WS-C)**: per-stage heterogeneous neurons, ten new
+  stage kinds with explicit NIR contracts, and the `sequence_mlp`/`sequence_attn`
+  demonstration presets (see below)
+- **Event runtime and energy (WS-D)**: a sparse/event-driven runner with a
+  dense-parity check, SOP/MAC/AC counting, and a `snn-energy` report that maps
+  op counts to a declared per-target cost table (see below)
+- **Operational maturity (WS-E)**: opt-in persisted metrics, optional
+  TensorBoard/W&B tracking sinks, determinism tooling, and a generated docs
+  site (see below)
+- **Interop fold-ins (WS-F)**: event-dataset training, an ONNX bridge,
+  `nirtorch` extraction of third-party PyTorch modules, weight-level
+  quantization, non-square sensor geometry, and per-step hidden-layer
+  animation (see below)
 
 ## Interpreter spine (Phase 1)
 
@@ -234,6 +317,28 @@ Phase 3 turns the browser dashboard into the go-to surface for both
 audiences. Every panel below renders from live server payloads over the
 existing WebSocket protocol, so nothing needs a page reload.
 
+### Screenshots (placeholder — not yet captured)
+
+> **Maintainer note — deliberate placeholder; no image is committed.** The
+> dashboard screenshots and the demo GIF were **not** captured, because this
+> repository is prepared in a headless environment with no browser. Do not
+> fake an image; capture the following from a real browser session and link
+> them from this section:
+>
+> - **Dashboard overview** — the full three-column layout (model controls,
+>   introspection panels, analysis panels) with a sample encoded.
+> - **Training run** — the live loss/accuracy charts mid-run.
+> - **NIR graph viewer and drift-validation panel** — a topology graph and
+>   its `within_tolerance` report.
+> - **Hub panel** — entry cards, a compat badge, and an import verdict.
+> - **Demo GIF** — apply-and-run streaming spike frames into the raster.
+>
+> To reproduce: `pip install -e ".[web]"`, then `python -m server` (port
+> 8877) and `cd client && npm install && npm run dev`; open
+> <http://localhost:5173>. Commit the captures under a top-level `assets/`
+> directory (the gitignored `build/` and `docs/` trees are not suitable) and
+> link them here.
+
 ### Execution-mode toggle
 
 The top bar carries an **Educational / Production** toggle wired to
@@ -329,6 +434,13 @@ failures emit the existing `error` message rather than raising.
 | `surrogates` | `surrogate_list` | — |
 | `surrogate_curve` | `surrogate_curve` | needs a surrogate name |
 | `benchmark` | `benchmark` | runs the tiny default fixture |
+| `model_search` / `model_diff` | `model_search` / `model_diff` | registry search and metadata diffing |
+| `deployment_report` | `deployment_report` | capability matrix for a target |
+| `deploy_run` | `backend_run` | compile + run on a backend, with rewrite/compare |
+| `energy_report` | `energy_report` | SOP/MAC/AC accounting for a target |
+| `hub_list` / `hub_search` | `hub_list` / `hub_search` | curated catalog browse + search |
+| `hub_download` / `hub_cancel` | `hub_download_state` | isolated download with progress/cancel |
+| `hub_inspect` / `hub_import` | `hub_inspect` / `hub_import` | structure report + compat verdict |
 
 The schema also still declares a legacy `predict` type, but the client no
 longer sends it and the server does not dispatch it.
@@ -425,10 +537,13 @@ of decoding a missing image.
 
 ### Limitations
 
-- **Training on event datasets is not wired.** The event path serves
-  samples for viewing, encoding, and NIR validation; the training loop
-  still loads image datasets through `build_dataset`, and `build_dataset`
-  refuses an event spec, so no event-mode training is offered yet.
+> The consequences of the extras-gated boundaries below are reasoned about in
+> [Implications and boundaries](#implications-and-boundaries).
+
+- **Training on event datasets needs the `events` extra.** Event-mode
+  training shipped in WS-F through `EventTrainingEngine`, which batches a
+  stream of event samples into the shared training loop; without `tonic` it
+  raises the typed `EventsExtraMissingError` rather than silently running.
 - **Spatial topologies need 28x28-like geometry.** `conv_net` consumes
   `[T, B, 1, H, W]`; the bridge passes a polar frame through unchanged and
   never reshapes a non-square frame. Use a feature-input topology
@@ -464,12 +579,14 @@ quantization). The registry ships:
 | `norse` | simulator | `norse` | Norse PyTorch simulator |
 
 SDKs are optional and are reported **honestly**. Availability is resolved on
-demand through one isolated probe
-([`targets/probe.py`](snn_interpreter/targets/probe.py:1) — the only module
-that imports a backend SDK; it imports nothing at module load time). A target
-whose SDK is absent is returned with `"available": false` and named in the
-report notes; it is never hidden or silently treated as ready. Only the
-`reference` target is available by default.
+demand through isolated probes
+([`targets/probe.py`](snn_interpreter/targets/probe.py:1) and
+[`targets/backends/api.py`](snn_interpreter/targets/backends/api.py:1) — the
+only modules that import a backend SDK; both import nothing at module load
+time). A target whose SDK is absent is returned with `"available": false` and
+named in the report notes; it is never hidden or silently treated as ready.
+The `reference` target is always available, and `norse`/`lava_loihi2` gain
+executable backends when their extras are installed (see WS-B above).
 
 ### Capability matrix
 
@@ -531,7 +648,7 @@ on a negative result so they double as CI gates):
 python -m snn_interpreter.cli.verify targets
 python -m snn_interpreter.cli.verify deploy --topology conv_net --target reference
 python -m snn_interpreter.cli.verify deploy --topology conv_net --target xylo
-python -m snn_interpreter.cli.verify roundtrip --topology conv_net
+python -m snn_interpreter.cli.verify roundtrip --topology conv_net --out build/graph.json
 python -m snn_interpreter.cli.verify ingest --file build/graph.json
 ```
 
@@ -539,7 +656,9 @@ python -m snn_interpreter.cli.verify ingest --file build/graph.json
 topology against a target and exits `0` only when `deployable`; `roundtrip`
 exits `0` only when the persisted graph is `identical`; `ingest` runs a saved
 external graph and prints its traced nodes, or a typed error with a non-zero
-exit.
+exit. `ingest` reads the version-stamped JSON envelope written by
+`roundtrip --out` (or `nir_bridge.save_graph`), **not** the node/edge summary
+that `export --out` writes.
 
 ### WebSocket actions
 
@@ -567,17 +686,23 @@ different target.
 
 ### Limitations
 
-- **Only the reference target is available.** The hardware/simulator entries
-  are declarative placeholders; their SDKs are not installed, so they report
-  `available: false`. Wiring a concrete backend is a follow-up decision.
-- **Substitutions are declared, not executed.** The matrix says a target
-  *would* use a substitute primitive; it does not perform the swap.
-- **No hardware runtime is wired.** A deployment report classifies a graph
-  against a target's declared capabilities; it does not compile or run the
-  graph on a device.
+> **See also** [Implications and boundaries](#implications-and-boundaries) for
+> why each boundary below exists and what it implies for a user.
+
+- **Availability, not capability.** The in-process `reference` target is
+  always available. `norse` and `lava_loihi2` now have executable backends
+  (WS-B) that compile and run when their extras are installed; without the SDK
+  they report `available: false` and `run` returns `status: "unavailable"`.
+  `spinnaker2`, `speck`, and `xylo` remain declarative placeholders.
+- **Substitutions are executed.** The declared mapping stays the source of
+  truth; the rewrite executor (WS-B) applies it and reports a post-rewrite
+  drift check.
+- **No on-device measurement.** `reference`, `norse`, and `lava_loihi2` compile
+  and run, but no physical device is attached, so hardware timing and energy
+  are not measured.
 - **Graph exchange uses NIR's node vocabulary.** Import/export round-trips a
-  graph in this project's version-stamped JSON envelope; `nirtorch`-based
-  extraction from arbitrary third-party PyTorch modules is still out of scope.
+  graph in this project's version-stamped JSON envelope, and `nirtorch`
+  extraction of third-party PyTorch modules ships in WS-F.
 
 ## Production workflows (Phase 6)
 
@@ -719,8 +844,10 @@ a stable name:
 | `snn-interpreter` | `python main.py` |
 | `snn-interpreter-encodings` | `python main_encodings.py` |
 | `snn-verify` | `python -m snn_interpreter.cli.verify` |
-| `snn-records` | `python -m snn_interpreter.cli.records_cli` |
-| `snn-targets` | `python -m snn_interpreter.cli.target_cli` |
+| `snn-records` | `python -m snn_interpreter.cli.verify records` |
+| `snn-targets` | `python -m snn_interpreter.cli.verify targets` |
+| `snn-hub` | `python -m snn_interpreter.hub.cli` |
+| `snn-energy` | `python -m snn_interpreter.energy.cli` |
 | `snn-benchmark` | `python -m snn_interpreter.benchmark` |
 
 ### Docker CPU/GPU profiles
@@ -729,11 +856,424 @@ Two opt-in Compose [profiles](docker-compose.yml) (`cpu`, `gpu`) select
 explicit CPU-only / CUDA builds of the same service without changing the
 default `docker compose up --build` (CUDA image, dashboard on port 8877, host
 GPU reserved). Only one profile can own port 8877 at a time; see the
-[Docker profiles](README.md#docker-profiles-cpu--gpu) subsection in Usage.
+[Docker profiles](README.md#docker-profiles-cpu-and-gpu) subsection in Usage.
+
+## Model hub (WS-A)
+
+The hub discovers and obtains SNN models across the landscape and funnels
+every artifact through an honest compatibility gate.
+
+### Curated catalog + optional live Hugging Face
+
+[`snn_interpreter/hub/models.json`](snn_interpreter/hub/models.json) bundles
+**10 curated entries across five frameworks** (NIR, snnTorch, SpikingJelly,
+Norse, Lava): ten NIR graphs rendered from this project's own presets. It
+renders fully offline. Entries are validated into a
+[`HubEntry`](snn_interpreter/hub/entry.py:1); a malformed entry is *reported*
+in `issues()` rather than silently skipped. The catalog ships **only verified
+entries** — a remote entry must name a real repository/reference and a concrete
+SPDX-style license, and a known-but-unverified candidate is marked
+`"unverified-candidate"` and reported `available: false`. The full policy is in
+`snn_interpreter/hub/CURATION.md`.
+
+Live Hugging Face search/download is opt-in behind the `hub` extra
+(`huggingface_hub`), isolated in
+[`hub/hf_api.py`](snn_interpreter/hub/hf_api.py:1) and
+[`hub/probe.py`](snn_interpreter/hub/probe.py:1). Without the extra, `search`
+returns `available: false` with an explicit reason — never an error and never
+a fabricated hit.
+
+### Downloading
+
+Downloads reuse the isolated child-process worker pattern so the FastAPI loop
+never blocks: [`hub/download_cli.py`](snn_interpreter/hub/download_cli.py:1)
+fetches one entry into the offline cache and
+[`hub/verify.py`](snn_interpreter/hub/verify.py:1) checks its sha256 and size.
+[`hub/downloads.py`](snn_interpreter/hub/downloads.py:1) streams progress and
+supports cancellation, exactly like the dataset downloader. The cache lives
+under `HUB_CACHE_DIR` (`SNN_HUB_DIR`, default `<DATA_DIR>/hub`), kept separate
+from the trained-model store. A source that publishes no checksum is reported
+**unverified**, not passed silently.
+
+### Inspect → compat → promote
+
+[`hub/import_model.py`](snn_interpreter/hub/import_model.py:1) runs a
+three-gate funnel:
+
+1. **Inspect** ([`hub/inspect.py`](snn_interpreter/hub/inspect.py:1)) detects
+   the artifact kind (`nir_graph`, `state_dict`, `framework_weights`) and
+   describes its structure.
+2. **Compat** ([`hub/compat.py`](snn_interpreter/hub/compat.py:1)) returns a
+   verdict — `exact`, `mappable` (with a stage mapping), or `incompatible`
+   (with the specific mismatches named).
+3. **Promote** loads weights via
+   [`hub/weight_map.py`](snn_interpreter/hub/weight_map.py:1), runs a drift
+   check, and only then saves into `MODEL_DIR` with hub provenance in `meta`.
+
+A NIR-only artifact that matches no preset is still runnable through the
+reference interpreter, so import is useful even without a weight mapping.
+
+### `snn-hub` CLI
+
+```bash
+snn-hub list [--framework nir] [--kind nir_graph] [--available]
+snn-hub search <query> [--limit 20]
+snn-hub download <id> [--no-verify]
+snn-hub inspect <id>
+snn-hub import <id> [--topology conv_net]
+```
+
+Every command prints JSON; `download` and `import` exit non-zero on a failed
+verification or an `incompatible` verdict, so they double as CI gates.
+
+### WebSocket + client
+
+Six additive actions: `hub_list`, `hub_search`, `hub_download`, `hub_cancel`,
+`hub_inspect`, `hub_import` (replies `hub_list`, `hub_search`,
+`hub_download_state`, `hub_inspect`, `hub_import`). The
+[`HubPanel`](client/src/components/HubPanel.tsx:1) browser renders entry cards,
+a compat badge, a download progress row with cancel, and an inline import
+verdict ([`HubVerdictView`](client/src/components/HubVerdictView.tsx:1)) that
+names every mismatch.
+
+## Backend execution (WS-B)
+
+Capability *declaration* becomes executable *deployment*.
+
+### Substitution executor
+
+[`targets/rewrite.py`](snn_interpreter/targets/rewrite.py:1) applies a target's
+**declared** substitutions to produce a target-ready graph and reports what
+changed ([`rewrite_report.py`](snn_interpreter/targets/rewrite_report.py:1)):
+`applied`, `skipped`, `unfixable`. Two rules ship — `IF`→`beta=0` `LIF` for
+`norse` and `AvgPool2d`→`SumPool2d`+`Scale` for `lava_loihi2`. An unfixable
+primitive is named, never dropped, and a post-rewrite **drift check** quantifies
+any residual.
+
+### Real backends: reference, norse, lava_loihi2
+
+[`targets/backends.compile_run()`](snn_interpreter/targets/backends/__init__.py:137)
+is the single entry point. It rewrites, optionally quantizes, gates on the
+backend's availability, then compiles, runs, and compares the result to the
+reference interpreter — returning a `BackendResult` whose `status` is `ok`,
+`unavailable`, or `error`. Nothing raises and nothing is faked.
+
+| Backend | Extra | Behavior |
+|---|---|---|
+| `reference` | — | In-process NIR interpreter; always available |
+| `norse` | `norse` | Pure-PyTorch simulator; runs when the extra is installed |
+| `lava_loihi2` | `lava` | Lava/Loihi 2 path; runs when the SDK is installed |
+
+An absent SDK yields `status: "unavailable"` with a note naming the extra. SDK
+imports are confined to
+[`backends/api.py`](snn_interpreter/targets/backends/api.py:1).
+
+### `deploy` / `rewrite` / `run`
+
+```bash
+snn-verify deploy  --topology conv_net --target reference   # capability view
+snn-verify rewrite --topology conv_net --target norse       # substitutions + drift
+snn-verify run     --topology conv_net --target reference   # compile + run + compare
+```
+
+The same commands are on `snn-targets`. `deploy` exits `0` only when
+`deployable`; `run` exits non-zero unless `status == "ok"` and the comparison
+to the reference is within tolerance.
+
+### WebSocket + client
+
+A `deploy_run` action (`backend_run` reply) adds the *executed* view beside the
+existing `deployment_report`. The
+[`BackendRunPanel`](client/src/components/BackendRunPanel.tsx:1) renders the
+status, the rewrite report, the drift, and the reference comparison.
+
+## Sequence primitives and per-stage neurons (WS-C)
+
+### Per-stage heterogeneous neurons
+
+Every neuron stage can now choose its own kind, params, and surrogate. The
+presets accept additive `neurons` (per-stage kind) and `stage_params`
+(per-stage `beta`/`threshold`/`reset`/`surrogate`) maps, and `TrainConfig` gains
+additive `stage_neurons`/`stage_params`. A default build is byte-identical to
+before, and `fc_legacy` keeps its `_fc1/_lif1/_fc2/_lif2` contract.
+
+### New stage kinds
+
+[`topology/kinds.py`](snn_interpreter/topology/kinds.py:8) grows `conv1d`,
+`maxpool1d`, `maxpool2d`, `embedding`, `layer_norm`, `batch_norm`, `dropout`,
+`positional_encoding`, `attention`, and `multihead_attention`, each with a
+module factory and an explicit NIR contract — `mapped`, `passthrough`
+(`dropout` is identity at inference), or `unexportable`.
+
+### `sequence_mlp` and `sequence_attn`
+
+- `sequence_mlp` is built only from NIR-mappable kinds over a `[T, B, L, D]`
+  sequence and **validates end to end**. Its neurons default to `reset="zero"`,
+  rendering a single `nir.LIF` with no `Delay`, so it is runnable by the Norse
+  target too.
+- `sequence_attn` is the spiking-transformer-shaped demo (`embedding` →
+  `positional_encoding` → `multihead_attention` → `layer_norm` → `linear` →
+  neuron). The installed `nir` has no embedding, attention, or normalisation
+  primitive, so export raises the typed `UnsupportedStageError` naming the
+  first unexportable stage. It stays available for simulation and
+  introspection — the honest `alpha` precedent, applied to stages.
+
+The toy token task
+([`data/sequence_source.py`](snn_interpreter/data/sequence_source.py:1))
+supplies `[T, B, L, D]` frames, and the client
+[`StageNeuronEditor`](client/src/components/StageNeuronEditor.tsx:1) edits the
+per-stage configuration. This enables sequence/attention *experimentation*, not
+production LLM training.
+
+## Event-driven runtime and energy accounting (WS-D)
+
+### Sparse runner
+
+[`event_runtime.sparse_run()`](snn_interpreter/event_runtime/sparse_runner.py:1)
+is a parallel, training-free inference path that propagates spike events
+instead of dense MACs. It returns a `SparseResult` with the same readout
+contract as the dense `Trajectory`, and
+[`dense_compare`](snn_interpreter/event_runtime/dense_compare.py:1) proves
+parity within tolerance. The dense path stays the untouched default.
+
+[`SynapticCounter`](snn_interpreter/event_runtime/counters.py:1) tallies **SOP**
+(synaptic ops), **MAC** (dense baseline), **AC**, and timesteps; for a sparse
+input `SOP < MAC` by the active-spike ratio.
+
+### Declared per-target cost tables
+
+Each target carries a declared cost table under
+[`energy/costs/`](snn_interpreter/energy/costs/reference.json:1) (`reference`,
+`norse`, `lava_loihi2`, `spinnaker2`, `speck`, `xylo`), giving energy per
+SOP/MAC/AC and latency per timestep. Every table is `"measured": false` and
+carries its `source`.
+
+### `snn-energy`
+
+```bash
+snn-energy account --topology conv_net --target reference --sparse
+snn-energy report  --topology conv_net --target reference
+```
+
+`account` prints the report; `report` adds the sparse-vs-dense parity block.
+The `energy_report` WebSocket action and the benchmark `--energy` path carry
+the same payload; [`EnergyPanel`](client/src/components/EnergyPanel.tsx:1)
+renders it with a prominent estimate badge.
+
+### The estimate-vs-measured rule
+
+Every report carries `estimate: true` and a `basis` (`"declared cost table"`,
+or `"unavailable"` when a target has no table — never a fabricated number).
+Numbers are **estimates from declared tables**, never presented as measured,
+until a device reports its own timing.
+
+## Operational maturity (WS-E)
+
+### Persisted metrics
+
+The in-process registry can be snapshotted to disk. Persistence is **opt-in**
+via `SNN_METRICS_PERSIST`; with it unset, `flush()` is a no-op and behaviour is
+unchanged. Snapshots
+([`MetricSnapshot`](snn_interpreter/observability/snapshot.py:14)) are written
+under `METRICS_DIR` (`SNN_METRICS_DIR`, default `<DATA_DIR>/metrics`).
+`system_stats` gains additive `metrics_persisted` and `metrics_last_flush`
+keys; existing keys are untouched.
+
+### External tracking sinks
+
+`TrainConfig.tracking` selects `tensorboard` (extra `tracking`) or `wandb`
+(extra `tracking-wandb`), default `null`. The **local manifest is always
+written first**, so a tracker outage never loses a run; an absent backend
+becomes a recorded `reason` in the manifest's `tracking` block
+([`sinks.describe()`](snn_interpreter/tracking/sinks.py:68)). Probes are
+isolated in [`tracking/sink_probe.py`](snn_interpreter/tracking/sink_probe.py:1).
+
+### Determinism
+
+[`tracking.determinism.enable_deterministic()`](snn_interpreter/tracking/determinism.py:82)
+seeds Python/NumPy/torch and sets the deterministic-algorithm flags, returning
+a report of what it could and could not enforce;
+[`bit_exactness_check()`](snn_interpreter/tracking/determinism.py:117) reruns a
+fixture and reports exactness. `TrainConfig.deterministic` (default off) opts a
+run in, and the manifest gains an additive `determinism` block. This narrows
+the bit-exactness gap; it does not claim universal bit-exactness.
+
+### Docs site
+
+[`mkdocs.yml`](mkdocs.yml) and [`scripts/build_docs.sh`](scripts/build_docs.sh)
+render `plans/` and this README into a browsable Material site:
+
+```bash
+scripts/build_docs.sh          # build into build/docs
+scripts/build_docs.sh --check  # fail on broken documentation links
+```
+
+The markdown remains authoritative; the site is a rendering of it. The `docs`
+extra provides MkDocs Material.
+
+## Interop fold-ins (WS-F)
+
+### Event-dataset training
+
+[`training/event_engine.py`](snn_interpreter/training/event_engine.py:1) and
+[`training/event_batches.py`](snn_interpreter/training/event_batches.py:1)
+batch an event stream through the existing bridge into the `[T, B, …]`
+contract the training loop already consumes, so the loss/optimizer/metrics/
+checkpointing path is shared. A checkpoint records `modality: event`; without
+`tonic` the engine raises the typed `EventsExtraMissingError`, and a synthetic
+stream is never presented as a recording.
+
+### ONNX bridge
+
+[`onnx_bridge/`](snn_interpreter/onnx_bridge/__init__.py:1) exports a topology's
+**single forward step** to ONNX (the time loop stays in the simulator) with the
+spec in metadata, and imports a third-party graph by mapping ops to stage kinds
+— or failing with a typed error naming the op. The `onnx` extra provides
+`onnx`/`onnxruntime`; imports are confined to `onnx_bridge/api.py`.
+
+```bash
+snn-verify onnx-export    --topology conv_net --out build/model.onnx
+snn-verify onnx-import    --file build/model.onnx
+snn-verify onnx-roundtrip --topology conv_net
+```
+
+### `nirtorch` extraction
+
+[`nir_bridge/extract.py`](snn_interpreter/nir_bridge/extract.py:1) lifts an
+arbitrary `torch.nn.Module` into NIR through the isolated `nirtorch` wrapper,
+then runs it on the independent interpreter:
+
+```bash
+snn-targets extract --module model.pt
+```
+
+[`torch_map.NODE_MAP`](snn_interpreter/nir_bridge/torch_map.py:39) maps only
+`nn.Linear` and `nn.Flatten`; any other module raises the typed
+`UnsupportedNodeError` naming the class — no silent truncation.
+
+### Quantization
+
+[`targets/quantize.py`](snn_interpreter/targets/quantize.py:103) applies a
+target's **declared** scheme (`none`, `weight_int8`, `weight_uint8`) to a
+graph's weights, reporting per-layer before/after ranges and the induced drift.
+It is **weight-level only** (no activations, no device), a `none` target is a
+reported no-op, and an unknown scheme is reported unapplied.
+
+### Non-square geometry and `input_size`
+
+[`data/image_size.py`](snn_interpreter/data/image_size.py:16) normalises a
+geometry declared as an `int` side or an explicit `(H, W)` pair, and
+`EncodeConfig.input_size` propagates it. Presets keep 28×28 by default, so
+every shipped preset is byte-identical until a shape is requested.
+
+### Hidden-layer animation
+
+`EncodeConfig.animate_hidden` (default off) streams a per-step hidden-layer
+frame over the existing `spike_frame`/`animation_state` channel;
+[`network/hidden_frames.py`](snn_interpreter/network/hidden_frames.py:1) caps
+the width so an oversized layer cannot flood the socket. With the flag unset,
+the payload stream is identical to before.
+
+## Implications and boundaries
+
+This section states, for the six cross-cutting limitations that shape real
+use, **what** each one is, **why** it exists, and **what it implies for you**.
+The per-phase "Limitations" notes elsewhere in this README describe
+phase-specific behaviour; when a limit reaches beyond one phase it is reasoned
+about once, here, and those notes link back to it instead of restating the
+consequence.
+
+### 1. Energy and latency are modelled, not measured
+
+- **Why it exists.** The tool runs on x86/GPU through PyTorch, which exposes
+  no per-operation energy counters. A real energy number needs a physical
+  neuromorphic device with on-board instrumentation (for example Loihi 2
+  energy probes) or an external power monitor, and none is attached.
+- **What it does instead.** It counts operations deterministically (SOP/MAC/AC
+  and timesteps) and multiplies them by per-target cost coefficients declared
+  from published, cited literature.
+- **Implication.** Every number is an order-of-magnitude *planning* estimate:
+  it is sound for comparing models and targets and for sparse-vs-dense
+  trade-offs, but it is **not** valid for procurement, thermal, or power-budget
+  guarantees. Reports are labelled `estimate: true` with a `basis` and a
+  `source`; a single integration point (`account(..., measurement=...)`, or a
+  target probe) lets a real device report a measurement and flip the label to
+  `estimate: false` without changing any other code.
+
+### 2. `sequence_attn` is simulation-only
+
+- **Why it exists.** The installed `nir` standard has no primitives for
+  embedding, attention, layer-norm, or positional encoding, so a faithful
+  export is impossible; inventing a lossy mapping would violate the project's
+  honesty rule and could silently misbehave on hardware.
+- **What it does instead.** It keeps those stage kinds available for
+  simulation and raises a typed `UnsupportedStageError` that names the first
+  unexportable stage when export is attempted.
+- **Implication.** You can build, train, and introspect `sequence_attn` in the
+  snnTorch simulator, but you cannot export it to NIR or deploy it:
+  `snn-verify export`/`validate --topology sequence_attn` exit non-zero with the
+  named stage (for the shipped preset, `embedding`). `sequence_mlp` is the
+  NIR-exportable sequence preset because it uses only mappable kinds.
+
+### 3. Quantization is weight-level only
+
+- **What it does.** It restricts the weight tensors of affine/conv NIR nodes
+  to the target's declared scheme (int8 symmetric per-tensor, uint8 asymmetric
+  per-tensor), with a per-layer before/after range report and an optional
+  post-quantize drift check. The original graph is never mutated.
+- **Implication.** There is no activation or membrane quantization, no
+  calibration dataset, no integer-accumulation/saturation modelling, no
+  per-channel schemes, and no device kernel — so it *estimates* a target's
+  precision impact; it does not reproduce the vendor compiler's numerics, and
+  executing a quantized graph still requires the target SDK. A target whose
+  declared scheme is `none` is a reported no-op, and an unsupported scheme
+  (for example `int4`) is reported unapplied rather than silently ignored.
+
+### 4. ONNX is a single-step structural bridge
+
+- **What it does.** It exports the per-step module (the time loop stays in the
+  simulator) stamped with topology/spec/temporal metadata, and imports by
+  reading that metadata exactly or by mapping a limited op set (`Gemm`/`MatMul`,
+  `Conv`, `Flatten`, `AveragePool`, `Dropout`, and the `Identity` passthrough),
+  rejecting every other op by name. The round-trip reports `identical` only on
+  structural equality.
+- **Implication.** An exported ONNX file is **not** a complete temporal SNN:
+  running it in another runtime will not reproduce multi-timestep dynamics.
+  Importing an arbitrary ONNX model works only for the mapped op set, and
+  neuron-internal ops (`Greater`/`Sub`/`Clip`) are rejected by name — so a
+  model exported *with* metadata round-trips through the bridge, while the op
+  mapper only accepts the mapped set. Use it for interop and visualization of
+  the feed-forward math and for structural round-trips, not for cross-runtime
+  time execution.
+
+### 5. Hub weights are fetched on demand
+
+- **What it does.** The catalog stores metadata (source, expected size, and a
+  checksum when one is published) for **verified entries only**; bundled NIR
+  preset graphs materialize locally and remote artifacts a user chooses to add
+  download into a cache on first use.
+- **Implication.** The repository does not redistribute weights, for licensing
+  and size reasons, so **you** are responsible for honouring each model's
+  license. An entry with no published checksum verifies as `unverified` rather
+  than trusted, network access (plus the `hub` extra for Hugging Face) is
+  required unless the artifact is already cached, and integrity checking is
+  best-effort.
+
+### 6. Hardware backends are declared until their SDKs are installed
+
+- **Why it exists.** The hardware and simulator SDKs are heavyweight and
+  platform-specific and are not installed.
+- **Implication.** `reference` is always available; `norse`, `lava_loihi2`,
+  `spinnaker2`, `speck`, and `xylo` report `available: false` with a named
+  reason (see `snn-verify targets`), and no deployment report claims a device
+  result that was not produced — `compile_run` returns `status: "unavailable"`
+  with a note naming the enabling extra. Note that `norse` is pip-installable
+  and pure-PyTorch, so it is usable for CPU cross-checking even without any
+  neuromorphic hardware.
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10-3.13 (matching `python_requires` and CI)
 - `torch`, `torchvision`, `snntorch`
 - `matplotlib`, `Pillow`, `numpy`
 - Node.js 18+ and npm (for the `client/` dashboard)
@@ -760,6 +1300,29 @@ its capability probe work without it, reporting the event datasets as
 unavailable and raising a clear typed error that names the missing extra
 until it is installed.
 
+### Optional extras
+
+Every capability beyond the core is an opt-in extra; each has an isolated
+probe, so a missing package is *reported* rather than raising at import.
+
+| Extra | Enables | Absent behavior |
+|---|---|---|
+| `web` | FastAPI dashboard/WebSocket server | server unavailable |
+| `nir` | NIR export, interpretation, `nirtorch` extraction | typed unavailable error |
+| `events` | Tonic event datasets (+ event training) | datasets reported unavailable |
+| `onnx` | ONNX export/import bridge | typed unavailable error |
+| `hub` | live Hugging Face search/download | catalog still works offline |
+| `norse` | real Norse simulator backend | `norse` target `available: false` |
+| `lava` | Lava/Loihi 2 backend path | `lava_loihi2` target `available: false` |
+| `tracking` | TensorBoard sink | local manifest remains the default |
+| `tracking-wandb` | Weights & Biases sink | local manifest remains the default |
+| `docs` | MkDocs Material for the docs site | `build_docs.sh` reports the gap |
+| `dev` | `pytest`, `pytest-cov`, `ruff` | — |
+
+```bash
+pip install -e ".[web,events,onnx,hub,norse,tracking,docs]"
+```
+
 ## Usage
 
 ### 🐳 Run everything with Docker (recommended)
@@ -770,6 +1333,19 @@ builds into a single container and is served from **one port**.
 ```bash
 docker compose up --build
 ```
+
+Or use the dedicated runner, which selects the CPU/GPU image, builds it,
+waits for the server to report healthy, and follows the logs:
+
+```bash
+scripts/docker_server.sh            # build + run the CUDA image (default)
+scripts/docker_server.sh --cpu      # build + run the CPU-only image
+scripts/docker_server.sh --gpu      # explicit CUDA build
+scripts/docker_server.sh -d --follow  # run detached, then tail logs
+scripts/docker_server.sh --port 9000  # serve the dashboard on :9000
+```
+
+Run `scripts/docker_server.sh --help` for every option.
 
 Then open **http://localhost:8877**. The dashboard auto-connects to the
 WebSocket on the same host/port (no separate backend or proxy to run).
@@ -793,7 +1369,7 @@ of the box; build a smaller CPU-only image with:
 docker compose build --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 ```
 
-#### Docker profiles (CPU / GPU)
+#### Docker profiles (CPU and GPU)
 
 The default `docker compose up --build` is unchanged: it builds the CUDA
 image and serves the dashboard on port 8877. Two opt-in
@@ -848,7 +1424,9 @@ dev server proxies `/ws` to the FastAPI server on port 8877 (see
 ## Developer script
 
 [`scripts/dev.sh`](scripts/dev.sh) bundles the common tasks (setup, lint,
-tests, dev servers, dataset cache, Docker):
+tests, dev servers, dataset cache, Docker),
+and [`scripts/docker_server.sh`](scripts/docker_server.sh) builds and runs the
+server from the Docker container:
 
 ```bash
 scripts/dev.sh help          # list every command
@@ -857,6 +1435,7 @@ scripts/dev.sh bench         # run the benchmark suite (snn-benchmark)
 scripts/dev.sh dev           # run the API and Vite dev server together
 scripts/dev.sh data          # show the dataset cache and sizes
 scripts/dev.sh data-clear    # clear dataset caches (keeps models)
+scripts/dev.sh docker-server # run the server from the Docker container
 scripts/dev.sh docker-reset  # rebuild the Docker volume from scratch
 ```
 
@@ -865,7 +1444,8 @@ scripts/dev.sh docker-reset  # rebuild the Docker volume from scratch
 ```
 main.py                      Thin entry point: rate pipeline -> exporters
 main_encodings.py            Extra tutorial-1 encodings (latency/delta/random)
-setup.py                     Packaging metadata + web extra
+setup.py                     Packaging metadata: extras + console scripts
+examples/                    Small runnable scripts (see examples/README.md)
 snn_interpreter/
   config.py                  Paths/settings resolved from the environment
   data/                      Dataset registry, loaders, sample access
@@ -875,6 +1455,9 @@ snn_interpreter/
     sample_source.py         Single transformed images/labels for the viewer
     event_loader.py          Tonic (x,y,t,p) stream -> EventSample
     event_errors.py          EventsExtraMissingError for a missing extra
+    event_geometry.py        Event frames -> a topology's input geometry
+    image_size.py            int / (H, W) sensor geometry normalisation
+    sequence_source.py       Synthetic (tokens, label) toy sequence task
   events/                    Event-modality model, dense forms, bridge
     event_sample.py          EventSample: sparse (x, y, t, p) stream
     dense.py                 to_frames / to_voxel -> [T, 2, H, W]
@@ -893,6 +1476,7 @@ snn_interpreter/
     model_store.py           Save/load/list/delete model checkpoints
     model_search.py          Filter checkpoints by stored metadata
     model_diff.py            Classify metadata changes between checkpoints
+    hidden_frames.py         Per-step hidden-layer frames for animation
   training/                  Training loop and its collaborators
     trainer.py               SSNTrainer: MNIST loading + rate coding
     logger.py                SNNTrainerLogger: diagnostic prints
@@ -903,9 +1487,20 @@ snn_interpreter/
     scaleup_mixin.py         Opt-in AMP/grad-ckpt/BPTT/multi-GPU wiring
     amp_controller.py        Resolve and apply autocast/GradScaler AMP
     multi_device.py          DataParallel decision + honest status
+    topology_mixin.py        Resolve the spec/module for a training run
+    event_engine.py          EventTrainingEngine: steps over an event source
+    event_batches.py         Batch an event stream into [T, B, ...] frames
   topology/                  Topology specs, presets, module builder
     spec.py                  TopologySpec: stages + edges (+ chain helpers)
     presets.py               fc_legacy / fc_small / conv_net / recurrent_net
+    sequence_presets.py      sequence_mlp / sequence_attn demo presets
+    sequence_stages.py       embedding / norm / attention factories
+    attention.py             Single-head self-attention module
+    multihead_attention.py   Multi-head self-attention module
+    positional_encoding.py   Deterministic sinusoidal positional encoding
+    sum_pool.py              SumPool2d used by the Loihi substitution
+    stage_module.py          StageModule: one (input, state) step per stage
+    stage_modules.py         Module-kind factory table
     registry.py              name -> builder; build_topology/resolved_params
     builder.py               build_module(spec) -> snnTorch StageModule
   neurons/                   Neuron registry + canonical NIR param contract
@@ -946,6 +1541,9 @@ snn_interpreter/
     registry.py              MetricsRegistry: counters/gauges/timers
     timer.py                 Context-manager timer recording into a registry
     metrics.py               Shared registry + snapshot/JSON helpers
+    snapshot.py              MetricSnapshot: metrics + run id + timestamp
+    store.py                 SnapshotStore: write/read metric snapshots
+    persistence.py           Opt-in flush/load hook (SNN_METRICS_PERSIST)
   nir_bridge/                NIR export, interpreter, validation, interop
     api.py                   The only module importing nir/nirtorch
     exporter.py              to_nir(spec, module); graph_summary(...)
@@ -956,6 +1554,13 @@ snn_interpreter/
     array_codec.py           Tagged numpy encoding for an exact reload
     ingest.py                load_external / interpret_graph / interpret_file
     roundtrip.py             Persist + reload + compare graph fidelity
+    extract.py               nirtorch: third-party torch module -> NIR graph
+    torch_map.py             nn.Linear/nn.Flatten -> NIR for extraction
+    mapper.py                Stage -> NIR node(s); consults the tables below
+    node_builders.py         Builder table for mapped module kinds
+    neuron_nodes.py          Neuron-kind -> NIR node(s); alpha precedent
+    stage_builders.py        Builder table for the new stage kinds
+    stages_unmappable.py     kind -> honest reason export cannot map it
   targets/                   Deployment targets: spec, matrix, reports
     target_spec.py           TargetSpec: support, substitutions, constraints
     catalog.py               Built-in targets (reference + placeholders)
@@ -966,17 +1571,66 @@ snn_interpreter/
     matrix_result.py         Buckets, counts, and deployable() semantics
     node_view.py             Node name/kind view of a spec or graph
     substitution.py          Substitution record
+    rewrite.py               rewrite(graph, target) -> RewriteResult
+    rewrite_report.py        JSON-able applied/skipped/unfixable deltas
+    substitute_ops.py        One rewrite function per declared substitution
+    rewrite_drift.py         Post-rewrite drift check vs. the original
+    quantize.py              Apply a target's declared weight quantization
+    quantize_schemes.py      none / weight_int8 / weight_uint8 schemes
     report.py                deployment_report(...) -> JSON
     summary.py               Availability-annotated registry summaries
+    backends/                Executable backends behind one isolated probe
+      __init__.py            compile_run(...) -> BackendResult (never raises)
+      reference_backend.py   In-process NIR interpreter (always available)
+      norse_backend.py       Norse PyTorch simulator (norse extra)
+      lava_backend.py        Lava / Loihi 2 path (lava extra)
+      compare.py             Backend result vs. reference comparison
   tracking/                  Reproducibility: manifest, hash, seed, versions
     manifest.py              ReproducibilityManifest: config/seed/history
     config_hash.py           Canonical-JSON SHA-256 of the run config
     seed.py                  set_seed: Python/torch/CUDA deterministic seed
     versions.py              Library versions recorded in a manifest
+    determinism.py           enable_deterministic + bit_exactness_check
+    sink.py / sinks.py       Sink protocol + active-sink resolution
+    tensorboard_sink.py      TensorBoard SummaryWriter sink (tracking extra)
+    wandb_sink.py            Weights & Biases sink (tracking-wandb extra)
+    sink_probe.py            Isolated tensorboard / wandb probes
+  hub/                       Curated model catalog, download, import
+    models.json              Bundled catalog (10 entries, five frameworks)
+    entry.py / catalog.py    Validate and list/search the catalog
+    probe.py / hf_api.py     Isolated huggingface_hub probe + live access
+    download_cli.py          Isolated child-process downloader + verify
+    downloads.py             Async download manager: progress + cancel
+    inspect.py / compat.py   Structure report + exact/mappable/incompatible
+    weight_map.py            Load compatible weights into a preset module
+    import_model.py          inspect -> compat -> promote into MODEL_DIR
+    cli.py                   snn-hub entry point
+  energy/                    Declared cost tables + energy accounting
+    cost_table.py            Load/validate a target's declared costs
+    target_costs.py          Bundled per-target cost-table lookup
+    accounting.py            account(...) -> EnergyReport (estimate: true)
+    report.py                JSON-able report assembly
+    costs/*.json             reference / norse / lava_loihi2 / ... tables
+    cli.py                   snn-energy entry point
+  event_runtime/             Sparse / event-driven execution path
+    spike_view.py            SparseSpikes: indices/values per frame
+    ops.py / sparse_step.py  Event-driven ops for one temporal step
+    counters.py              SynapticCounter: SOP / MAC / AC / timesteps
+    sparse_runner.py         sparse_run(...) -> SparseResult
+    dense_compare.py         Sparse-vs-dense readout parity check
+  onnx_bridge/               Optional ONNX import/export (onnx extra)
+    api.py                   The only module importing onnx/onnxruntime
+    export.py                One-step topology export with spec metadata
+    import_onnx.py           Map ONNX ops to stage kinds, or name the op
+    roundtrip.py             Export + re-import fidelity check
   cli/                       Headless commands
-    verify.py                export / validate subcommands
+    verify.py                export / validate + the shared subcommands
     records_cli.py           records list / diff / manifest (snn-records)
-    target_cli.py            targets / deploy / roundtrip / ingest (snn-targets)
+    target_cli.py            targets / deploy / roundtrip / ingest
+    backend_cli.py           rewrite / run backend commands
+    extract_cli.py           extract a torch module via nirtorch
+    onnx_cli.py              onnx-export / onnx-import / onnx-roundtrip
+    fixture.py               Offline spike fixtures shaped per topology
   exporters/                 matplotlib/GIF/MP4 output -> build/
     exporter.py              Exporter base + build/ output resolution
     plot_utils.py            shared fig/GIF helpers
@@ -992,6 +1646,13 @@ server/
   nir_handlers.py            nir_export / nir_validate handlers
   target_handlers.py         targets / deployment_report handlers
   target_payloads.py         JSON payloads for the target actions
+  backend_handlers.py        deploy_run handler (compile + run)
+  backend_payloads.py        JSON payloads for the backend actions
+  energy_handlers.py         energy_report handler
+  energy_payloads.py         JSON payloads for the energy actions
+  hub_handlers.py            hub_list/search/download/inspect/import
+  hub_payloads.py            JSON payloads for the hub actions
+  hub_downloads.py           Hub download manager singleton + emitter
   model_handlers.py          model_search / model_diff handlers
   model_payloads.py          JSON payloads for the registry actions
   introspection_handlers.py  trajectory / metrics / encoding / surrogate
@@ -1010,15 +1671,19 @@ server/
 client/                      Vite + React + TypeScript dashboard
   src/                       app shell, theme, types, WS/training hooks
   src/hooks/                 viewer state, encode config, model/tour actions
-  src/components/            controls, charts, canvas panels (incl. training)
+  src/components/            controls, charts, canvas panels, plus the hub /
+                             backend / energy / stage-editor panels
+  src/hubTypes.ts            Typed hub payloads
+  src/energyTypes.ts         Typed energy payloads
   src/tour/                  guided-walkthrough lessons + target highlighting
   src/styles/                split stylesheet (base/sections/controls/mode/
                              panels/analysis/targets/tour/...)
 ```
 
 Code is kept tidy by construction: modules are grouped into focused
-subpackages, each Python file is under 250 lines, every Python function
-stays under 20 lines, and each class lives in its own file.
+subpackages, almost every Python file is under 250 lines (the one exception,
+[`server/messages.py`](server/messages.py:1), is tracked as style debt), every
+Python function stays under 20 lines, and each class lives in its own file.
 
 ## Notes
 
@@ -1034,7 +1699,7 @@ stays under 20 lines, and each class lives in its own file.
   zero-order-hold form, and `Synaptic`'s subtract reset carries a small
   residual; both residuals are reported in the `ValidationReport` rather
   than hidden. Extracting NIR graphs from arbitrary external modules via
-  `nirtorch` is deferred to Phase 5.
+  `nirtorch` landed in WS-F (`snn-targets extract`; see below).
 - **Introspection limitations (Phase 2).** Four behaviours are deliberate.
   (1) `snn.Alpha` is simulation/introspection-only: the installed `nir` has
   no alpha-function primitive that matches its three-state dynamics, so
@@ -1050,51 +1715,64 @@ stays under 20 lines, and each class lives in its own file.
   carries no image signal at all. (4) Upstream's `LSO` surrogate is listed
   because snnTorch exposes it, but applying it raises `TypeError` from
   upstream's wrapper.
-- **Dashboard limitations (Phase 3).** (1) The hardware-target picker moves
-  to Phase 5, so the LEFT column exposes topology, neuron, and surrogate
-  controls only. (2) Event datasets landed in Phase 4 (see the event
-  datasets section above), so that walkthrough step now describes the live
-  path. (3) The trajectory viewer, metrics, and histogram are gated to
-  educational mode and show an explanatory empty state in production.
-- **Event limitations (Phase 4).** (1) Training on event datasets is not
-  wired: the event path serves viewing, encoding, and NIR validation only,
-  and `build_dataset` refuses an event spec, so the training loop still
-  targets image datasets. (2) Spatial topologies such as `conv_net` expect
-  28x28-like single-channel geometry; a polar or non-square sensor should
-  use a feature-input topology. (3) The offline synthetic path is labelled
-  as such in `origin`/`description` and is never passed off as a recording.
+- **Dashboard limitations (Phase 3).** (1) The hardware-target picker is
+  delivered by the `TargetsPanel`/`BackendRunPanel` (Phase 5/WS-B). (2) Event
+  datasets landed in Phase 4 (see the event datasets section above), so that
+  walkthrough step now describes the live path. (3) The trajectory viewer,
+  metrics, and histogram are gated to educational mode and show an
+  explanatory empty state in production.
+- **Event limitations (Phase 4).** (1) Training on event datasets is now
+  wired in WS-F (`EventTrainingEngine`), but it still needs the `events`
+  extra; without `tonic` the engine raises the typed
+  `EventsExtraMissingError`. (2) Spatial topologies such as `conv_net` expect
+  28x28-like single-channel geometry; a polar or non-square sensor should use
+  a feature-input topology or declare an explicit `input_size` (see the
+  non-square geometry fold-in). (3) The offline synthetic path is labelled as
+  such in `origin`/`description` and is never passed off as a recording.
   (4) Event datasets need the optional `events` extra; without it they show
   as unavailable and the loader raises `EventsExtraMissingError`.
-- **Target limitations (Phase 5).** (1) Only the in-process `reference`
-  target is available by default; the hardware and simulator entries
-  (`lava_loihi2`, `spinnaker2`, `speck`, `xylo`, `norse`) are declarative
-  placeholders whose SDKs are not installed, so they report
-  `available: false`. (2) Substitutions are declared capabilities, not
-  executed swaps — the matrix states a substitute primitive, it does not
-  transform the graph. (3) No hardware runtime is wired: a deployment report
-  classifies a graph against declared support but neither compiles nor runs
-  it on a device. (4) Graph exchange round-trips through this project's
-  version-stamped JSON envelope over NIR's own node vocabulary;
-  `nirtorch`-based extraction from arbitrary third-party PyTorch modules is
-  still out of scope.
+- **Target limitations (Phase 5, updated in WS-B/WS-F).** (1) The in-process
+  `reference` target is always available. `norse` and `lava_loihi2` now have
+  real backends and compile and run when their extras (`norse`, `lava`) are
+  installed; without them they report `available: false` and `run` returns
+  `status: "unavailable"`. `spinnaker2`, `speck`, and `xylo` remain
+  declared-only placeholders. (2) Substitutions are now *executed* by the
+  rewrite executor with a report and a post-rewrite drift check (WS-B), so a
+  declared substitute is applied, not merely stated. (3) No on-device runtime
+  is wired: `lava_loihi2` requires the Lava SDK and no physical device is
+  present, so nothing measures real hardware timing. (4) Graph exchange
+  round-trips through this project's version-stamped JSON envelope over NIR's
+  own node vocabulary, and `nirtorch` extraction of third-party PyTorch
+  modules now ships (WS-F) with a typed error naming any unmappable node.
 - **Production limitations (Phase 6).** (1) A manifest makes a run
   *reproducible*, not *bit-exact*: CUDA kernels, thread scheduling/summation
   order, and changed dataset files can still move results, and the manifest
   says so in its `reproducible` block. (2) The registry and its search/diff
-  are local and file-based (`MODEL_DIR`); external trackers are out of scope.
+  are local and file-based (`MODEL_DIR`); optional TensorBoard/W&B sinks
+  (WS-E) forward a run *after* the local manifest is written, and an absent
+  backend is a recorded reason, not an error.
   (3) Benchmark records are compared per `(topology, mode)` on `ms/step`,
   `steps/s`, and peak memory; wall-time noise on a shared CPU runner can move
   a metric a few percent, so CI regressions use a threshold (default 10
   percent) rather than bit-exact equality, and `--compare` takes a run id, not
-  a label. (4) The metrics registry is per-process and in-memory: a snapshot
-  is not persisted, so it resets on restart and is not aggregated across
-  workers. (5) Structured logging is opt-in via `SNN_LOG_JSON` /
+  a label. (4) The metrics registry is per-process and in-memory by default;
+  WS-E adds opt-in JSON snapshot persistence (`SNN_METRICS_PERSIST`) but does
+  not aggregate across workers. (5) Structured logging is opt-in via `SNN_LOG_JSON` /
   `SNN_LOG_LEVEL`; nothing calls `configure_logging()` automatically, so the
   default log output is unchanged. (6) AMP, gradient checkpointing, truncated
   BPTT, and multi-GPU are all opt-in and default-off, so a default run is
   numerically identical; multi-GPU needs more than one visible CUDA device and
   otherwise reports an honest "unavailable" status. (7) The Docker `cpu`/`gpu`
   profiles are alternate services; only one can own port 8877 at a time.
+- **Professionalization limitations (WS-A…WS-F).** These are the honest
+  boundaries of the shipped program. The six that shape real use — no measured
+  energy, simulation-only `sequence_attn`, weight-level-only quantization, the
+  single-step ONNX bridge, fetch-on-demand hub weights, and SDK-gated hardware
+  backends — are each reasoned about in
+  [Implications and boundaries](#implications-and-boundaries), with *why* they
+  exist and *what* they imply. One further boundary is not about any of those
+  six: **determinism narrows, not closes, the bit-exactness gap** — hardware
+  scheduling and some CUDA kernels remain outside the process's control.
 
 ## License
 

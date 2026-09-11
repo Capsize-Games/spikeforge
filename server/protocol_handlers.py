@@ -8,6 +8,9 @@ action here, and this module fans them out to :mod:`server.nir_handlers` and
 
 from fastapi import WebSocket
 
+from server.backend_handlers import dispatch_backend
+from server.energy_handlers import dispatch_energy
+from server.hub_handlers import dispatch_hub
 from server.introspection_handlers import dispatch_introspection
 from server.model_handlers import dispatch_registry
 from server.nir_handlers import dispatch_nir
@@ -15,24 +18,33 @@ from server.schemas import ClientMessage
 from server.session import Session
 from server.target_handlers import dispatch_targets
 
-#: Actions handled by the NIR, introspection, target, and registry modules.
+#: Actions handled by the NIR, introspection, target, registry, and hub
+#: modules.
 PROTOCOL_ACTIONS = frozenset({
     "nir_export", "nir_validate",
     "trajectory", "metrics", "encoding_report",
     "surrogates", "surrogate_curve", "benchmark",
-    "targets", "deployment_report",
+    "targets", "deployment_report", "deploy_run", "energy_report",
     "model_search", "model_diff",
+    "hub_list", "hub_search", "hub_download", "hub_cancel",
+    "hub_inspect", "hub_import",
 })
 
 
 async def dispatch_protocol(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
-    """Route a NIR, introspection, target, or registry action."""
-    if message.type in ("nir_export", "nir_validate"):
+    """Route a NIR, introspection, target, registry, or hub action."""
+    if message.type.startswith("hub_"):
+        await dispatch_hub(ws, session, message)
+    elif message.type in ("nir_export", "nir_validate"):
         await dispatch_nir(ws, session, message)
     elif message.type in ("targets", "deployment_report"):
         await dispatch_targets(ws, session, message)
+    elif message.type == "deploy_run":
+        await dispatch_backend(ws, session, message)
+    elif message.type == "energy_report":
+        await dispatch_energy(ws, session, message)
     elif message.type in ("model_search", "model_diff"):
         await dispatch_registry(ws, session, message)
     else:

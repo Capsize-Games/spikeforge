@@ -18,8 +18,7 @@ import argparse
 import json
 from typing import Any, Dict, List, Optional
 
-import torch
-
+from snn_interpreter.cli import backend_cli, extract_cli, fixture
 from snn_interpreter.nir_bridge import interpret_file, roundtrip
 from snn_interpreter.nir_bridge.errors import (
     GraphNotFoundError,
@@ -27,18 +26,14 @@ from snn_interpreter.nir_bridge.errors import (
     UnknownNodeKindError,
     UnsupportedNodeError,
 )
-from snn_interpreter.simulator import input_shape
 from snn_interpreter.targets.report import deployment_report
 from snn_interpreter.targets.summary import target_summaries
-from snn_interpreter.topology.registry import build_topology
-from snn_interpreter.topology.spec import TopologySpec
 
 #: Target used for a deployment report when the caller names none.
 DEFAULT_TARGET = "reference"
 #: Synthetic input shape shared by the round-trip and ingest commands.
 STEPS = 8
 BATCH = 2
-FEATURES = 784
 SEED = 0
 
 #: Graph errors ``ingest`` reports cleanly rather than letting them escape.
@@ -48,13 +43,6 @@ GraphError = (
     UnknownNodeKindError,
     UnsupportedNodeError,
 )
-
-
-def _spikes(spec: TopologySpec) -> torch.Tensor:
-    """Return a deterministic flat spike volume shaped for ``spec``."""
-    torch.manual_seed(SEED)
-    flat = torch.rand(STEPS, BATCH, FEATURES)
-    return input_shape.to_input_shape(flat, spec)
 
 
 def targets_payload() -> Dict[str, Any]:
@@ -70,13 +58,18 @@ def deploy_report(
 ) -> Dict[str, Any]:
     """Return the deployment report for ``topology`` against ``target``.
 
-    A ``dataset`` attaches the drift-validation section by encoding one real
-    sample. Without it the report classifies the graph structure alone, which
-    keeps the command offline and fast.
+    A ``dataset`` selects the sample whose spikes drive the validation and
+    substitution sections; without it a deterministic synthetic fixture is
+    used, so the report still carries the executed substitution view while
+    staying offline.
     """
     if dataset is None:
-        spec, _ = build_topology(topology)
-        return deployment_report(spec, target)
+        spec, module, spikes = fixture.synthetic_input(
+            topology, STEPS, BATCH, SEED
+        )
+        return deployment_report(
+            spec, target, module=module, spikes=spikes
+        )
     from snn_interpreter.cli import verify
 
     spec, module, spikes = verify.sample_input(topology, dataset, sample)
@@ -98,8 +91,10 @@ def roundtrip_report(
     ``graph`` overrides the persisted artifact so a perturbed parameter shows
     as drift; ``out`` chooses the file, else a temporary one is used.
     """
-    spec, module = build_topology(topology)
-    return roundtrip(spec, module, _spikes(spec), graph=graph, path=out)
+    spec, module, spikes = fixture.synthetic_input(
+        topology, STEPS, BATCH, SEED
+    )
+    return roundtrip(spec, module, spikes, graph=graph, path=out)
 
 
 def roundtrip_exit(report: Dict[str, Any]) -> int:
@@ -118,8 +113,8 @@ def ingest_summary(path: str, topology: str) -> Dict[str, Any]:
     Errors the loader raises are typed and left to the caller; the summary
     names the traced nodes so an ingest is never silently partial.
     """
-    spec, _ = build_topology(topology)
-    result = interpret_file(path, _spikes(spec))
+    _, _, spikes = fixture.synthetic_input(topology, STEPS, BATCH, SEED)
+    result = interpret_file(path, spikes)
     return {
         "path": path,
         "topology": topology,
@@ -185,6 +180,9 @@ def add_subcommands(subs: Any) -> None:
     ingest.add_argument("--topology", default="conv_net")
     ingest.set_defaults(handler=_run_ingest)
 
+    backend_cli.add_subcommands(subs)
+    extract_cli.add_subcommands(subs)
+
 
 def main(argv: Optional[List[str]] = None) -> int:
     """Parse ``argv`` and dispatch to a deployment subcommand."""
@@ -196,3 +194,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     add_subcommands(subs)
     args = parser.parse_args(argv)
     return int(args.handler(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

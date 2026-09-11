@@ -17,13 +17,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 
-from snn_interpreter.cli import records_cli, target_cli
+from snn_interpreter.cli import fixture, onnx_cli, records_cli, target_cli
 from snn_interpreter.data.datasets import dataset_info
 from snn_interpreter.data.sample_source import SampleSource
 from snn_interpreter.encoding.spike_encoder import SpikeEncoder
 from snn_interpreter.nir_bridge import graph_summary, to_nir, validate
+from snn_interpreter.nir_bridge.errors import UnsupportedStageError
 from snn_interpreter.nir_bridge.validation_report import ValidationReport
 from snn_interpreter.simulator import input_shape
+from snn_interpreter.topology import registry
 from snn_interpreter.topology.registry import build_topology
 from snn_interpreter.topology.spec import TopologySpec
 from snn_interpreter.topology.stage_module import StageModule
@@ -37,6 +39,11 @@ def export_summary(topology: str) -> Dict[str, Any]:
     return graph_summary(to_nir(spec, module))
 
 
+def _sequence_input(topology: str, steps: int, seed: int) -> _Input:
+    """Build a sequence topology and one deterministic sequence fixture."""
+    return fixture.sequence_input(topology, steps, 1, seed)
+
+
 def sample_input(
     topology: str,
     dataset: str,
@@ -44,7 +51,14 @@ def sample_input(
     steps: int = 10,
     seed: int = 0,
 ) -> _Input:
-    """Build ``topology`` and one encoded, correctly-shaped spike sample."""
+    """Build ``topology`` and one encoded, correctly-shaped spike sample.
+
+    Sequence topologies receive a ``[T, B, L, D]`` token fixture (or
+    ``[T, B, L]`` integer tokens for an ``embedding`` entry) instead of an
+    encoded image, so the same command validates the sequence data path.
+    """
+    if registry.is_sequence_topology(topology):
+        return _sequence_input(topology, steps, seed)
     num_classes, _ = dataset_info(dataset)
     spec, module = build_topology(topology, {"num_classes": num_classes})
     torch.manual_seed(seed)
@@ -70,8 +84,17 @@ def exit_code(report: ValidationReport) -> int:
 
 
 def _run_export(args: argparse.Namespace) -> int:
-    """Print the graph summary, or write it to ``--out``."""
-    text = json.dumps(export_summary(args.topology), indent=2)
+    """Print the graph summary, or write it to ``--out``.
+
+    A topology with an unexportable stage prints the typed error naming the
+    stage and exits non-zero, so the command stays a usable CI gate.
+    """
+    try:
+        summary = export_summary(args.topology)
+    except UnsupportedStageError as exc:
+        print(json.dumps({"error": str(exc), "kind": exc.kind}, indent=2))
+        return 1
+    text = json.dumps(summary, indent=2)
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8")
     else:
@@ -80,11 +103,19 @@ def _run_export(args: argparse.Namespace) -> int:
 
 
 def _run_validate(args: argparse.Namespace) -> int:
-    """Build a real sample, print the report, and return its exit status."""
+    """Build a real sample, print the report, and return its exit status.
+
+    An unexportable topology cannot be validated, so the typed error naming
+    the stage is printed and the command exits non-zero instead of raising.
+    """
     spec, module, spikes = sample_input(
         args.topology, args.dataset, args.sample, args.steps, args.seed
     )
-    report = validate_report(spec, module, spikes)
+    try:
+        report = validate_report(spec, module, spikes)
+    except UnsupportedStageError as exc:
+        print(json.dumps({"error": str(exc), "kind": exc.kind}, indent=2))
+        return 1
     print(json.dumps(report, indent=2))
     return exit_code(report)
 
@@ -109,6 +140,7 @@ def _parser() -> argparse.ArgumentParser:
     check.set_defaults(handler=_run_validate)
     target_cli.add_subcommands(subs)
     records_cli.add_subcommands(subs)
+    onnx_cli.add_subcommands(subs)
     return parser
 
 

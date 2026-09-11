@@ -1,0 +1,87 @@
+name: Bug report
+description: Report a reproducible defect in snn-interpreter
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please search existing issues first, and do
+        **not** report security problems here — see SECURITY.md.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the defect and what you expected.
+      placeholder: |
+        Observed: ...
+        Expected: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: |
+        The exact command(s) or a minimal Python snippet. Include the
+        topology/dataset/target if relevant.
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Relevant output
+      description: Paste the error message or JSON. If it is large, trim to the point of failure.
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: The reported version (`python -c "import snn_interpreter"`) or the git commit.
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12.4"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Ubuntu 24.04 / macOS 14 / Windows 11"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extras
+    attributes:
+      label: Installed extras
+      description: |
+        Which optional extras are installed (e.g. `web`, `events`, `onnx`,
+        `hub`, `norse`, `lava`, `tracking`, `docs`)? The output of
+        `pip show snn-interpreter` is ideal.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I have searched existing issues for this bug.
+          required: true
+        - label: I have run `ruff check .` and `pytest` on the current `main`.
+          required: false

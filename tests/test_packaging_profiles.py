@@ -13,9 +13,23 @@ _EXPECTED_SCRIPTS = {
     "snn-verify",
     "snn-records",
     "snn-targets",
+    "snn-hub",
+    "snn-energy",
     "snn-benchmark",
 }
-_EXPECTED_EXTRAS = {"dev", "web", "nir", "events"}
+_EXPECTED_EXTRAS = {
+    "dev",
+    "web",
+    "nir",
+    "events",
+    "onnx",
+    "hub",
+    "tracking",
+    "tracking-wandb",
+    "docs",
+    "norse",
+    "lava",
+}
 
 
 def _setup_source() -> str:

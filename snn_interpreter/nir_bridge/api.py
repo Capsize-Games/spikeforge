@@ -6,7 +6,7 @@ callers instead read the report returned by :func:`capability`.
 """
 
 from importlib import import_module
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 # Keys guaranteed to be present in the dict returned by ``capability``.
 REPORT_KEYS = (
@@ -89,6 +89,30 @@ def node_class(name: str) -> Optional[type]:
 def available() -> bool:
     """Return True when the ``nir`` package can be imported."""
     return _safe_import("nir") is not None
+
+
+def nirtorch_available() -> bool:
+    """Return True when the ``nirtorch`` package can be imported."""
+    return _safe_import("nirtorch") is not None
+
+
+def extract_graph(
+    module: Any, module_map: Mapping[Any, Any]
+) -> Optional[Any]:
+    """Extract a NIR graph from a torch ``module`` using ``nirtorch``.
+
+    ``module_map`` maps torch module classes to NIR-node builders; the
+    installed ``nirtorch`` supplies its own defaults for the trivial kinds.
+    Returns ``None`` when ``nirtorch`` is unavailable so the caller owns the
+    honesty decision. ``type_check`` stays off so the extracted structural
+    graph is not re-inferred and mutated, matching the exporter.
+    """
+    nirtorch_module = _safe_import("nirtorch")
+    if nirtorch_module is None:
+        return None
+    return nirtorch_module.torch_to_nir(
+        module, dict(module_map), type_check=False
+    )
 
 
 def is_serializable_node(kind: Any) -> bool:

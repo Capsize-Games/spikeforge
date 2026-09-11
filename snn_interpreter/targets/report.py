@@ -43,6 +43,74 @@ def _notes(
     return notes
 
 
+def _rewrite_graph(
+    graph_or_spec: Any, module: Optional[Any]
+) -> Any:
+    """Return the graph a rewrite should run on, copying module weights."""
+    if isinstance(graph_or_spec, TopologySpec) and module is not None:
+        from snn_interpreter.nir_bridge.exporter import to_nir
+
+        return to_nir(graph_or_spec, module)
+    return graph_or_spec
+
+
+def _quantization(
+    graph_or_spec: Any,
+    module: Optional[Any],
+    target_name: str,
+    spikes: Optional[Any],
+) -> Dict[str, Any]:
+    """Return the quantization section, applied only when weights exist.
+
+    A spec without a built module has no weights to quantize, so the section
+    honestly reports the declared scheme as *unapplied* rather than inventing
+    a placeholder result; a graph or a spec plus module is quantized for real.
+    Imported lazily so a capability-only report stays free of nir and torch.
+    """
+    from snn_interpreter.targets.quantize import quantize
+
+    if isinstance(graph_or_spec, TopologySpec) and module is None:
+        target = get_target(target_name)
+        scheme = str(target.constraints.get("quantization", "none"))
+        return {
+            "target": target_name,
+            "scheme": scheme,
+            "applied": False,
+            "reason": "no built module supplied; quantization not applied",
+            "layers": [],
+            "counts": {"layers": 0},
+            "drift": None,
+        }
+    try:
+        graph = _rewrite_graph(graph_or_spec, module)
+        return quantize(graph, target_name, spikes).report.to_dict()
+    except Exception as exc:
+        return {"target": target_name, "error": f"{type(exc).__name__}: {exc}"}
+
+
+def _rewrite(
+    graph_or_spec: Any,
+    module: Optional[Any],
+    target_name: str,
+    spikes: Optional[Any],
+) -> Optional[Any]:
+    """Return the executed-substitution section, or ``None`` without spikes.
+
+    Imported lazily so a capability-only report stays free of torch, and
+    guarded so a rewrite failure is reported as a named error rather than
+    dropped or raised.
+    """
+    if spikes is None:
+        return None
+    from snn_interpreter.targets.rewrite import rewrite
+
+    graph = _rewrite_graph(graph_or_spec, module)
+    try:
+        return rewrite(graph, target_name, spikes).report.to_dict()
+    except Exception as exc:
+        return {"target": target_name, "error": f"{type(exc).__name__}: {exc}"}
+
+
 def _node_buckets(matrix: CapabilityMatrix) -> Dict[str, Any]:
     """Return the supported/unsupported/substituted node buckets."""
     return {
@@ -80,5 +148,9 @@ def deployment_report(
         "nodes": _node_buckets(matrix),
         "constraints": dict(target.constraints),
         "validation": validation,
+        "quantization": _quantization(
+            graph_or_spec, module, target_name, spikes
+        ),
+        "rewrite": _rewrite(graph_or_spec, module, target_name, spikes),
         "notes": _notes(matrix, validation),
     }

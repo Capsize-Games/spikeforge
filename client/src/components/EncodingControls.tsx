@@ -1,6 +1,7 @@
 import { HELP } from "../helpText";
 import type { EncodeConfig } from "../types";
 import { CheckField } from "./CheckField";
+import { InputSizeField } from "./InputSizeField";
 import { SelectField } from "./SelectField";
 import { SliderField } from "./SliderField";
 import { Section } from "./Stepper";
@@ -66,6 +67,18 @@ export function EncodingControls({
         min={20} max={400} step={10}
         help={HELP.interval_ms}
         onChange={(v) => set({ interval_ms: v })}
+      />
+      <InputSizeField
+        value={config.input_size}
+        disabled={fixed}
+        onChange={(v) => set({ input_size: v })}
+      />
+      <CheckField
+        label="animate hidden layer"
+        checked={config.animate_hidden}
+        help={HELP.animate_hidden}
+        disabled={locked}
+        onChange={(v) => set({ animate_hidden: v })}
       />
 
       {!eventMode && config.coding === "rate" && (

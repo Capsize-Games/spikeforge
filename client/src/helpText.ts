@@ -13,6 +13,12 @@ export const HELP: Record<string, string> = {
     "Events need the optional tonic package. Install the events extra " +
     "(pip install -e \".[events]\") to enable these datasets; until then " +
     "the picker marks them unavailable instead of failing silently.",
+  event_training:
+    "Event datasets train through the event stream path: each sample's " +
+    "own ON/OFF bins feed the network directly, with no rate/latency " +
+    "encoding. The topology must match the sensor geometry — conv_net " +
+    "needs a square 28x28-like sensor, while a non-square sensor needs a " +
+    "feature-input topology whose input_size equals the sensor area.",
   coding:
     "Spike encoding scheme. Rate uses firing frequency, latency uses " +
     "first-spike timing, delta fires on large changes, random generates " +
@@ -29,6 +35,14 @@ export const HELP: Record<string, string> = {
   interval_ms:
     "Delay between animation frames in milliseconds. Higher values play " +
     "the spike animation back more slowly.",
+  input_size:
+    "Optional sensor geometry for spatial topologies, written HxW (e.g. " +
+    "32x28). Blank keeps the default 28x28. A conv_net derives its feature " +
+    "count from this shape, so it must match the sample you build for.",
+  animate_hidden:
+    "Stream the loaded model's hidden-layer activation frame each step " +
+    "during playback, on top of the raster. Needs a trained or loaded " +
+    "model; without one the panel names the reason instead of drawing one.",
   gain:
     "Scales spiking probability for rate coding. Lower gain produces " +
     "sparser spikes and a dimmer reconstruction.",
@@ -108,6 +122,12 @@ export const HELP: Record<string, string> = {
     "Peak memory for the run, attributed to CPU or GPU. It is the high-" +
     "water mark, so it tells you the batch size a device can actually " +
     "hold rather than what is allocated right now.",
+  energy:
+    "Accounts the topology's synaptic operations (SOP), dense multiply-" +
+    "accumulates (MAC), accumulations (AC), and timesteps, then maps them " +
+    "to the target's declared cost table. The numbers are estimates unless " +
+    "a real device reports its own timing, and a target with no declared " +
+    "table reports that honestly instead of guessing.",
   time_cursor:
     "The shared time cursor for the centre panels. Scrubbing or playing " +
     "moves every raster, the neuron-state trace, and the prediction bars " +
@@ -137,12 +157,21 @@ export const HELP: Record<string, string> = {
     "model and sample are loaded the report adds the reference " +
     "interpreter's drift check; otherwise that section is omitted, never " +
     "faked.",
+  hub:
+    "Browse, download, inspect, and import curated models. The catalog " +
+    "renders offline; only live Hugging Face search needs the hub extra, " +
+    "and an entry that needs it is marked unavailable with the reason. " +
+    "Import is a three-gate funnel — inspect, then compatibility, then " +
+    "promote — so an artifact is mapped to a shipped preset or rejected " +
+    "with the mismatched stages named, never loaded wrong.",
 };
 
 export const TRAIN_HELP: Record<string, string> = {
   dataset:
-    "Which dataset to train on. All are normalised to 28x28 grayscale; " +
-    "the class count adjusts the output layer automatically.",
+    "Which dataset to train on. Images are normalised to 28x28 grayscale; " +
+    "event datasets train through the event stream path on their own " +
+    "sensor, so a non-square sensor needs a feature-input topology. The " +
+    "class count adjusts the output layer automatically.",
   hidden:
     "Number of neurons in the hidden LIF layer between the input and " +
     "output layers.",

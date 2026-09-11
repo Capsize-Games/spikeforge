@@ -3,6 +3,8 @@
 from typing import Any, Dict, List, Optional
 
 from snn_interpreter.network import model_store
+from snn_interpreter.neurons.registry import NEURONS
+from snn_interpreter.tracking import sinks
 from snn_interpreter.tracking.manifest import ReproducibilityManifest
 
 
@@ -13,6 +15,9 @@ class CheckpointMixin:
     _epochs: int
     _subset: int
     _batch_size: int
+    _tracking: Optional[str]
+    _deterministic: bool
+    _determinism_report: Optional[Dict[str, Any]]
 
     def _stored_meta(self, checkpoint: str) -> Dict[str, Any]:
         """Return a checkpoint's stored meta mapping, or an empty dict."""
@@ -29,10 +34,30 @@ class CheckpointMixin:
     def save(
         self, name: str, history: Optional[List[Dict[str, Any]]] = None
     ) -> str:
-        """Persist the model, its metadata, history, and manifest."""
-        return model_store.save(
-            name, self._net, self._meta(), history, self._manifest(history)
+        """Persist the local manifest first, then forward it to any sink.
+
+        Writing the local checkpoint first means a tracker outage can never
+        lose a run; the sink is a strictly additional destination.
+        """
+        manifest = self._manifest(history)
+        path = model_store.save(
+            name, self._net, self._meta(), history, manifest
         )
+        sinks.emit(manifest)
+        return path
+
+    def _stage_neurons(self) -> Dict[str, str]:
+        """Return the resolved kind of every neuron stage, keyed by name.
+
+        This is an additive, human-readable summary of the spec's per-stage
+        heterogeneity, so a checkpoint's neuron layout is visible without
+        decoding the full spec.
+        """
+        return {
+            stage.name: stage.kind
+            for stage in self._spec.stages
+            if stage.kind in NEURONS
+        }
 
     def _meta(self) -> Dict[str, Any]:
         """Return the checkpoint metadata card for the current model."""
@@ -49,6 +74,7 @@ class CheckpointMixin:
             "encode": self._encode.model_dump() if self._encode else None,
             "topology": self._topology,
             "topology_params": dict(self._architecture),
+            "stage_neurons": self._stage_neurons(),
             "spec": self._spec.to_dict(),
         }
 
@@ -57,8 +83,24 @@ class CheckpointMixin:
     ) -> Dict[str, Any]:
         """Build the reproducibility manifest persisted with the checkpoint."""
         return ReproducibilityManifest(
-            self._manifest_config(), seed=self._seed, history=history
+            self._manifest_config(),
+            seed=self._seed,
+            history=history,
+            tracking=self._tracking_block(),
+            determinism=self._determinism_block(),
         ).to_dict()
+
+    def _tracking_block(self) -> Optional[Dict[str, Any]]:
+        """Return the tracking block, or None when no sink was requested."""
+        if not self._tracking:
+            return None
+        return sinks.describe(self._tracking)
+
+    def _determinism_block(self) -> Optional[Dict[str, Any]]:
+        """Return the determinism block, or None in the default fast mode."""
+        if not self._deterministic:
+            return None
+        return dict(self._determinism_report or {})
 
     def _manifest_config(self) -> Dict[str, Any]:
         """Return the reproducibility-relevant configuration of the run."""

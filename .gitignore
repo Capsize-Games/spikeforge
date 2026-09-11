@@ -1,5 +1,8 @@
 # Generated media (exporters write these to build/)
 build/
+
+# Generated documentation site source (see scripts/build_docs.sh)
+docs/
 *.gif
 *.mp4
 *.png
@@ -10,6 +13,15 @@ client/dist/
 client/.vite/
 client/*.tsbuildinfo
 *.tsbuildinfo
+
+# IDE / editor directories
+.idea/
+.vscode/
+
+# Trained model checkpoints (the model store writes under build/ at runtime)
+*.pt
+*.pth
+*.ckpt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

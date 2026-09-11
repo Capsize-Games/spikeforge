@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { HubQueryInput } from "./hubTypes";
 import type { EncodeConfig, ServerMsg, TrainConfig } from "./types";
 
 interface Options {
@@ -80,6 +81,14 @@ export function useWebSocket({ onMessage }: Options) {
     wsRef.current?.send(JSON.stringify({ type: "cancel_download" }));
   }, []);
 
+  /** Send a hub action with its additive query fields and optional name. */
+  const sendHub = useCallback(
+    (type: string, hub: HubQueryInput, name?: string) => {
+      wsRef.current?.send(JSON.stringify({ type, hub, name }));
+    },
+    [],
+  );
+
   return {
     connected,
     send,
@@ -90,5 +99,6 @@ export function useWebSocket({ onMessage }: Options) {
     sendInfer,
     sendStats,
     sendCancelDownload,
+    sendHub,
   };
 }

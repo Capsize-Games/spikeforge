@@ -104,6 +104,10 @@ export function Controls(props: Props) {
           <p className="modality-note warn">{HELP.event_availability}</p>
         )}
 
+        {eventMode && !eventUnavailable && (
+          <p className="modality-note">{HELP.event_training}</p>
+        )}
+
         <SliderField
           label="subset" value={config.subset} min={1} max={50} step={1}
           help={HELP.subset} onChange={(v) => onChange({ subset: v })}

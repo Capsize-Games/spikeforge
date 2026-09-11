@@ -1,0 +1,8 @@
+{
+  "sop_pj": 5.0,
+  "mac_pj": 5.0,
+  "ac_pj": 1.0,
+  "step_ns": 2000.0,
+  "source": "Declared in-repo order-of-magnitude estimate for the in-process x86 host; illustrative only, not measured on any device.",
+  "measured": false
+}

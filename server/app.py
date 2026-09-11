@@ -7,6 +7,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from server.downloads import manager
 from server.handlers import dispatch
+from server.hub_downloads import manager as hub_manager
 from server.messages import send_locked
 from server.schemas import ClientMessage
 from server.session import Session
@@ -69,10 +70,17 @@ async def _serve(ws: WebSocket, session: Session) -> None:
                 "type": "error", "payload": str(exc),
             })
             continue
-        # Cancel must bypass the queue so it lands while a download blocks the
-        # dispatcher on its progress stream.
+        # Cancels must bypass the queue so they land while a download blocks
+        # the dispatcher on its progress stream.
         if message.type == "cancel_download":
             manager.cancel()
+            continue
+        if message.type == "hub_cancel":
+            hub_manager.cancel()
+            await send_locked(ws, session, {
+                "type": "hub_download_state",
+                "payload": hub_manager.snapshot(),
+            })
             continue
         await session.inbox.put(message)
 

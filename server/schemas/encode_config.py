@@ -1,6 +1,6 @@
 """Encoding experiment configuration schema."""
 
-from typing import Literal, Optional
+from typing import Literal, Optional, Tuple
 
 from pydantic import BaseModel
 
@@ -28,3 +28,7 @@ class EncodeConfig(BaseModel):
     random_scale: float = 0.5
     random_seed: Optional[int] = None
     interval_ms: int = 100
+    #: Optional (H, W) sensor geometry; None keeps the default 28x28.
+    input_size: Optional[Tuple[int, int]] = None
+    #: Opt-in per-step hidden-layer animation; default off keeps the stream.
+    animate_hidden: bool = False

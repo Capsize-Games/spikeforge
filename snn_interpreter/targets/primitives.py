@@ -16,6 +16,7 @@ EMITTED_PRIMITIVES: FrozenSet[str] = frozenset(
         "Affine",
         "Linear",
         "Conv2d",
+        "Conv1d",
         "Flatten",
         "AvgPool2d",
         "SumPool2d",

@@ -6,10 +6,12 @@ import type {
 } from "./introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
 import type {
+  BackendRunPayload,
   DeploymentReportPayload,
   TargetListPayload,
 } from "./targetTypes";
 import type {
+  AnimationStatePayload,
   DownloadState,
   InferencePayload,
   RasterPayload,
@@ -37,6 +39,8 @@ export interface ViewerState {
   rasters: RasterMap;
   inference: InferencePayload | null;
   status: StatusPayload | null;
+  /** Availability of the opt-in hidden-layer animation stream. */
+  animation: AnimationStatePayload | null;
   error: string | null;
   running: boolean;
   framesByStep: Record<number, number[][]>;
@@ -55,6 +59,8 @@ export interface ViewerState {
   targetList: TargetListPayload | null;
   /** Last deployment report; only rendered when its target matches. */
   deploymentReport: DeploymentReportPayload | null;
+  /** Last executed backend run for the selected target. */
+  backendRun: BackendRunPayload | null;
 }
 
 export type ViewerAction =
@@ -79,6 +85,7 @@ export function createInitialViewerState(autoPredict: boolean): ViewerState {
     rasters: EMPTY_RASTERS,
     inference: null,
     status: null,
+    animation: null,
     error: null,
     running: false,
     framesByStep: {},
@@ -91,6 +98,7 @@ export function createInitialViewerState(autoPredict: boolean): ViewerState {
     nirValidation: null,
     targetList: null,
     deploymentReport: null,
+    backendRun: null,
   };
 }
 
@@ -107,6 +115,7 @@ function clearStream(state: ViewerState): ViewerState {
     reconLow: null,
     rasters: EMPTY_RASTERS,
     inference: null,
+    animation: null,
     framesByStep: {},
     // A new sample invalidates the captured trajectory and metrics; the user
     // refreshes. The surrogate curve is coding-independent, so it survives.
@@ -116,6 +125,7 @@ function clearStream(state: ViewerState): ViewerState {
     // The report classifies the current topology, so a reconfigure stales it;
     // the registry itself is topology-independent and survives.
     deploymentReport: null,
+    backendRun: null,
   };
 }
 
@@ -179,6 +189,8 @@ function applyMessage(state: ViewerState, msg: ServerMsg): ViewerState {
       return applySpikeFrame(state, msg.source, msg.step, msg.payload);
     case "inference":
       return state.autoPredict ? { ...state, inference: msg.payload } : state;
+    case "animation_state":
+      return { ...state, animation: msg.payload };
     case "run_state":
       return { ...state, running: msg.payload.running };
     case "status":
@@ -201,6 +213,8 @@ function applyMessage(state: ViewerState, msg: ServerMsg): ViewerState {
       return { ...state, targetList: msg.payload };
     case "deployment_report":
       return { ...state, deploymentReport: msg.payload };
+    case "backend_run":
+      return { ...state, backendRun: msg.payload };
     case "error":
       return { ...state, error: msg.payload, running: false };
     default:

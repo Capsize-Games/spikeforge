@@ -17,7 +17,9 @@ class BenchmarkConfig:
     shape the random spike input, ``seed`` fixes both the module weights and
     the spikes, and ``warmup`` untimed runs precede ``repeats`` timed samples.
     ``compiled`` additionally measures a ``torch.compile`` production path and
-    ``backward`` measures a backward pass where one is meaningful.
+    ``backward`` measures a backward pass where one is meaningful. ``energy``
+    (default off) additionally attaches an event-driven energy estimate for
+    ``energy_target`` to every record; the fields are additive.
     """
 
     topologies: Tuple[str, ...] = ("fc_small",)
@@ -29,6 +31,8 @@ class BenchmarkConfig:
     device: str = "auto"
     compiled: bool = False
     backward: bool = True
+    energy: bool = False
+    energy_target: str = "reference"
 
 
 def default_config() -> BenchmarkConfig:

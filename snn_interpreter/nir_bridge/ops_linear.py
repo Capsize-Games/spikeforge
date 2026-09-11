@@ -44,6 +44,25 @@ def apply_conv2d(node: Any, x: torch.Tensor, state: Any) -> Result:
     return convolved, None, None
 
 
+def apply_conv1d(node: Any, x: torch.Tensor, state: Any) -> Result:
+    """Return the 1D convolution of ``x`` with the node's weight and bias.
+
+    ``nir.Conv1d`` uses channels-first ``[B, C, L]`` frames, matching
+    ``nn.Conv1d``; its stride/padding/dilation are scalars (or a padding
+    string), so they pass straight through to the functional call.
+    """
+    convolved = functional.conv1d(
+        x,
+        as_tensor(node.weight, x),
+        _optional_bias(node, x),
+        stride=node.stride,
+        padding=node.padding,
+        dilation=node.dilation,
+        groups=int(node.groups),
+    )
+    return convolved, None, None
+
+
 def apply_flatten(node: Any, x: torch.Tensor, state: Any) -> Result:
     """Return ``x`` flattened from ``start_dim`` through ``end_dim``."""
     flattened = torch.flatten(x, int(node.start_dim), int(node.end_dim))

@@ -114,6 +114,62 @@ def conv_node(
     return MappedNode(name, cls(None, *settings))
 
 
+def _conv1d_shape(
+    params: Mapping[str, Any], groups: int
+) -> Tuple[int, int, int]:
+    """Return the ``(out, in, kernel)`` weight shape for a conv1d stage."""
+    kernel = _pair(params["kernel_size"]) or (0, 0)
+    return (
+        int(params["out_channels"]),
+        int(params["in_channels"]) // groups,
+        int(kernel[0]),
+    )
+
+
+def _module_conv1d_settings(submodule: Any) -> Tuple[Any, ...]:
+    """Return Conv1d arguments copied from a built torch module."""
+    return (
+        _np(submodule.weight),
+        int(submodule.stride[0]),
+        int(submodule.padding[0]),
+        int(submodule.dilation[0]),
+        int(submodule.groups),
+        _opt_np(submodule.bias),
+    )
+
+
+def _structural_conv1d_settings(params: Mapping[str, Any]) -> Tuple[Any, ...]:
+    """Return Conv1d arguments with zero placeholder weights."""
+    groups = int(params.get("groups", 1))
+    weight = np.zeros(_conv1d_shape(params, groups), np.float32)
+    bias = np.zeros(int(params["out_channels"]), np.float32)
+    return (
+        weight,
+        int(params.get("stride", 1)),
+        int(params.get("padding", 0)),
+        int(params.get("dilation", 1)),
+        groups,
+        bias,
+    )
+
+
+def conv1d_node(
+    name: str, params: Mapping[str, Any], submodule: Optional[Any]
+) -> MappedNode:
+    """Return the ``Conv1d`` node rendering a 1-D convolution stage.
+
+    The ``nir.Conv1d`` primitive is resolved through the isolated probe, so a
+    future ``nir`` that drops it fails with a typed ``UnsupportedStageError``
+    rather than a missing attribute.
+    """
+    cls = require_node("Conv1d", "conv1d")
+    if submodule is None:
+        settings = _structural_conv1d_settings(params)
+    else:
+        settings = _module_conv1d_settings(submodule)
+    return MappedNode(name, cls(None, *settings))
+
+
 def flatten_node(
     name: str, params: Mapping[str, Any], submodule: Optional[Any]
 ) -> MappedNode:

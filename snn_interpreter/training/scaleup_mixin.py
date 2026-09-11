@@ -26,6 +26,21 @@ def _window(bptt_steps: Optional[int]) -> Optional[int]:
     return steps if steps > 0 else None
 
 
+def scaleup_options(
+    amp: bool,
+    grad_checkpoint: bool,
+    bptt_steps: Optional[int],
+    multi_gpu: bool,
+) -> Dict[str, Any]:
+    """Bundle the additive scale-up flags for the engine."""
+    return {
+        "amp": bool(amp),
+        "grad_checkpoint": bool(grad_checkpoint),
+        "bptt_steps": bptt_steps,
+        "multi_gpu": bool(multi_gpu),
+    }
+
+
 class ScaleUpMixin:
     """Configure and apply the opt-in training scale-up options."""
 

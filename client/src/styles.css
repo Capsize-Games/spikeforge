@@ -9,5 +9,7 @@
 @import "./styles/mode.css";
 @import "./styles/analysis.css";
 @import "./styles/targets.css";
+@import "./styles/hub.css";
+@import "./styles/energy.css";
 @import "./styles/download.css";
 @import "./styles/tour.css";

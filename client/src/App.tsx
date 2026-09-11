@@ -3,6 +3,8 @@ import { useCallback, useRef } from "react";
 import { AnalysisPanels } from "./components/AnalysisPanels";
 import { Controls } from "./components/Controls";
 import { DownloadProgress } from "./components/DownloadProgress";
+import { EnergyPanel } from "./components/EnergyPanel";
+import { HubPanel } from "./components/HubPanel";
 import { ModelPanel } from "./components/ModelPanel";
 import { StatusBar } from "./components/StatusBar";
 import { TopBar } from "./components/TopBar";
@@ -10,6 +12,8 @@ import { TourCard } from "./components/TourCard";
 import { TrainingPanel } from "./components/TrainingPanel";
 import { ViewerPanels } from "./components/ViewerPanels";
 import { useEncodeConfig } from "./hooks/useEncodeConfig";
+import { useEnergy } from "./hooks/useEnergy";
+import { useHub } from "./hooks/useHub";
 import { useModelActions } from "./hooks/useModelActions";
 import { useServerBootstrap } from "./hooks/useServerBootstrap";
 import { useTour } from "./hooks/useTour";
@@ -39,7 +43,13 @@ export default function App() {
     connected: ws.connected,
     sendInfer: ws.sendInfer,
   });
-  handlerRef.current = viewer.onMessage;
+  const hub = useHub({ ws, connected: ws.connected });
+  const energy = useEnergy({ ws, connected: ws.connected });
+  handlerRef.current = (msg) => {
+    viewer.onMessage(msg);
+    hub.onMessage(msg);
+    energy.onMessage(msg);
+  };
 
   const actions = useModelActions({
     config,
@@ -129,6 +139,8 @@ export default function App() {
             rasters={viewer.state.rasters}
             inference={viewer.state.inference}
             modality={modality}
+            hiddenFrame={viewer.state.spikeFrames.hidden}
+            animation={viewer.state.animation}
             loaded={training.state.loaded}
             coding={config.coding}
             mode={training.state.config.mode}
@@ -140,6 +152,7 @@ export default function App() {
             nirValidation={viewer.state.nirValidation}
             targetList={viewer.state.targetList}
             deploymentReport={viewer.state.deploymentReport}
+            backendRun={viewer.state.backendRun}
             playing={viewer.state.running}
             onPlay={actions.playPreview}
             onStop={actions.stopPreview}
@@ -152,6 +165,7 @@ export default function App() {
             onRefreshNirValidation={actions.requestNirValidate}
             onRefreshTargets={actions.requestTargets}
             onSelectTarget={actions.requestDeploymentReport}
+            onRunBackend={actions.requestDeployRun}
             onSwitchToEducational={() =>
               training.patch({ mode: "educational" })
             }
@@ -186,6 +200,17 @@ export default function App() {
               onRequestSurrogateCurve={actions.requestSurrogateCurve}
               onRunBenchmark={actions.requestBenchmark}
               onSwitchMode={() => training.patch({ mode: "educational" })}
+            />
+
+            <HubPanel hub={hub} />
+
+            <EnergyPanel
+              payload={energy.payload}
+              targets={viewer.state.targetList?.targets ?? []}
+              loading={energy.loading}
+              onRun={(target) =>
+                energy.run(training.state.config, target)
+              }
             />
           </div>
         </div>

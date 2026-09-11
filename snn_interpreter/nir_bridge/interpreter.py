@@ -47,6 +47,18 @@ _Delays = Dict[str, Optional[torch.Tensor]]
 _Frames = Dict[str, List[torch.Tensor]]
 
 
+def _flatten_or_pass(frame: torch.Tensor) -> torch.Tensor:
+    """Flatten a flat feature frame, passing multi-dimensional ones through.
+
+    Sequence frames (``[B, L, D]``) and tokens reach their first node intact,
+    exactly as spatial frames already do; only the historical ``[B, F]``
+    feature frame is collapsed, which is the identity for it.
+    """
+    if frame.dim() >= 3:
+        return frame
+    return frame.reshape(frame.size(0), -1)
+
+
 class NirInterpreter:
     """Execute an exported NIR graph step by step, without snnTorch."""
 
@@ -108,7 +120,7 @@ class NirInterpreter:
         consumer = self._first_consumer(self._in_name)
         if consumer is not None and self._kinds[consumer] in SPATIAL_KINDS:
             return lambda frame: frame
-        return lambda frame: frame.reshape(frame.size(0), -1)
+        return _flatten_or_pass
 
     def _node_named(self, kind: str) -> str:
         """Return the name of the first node of ``kind``."""

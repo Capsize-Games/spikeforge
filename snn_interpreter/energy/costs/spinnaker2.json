@@ -1,0 +1,8 @@
+{
+  "sop_pj": 500.0,
+  "mac_pj": 500.0,
+  "ac_pj": 200.0,
+  "step_ns": 1000.0,
+  "source": "Declared in-repo order-of-magnitude estimate for SpiNNaker2 digital hardware; a dense MAC is modelled at the synaptic rate because the device has no dense-MAC primitive. Illustrative, not measured on this machine.",
+  "measured": false
+}

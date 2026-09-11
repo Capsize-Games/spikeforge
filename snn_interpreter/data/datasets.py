@@ -65,17 +65,22 @@ _REGISTRY: Dict[str, DatasetSpec] = {
         "ssc", 35, "Spiking Speech Commands (35 classes)", "event",
         tonic_class="SSC", kwargs={"split": "train"},
     ),
+    # Sequence modality: a fully synthetic token parity task, no loader.
+    "sequence_toy": DatasetSpec(
+        "sequence_toy", 2, "Synthetic token parity (sequence demo)",
+        "sequence",
+    ),
 }
 
 DEFAULT_DATASET = "mnist"
 
 
-def transform() -> transforms.Compose:
-    """Grayscale, resize to 28x28, and normalise to [0,1]."""
+def transform(size: Tuple[int, int] = (28, 28)) -> transforms.Compose:
+    """Grayscale, resize to ``size``, and normalise to [0,1]."""
     return transforms.Compose(
         [
             transforms.Grayscale(),
-            transforms.Resize((28, 28)),
+            transforms.Resize(size),
             transforms.ToTensor(),
             transforms.Normalize((0,), (1,)),
         ]
@@ -104,17 +109,27 @@ def dataset_info(name: str) -> Tuple[int, str]:
 
 
 def build_dataset(
-    name: str, train: bool = True, download: bool = True
+    name: str, train: bool = True, download: bool = True,
+    size: Tuple[int, int] = (28, 28),
 ) -> tv_datasets.VisionDataset:
-    """Instantiate a dataset, optionally downloading it into the data dir."""
+    """Instantiate a dataset, optionally downloading it into the data dir.
+
+    ``size`` is the sample geometry the transform resizes to; the default
+    28x28 keeps every existing caller byte-identical.
+    """
     spec = dataset_spec(name)
+    if spec.cls is None and spec.modality == "event":
+        raise ValueError(
+            f"dataset {spec.name!r} is an event dataset; train it through "
+            "the event batch path instead of build_dataset"
+        )
     if spec.cls is None:
         raise ValueError(f"dataset {spec.name!r} has no image loader")
     return spec.cls(
         DATA_DIR,
         train=train,
         download=download,
-        transform=transform(),
+        transform=transform(size),
         **spec.kwargs,
     )
 
@@ -126,6 +141,8 @@ def _resolve(name: str) -> str:
 
 def _available(spec: DatasetSpec) -> bool:
     """Return True when ``spec``'s loader can run in this environment."""
+    if spec.modality == "sequence":
+        return True
     if spec.modality == "event":
         return tonic_api.available()
     return spec.cls is not None

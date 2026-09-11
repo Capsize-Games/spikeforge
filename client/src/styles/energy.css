@@ -1,0 +1,45 @@
+/* --- Phase D3 event-driven energy panel --- */
+
+.energy-panel .energy-target {
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 3px 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.energy-badge {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.energy-badge.estimate {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.energy-badge.measured {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.energy-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1px 8px;
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.energy-grid .energy-key {
+  color: var(--muted);
+}

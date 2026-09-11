@@ -21,27 +21,30 @@ def _read_long_description() -> str:
 
 setup(
     name="snn-interpreter",
-    version="0.1.0",
+    version="0.2.0",
     description=(
         "Spiking neural network trainer/experiments for MNIST built "
         "with snnTorch and PyTorch."
     ),
     long_description=_read_long_description(),
     long_description_content_type="text/markdown",
-    author="",
-    author_email="",
-    url="",
+    author="w4ffl35",
+    author_email="contact@capsizegames.com",
+    url="https://github.com/w4ffl35/snn_interpreter",
     license="BSD-3-Clause",
-    python_requires=">=3.8",
+    license_files=["LICENSE"],
+    python_requires=">=3.10",
     packages=find_packages(exclude=("tests", "tests.*")),
+    package_data={"snn_interpreter": ["py.typed"]},
     py_modules=["main", "main_encodings"],
     install_requires=[
-        "torch>=1.13",
-        "torchvision>=0.14",
-        "snntorch>=0.8",
-        "matplotlib>=3.5",
-        "Pillow>=9.0",
-        "numpy>=1.21",
+        "torch>=2.5",
+        "torchvision>=0.20",
+        "snntorch>=1.0",
+        "matplotlib>=3.8",
+        "Pillow>=10.0",
+        "numpy>=1.26",
+        "psutil>=5.9",
     ],
     extras_require={
         "dev": [
@@ -62,6 +65,28 @@ setup(
         "events": [
             "tonic>=1.4",
         ],
+        "onnx": [
+            "onnx>=1.14",
+            "onnxruntime>=1.16",
+        ],
+        "hub": [
+            "huggingface_hub>=0.20",
+        ],
+        "tracking": [
+            "tensorboard>=2.0",
+        ],
+        "tracking-wandb": [
+            "wandb",
+        ],
+        "docs": [
+            "mkdocs-material>=9.0",
+        ],
+        "norse": [
+            "norse",
+        ],
+        "lava": [
+            "lava-nc",
+        ],
     },
     entry_points={
         "console_scripts": [
@@ -70,21 +95,22 @@ setup(
             "snn-verify=snn_interpreter.cli.verify:main",
             "snn-records=snn_interpreter.cli.records_cli:main",
             "snn-targets=snn_interpreter.cli.target_cli:main",
+            "snn-hub=snn_interpreter.hub.cli:main",
+            "snn-energy=snn_interpreter.energy.cli:main",
             "snn-benchmark=snn_interpreter.benchmark.cli:main",
         ],
     },
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     zip_safe=False,

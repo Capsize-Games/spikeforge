@@ -13,6 +13,11 @@ Phase 5b adds an external import/export surface: :func:`save_graph` and
 :func:`interpret_graph` / :func:`interpret_file` ingest and run a graph from
 another framework, and :func:`roundtrip` proves the persisted artifact
 reproduces the module's interpretation.
+
+Phase F3 adds :func:`extract`, :func:`extract_summary` and
+:func:`run_extracted`, which lift an arbitrary third-party
+``torch.nn.Module`` into NIR through ``nirtorch`` and run it on the
+independent interpreter.
 """
 
 from snn_interpreter.nir_bridge.api import (
@@ -21,6 +26,11 @@ from snn_interpreter.nir_bridge.api import (
     node_class,
 )
 from snn_interpreter.nir_bridge.exporter import graph_summary, to_nir
+from snn_interpreter.nir_bridge.extract import (
+    extract,
+    extract_summary,
+    run_extracted,
+)
 from snn_interpreter.nir_bridge.ingest import (
     interpret_file,
     interpret_graph,
@@ -46,6 +56,8 @@ __all__ = [
     "NirInterpreter",
     "ValidationReport",
     "capability",
+    "extract",
+    "extract_summary",
     "graph_summary",
     "interpret_file",
     "interpret_graph",
@@ -53,6 +65,7 @@ __all__ = [
     "load_graph",
     "node_class",
     "roundtrip",
+    "run_extracted",
     "save_graph",
     "to_nir",
     "validate",

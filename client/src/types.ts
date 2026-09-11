@@ -1,3 +1,5 @@
+import type { EnergyServerMsg } from "./energyTypes";
+import type { HubServerMsg } from "./hubTypes";
 import type { IntrospectionServerMsg } from "./introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
 import type {
@@ -28,8 +30,21 @@ export type CodingType = "rate" | "latency" | "delta" | "random";
 /** Compute device selectable for training. */
 export type DeviceChoice = "auto" | "cpu" | "gpu";
 
+/** Per-stage parameter overrides keyed by stage name. */
+export type StageParams = Record<string, number | string | boolean>;
+
+/** Per-stage neuron-kind overrides keyed by stage name. */
+export type StageNeurons = Record<string, string>;
+
+/** One topology override value: a scalar or a nested stage mapping. */
+export type TopologyValue =
+  | number
+  | string
+  | boolean
+  | Record<string, number | string | boolean>;
+
 /** Per-topology overrides for the registry defaults. */
-export type TopologyParams = Record<string, number | string | boolean>;
+export type TopologyParams = Record<string, TopologyValue>;
 
 /** Which layer produced a raster / spike frame. */
 export type RasterSource = "input" | "hidden" | "output";
@@ -53,6 +68,10 @@ export interface EncodeConfig {
   random_scale: number;
   random_seed: number | null;
   interval_ms: number;
+  /** Optional (H, W) sensor geometry; null keeps the default 28x28. */
+  input_size: [number, number] | null;
+  /** Opt-in per-step hidden-layer animation; default off. */
+  animate_hidden: boolean;
 }
 
 export const defaultConfig: EncodeConfig = {
@@ -74,6 +93,8 @@ export const defaultConfig: EncodeConfig = {
   random_scale: 0.5,
   random_seed: null,
   interval_ms: 100,
+  input_size: null,
+  animate_hidden: false,
 };
 
 export interface RasterPayload {
@@ -99,6 +120,14 @@ export interface RunStatePayload {
   reason: string;
 }
 
+/** Whether the opt-in hidden-layer animation stream is available. */
+export interface AnimationStatePayload {
+  available: boolean;
+  /** Named reason the animation is unavailable; empty when available. */
+  reason: string;
+  source: RasterSource;
+}
+
 export interface TrainConfig {
   dataset: string;
   hidden: number;
@@ -116,6 +145,10 @@ export interface TrainConfig {
   topology: string;
   /** Per-topology overrides for the registry defaults. */
   topology_params: TopologyParams;
+  /** Per-stage neuron-kind overrides, additive and default-empty. */
+  stage_neurons: StageNeurons;
+  /** Per-stage parameter overrides, additive and default-empty. */
+  stage_params: StageParams;
   /** Opt-in mixed precision; default false preserves fp32 numerics. */
   amp: boolean;
   /** Opt-in per-step activation checkpointing; default false. */
@@ -142,6 +175,8 @@ export const defaultTrainConfig: TrainConfig = {
   mode: "production",
   topology: "fc_legacy",
   topology_params: {},
+  stage_neurons: {},
+  stage_params: {},
   amp: false,
   grad_checkpoint: false,
   bptt_steps: null,
@@ -232,6 +267,7 @@ export type ServerMsg =
   | { type: "train_state"; payload: TrainStatePayload }
   | { type: "prediction"; payload: PredictionPayload }
   | { type: "inference"; payload: InferencePayload }
+  | { type: "animation_state"; payload: AnimationStatePayload }
   | { type: "nir_graph"; payload: NirGraphPayload }
   | { type: "nir_validation"; payload: NirValidationPayload }
   | { type: "model_saved"; payload: { name: string; path: string } }
@@ -243,4 +279,6 @@ export type ServerMsg =
   | IntrospectionServerMsg
   | TargetServerMsg
   | ModelRegistryServerMsg
+  | HubServerMsg
+  | EnergyServerMsg
   | { type: "error"; payload: string };

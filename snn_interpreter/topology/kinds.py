@@ -9,8 +9,18 @@ MODULE_KINDS: Tuple[str, ...] = (
     "flatten",
     "linear",
     "conv2d",
+    "conv1d",
     "avgpool2d",
     "sumpool2d",
+    "maxpool1d",
+    "maxpool2d",
+    "embedding",
+    "layer_norm",
+    "batch_norm",
+    "dropout",
+    "positional_encoding",
+    "attention",
+    "multihead_attention",
 )
 #: Kinds that carry no parameters or submodule of their own.
 PARAMETERLESS_KINDS: Tuple[str, ...] = ("add",)

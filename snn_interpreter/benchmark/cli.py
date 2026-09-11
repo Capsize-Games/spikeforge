@@ -36,6 +36,9 @@ def _add_fixture_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--device", default="auto")
     parser.add_argument("--compiled", action="store_true")
     parser.add_argument("--no-backward", action="store_true")
+    parser.add_argument("--energy", action="store_true")
+    parser.add_argument("--energy-target", dest="energy_target",
+                        default="reference")
     parser.add_argument("--out", default=None)
 
 
@@ -74,6 +77,8 @@ def _config(args: argparse.Namespace) -> BenchmarkConfig:
         device=args.device,
         compiled=args.compiled,
         backward=not args.no_backward,
+        energy=args.energy,
+        energy_target=args.energy_target,
     )
 
 

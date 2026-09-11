@@ -1,10 +1,12 @@
 import type { TrajectoryPayload } from "../introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "../nirTypes";
 import type {
+  BackendRunPayload,
   DeploymentReportPayload,
   TargetListPayload,
 } from "../targetTypes";
 import type {
+  AnimationStatePayload,
   CodingType,
   ExecutionMode,
   InferencePayload,
@@ -30,6 +32,8 @@ interface Props {
   rasters: Record<RasterSource, RasterPayload | null>;
   modality: Modality;
   inference: InferencePayload | null;
+  hiddenFrame: number[][] | null;
+  animation: AnimationStatePayload | null;
   loaded: ModelLoadedPayload | null;
   coding: CodingType;
   mode: ExecutionMode;
@@ -41,6 +45,7 @@ interface Props {
   nirValidation: NirValidationPayload | null;
   targetList: TargetListPayload | null;
   deploymentReport: DeploymentReportPayload | null;
+  backendRun: BackendRunPayload | null;
   playing: boolean;
   onPlay: () => void;
   onStop: () => void;
@@ -51,6 +56,7 @@ interface Props {
   onRefreshNirValidation: () => void;
   onRefreshTargets: () => void;
   onSelectTarget: (name: string) => void;
+  onRunBackend: (name: string) => void;
   onSwitchToEducational: () => void;
 }
 
@@ -63,6 +69,8 @@ export function ViewerPanels({
   rasters,
   modality,
   inference,
+  hiddenFrame,
+  animation,
   loaded,
   coding,
   mode,
@@ -74,6 +82,7 @@ export function ViewerPanels({
   nirValidation,
   targetList,
   deploymentReport,
+  backendRun,
   playing,
   onPlay,
   onStop,
@@ -84,6 +93,7 @@ export function ViewerPanels({
   onRefreshNirValidation,
   onRefreshTargets,
   onSelectTarget,
+  onRunBackend,
   onSwitchToEducational,
 }: Props) {
   return (
@@ -116,6 +126,8 @@ export function ViewerPanels({
         inference={inference}
         timeStep={timeStep}
         modality={modality}
+        hiddenFrame={hiddenFrame}
+        animation={animation}
       />
 
       <TrajectoryPanel
@@ -136,8 +148,10 @@ export function ViewerPanels({
       <TargetsPanel
         list={targetList}
         report={deploymentReport}
+        backendRun={backendRun}
         onRefresh={onRefreshTargets}
         onSelectTarget={onSelectTarget}
+        onRunBackend={onRunBackend}
       />
     </div>
   );

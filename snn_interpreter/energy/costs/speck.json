@@ -1,0 +1,8 @@
+{
+  "sop_pj": 30.0,
+  "mac_pj": 30.0,
+  "ac_pj": 60.0,
+  "step_ns": 1000.0,
+  "source": "Declared in-repo order-of-magnitude estimate for the SynSense Speck edge chip; a dense MAC is modelled at the synaptic rate because the device has no dense-MAC primitive. Illustrative, not measured on this machine.",
+  "measured": false
+}

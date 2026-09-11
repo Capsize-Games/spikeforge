@@ -5,8 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  quality:
+  lint:
+    # Static checks are interpreter-version agnostic; run them once.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,19 +22,127 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+  test:
+    # The full suite across every supported interpreter (python_requires).
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
       # CPU wheels keep CI light; mirrors the Dockerfile TORCH_INDEX_URL flow.
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install torch torchvision \
             --index-url https://download.pytorch.org/whl/cpu
-          pip install -r requirements.txt -e ".[dev,nir]"
-
-      - name: Lint (ruff)
-        run: ruff check snn_interpreter server main.py main_encodings.py tests
+          pip install -r requirements.txt -e ".[dev,nir,web]"
 
       - name: Test (pytest)
         run: pytest
+
+  extras:
+    # Prove every advertised optional extra still installs and does not rot.
+    # `norse` is install-only here: the suite deliberately asserts the
+    # SDK-gated backends are *absent* (it drives them through fakes), so a
+    # present `norse` would flip those absence assertions. Its presence is
+    # verified with an import smoke instead.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        extra: ["events", "onnx", "hub", "norse", "tracking", "docs"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install the ${{ matrix.extra }} extra
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision \
+            --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -e ".[dev,nir,web,${{ matrix.extra }}]"
+
+      - name: Exercise the ${{ matrix.extra }} extra
+        run: |
+          if [ "${{ matrix.extra }}" = "norse" ]; then
+            python -c "import norse; print('norse', norse.__version__)"
+          elif [ "${{ matrix.extra }}" = "docs" ]; then
+            python -m mkdocs --version
+            bash scripts/build_docs.sh --check
+          else
+            pytest
+          fi
+
+  blocked-deps:
+    # The honest-degradation gate: install the optional extras, then make them
+    # unimportable with a checked-in import blocker so every typed-unavailable
+    # path, `available: false`, and reported reason is exercised.
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/scripts/blocked_deps
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install base dependencies plus the optional extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision \
+            --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt \
+            -e ".[dev,nir,web,events,onnx,hub,tracking,tracking-wandb]"
+
+      - name: Test with the optional extras blocked
+        run: pytest
+
+  docs:
+    # A broken documentation link must fail the pull request, not just a local
+    # `build_docs.sh --check`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install docs dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -e ".[docs]"
+
+      - name: Check documentation links
+        run: bash scripts/build_docs.sh --check
+
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:

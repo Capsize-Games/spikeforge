@@ -7,7 +7,7 @@ logging setup only acts when asked (via an environment variable or
 returns JSON-able data for the dashboard.
 """
 
-from snn_interpreter.observability import metrics
+from snn_interpreter.observability import metrics, persistence
 from snn_interpreter.observability.logging_setup import (
     configure_logging,
     logging_enabled,
@@ -20,5 +20,6 @@ __all__ = [
     "configure_logging",
     "logging_enabled",
     "metrics",
+    "persistence",
     "reset_logging",
 ]

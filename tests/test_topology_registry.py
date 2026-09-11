@@ -6,11 +6,14 @@ from snn_interpreter.topology import registry
 from snn_interpreter.topology.spec import TopologySpec
 from snn_interpreter.topology.stage_module import StageModule
 
-_NAMES = ("fc_legacy", "fc_small", "conv_net", "recurrent_net")
+_NAMES = (
+    "fc_legacy", "fc_small", "conv_net", "recurrent_net",
+    "sequence_mlp", "sequence_attn",
+)
 
 
 def test_topology_names_match_presets() -> None:
-    """The registry lists exactly the four shipped topologies."""
+    """The registry lists exactly the shipped topologies."""
     assert set(registry.topology_names()) == set(_NAMES)
 
 

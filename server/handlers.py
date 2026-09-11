@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import WebSocket
 
+from server import animation
 from server.engine_factory import build_encoder, ensure_dataset
 from server.messages import (
     emit_frame,
@@ -26,13 +27,21 @@ from snn_interpreter.network import model_store
 async def stream_frames(
     ws: WebSocket, session: Session, cfg: EncodeConfig
 ) -> None:
-    """Push one spike_frame per step, looping until cancelled."""
+    """Push one spike_frame per step, looping until cancelled.
+
+    With ``animate_hidden`` a hidden-layer frame is streamed per step too,
+    sourced from the loaded model. When no model is present the reason is
+    reported once and only the input frames stream, exactly as before.
+    """
     engine = session.engine
     delay = max(0.02, cfg.interval_ms / 1000.0)
     steps = 1 if cfg.coding == "delta" else engine.num_steps()
+    hidden = await animation.prepare(ws, session, cfg.animate_hidden)
     while True:
         for step in range(steps):
             await emit_frame(ws, session, engine, step)
+            if hidden:
+                await animation.emit_hidden_frame(ws, session, hidden, step)
             await asyncio.sleep(delay)
 
 

@@ -215,3 +215,12 @@ async def send_deployment_report(
     await send_locked(ws, session, {
         "type": "deployment_report", "payload": payload,
     })
+
+
+async def send_backend_run(
+    ws: WebSocket, session: Session, payload: Dict[str, Any]
+) -> None:
+    """Send an executed backend run result to the client."""
+    await send_locked(ws, session, {
+        "type": "backend_run", "payload": payload,
+    })

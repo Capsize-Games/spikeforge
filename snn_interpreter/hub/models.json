@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "nir/fc_legacy",
+      "name": "Legacy FC LIF (fc_legacy)",
+      "framework": "nir",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "fc_legacy",
+      "input_shape": "1x28x28 (784 flattened)",
+      "notes": "Shipped fc_legacy preset rendered as a NIR graph. Bundled with the project; no third-party weights are redistributed."
+    },
+    {
+      "id": "nir/fc_small",
+      "name": "Small FC LIF (fc_small)",
+      "framework": "nir",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "fc_small",
+      "input_shape": "1x28x28 (784 flattened)",
+      "notes": "Shipped fc_small preset rendered as a NIR graph. Bundled with the project; no third-party weights are redistributed."
+    },
+    {
+      "id": "nir/conv_net",
+      "name": "Convolutional LIF (conv_net)",
+      "framework": "nir",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "conv_net",
+      "input_shape": "1x28x28",
+      "notes": "Shipped conv_net preset rendered as a NIR graph. Bundled with the project; no third-party weights are redistributed."
+    },
+    {
+      "id": "nir/recurrent_net",
+      "name": "Recurrent LIF (recurrent_net)",
+      "framework": "nir",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "recurrent_net",
+      "input_shape": "1x28x28 (784 flattened)",
+      "notes": "Shipped recurrent_net preset rendered as a NIR graph. Bundled with the project; no third-party weights are redistributed."
+    },
+    {
+      "id": "snntorch/fc_reference",
+      "name": "snnTorch FC reference",
+      "framework": "snntorch",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "fc_small",
+      "input_shape": "1x28x28 (784 flattened)",
+      "notes": "Ecosystem provenance only: the artifact is the bundled NIR graph derived from the shipped fc_small preset, so a snnTorch-authored model can be compared against a known-good structure."
+    },
+    {
+      "id": "snntorch/recurrent_reference",
+      "name": "snnTorch recurrent reference",
+      "framework": "snntorch",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "recurrent_net",
+      "input_shape": "1x28x28 (784 flattened)",
+      "notes": "Ecosystem provenance only: the artifact is the bundled NIR graph derived from the shipped recurrent_net preset."
+    },
+    {
+      "id": "spikingjelly/conv_reference",
+      "name": "SpikingJelly conv reference",
+      "framework": "spikingjelly",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "conv_net",
+      "input_shape": "1x28x28",
+      "notes": "Ecosystem provenance only: the artifact is the bundled NIR graph derived from the shipped conv_net preset."
+    },
+    {
+      "id": "spikingjelly/fc_reference",
+      "name": "SpikingJelly FC reference",
+      "framework": "spikingjelly",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "fc_small",
+      "input_shape": "1x28x28 (784 flattened)",
+      "notes": "Ecosystem provenance only: the artifact is the bundled NIR graph derived from the shipped fc_small preset."
+    },
+    {
+      "id": "norse/conv_reference",
+      "name": "Norse conv reference",
+      "framework": "norse",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "conv_net",
+      "input_shape": "1x28x28",
+      "notes": "Ecosystem provenance only: the artifact is the bundled NIR graph derived from the shipped conv_net preset, used as the first simulator-backend reference target."
+    },
+    {
+      "id": "lava/recurrent_reference",
+      "name": "Lava/Loihi recurrent reference",
+      "framework": "lava",
+      "kind": "nir_graph",
+      "source": "bundled",
+      "license": "BSD-3-Clause",
+      "topology": "recurrent_net",
+      "input_shape": "1x28x28 (784 flattened)",
+      "notes": "Ecosystem provenance only: the artifact is the bundled NIR graph derived from the shipped recurrent_net preset, used as a declared hardware-path reference."
+    }
+  ]
+}

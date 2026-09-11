@@ -14,29 +14,18 @@ from snn_interpreter.simulator.runner import run
 from snn_interpreter.simulator.trajectory import Trajectory
 from snn_interpreter.topology import registry
 from snn_interpreter.topology.stage_module import StageModule
+from snn_interpreter.tracking.determinism import enable_deterministic
 from snn_interpreter.tracking.seed import set_seed
 from snn_interpreter.training.checkpoint_mixin import CheckpointMixin
 from snn_interpreter.training.encoding_mixin import EncodingMixin
 from snn_interpreter.training.eval_mixin import EvalMixin
-from snn_interpreter.training.scaleup_mixin import ScaleUpMixin
+from snn_interpreter.training.scaleup_mixin import (
+    ScaleUpMixin,
+    scaleup_options,
+)
 from snn_interpreter.training.topology_mixin import TopologyMixin
 
 _Batch = Tuple[torch.Tensor, torch.Tensor]
-
-
-def _scaleup_options(
-    amp: bool,
-    grad_checkpoint: bool,
-    bptt_steps: Optional[int],
-    multi_gpu: bool,
-) -> Dict[str, Any]:
-    """Bundle the additive scale-up flags for the engine."""
-    return {
-        "amp": bool(amp),
-        "grad_checkpoint": bool(grad_checkpoint),
-        "bptt_steps": bptt_steps,
-        "multi_gpu": bool(multi_gpu),
-    }
 
 
 class TrainingEngine(
@@ -58,6 +47,9 @@ class TrainingEngine(
     _seed: Optional[int]
     _test_batches: Optional[List[_Batch]]
     _scaleups: Dict[str, Any]
+    _tracking: Optional[str]
+    _deterministic: bool
+    _determinism_report: Optional[Dict[str, Any]]
 
     def __init__(
         self, dataset: str = "mnist", hidden: int = 128, beta: float = 0.5,
@@ -70,6 +62,7 @@ class TrainingEngine(
         mode: str = "production", seed: Optional[int] = None,
         amp: bool = False, grad_checkpoint: bool = False,
         bptt_steps: Optional[int] = None, multi_gpu: bool = False,
+        tracking: Optional[str] = None, deterministic: bool = False,
     ) -> None:
         """Resolve inputs, build the topology, and optionally restore it."""
         self._store_settings(
@@ -77,10 +70,13 @@ class TrainingEngine(
         )
         self._mode = ExecutionMode(mode)
         self._seed = None if seed is None else int(seed)
+        self._tracking = tracking
+        self._deterministic = bool(deterministic)
+        self._determinism_report = None
         self._encode = encode
         self._topology = topology
         self._topology_params = dict(topology_params or {})
-        self._scaleups = _scaleup_options(
+        self._scaleups = scaleup_options(
             amp, grad_checkpoint, bptt_steps, multi_gpu
         )
         self._setup_input(encode, input_mode, device)
@@ -122,6 +118,9 @@ class TrainingEngine(
         """Create the configured topology/optimiser and restore a ckpt."""
         if self._seed is not None:
             set_seed(self._seed)
+        if self._deterministic:
+            report = enable_deterministic(self._seed)
+            self._determinism_report = report.to_dict()
         self._adopt_topology(checkpoint)
         params = self._topology_arguments()
         self._architecture = registry.resolved_params(self._topology, params)
@@ -151,13 +150,21 @@ class TrainingEngine(
 
     # --- training --------------------------------------------------------
 
+    def _epoch_batches(self, train: bool = True) -> Any:
+        """Return the (inputs, targets) batches for one epoch.
+
+        Image modality reads through the shared loader; the event engine
+        overrides this to bridge an event stream into the same contract.
+        """
+        return build_loader(
+            self._dataset, self._subset, self._batch_size, train=train
+        )
+
     def train(
         self, should_stop: Optional[Callable[[], bool]] = None
     ) -> Iterator[Dict[str, Any]]:
         """Yield a metrics dict after each batch until done or stopped."""
-        loader = build_loader(
-            self._dataset, self._subset, self._batch_size, train=True
-        )
+        loader = self._epoch_batches(train=True)
         total = len(loader) * self._epochs
         step = 0
         for epoch in range(self._epochs):

@@ -7,7 +7,9 @@ services:
     container_name: snn-interpreter
     ports:
       # Host 8877 -> container 8877 (single port for web + ws + api).
-      - "8877:8877"
+      # Override the host port with SNN_HOST_PORT (scripts/docker_server.sh
+      # --port N sets this for you).
+      - "${SNN_HOST_PORT:-8877}:8877"
     volumes:
       # Persist downloaded datasets + generated outputs across restarts.
       - snn-data:/data
@@ -34,7 +36,7 @@ services:
         TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
     container_name: snn-interpreter-cpu
     ports:
-      - "8877:8877"
+      - "${SNN_HOST_PORT:-8877}:8877"
     volumes:
       - snn-data:/data
     environment:
@@ -51,7 +53,7 @@ services:
         TORCH_INDEX_URL: https://download.pytorch.org/whl/cu132
     container_name: snn-interpreter-gpu
     ports:
-      - "8877:8877"
+      - "${SNN_HOST_PORT:-8877}:8877"
     volumes:
       - snn-data:/data
     environment:

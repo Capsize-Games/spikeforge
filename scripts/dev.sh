@@ -161,6 +161,7 @@ cmd_data_nuke() {
 # --- docker ------------------------------------------------------------------
 
 cmd_docker_up() { docker_compose up --build; }
+cmd_docker_server() { "$ROOT/scripts/docker_server.sh" "$@"; }
 cmd_docker_down() { docker_compose down; }
 cmd_docker_build() { docker_compose build "$@"; }
 cmd_docker_logs() { docker_compose logs -f "$@"; }
@@ -231,6 +232,9 @@ Data cache
   data-nuke                 remove the whole data dir (datasets + models)
 
 Docker
+  docker-server [args]      build + run the server from the container
+                            (see scripts/docker_server.sh --help; --cpu/--gpu,
+                             --port, -d/--detach, --follow)
   docker-up                 docker compose up --build
   docker-down               docker compose down
   docker-build [args]       docker compose build
@@ -268,6 +272,7 @@ main() {
     data-dir) cmd_data_dir ;;
     data-clear) cmd_data_clear "$@" ;;
     data-nuke) cmd_data_nuke ;;
+    docker-server) cmd_docker_server "$@" ;;
     docker-up) cmd_docker_up ;;
     docker-down) cmd_docker_down ;;
     docker-build) cmd_docker_build "$@" ;;

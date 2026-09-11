@@ -20,7 +20,7 @@ class EncoderEngine:
     def __init__(self, config: EncodeConfig) -> None:
         """Encode the selected sample under the client's config."""
         self._config = config
-        self._source = SampleSource(config.dataset)
+        self._source = SampleSource(config.dataset, size=config.input_size)
         self._index = self._source.clamp(config.sample_index)
         self._encoder = SpikeEncoder.from_encode_config(config)
         self._image = self._source.image(self._index)
@@ -40,18 +40,20 @@ class EncoderEngine:
         """Return averaged spike reconstructions for the rate coding."""
         if self._config.coding != "rate":
             return None
-        gain1 = self._spikes.mean(dim=0)[0].reshape(28, 28)
+        height, width = self._source.size
+        gain1 = self._spikes.mean(dim=0)[0].reshape(height, width)
         low = gain1 * self._config.gain
         return {
             "gain1": to_list(gain1),
             "low": to_list(low),
-            "size": [28, 28],
+            "size": [height, width],
         }
 
     def spike_frame(self, step: int) -> Any:
         """Return one 2-D spike frame of the selected sample."""
+        height, width = self._source.size
         index = min(max(int(step), 0), self._spikes.size(0) - 1)
-        return to_list(self._spikes[index, 0].reshape(28, 28))
+        return to_list(self._spikes[index, 0].reshape(height, width))
 
     def spike_tensor(self) -> torch.Tensor:
         """Return the full [T,1,784] spike volume."""

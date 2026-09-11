@@ -3,12 +3,15 @@
 import asyncio
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Type
 
 import torch
 
 from server.schemas import EncodeConfig, TrainConfig
+from snn_interpreter.data.datasets import dataset_modality
 from snn_interpreter.network import model_store
+from snn_interpreter.observability import persistence
+from snn_interpreter.training.event_engine import EventTrainingEngine
 from snn_interpreter.training.training_engine import TrainingEngine
 
 
@@ -25,6 +28,35 @@ def _checkpoint_meta(checkpoint: Optional[str]) -> Dict[str, Any]:
 def _dataset_from(config: TrainConfig, encode: Optional[EncodeConfig]) -> str:
     """Prefer the encode config's dataset, else the train config's."""
     return encode.dataset if encode is not None else config.dataset
+
+
+def _topology_params(
+    config: TrainConfig, meta: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Return topology params with per-stage neuron overrides folded in.
+
+    A checkpoint's stored params win (they reproduce the trained
+    architecture), and the config's additive ``stage_neurons``/
+    ``stage_params`` are layered on top so heterogeneous neurons survive the
+    config-to-engine hand-off.
+    """
+    params = dict(meta.get("topology_params") or config.topology_params)
+    if config.stage_neurons:
+        params["neurons"] = dict(config.stage_neurons)
+    if config.stage_params:
+        params["stage_params"] = dict(config.stage_params)
+    return params
+
+
+def _engine_class(dataset: str) -> Type[Any]:
+    """Return the training engine class the dataset's modality selects.
+
+    Image modality keeps the historical :class:`TrainingEngine`; event
+    modality builds the event-stream engine so one server route trains both.
+    """
+    if dataset_modality(dataset) == "event":
+        return EventTrainingEngine
+    return TrainingEngine
 
 
 def _point(metrics: Dict[str, Any]) -> Dict[str, Any]:
@@ -134,11 +166,12 @@ class TrainingService:
     @staticmethod
     def _make_engine(config: TrainConfig, encode: Optional[EncodeConfig],
                      checkpoint: Optional[str]) -> TrainingEngine:
-        """Build a TrainingEngine, honoring a checkpoint's architecture."""
+        """Build the modality-appropriate engine for the dataset."""
         meta = _checkpoint_meta(checkpoint)
         dataset = meta.get("dataset") or _dataset_from(config, encode)
-        params = meta.get("topology_params") or config.topology_params
-        return TrainingEngine(
+        params = _topology_params(config, meta)
+        engine_class = _engine_class(dataset)
+        return engine_class(
             dataset=dataset, hidden=int(meta.get("hidden", config.hidden)),
             beta=float(meta.get("beta", config.beta)), lr=config.lr,
             epochs=config.epochs, num_steps=config.num_steps,
@@ -148,6 +181,7 @@ class TrainingService:
             topology_params=dict(params), mode=config.mode,
             amp=config.amp, grad_checkpoint=config.grad_checkpoint,
             bptt_steps=config.bptt_steps, multi_gpu=config.multi_gpu,
+            tracking=config.tracking, deterministic=config.deterministic,
         )
 
     def stop(self) -> None:
@@ -171,6 +205,9 @@ class TrainingService:
             self._put({"type": "error", "payload": str(exc)})
             self._state("error", engine)
         finally:
+            # Durability point: persist metrics at the end of a run when the
+            # opt-in flag is set; a no-op otherwise, so the default is safe.
+            persistence.flush()
             self._thread = None
 
     def _state(self, reason: str, engine: TrainingEngine) -> None:

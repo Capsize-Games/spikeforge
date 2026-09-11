@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Literal, Optional
 
 #: The data modality a registry dataset delivers.
-Modality = Literal["image", "event"]
+Modality = Literal["image", "event", "sequence"]
 
 
 @dataclass(frozen=True)
@@ -21,8 +21,9 @@ class DatasetSpec:
     Image datasets set ``cls`` to their torchvision class and ``kwargs`` to
     its constructor arguments. Event datasets leave ``cls`` as ``None``,
     point ``tonic_class`` at the matching ``tonic.datasets`` class, and put
-    that class's split arguments in ``kwargs``. ``modality`` drives which
-    encodings the UI offers.
+    that class's split arguments in ``kwargs``. Sequence datasets are fully
+    synthetic and need no loader. ``modality`` drives which encodings the UI
+    offers.
     """
 
     name: str

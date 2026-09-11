@@ -2,6 +2,7 @@ import { TRAIN_HELP } from "../helpText";
 import type { TopologyParams, TrainConfig } from "../types";
 import { SelectField } from "./SelectField";
 import { SliderField } from "./SliderField";
+import { StageNeuronEditor } from "./StageNeuronEditor";
 import { Section } from "./Stepper";
 
 interface Props {
@@ -106,6 +107,13 @@ export function ModelSection({
         onChange={(v) =>
           set({ topology_params: withParam(params, "surrogate", v || null) })
         }
+      />
+      <p className="panel-note">Per-stage neuron overrides (optional)</p>
+      <StageNeuronEditor
+        value={model.stage_neurons}
+        neurons={neurons}
+        disabled={locked}
+        onChange={(v) => set({ stage_neurons: v })}
       />
 
       <SliderField

@@ -1,0 +1,227 @@
+/* --- Phase A4 model hub panel --- */
+
+.hub-panel .hub-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.hub-search-input {
+  flex: 1 1 120px;
+  min-width: 0;
+  padding: 3px 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.hub-search-caption {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.hub-issues {
+  margin: 0 0 6px;
+  padding-left: 16px;
+  color: var(--warn);
+  font-size: 10px;
+}
+
+.hub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.hub-card.selected {
+  border-color: var(--accent);
+}
+
+.hub-card-main {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  width: 100%;
+  padding: 5px 7px;
+  text-align: left;
+  background: var(--bg);
+  color: var(--text);
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.hub-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.hub-cached {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.hub-badge {
+  justify-self: end;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.hub-badge.ok {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+
+.hub-badge.off {
+  color: var(--muted);
+  border-color: color-mix(in srgb, var(--muted) 50%, transparent);
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+}
+
+.hub-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-actions {
+  display: flex;
+  gap: 6px;
+  padding: 4px 7px 6px;
+  border-top: 1px solid var(--border);
+}
+
+.hub-note {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+/* --- hub download progress --- */
+.hub-download {
+  margin-top: 6px;
+  padding: 6px 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.hub-download-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hub-download-bar {
+  height: 4px;
+  margin: 4px 0;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.hub-download-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  animation: hub-pulse 1.2s ease-in-out infinite;
+}
+
+.hub-download-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-verified.ok {
+  color: var(--ok);
+}
+
+.hub-verified.off {
+  color: var(--muted);
+}
+
+@keyframes hub-pulse {
+  0% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+/* --- hub compatibility verdict --- */
+.hub-verdict-view {
+  margin-top: 6px;
+}
+
+.hub-verdict-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hub-verdict-topo {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.hub-verdict-note {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 10px;
+  word-break: break-word;
+}
+
+.hub-verdict {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.hub-verdict.exact {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+
+.hub-verdict.mappable {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+
+.hub-verdict.incompatible {
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+  background: color-mix(in srgb, var(--bad) 10%, transparent);
+}

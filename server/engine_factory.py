@@ -28,7 +28,14 @@ async def _emit(
 async def ensure_dataset(
     ws: WebSocket, session: Session, dataset: str, train: bool = True
 ) -> bool:
-    """Ensure a dataset is on disk; return False when cancelled."""
+    """Ensure a dataset is on disk; return False when cancelled.
+
+    An event dataset whose ``tonic`` loader is absent serves its explicit
+    synthetic path, so there is nothing to fetch and the download worker is
+    skipped instead of failing.
+    """
+    if not _needs_download(dataset):
+        return True
     try:
         await manager.ensure(
             dataset, train, lambda state: _emit(ws, session, state)
@@ -63,9 +70,7 @@ async def build_encoder(
     ws: WebSocket, session: Session, cfg: EncodeConfig
 ) -> bool:
     """Ensure the dataset, then build and store the matching encoder engine."""
-    if _needs_download(cfg.dataset) and not await ensure_dataset(
-        ws, session, cfg.dataset
-    ):
+    if not await ensure_dataset(ws, session, cfg.dataset):
         return False
     loop = asyncio.get_running_loop()
     factory = _engine_class(cfg.dataset)
