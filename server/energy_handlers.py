@@ -21,7 +21,7 @@ from server.target_handlers import (
     shaped_sample,
     target_pair,
 )
-from snn_targets.registry import target_names
+from spikeforge_targets.registry import target_names
 
 
 async def _resolve(

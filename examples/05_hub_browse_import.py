@@ -10,13 +10,13 @@ Run from the repository root::
 
 Promoting the bundled ``nir/fc_legacy`` graph writes a checkpoint into
 ``MODEL_DIR`` (the gitignored ``build/models``). The equivalent shell
-commands are ``snn-hub list``, ``snn-hub inspect nir/fc_legacy`` and
-``snn-hub import nir/fc_legacy``.
+commands are ``spikeforge-hub list``, ``spikeforge-hub inspect
+nir/fc_legacy`` and ``spikeforge-hub import nir/fc_legacy``.
 """
 
 from typing import Any, Dict, List
 
-from snn_hub import available, catalog, get, import_model, inspect
+from spikeforge_hub import available, catalog, get, import_model, inspect
 
 #: Bundled NIR entry exercised by this example.
 ENTRY_ID = "nir/fc_legacy"

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/hub_query.schema.json",
+  "$id": "https://spikeforge.dev/protocol/1.0/payloads/hub_query.schema.json",
   "title": "HubQuery",
   "description": "Mirrors server/schemas/hub_query.py::HubQuery; unknown keys are ignored.",
   "type": "object",

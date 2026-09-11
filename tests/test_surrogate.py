@@ -7,13 +7,13 @@ import pytest
 import torch
 from snntorch import surrogate as surrogate_module
 
-from snn_interpreter.introspection.surrogate import (
+from spikeforge.introspection.surrogate import (
     list_surrogates,
     resolve_surrogate,
     surrogate_curve,
 )
-from snn_interpreter.neurons.registry import NEURONS, build_neuron
-from snn_interpreter.neurons.spike_grad import spike_grad_from
+from spikeforge.neurons.registry import NEURONS, build_neuron
+from spikeforge.neurons.spike_grad import spike_grad_from
 
 _KINDS = ("leaky", "lapicque", "synaptic", "recurrent", "alpha")
 _PARAMS: Dict[str, Dict[str, Any]] = {

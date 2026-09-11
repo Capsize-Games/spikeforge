@@ -10,9 +10,9 @@ from server.handlers import dispatch
 from server.introspection_payloads import MAX_NEURONS, MAX_STAGES
 from server.schemas import ClientMessage, TrainConfig
 from server.session import Session
-from snn_interpreter.encoding.spike_encoder import SpikeEncoder
-from snn_interpreter.introspection.surrogate import list_surrogates
-from snn_interpreter.topology import registry
+from spikeforge.encoding.spike_encoder import SpikeEncoder
+from spikeforge.introspection.surrogate import list_surrogates
+from spikeforge.topology import registry
 
 _SMALL = {"hidden": 4, "beta": 0.5, "num_classes": 3}
 _WIDE = {"hidden": 100, "beta": 0.5, "num_classes": 3}

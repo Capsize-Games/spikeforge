@@ -12,16 +12,16 @@ from typing import Tuple
 import pytest
 import torch
 
-from snn_interpreter.neurons.registry import NEURONS
-from snn_interpreter.nir_bridge import node_names
-from snn_interpreter.nir_bridge.drift import compare
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.nir_bridge.interpreter import NirInterpreter
-from snn_interpreter.nir_bridge.validator import validate
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology.registry import build_topology
-from snn_interpreter.topology.spec import TopologySpec
-from snn_interpreter.topology.stage_module import StageModule
+from spikeforge.neurons.registry import NEURONS
+from spikeforge.nir_bridge import node_names
+from spikeforge.nir_bridge.drift import compare
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.nir_bridge.interpreter import NirInterpreter
+from spikeforge.nir_bridge.validator import validate
+from spikeforge.simulator.runner import run
+from spikeforge.topology.registry import build_topology
+from spikeforge.topology.spec import TopologySpec
+from spikeforge.topology.stage_module import StageModule
 
 pytest.importorskip("nir")
 

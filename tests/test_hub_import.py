@@ -7,13 +7,13 @@ import numpy as np
 import pytest
 import torch
 
-from snn_hub import cache
-from snn_hub.errors import HubArtifactError
-from snn_hub.import_model import import_model
-from snn_hub.weight_map import load_weights
-from snn_interpreter.network import model_store
-from snn_interpreter.nir_bridge import save_graph, to_nir
-from snn_interpreter.topology.registry import build_topology
+from spikeforge.network import model_store
+from spikeforge.nir_bridge import save_graph, to_nir
+from spikeforge.topology.registry import build_topology
+from spikeforge_hub import cache
+from spikeforge_hub.errors import HubArtifactError
+from spikeforge_hub.import_model import import_model
+from spikeforge_hub.weight_map import load_weights
 
 pytest.importorskip("nir")
 

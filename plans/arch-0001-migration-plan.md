@@ -2,7 +2,7 @@
 
 **Status: accepted (proposed for maintainer sign-off).**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
-**Owner:** w4ffl35 (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
+**Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
 
 ## Decision
 
@@ -21,15 +21,15 @@ Goal: make the boundaries real without moving a file.
    field, the TS codegen/validation step, and
    `tests/test_protocol_schema_parity.py`
    ([`plans/arch-0001-protocol-contract.md`](plans/arch-0001-protocol-contract.md)).
-2. Add the `packages/` workspace with `packages/snn-interpreter/pyproject.toml`
-   (excluding `server/`) and `packages/snn-interpreter-server/pyproject.toml`
+2. Add the `packages/` workspace with `packages/spikeforge/pyproject.toml`
+   (excluding `server/`) and `packages/spikeforge-server/pyproject.toml`
    ([`plans/arch-0001-packaging-versioning.md`](plans/arch-0001-packaging-versioning.md)).
 3. Extend `scripts/blocked_deps/sitecustomize.py` with `fastapi`, `pydantic`,
    `uvicorn`; add `scripts/check_core_boundary.py`; add the `headless` CI step
    ([`plans/arch-0001-core-boundary.md`](plans/arch-0001-core-boundary.md)).
 4. Remove the `web` extra from core; make it the server distribution's base
    dependencies. Update [`docker-compose.yml`](docker-compose.yml) and
-   [`Dockerfile`](Dockerfile) to install `snn-interpreter-server`.
+   [`Dockerfile`](Dockerfile) to install `spikeforge-server`.
 5. Port `tests/test_packaging_profiles.py` to read the new
    `packages/*/pyproject.toml` files instead of [`setup.py`](setup.py).
 
@@ -40,8 +40,8 @@ protocol work is additive and can remain.
 
 ## Phase 2 — extract the dashboard (trigger T1)
 
-1. On a throwaway clone, `git subtree split --prefix=client -b snn-dashboard-split`
-   and push to a new `w4ffl35/snn-dashboard`.
+1. On a throwaway clone, `git subtree split --prefix=client -b spikeforge-dashboard-split`
+   and push to a new `capsize-games/spikeforge-dashboard`.
 2. Move the dashboard CI job (`npm ci && npm run build`) and the
    `client/package-lock.json` cache to the new repo.
 3. In core, pin the dashboard bundle version in `compatibility.json`; the server
@@ -57,42 +57,42 @@ artifact rather than a live `client/` checkout.
 **Rollback:** restore `client/` from the mirror (or from the pre-phase tag); the
 server build reverts to in-repo `client/`.
 
-## Phase 3 — extract `snn-targets` (trigger T2)
+## Phase 3 — extract `spikeforge-targets` (trigger T2)
 
 1. On a throwaway clone, run the `git filter-repo` multi-prefix extraction from
    [`plans/arch-0001-packaging-versioning.md`](plans/arch-0001-packaging-versioning.md)
-   and push to a new `w4ffl35/snn-targets` with import root `snn_targets`.
-2. Delete `snn_interpreter/{targets,energy,event_runtime}` from core; add the
-   `snn-targets` pinned dev dependency and the lazy re-export shim.
-3. Move console-script ownership of `snn-energy` and `snn-targets` to the new
+   and push to a new `capsize-games/spikeforge-targets` with import root `spikeforge_targets`.
+2. Delete `spikeforge/{targets,energy,event_runtime}` from core; add the
+   `spikeforge-targets` pinned dev dependency and the lazy re-export shim.
+3. Move console-script ownership of `spikeforge-energy` and `spikeforge-targets` to the new
    distribution.
-4. Move the tests for the moved code into `snn-targets`; the server updates its
-   imports from `snn_interpreter.energy` / `.event_runtime` / `.targets` to
-   `snn_targets.*`.
+4. Move the tests for the moved code into `spikeforge-targets`; the server updates its
+   imports from `spikeforge.energy` / `.event_runtime` / `.targets` to
+   `spikeforge_targets.*`.
 
 **Test relocation rule:** tests move with their subject. Tests that reference
-`targets`, `energy`, or `event_runtime` relocate to `w4ffl35/snn-targets`. Tests
+`targets`, `energy`, or `event_runtime` relocate to `capsize-games/spikeforge-targets`. Tests
 that exercise the *seam* (the server driving a target through the protocol) stay
 in the cross-package integration suite described below.
 
 **Rollback:** restore the four prefixes from the pre-phase tag; drop the pin and
 shim.
 
-## Phase 4 — extract `snn-hub` (go) and `snn-server` (conditional)
+## Phase 4 — extract `spikeforge-hub` (go) and `spikeforge-server` (conditional)
 
-- **`snn-hub` (go, trigger T3).** Single-directory `git subtree split` of
-  `snn_interpreter/hub` to `w4ffl35/snn-hub` with import root `snn_hub`; move the
-  `snn-hub` console script and hub tests; keep `snn_interpreter.hub` as a lazy
+- **`spikeforge-hub` (go, trigger T3).** Single-directory `git subtree split` of
+  `spikeforge/hub` to `capsize-games/spikeforge-hub` with import root `spikeforge_hub`; move the
+  `spikeforge-hub` console script and hub tests; keep `spikeforge.hub` as a lazy
   shim.
-- **`snn-server` (conditional, trigger T4).** Only when the server must release
+- **`spikeforge-server` (conditional, trigger T4).** Only when the server must release
   on its own cadence: `git subtree split --prefix=server` to
-  `w4ffl35/snn-server`. The server keeps import root `server`
+  `capsize-games/spikeforge-server`. The server keeps import root `server`
   ([`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)).
   Its 17 server-touching test files and the `server/schemas/*` modules move with
   it.
 
 **Protocol ownership after Phase 4 (if it fires):** `protocol/` remains in
-`w4ffl35/snn_interpreter` as the contract authority. The server and dashboard
+`capsize-games/spikeforge` as the contract authority. The server and dashboard
 repos consume it as a pinned artifact or git submodule; they never fork it.
 
 ## Cross-package integration suite
@@ -105,7 +105,7 @@ seams rather than the internals:
 - `tests/test_protocol_schema_parity.py` — pydantic models vs JSON Schema vs
   `protocol_version.txt`.
 - one server-through-core smoke test that drives a real request over the
-  protocol using the pinned `snn-interpreter-server`.
+  protocol using the pinned `spikeforge-server`.
 
 Everything else migrates to the owning repository.
 
@@ -122,11 +122,11 @@ per repo, the core site remains the hub page; no `plans/` content is duplicated.
 
 | Old path | New path | Phase | Shim lifetime |
 |---|---|---|---|
-| `snn_interpreter.targets.*` | `snn_targets.*` | 3 | 1 minor release after extraction |
-| `snn_interpreter.targets.backends.*` | `snn_targets.backends.*` | 3 | 1 minor release |
-| `snn_interpreter.energy.*` | `snn_targets.energy.*` | 3 | 1 minor release |
-| `snn_interpreter.event_runtime.*` | `snn_targets.event_runtime.*` | 3 | 1 minor release |
-| `snn_interpreter.hub.*` | `snn_hub.*` | 4 | 1 minor release |
+| `spikeforge.targets.*` | `spikeforge_targets.*` | 3 | 1 minor release after extraction |
+| `spikeforge.targets.backends.*` | `spikeforge_targets.backends.*` | 3 | 1 minor release |
+| `spikeforge.energy.*` | `spikeforge_targets.energy.*` | 3 | 1 minor release |
+| `spikeforge.event_runtime.*` | `spikeforge_targets.event_runtime.*` | 3 | 1 minor release |
+| `spikeforge.hub.*` | `spikeforge_hub.*` | 4 | 1 minor release |
 
 Shims emit `DeprecationWarning` naming the new path, import the satellite
 lazily, and raise a clear `ImportError` when it is not installed. Shims are

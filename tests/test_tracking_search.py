@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Optional
 import pytest
 import torch
 
-from snn_interpreter.network import model_store
-from snn_interpreter.network.model_search import search_models
+from spikeforge.network import model_store
+from spikeforge.network.model_search import search_models
 
 
 @pytest.fixture(autouse=True)

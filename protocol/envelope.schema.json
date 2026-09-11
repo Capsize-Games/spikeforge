@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://snn-interpreter.dev/protocol/1.0/envelope.schema.json",
+  "$id": "https://spikeforge.dev/protocol/1.0/envelope.schema.json",
   "title": "Envelope",
   "description": "Shared $defs used by both the inbound and outbound envelopes. This file is the common vocabulary; each direction's envelope inlines the concrete properties so the two are independently readable.",
   "$defs": {

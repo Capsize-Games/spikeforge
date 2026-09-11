@@ -8,13 +8,13 @@ import numpy as np
 import pytest
 import torch
 
-from snn_interpreter.nir_bridge import api as nir_api
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.spec import chain
-from snn_interpreter.topology.stage import Stage
-from snn_targets.backends import api, compile_run
-from snn_targets.backends.lava_backend import LavaBackend
+from spikeforge.nir_bridge import api as nir_api
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.spec import chain
+from spikeforge.topology.stage import Stage
+from spikeforge_targets.backends import api, compile_run
+from spikeforge_targets.backends.lava_backend import LavaBackend
 
 pytest.importorskip("nir")
 
@@ -91,6 +91,18 @@ def test_lava_device_path_is_named(
     assert result.status == "ok"
     assert result.path == "loihi2_device"
     assert any("device" in note for note in result.notes)
+
+
+def test_lava_legacy_device_env_still_opts_in(
+    lava: types.ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The legacy SNN_LAVA_DEVICE name still opts into the device path."""
+    _stub_run(monkeypatch, "loihi2_device")
+    monkeypatch.delenv(api.LAVA_DEVICE_ENV, raising=False)
+    monkeypatch.setenv(api.LAVA_DEVICE_LEGACY_ENV, "1")
+    result = compile_run("lava_loihi2", _graph(), _spikes())
+    assert result.status == "ok"
+    assert result.path == "loihi2_device"
 
 
 def _conv_graph() -> Any:

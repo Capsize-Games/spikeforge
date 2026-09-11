@@ -1,6 +1,6 @@
 # Open-source readiness checklist
 
-An actionable pre-release checklist for `snn-interpreter`, grouped and marked
+An actionable pre-release checklist for `spikeforge`, grouped and marked
 with what is **already done** (`[x]`) versus **outstanding** (`[ ]`). Every
 "done" item was verified in the repository; every "outstanding" item names the
 concrete gap. Nothing here changes product code.
@@ -19,7 +19,7 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
 - [x] **`LICENSE` present and coherent.** [`LICENSE`](LICENSE) is the standard
   BSD 3-Clause text; its copyright line points at the AUTHORS file.
 - [x] **`AUTHORS` present.** [`AUTHORS`](AUTHORS) lists one contributor
-  (`w4ffl35 <25737761+w4ffl35@users.noreply.github.com>`), matching the
+  (`Capsize Games <contact@capsizegames.com>`), matching the
   `LICENSE` copyright reference. This is the identity recorded in
   `git config user.name` / `user.email`.
 - [x] **License declared in packaging metadata.** [`setup.py`](setup.py:34)
@@ -27,7 +27,7 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
   `License :: OSI Approved :: BSD License`.
 - [x] **The `setup.py` author fields are filled.** `author`, `author_email`,
   and `url` are set from the git identity and the `origin` remote
-  (`https://github.com/w4ffl35/snn_interpreter`) — no longer empty.
+  (`https://github.com/capsize-games/spikeforge`) — no longer empty.
 - [x] **Confirm the intended license.** BSD-3-Clause is the deliberate choice
   for the project itself, and it is now the declared `license` plus
   `license_files`.
@@ -35,12 +35,12 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
   in the README, the roadmap (§12 decision 1), and now a top-level
   `NOTICE.md` so a redistributor sees it without reading the README.
 - [x] **Third-party license audit for catalog entries — resolved by removal.**
-  [`snn_hub/models.json`](snn_hub/models.json) now ships
+  [`spikeforge_hub/models.json`](spikeforge_hub/models.json) now ships
   **10 entries, all `"license": "BSD-3-Clause"`** (this project's own NIR preset
   graphs). The four former `"license": "see upstream"` entries were invented
   "seed" ids under a fictional `snn-community/*` namespace with no real
   upstream; rather than ship unverifiable ids they were **removed**. The schema
-  now rejects free-text licenses (see `snn_hub/CURATION.md`), so an
+  now rejects free-text licenses (see `spikeforge_hub/CURATION.md`), so an
   unverified candidate must be marked `"unverified-candidate"` and is reported
   `available: false`.
 
@@ -101,7 +101,7 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
 - [x] **No committed large binary artifacts.** The largest tracked files are
   text (`README.md` ≈ 86 KB, `client/package-lock.json` ≈ 62 KB); no model
   weights or datasets are tracked.
-- [x] **No leftover TODO/FIXME/XXX/HACK markers** in `snn_interpreter/`,
+- [x] **No leftover TODO/FIXME/XXX/HACK markers** in `spikeforge/`,
   `server/`, `main.py`, `main_encodings.py`, or `tests/`.
 - [x] **Files are within the style contract** ([`rules.md`](rules.md): files
   ≤ 250 lines, functions ≤ 20 lines).
@@ -114,7 +114,7 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
   caches, keeping the image context tight.
 - [x] **Module entry points work.** `records_cli.py` and `target_cli.py` gained
   `if __name__ == "__main__":` guards, so `python -m
-  snn_interpreter.cli.records_cli` and `... target_cli` work like the other
+  spikeforge.cli.records_cli` and `... target_cli` work like the other
   console-script modules.
 
 ---
@@ -196,8 +196,8 @@ now recorded as resolved in the roadmap's §12:
 - [x] **Sequence scope is experimentation, not production LLM training —
   resolved** and stated in the README.
 - [x] **Metrics persistence root — resolved.** Written under
-  `SNN_METRICS_DIR` (default `<DATA_DIR>/metrics`) with opt-in
-  `SNN_METRICS_PERSIST`.
+  `SPIKEFORGE_METRICS_DIR` (default `<DATA_DIR>/metrics`) with opt-in
+  `SPIKEFORGE_METRICS_PERSIST`.
 - [x] **Hub catalog licensing — resolved: metadata-only, verified only.** No
   weights are redistributed; remote artifacts are fetched on demand. The four
   fabricated `"see upstream"` entries were removed, so the shipped catalog now

@@ -29,7 +29,7 @@ jobs:
       - name: Install the core dev extra
         run: |
           python -m pip install --upgrade pip
-          pip install -e "./packages/snn-interpreter[dev]"
+          pip install -e "./packages/spikeforge[dev]"
 
       - name: Lint (ruff)
         run: ruff check .
@@ -56,17 +56,17 @@ jobs:
 
       - name: Install core + targets + hub + server editable
         run: |
-          pip install -e "./packages/snn-interpreter[dev,nir]" \
-                      -e ./packages/snn-targets \
-                      -e ./packages/snn-hub \
-                      -e ./packages/snn-interpreter-server
+          pip install -e "./packages/spikeforge[dev,nir]" \
+                      -e ./packages/spikeforge-targets \
+                      -e ./packages/spikeforge-hub \
+                      -e ./packages/spikeforge-server
 
       - name: Test (pytest)
         run: pytest
 
   hub:
-    # The `hub` core extra is gone: the hub now ships as the `snn-hub`
-    # distribution (`snn_hub` import root) and this job proves it installs from
+    # The `hub` core extra is gone: the hub now ships as the `spikeforge-hub`
+    # distribution (`spikeforge_hub` import root) and this job proves it installs from
     # source and its offline catalog/CLI work.
     runs-on: ubuntu-latest
     steps:
@@ -84,15 +84,15 @@ jobs:
 
       - name: Install core + targets + hub + server editable
         run: |
-          pip install -e "./packages/snn-interpreter[dev,nir]" \
-                      -e ./packages/snn-targets \
-                      -e ./packages/snn-hub \
-                      -e ./packages/snn-interpreter-server
+          pip install -e "./packages/spikeforge[dev,nir]" \
+                      -e ./packages/spikeforge-targets \
+                      -e ./packages/spikeforge-hub \
+                      -e ./packages/spikeforge-server
 
-      - name: Exercise the snn-hub distribution
+      - name: Exercise the spikeforge-hub distribution
         run: |
-          python -c "import snn_hub, snn_hub.cli; print('snn_hub OK')"
-          python -m snn_hub.cli list > /dev/null
+          python -c "import spikeforge_hub, spikeforge_hub.cli; print('spikeforge_hub OK')"
+          python -m spikeforge_hub.cli list > /dev/null
           pytest tests/test_hub_catalog.py tests/test_hub_cache.py \
                  tests/test_hub_verify.py tests/test_hub_inspect.py \
                  tests/test_cli_hub.py
@@ -100,10 +100,10 @@ jobs:
   extras:
     # Prove every advertised extra still installs and does not rot.
     # `web` is gone: the server stack is now the server distribution's base
-    # dependencies. `norse`/`lava` now live on `snn-targets`; `norse` is
+    # dependencies. `norse`/`lava` now live on `spikeforge-targets`; `norse` is
     # install-only here (the suite asserts the SDK-gated backends are
     # *absent*), and `docs` builds the site. `hub` is gone too: it is the
-    # `snn-hub` distribution, exercised by the `hub` job above.
+    # `spikeforge-hub` distribution, exercised by the `hub` job above.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -126,14 +126,14 @@ jobs:
         run: |
           if [ "${{ matrix.extra }}" = "norse" ]; then
             pip install \
-              -e "./packages/snn-interpreter[dev,nir]" \
-              -e "./packages/snn-targets[norse]" \
-              -e ./packages/snn-interpreter-server
+              -e "./packages/spikeforge[dev,nir]" \
+              -e "./packages/spikeforge-targets[norse]" \
+              -e ./packages/spikeforge-server
           else
             pip install \
-              -e "./packages/snn-interpreter[dev,nir,${{ matrix.extra }}]" \
-              -e ./packages/snn-targets \
-              -e ./packages/snn-interpreter-server
+              -e "./packages/spikeforge[dev,nir,${{ matrix.extra }}]" \
+              -e ./packages/spikeforge-targets \
+              -e ./packages/spikeforge-server
           fi
 
       - name: Exercise the ${{ matrix.extra }} extra
@@ -176,10 +176,10 @@ jobs:
       - name: Install core + targets + hub + server editable with the extras
         run: |
           pip install \
-            -e "./packages/snn-interpreter[dev,nir,events,onnx,tracking,tracking-wandb]" \
-            -e ./packages/snn-targets \
-            -e ./packages/snn-hub \
-            -e ./packages/snn-interpreter-server
+            -e "./packages/spikeforge[dev,nir,events,onnx,tracking,tracking-wandb]" \
+            -e ./packages/spikeforge-targets \
+            -e ./packages/spikeforge-hub \
+            -e ./packages/spikeforge-server
 
       - name: Test with the optional extras and the server stack blocked
         run: |
@@ -218,14 +218,14 @@ jobs:
       - name: Install docs dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e "./packages/snn-interpreter[docs]"
+          pip install -e "./packages/spikeforge[docs]"
 
       - name: Check documentation links
         run: bash scripts/build_docs.sh --check
 
   client:
     # `client/` is a read-only mirror for one release; the full build now lives
-    # in w4ffl35/snn-dashboard (its own CI runs `npm run build`). Core keeps
+    # in capsize-games/spikeforge-dashboard (its own CI runs `npm run build`). Core keeps
     # only the protocol-codegen guard so a schema change without regenerated
     # types is still caught here.
     runs-on: ubuntu-latest
@@ -280,7 +280,7 @@ jobs:
       - name: Build the core wheel with no extras
         run: |
           python -m pip install --upgrade pip build
-          python -m build ./packages/snn-interpreter
+          python -m build ./packages/spikeforge
 
       - name: Install the wheel into a clean venv
         run: |
@@ -289,7 +289,7 @@ jobs:
           /tmp/headless/bin/pip install torch torchvision \
             --index-url ${{ env.TORCH_INDEX_URL }}
           /tmp/headless/bin/pip install \
-            ./packages/snn-interpreter/dist/snn_interpreter-*.whl
+            ./packages/spikeforge/dist/spikeforge-*.whl
 
       - name: Assert the headless wheel boundary
         run: |
@@ -307,17 +307,17 @@ jobs:
               assert util.find_spec(module) is None, (
                   f"core install leaked forbidden dep: {module}"
               )
-          import snn_interpreter
-          print("headless import OK:", snn_interpreter.__file__)
+          import spikeforge
+          print("headless import OK:", spikeforge.__file__)
 
           wheel = next(
-              pathlib.Path("packages/snn-interpreter/dist").glob("*.whl")
+              pathlib.Path("packages/spikeforge/dist").glob("*.whl")
           )
           with zipfile.ZipFile(wheel) as archive:
               leaked = [
                   name for name in archive.namelist()
                   if name.split("/", 1)[0]
-                  in ("server", "snn_targets", "snn_hub")
+                  in ("server", "spikeforge_targets", "spikeforge_hub")
               ]
           assert not leaked, f"core wheel contains satellite roots: {leaked}"
           print("wheel is satellite-free:", wheel.name)
@@ -337,15 +337,15 @@ jobs:
       - name: Build all four wheels
         run: |
           python -m pip install --upgrade pip build
-          python -m build ./packages/snn-interpreter
-          python -m build ./packages/snn-interpreter-server
-          python -m build ./packages/snn-targets
-          python -m build ./packages/snn-hub
+          python -m build ./packages/spikeforge
+          python -m build ./packages/spikeforge-server
+          python -m build ./packages/spikeforge-targets
+          python -m build ./packages/spikeforge-hub
 
       - name: Run the packaging guards
         run: |
           python scripts/check_packaging_guards.py \
-            --core-wheel packages/snn-interpreter/dist/snn_interpreter-*.whl \
-            --server-wheel packages/snn-interpreter-server/dist/snn_interpreter_server-*.whl \
-            --targets-wheel packages/snn-targets/dist/snn_targets-*.whl \
-            --hub-wheel packages/snn-hub/dist/snn_hub-*.whl
+            --core-wheel packages/spikeforge/dist/spikeforge-*.whl \
+            --server-wheel packages/spikeforge-server/dist/spikeforge_server-*.whl \
+            --targets-wheel packages/spikeforge-targets/dist/spikeforge_targets-*.whl \
+            --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl

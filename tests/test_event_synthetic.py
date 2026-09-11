@@ -2,8 +2,8 @@
 
 import torch
 
-from snn_interpreter.events.event_sample import EventSample
-from snn_interpreter.events.synthetic import moving_dot, moving_edge
+from spikeforge.events.event_sample import EventSample
+from spikeforge.events.synthetic import moving_dot, moving_edge
 
 _FIELDS = ("x", "y", "t", "p")
 

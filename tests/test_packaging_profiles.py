@@ -11,23 +11,24 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
     import tomli as tomllib
 
 _ROOT = Path(__file__).resolve().parent.parent
-_CORE = _ROOT / "packages" / "snn-interpreter" / "pyproject.toml"
-_SERVER = _ROOT / "packages" / "snn-interpreter-server" / "pyproject.toml"
-_TARGETS = _ROOT / "packages" / "snn-targets" / "pyproject.toml"
-_HUB = _ROOT / "packages" / "snn-hub" / "pyproject.toml"
+_CORE = _ROOT / "packages" / "spikeforge" / "pyproject.toml"
+_SERVER = _ROOT / "packages" / "spikeforge-server" / "pyproject.toml"
+_TARGETS = _ROOT / "packages" / "spikeforge-targets" / "pyproject.toml"
+_HUB = _ROOT / "packages" / "spikeforge-hub" / "pyproject.toml"
 
 _EXPECTED_SCRIPTS = {
-    "snn-interpreter",
-    "snn-interpreter-encodings",
-    "snn-verify",
-    "snn-records",
-    "snn-benchmark",
+    "spikeforge",
+    "spikeforge-encodings",
+    "spikeforge-verify",
+    "spikeforge-records",
+    "spikeforge-benchmark",
 }
 # ``web`` is intentionally absent: its dependencies are now the base
-# dependencies of the ``snn-interpreter-server`` distribution. ``norse`` and
-# ``lava`` moved to ``snn-targets``; ``hub`` moved to ``snn-hub`` — each with
-# the code it gates.
+# dependencies of the ``spikeforge-server`` distribution. ``norse`` and
+# ``lava`` moved to ``spikeforge-targets``; ``hub`` moved to
+# ``spikeforge-hub`` — each with the code it gates.
 _EXPECTED_EXTRAS = {
+    "all",
     "dev",
     "nir",
     "events",
@@ -50,14 +51,18 @@ _EXPECTED_SERVER_DEPS = {
     "uvicorn[standard]>=0.27",
     "websockets>=12.0",
     "pydantic>=2.5",
-    "snn-targets~=0.1.0",
-    "snn-hub~=0.1.0",
+    "spikeforge-targets~=0.1.0",
+    "spikeforge-hub~=0.1.0",
+}
+_EXPECTED_SERVER_SCRIPTS = {
+    "spikeforge-server",
 }
 _EXPECTED_TARGETS_SCRIPTS = {
-    "snn-energy",
-    "snn-targets",
+    "spikeforge-energy",
+    "spikeforge-targets",
 }
 _EXPECTED_TARGETS_EXTRAS = {
+    "dev",
     "norse",
     "lava",
 }
@@ -66,7 +71,7 @@ _EXPECTED_TARGETS_DEPS = {
     "torch>=2.5",
 }
 _EXPECTED_HUB_SCRIPTS = {
-    "snn-hub",
+    "spikeforge-hub",
 }
 _EXPECTED_HUB_EXTRAS = {
     "dev",
@@ -102,87 +107,110 @@ def test_core_dependencies_match_the_design() -> None:
     assert set(deps) == _EXPECTED_CORE_DEPS
 
 
+def test_core_all_extra_bundles_the_satellites() -> None:
+    """The ``all`` extra pulls the targets and hub satellites only."""
+    extras = _pyproject(_CORE)["project"]["optional-dependencies"]
+    assert set(extras["all"]) == {
+        "spikeforge-targets~=0.1.0",
+        "spikeforge-hub~=0.1.0",
+    }
+    # The base install stays clean: no satellite may be a hard dependency.
+    assert not any(
+        dep.startswith(("spikeforge-targets", "spikeforge-hub"))
+        for dep in _pyproject(_CORE)["project"]["dependencies"]
+    )
+
+
 def test_console_script_targets_are_stable() -> None:
     """The five remaining core entry points resolve to their targets."""
     scripts = _pyproject(_CORE)["project"]["scripts"]
-    assert scripts["snn-interpreter"] == "main:main"
-    assert scripts["snn-interpreter-encodings"] == "main_encodings:main"
-    assert scripts["snn-verify"] == "snn_interpreter.cli.verify:main"
-    assert scripts["snn-records"] == "snn_interpreter.cli.records_cli:main"
-    assert scripts["snn-benchmark"] == "snn_interpreter.benchmark.cli:main"
+    assert scripts["spikeforge"] == "main:main"
+    assert scripts["spikeforge-encodings"] == "main_encodings:main"
+    assert scripts["spikeforge-verify"] == "spikeforge.cli.verify:main"
+    assert scripts["spikeforge-records"] == "spikeforge.cli.records_cli:main"
+    assert scripts["spikeforge-benchmark"] == "spikeforge.benchmark.cli:main"
 
 
 def test_core_excludes_the_server_root() -> None:
     """Core discovery excludes the satellite roots so they cannot leak."""
     find = _pyproject(_CORE)["tool"]["setuptools"]["packages"]["find"]
-    assert find["include"] == ["snn_interpreter*"]
+    assert find["include"] == ["spikeforge", "spikeforge.*"]
     assert "server*" in find["exclude"]
-    assert "snn_targets*" in find["exclude"]
-    assert "snn_hub*" in find["exclude"]
+    assert "spikeforge_targets*" in find["exclude"]
+    assert "spikeforge_hub*" in find["exclude"]
 
 
 def test_server_declares_base_dependencies() -> None:
     """The server promotes the old web extra to base dependencies."""
     deps = set(_pyproject(_SERVER)["project"]["dependencies"])
     assert deps >= _EXPECTED_SERVER_DEPS
-    assert any(dep.startswith("snn-interpreter~=") for dep in deps)
+    assert any(dep.startswith("spikeforge~=") for dep in deps)
+
+
+def test_server_console_script_resolves_to_main() -> None:
+    """``spikeforge-server`` starts the uvicorn app via ``__main__:main``."""
+    scripts = _pyproject(_SERVER)["project"]["scripts"]
+    assert set(scripts) == _EXPECTED_SERVER_SCRIPTS
+    assert scripts["spikeforge-server"] == "server.__main__:main"
 
 
 def test_server_owns_only_the_server_root() -> None:
     """Server discovery is independent of the core package."""
     find = _pyproject(_SERVER)["tool"]["setuptools"]["packages"]["find"]
     assert find["include"] == ["server*"]
-    assert "snn_interpreter*" in find["exclude"]
+    assert "spikeforge*" in find["exclude"]
 
 
 def test_targets_distribution_owns_the_moved_surface() -> None:
-    """snn-targets owns the moved extras, scripts, and import root."""
+    """spikeforge-targets owns the moved extras, scripts, and import root."""
     project = _pyproject(_TARGETS)["project"]
     assert set(project["optional-dependencies"]) == _EXPECTED_TARGETS_EXTRAS
     assert set(project["scripts"]) == _EXPECTED_TARGETS_SCRIPTS
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_TARGETS_DEPS
-    assert "snn-interpreter~=0.3.0" in deps
+    assert "spikeforge~=0.3.0" in deps
 
 
 def test_targets_console_script_targets_resolve_to_the_new_root() -> None:
-    """The moved console scripts resolve inside the ``snn_targets`` root."""
+    """Moved console scripts resolve inside the ``spikeforge_targets`` root."""
     scripts = _pyproject(_TARGETS)["project"]["scripts"]
-    assert scripts["snn-energy"] == "snn_targets.energy.cli:main"
-    assert scripts["snn-targets"] == "snn_targets.cli.target_cli:main"
+    assert scripts["spikeforge-energy"] == "spikeforge_targets.energy.cli:main"
+    assert scripts["spikeforge-targets"] == (
+        "spikeforge_targets.cli.target_cli:main"
+    )
 
 
 def test_targets_owns_only_the_targets_root() -> None:
     """Targets discovery is independent of core and the server."""
     find = _pyproject(_TARGETS)["tool"]["setuptools"]["packages"]["find"]
-    assert find["include"] == ["snn_targets*"]
-    assert "snn_interpreter*" in find["exclude"]
+    assert find["include"] == ["spikeforge_targets*"]
+    assert "spikeforge" in find["exclude"]
     assert "server*" in find["exclude"]
 
 
 def test_hub_distribution_owns_the_moved_surface() -> None:
-    """snn-hub owns the moved extras, script, and import root."""
+    """spikeforge-hub owns the moved extras, script, and import root."""
     project = _pyproject(_HUB)["project"]
     assert set(project["optional-dependencies"]) == _EXPECTED_HUB_EXTRAS
     assert set(project["scripts"]) == _EXPECTED_HUB_SCRIPTS
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_HUB_DEPS
-    assert "snn-interpreter~=0.3.0" in deps
+    assert "spikeforge~=0.3.0" in deps
 
 
 def test_hub_console_script_targets_resolve_to_the_new_root() -> None:
-    """The moved console script resolves inside the ``snn_hub`` root."""
+    """The moved console script resolves inside the ``spikeforge_hub`` root."""
     scripts = _pyproject(_HUB)["project"]["scripts"]
-    assert scripts["snn-hub"] == "snn_hub.cli:main"
+    assert scripts["spikeforge-hub"] == "spikeforge_hub.cli:main"
 
 
 def test_hub_owns_only_the_hub_root() -> None:
     """Hub discovery is independent of core, targets, and the server."""
     find = _pyproject(_HUB)["tool"]["setuptools"]["packages"]["find"]
-    assert find["include"] == ["snn_hub*"]
-    assert "snn_interpreter*" in find["exclude"]
+    assert find["include"] == ["spikeforge_hub*"]
+    assert "spikeforge" in find["exclude"]
     assert "server*" in find["exclude"]
-    assert "snn_targets*" in find["exclude"]
+    assert "spikeforge_targets*" in find["exclude"]
 
 
 def _compose() -> Dict[str, Any]:
@@ -194,10 +222,11 @@ def _compose() -> Dict[str, Any]:
 
 def test_compose_default_service_is_profile_free() -> None:
     """``docker compose up --build`` still starts only the default service."""
-    service = _compose()["services"]["snn-interpreter"]
+    service = _compose()["services"]["spikeforge"]
     assert "profiles" not in service
-    # The host port is overridable via SNN_HOST_PORT, but the container port
-    # stays 8877 so the single-port dashboard contract is unchanged.
+    # The host port is overridable via SPIKEFORGE_HOST_PORT, but the
+    # container port stays 8877 so the single-port dashboard contract is
+    # unchanged.
     assert any(port.endswith(":8877") for port in service["ports"])
 
 

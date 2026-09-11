@@ -1,8 +1,8 @@
 name: Release
 
 # Tags are the only release trigger. The tag scheme is
-# `<distribution>-v<version>` (for example `snn-interpreter-v0.3.0` or
-# `snn-interpreter-server-v0.1.0`); the prefix selects `packages/<distribution>`.
+# `<distribution>-v<version>` (for example `spikeforge-v0.3.0` or
+# `spikeforge-server-v0.1.0`); the prefix selects `packages/<distribution>`.
 on:
   push:
     tags:
@@ -83,13 +83,21 @@ jobs:
                   f"compatibility.json has no {distribution} {version}"
               )
 
-          core = "snn-interpreter"
+          core = "spikeforge"
+
+          def _requirement_name(requirement):
+              """Return the bare distribution name of a requirement."""
+              for index, char in enumerate(requirement):
+                  if char in "<>=!~;[":
+                      return requirement[:index].strip()
+              return requirement.strip()
+
           if distribution != core:
               expected = f"{core}~={release.get(core)}"
               pins = [
                   dep
                   for dep in project.get("dependencies", [])
-                  if dep.startswith(core)
+                  if _requirement_name(dep) == core
               ]
               if pins != [expected]:
                   sys.exit(

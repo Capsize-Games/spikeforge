@@ -8,7 +8,7 @@ Three release-blocking health metrics from
   distributions (the PEP 420 / packaging-profile health metric);
 * **console-script ownership** - no console-script name may appear in two
   distributions;
-* **compatibility pin** - every satellite's ``snn-interpreter~=X.Y.0`` pin must
+* **compatibility pin** - every satellite's ``spikeforge~=X.Y.0`` pin must
   equal the core version recorded in ``compatibility.json``.
 
 Import roots and scripts are read from each distribution's ``pyproject.toml``.
@@ -19,10 +19,10 @@ actual archives instead, so CI proves the artifact and not just the intent.
 Usage::
 
     python scripts/check_packaging_guards.py \
-        --core-wheel dist/snn_interpreter-*.whl \
-        --server-wheel dist/snn_interpreter_server-*.whl \
-        --targets-wheel dist/snn_targets-*.whl \
-        --hub-wheel dist/snn_hub-*.whl
+        --core-wheel dist/spikeforge-*.whl \
+        --server-wheel dist/spikeforge_server-*.whl \
+        --targets-wheel dist/spikeforge_targets-*.whl \
+        --hub-wheel dist/spikeforge_hub-*.whl
 """
 
 import argparse
@@ -40,10 +40,10 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 #: Repository root (this file lives in ``scripts/``).
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-CORE_DISTRIBUTION = "snn-interpreter"
-SERVER_DISTRIBUTION = "snn-interpreter-server"
-TARGETS_DISTRIBUTION = "snn-targets"
-HUB_DISTRIBUTION = "snn-hub"
+CORE_DISTRIBUTION = "spikeforge"
+SERVER_DISTRIBUTION = "spikeforge-server"
+TARGETS_DISTRIBUTION = "spikeforge-targets"
+HUB_DISTRIBUTION = "spikeforge-hub"
 CORE_PYPROJECT = REPO_ROOT / "packages" / CORE_DISTRIBUTION / "pyproject.toml"
 SERVER_PYPROJECT = (
     REPO_ROOT / "packages" / SERVER_DISTRIBUTION / "pyproject.toml"
@@ -159,6 +159,20 @@ def _latest_release() -> Dict[str, object]:
     return releases[-1]
 
 
+def _requirement_name(requirement: object) -> str:
+    """Return the distribution name of a PEP 508 requirement string.
+
+    The satellites share the ``spikeforge`` prefix (for example
+    ``spikeforge-targets``), so a plain ``str.startswith`` would misread a
+    satellite pin as a core pin; comparing the bare name avoids that.
+    """
+    text = str(requirement).strip()
+    for index, char in enumerate(text):
+        if char in "<>=!~;[":
+            return text[:index].strip()
+    return text
+
+
 def check_matrix_pins(pyprojects: Dict[str, Path]) -> Optional[str]:
     """Return an error when a distribution disagrees with the matrix."""
     release = _latest_release()
@@ -179,7 +193,7 @@ def check_matrix_pins(pyprojects: Dict[str, Path]) -> Optional[str]:
         )
         for dependency in project.get("dependencies", []):
             if (
-                str(dependency).startswith(CORE_DISTRIBUTION)
+                _requirement_name(dependency) == CORE_DISTRIBUTION
                 and dependency != expected_pin
             ):
                 problems.append(

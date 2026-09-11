@@ -1,4 +1,4 @@
-# snn-interpreter examples
+# spikeforge examples
 
 Small, runnable, **offline-safe** scripts, one per core journey. Each has a
 module docstring explaining what it demonstrates and how to run it, and each
@@ -34,7 +34,7 @@ it is absent (see the last section).
 
 `01_train_image_model.py` runs the fully-connected LIF network on MNIST for
 two batches with the Python `TrainingEngine`. The first run downloads MNIST
-into `SNN_DATA_DIR` (default `build/`); later runs are offline. Representative
+into `SPIKEFORGE_DATA_DIR` (default `build/`); later runs are offline. Representative
 output:
 
 ```text
@@ -117,8 +117,8 @@ destination: .../build/models/hub_nir_fc_legacy.pt
 ```
 
 Promoting writes a checkpoint into `MODEL_DIR` (the gitignored
-`build/models`). The shell equivalents are `snn-hub list`,
-`snn-hub inspect nir/fc_legacy`, and `snn-hub import nir/fc_legacy`.
+`build/models`). The shell equivalents are `spikeforge-hub list`,
+`spikeforge-hub inspect nir/fc_legacy`, and `spikeforge-hub import nir/fc_legacy`.
 
 ## 6. Deployment report and the reference backend
 
@@ -135,8 +135,8 @@ spike agreement: 1.0
 ```
 
 `xylo deployable=False` is honest: its SDK is not installed. The shell
-equivalents are `snn-verify deploy --topology conv_net --target reference`
-and `snn-verify run --topology conv_net --target reference`.
+equivalents are `spikeforge-verify deploy --topology conv_net --target reference`
+and `spikeforge-verify run --topology conv_net --target reference`.
 
 ## 7. Estimate energy, sparse versus dense
 

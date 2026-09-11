@@ -1,4 +1,4 @@
-# SNN Interpreter — WS-E: Operational Maturity
+# Spikeforge — WS-E: Operational Maturity
 
 > Focused design for workstream **E** of the
 > [`professional_roadmap.md`](plans/professional_roadmap.md). Read the roadmap
@@ -20,15 +20,15 @@ out of scope.
 
 | Capability | Current reality | Anchor |
 |---|---|---|
-| Metrics registry | In-memory only, surfaced via `system_stats` | [`metrics.py`](snn_interpreter/observability/metrics.py:14) |
-| Metrics registry impl | `MetricsRegistry` counters/gauges/timers | [`registry.py`](snn_interpreter/observability/registry.py) |
-| Structured logs | Opt-in JSON logging | [`logging_setup.py`](snn_interpreter/observability/logging_setup.py) |
-| Reproducibility manifest | Config hash, seed, versions, history | [`manifest.py`](snn_interpreter/tracking/manifest.py:35) |
-| Bit-exactness | Documented as **not** bit-exact | [`manifest.py`](snn_interpreter/tracking/manifest.py:70) |
-| External tracking | Local `MODEL_DIR` only, by design | [`model_store.py`](snn_interpreter/network/model_store.py:34) |
-| Benchmark store | File-based, regression gating | [`store.py`](snn_interpreter/benchmark/store.py), [`compare.py`](snn_interpreter/benchmark/compare.py) |
+| Metrics registry | In-memory only, surfaced via `system_stats` | [`metrics.py`](spikeforge/observability/metrics.py:14) |
+| Metrics registry impl | `MetricsRegistry` counters/gauges/timers | [`registry.py`](spikeforge/observability/registry.py) |
+| Structured logs | Opt-in JSON logging | [`logging_setup.py`](spikeforge/observability/logging_setup.py) |
+| Reproducibility manifest | Config hash, seed, versions, history | [`manifest.py`](spikeforge/tracking/manifest.py:35) |
+| Bit-exactness | Documented as **not** bit-exact | [`manifest.py`](spikeforge/tracking/manifest.py:70) |
+| External tracking | Local `MODEL_DIR` only, by design | [`model_store.py`](spikeforge/network/model_store.py:34) |
+| Benchmark store | File-based, regression gating | [`store.py`](spikeforge/benchmark/store.py), [`compare.py`](spikeforge/benchmark/compare.py) |
 | Docs | Markdown plans only | [`ecosystem_roadmap.md`](plans/ecosystem_roadmap.md:1) |
-| Persistence root | `DATA_DIR`, `MODEL_DIR` | [`config.py`](snn_interpreter/config.py:10) |
+| Persistence root | `DATA_DIR`, `MODEL_DIR` | [`config.py`](spikeforge/config.py:10) |
 
 ### 1.1 Invariants that must not break
 
@@ -39,7 +39,7 @@ out of scope.
   ([`stats.py`](server/stats.py)).
 - The benchmark store/suite/compare contracts are unchanged; energy is additive.
 - `ReproducibilityManifest.to_dict` keys stay stable; new fields are additive
-  ([`manifest.py`](snn_interpreter/tracking/manifest.py:60)).
+  ([`manifest.py`](spikeforge/tracking/manifest.py:60)).
 - `ruff`, the test suite, and the client build stay green.
 
 ---
@@ -54,22 +54,22 @@ on shutdown, keyed by run/session, and can reload a previous snapshot for the
 stats surface.
 
 ```
-snn_interpreter/observability/
+spikeforge/observability/
   store.py         read/write metric snapshots under METRICS_DIR
   persistence.py   hook the registry to the store; flush + load helpers
   snapshot.py      snapshot dataclass: timestamp, run id, metrics
 ```
 
-- `METRICS_DIR` is a new setting in [`config.py`](snn_interpreter/config.py:10),
-  defaulting to `DATA_DIR/metrics`, overridable with `SNN_METRICS_DIR`
+- `METRICS_DIR` is a new setting in [`config.py`](spikeforge/config.py:10),
+  defaulting to `DATA_DIR/metrics`, overridable with `SPIKEFORGE_METRICS_DIR`
   (roadmap decision 6).
 - `persistence.flush()` writes the current
-  [`metrics.snapshot()`](snn_interpreter/observability/metrics.py:42); `load()`
+  [`metrics.snapshot()`](spikeforge/observability/metrics.py:42); `load()`
   returns the latest snapshot for a run id without mutating the live registry.
 - The `system_stats` reply gains an additive `metrics_persisted` flag and the
   timestamp of the last flush; existing keys are untouched
   ([`stats.py`](server/stats.py)).
-- The benchmark store ([`store.py`](snn_interpreter/benchmark/store.py)) is
+- The benchmark store ([`store.py`](spikeforge/benchmark/store.py)) is
   unchanged; it already persists runs, so energy/op-count blocks ride along.
 
 ---
@@ -83,7 +83,7 @@ record and forward it to an external tracker. The default is **no sink**; the
 local manifest is always written first, so a tracker outage never loses a run.
 
 ```
-snn_interpreter/tracking/
+spikeforge/tracking/
   sink.py            Sink protocol: available(), log(record)
   sinks.py           registry + active-sink resolution from config
   tensorboard_sink.py  TensorBoard SummaryWriter wrapper (tracking extra)
@@ -103,7 +103,7 @@ which sink it used and why, satisfying the honesty rule.
 
 ### 3.2 Wiring
 
-[`CheckpointMixin._manifest`](snn_interpreter/training/checkpoint_mixin.py:55)
+[`CheckpointMixin._manifest`](spikeforge/training/checkpoint_mixin.py:55)
 already builds the manifest; it calls `sinks.emit(manifest)` after the local
 write. Because probes are isolated, an absent package is a recorded reason, not
 a crash.
@@ -115,11 +115,11 @@ a crash.
 ### 4.1 Design
 
 The manifest already states `bit_exact: false` with the reasons
-([`manifest.py`](snn_interpreter/tracking/manifest.py:70)). WS-E turns the
+([`manifest.py`](spikeforge/tracking/manifest.py:70)). WS-E turns the
 documented gap into a measurable path:
 
 ```
-snn_interpreter/tracking/
+spikeforge/tracking/
   determinism.py   enable_deterministic(seed) + a bit-exactness check
 ```
 
@@ -160,7 +160,7 @@ scripts/build_docs.sh     build + --check (fails on broken links)
 | Surface | Change |
 |---|---|
 | WebSocket | `system_stats` gains additive `metrics_persisted`/timestamp; no new action required |
-| CLI | `snn-benchmark` unchanged; new `snn-docs` optional script wrapping `build_docs.sh` (roadmap lists it under packaging) |
+| CLI | `spikeforge-benchmark` unchanged; new `spikeforge-docs` optional script wrapping `build_docs.sh` (roadmap lists it under packaging) |
 | Client | [`ResourceMonitor.tsx`](client/src/components/ResourceMonitor.tsx) shows the persisted-metrics indicator; [`BenchmarkPanel.tsx`](client/src/components/BenchmarkPanel.tsx) shows the energy block when present |
 
 ---

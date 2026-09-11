@@ -7,12 +7,12 @@ import numpy as np
 import pytest
 import torch
 
-from snn_interpreter.nir_bridge import api
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.topology import presets
-from snn_targets.rewrite import rewrite
-from snn_targets.rewrite_drift import rewrite_drift
-from snn_targets.target_spec import TargetSpec
+from spikeforge.nir_bridge import api
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.topology import presets
+from spikeforge_targets.rewrite import rewrite
+from spikeforge_targets.rewrite_drift import rewrite_drift
+from spikeforge_targets.target_spec import TargetSpec
 
 pytest.importorskip("nir")
 

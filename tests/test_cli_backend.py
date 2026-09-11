@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from snn_interpreter.cli import verify
-from snn_targets.cli import target_cli
+from spikeforge.cli import verify
+from spikeforge_targets.cli import target_cli
 
 pytest.importorskip("nir")
 
@@ -53,7 +53,7 @@ def test_cli_run_unavailable_exits_nonzero(
 def test_cli_rewrite_is_also_on_the_targets_entry_point(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The ``snn-targets`` entry point exposes the same ``rewrite`` command."""
+    """The ``spikeforge-targets`` entry point exposes ``rewrite``."""
     code = target_cli.main(
         ["rewrite", "--topology", "fc_small", "--target", "reference"]
     )

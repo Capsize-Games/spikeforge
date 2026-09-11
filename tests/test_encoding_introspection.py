@@ -5,9 +5,9 @@ import json
 import pytest
 import torch
 
-from snn_interpreter.encoding.spike_encoder import SpikeEncoder
-from snn_interpreter.introspection.decoding import decode_delta
-from snn_interpreter.introspection.encoding import encoding_report
+from spikeforge.encoding.spike_encoder import SpikeEncoder
+from spikeforge.introspection.decoding import decode_delta
+from spikeforge.introspection.encoding import encoding_report
 
 
 def _rate_image() -> torch.Tensor:

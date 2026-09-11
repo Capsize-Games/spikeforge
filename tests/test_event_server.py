@@ -11,8 +11,8 @@ from server.introspection_handlers import EVENT_UNSUPPORTED
 from server.messages import send_initial
 from server.schemas import ClientMessage, EncodeConfig
 from server.session import Session
-from snn_interpreter.events import event_source
-from snn_interpreter.events.event_source import EventSampleSource
+from spikeforge.events import event_source
+from spikeforge.events.event_source import EventSampleSource
 
 
 class FakeWS:

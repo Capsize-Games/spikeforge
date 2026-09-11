@@ -1,4 +1,4 @@
-# SNN Interpreter — Phase 1: The Interpreter Spine
+# Spikeforge — Phase 1: The Interpreter Spine
 
 > This is the detailed design for **Phase 1** of the
 > [`ecosystem_roadmap.md`](ecosystem_roadmap.md). Read the roadmap first for
@@ -59,26 +59,26 @@ the spine is proven.
 
 | Capability the goal requires | Current reality | Anchor |
 |---|---|---|
-| Configurable topology | One hardcoded 2-layer FC LIF, hand-written loop | [`SpikingNet`](snn_interpreter/network/spiking_net.py:10), [`forward_spikes()`](snn_interpreter/network/spiking_net.py:37) |
+| Configurable topology | One hardcoded 2-layer FC LIF, hand-written loop | [`SpikingNet`](spikeforge/network/spiking_net.py:10), [`forward_spikes()`](spikeforge/network/spiking_net.py:37) |
 | Conv / recurrent support | None | n/a |
-| Neuron model library | Only `snn.Leaky` with `beta` | [`SpikingNet.__init__()`](snn_interpreter/network/spiking_net.py:26) |
+| Neuron model library | Only `snn.Leaky` with `beta` | [`SpikingNet.__init__()`](spikeforge/network/spiking_net.py:26) |
 | Graph representation / tracing | None; no fx, no IR | n/a |
 | NIR dependency | Not present | [`requirements.txt`](requirements.txt:1), [`setup.py`](setup.py:38) |
 | NIR export | None | n/a |
 | NIR execution / cross-check | None | n/a |
 | Numerical validation | None | n/a |
-| State introspection | Spikes only, no `U[t]`/`I[t]` | [`infer_spikes()`](snn_interpreter/network/inference.py:8) |
-| Educational vs production mode | Implicit via `track` flag only | [`_pack()`](snn_interpreter/network/spiking_net.py:62) |
-| Topology in checkpoints | `meta` stores dataset/hidden/beta only | [`save()`](snn_interpreter/training/checkpoint_mixin.py:19) |
+| State introspection | Spikes only, no `U[t]`/`I[t]` | [`infer_spikes()`](spikeforge/network/inference.py:8) |
+| Educational vs production mode | Implicit via `track` flag only | [`_pack()`](spikeforge/network/spiking_net.py:62) |
+| Topology in checkpoints | `meta` stores dataset/hidden/beta only | [`save()`](spikeforge/training/checkpoint_mixin.py:19) |
 | Tests | No `tests/` directory exists | repo root listing |
 
 ### Back-compat surface that must not break
 
 - `SpikingNet.forward(x, num_steps)` and `SpikingNet.forward_spikes(spikes, track)`
-  return contracts are consumed by [`TrainingEngine._train_batch()`](snn_interpreter/training/training_engine.py:130),
-  [`predict()`](snn_interpreter/training/training_engine.py:143),
-  [`inference.infer_spikes()`](snn_interpreter/network/inference.py:12), and
-  [`device.warmup()`](snn_interpreter/runtime/device.py:115).
+  return contracts are consumed by [`TrainingEngine._train_batch()`](spikeforge/training/training_engine.py:130),
+  [`predict()`](spikeforge/training/training_engine.py:143),
+  [`inference.infer_spikes()`](spikeforge/network/inference.py:12), and
+  [`device.warmup()`](spikeforge/runtime/device.py:115).
 - `SpikingNet` parameter names `_fc1`, `_lif1`, `_fc2`, `_lif2` are baked into
   saved `state_dict`s; existing checkpoints in `MODEL_DIR` must keep loading.
 - Properties `hidden`, `beta`, `num_classes`, `input_size` are read by
@@ -149,25 +149,25 @@ makes the drift check meaningful rather than tautological.
 New packages (each new class in its own file, keeping files small):
 
 ```
-snn_interpreter/topology/
+spikeforge/topology/
   __init__.py
   stage.py           Stage: name, kind, params
   spec.py            TopologySpec: stages + edges; chain/residual/recurrent helpers
   builder.py         build_module(spec) -> torch.nn.Module
   presets.py         fc_legacy, fc_small, conv_net, recurrent_net
-snn_interpreter/neurons/
+spikeforge/neurons/
   __init__.py
   registry.py        NEURONS: name -> factory; build(name, **params)
   leaky.py           snn.Leaky factory + NIR parameter conversion
   lapicque.py        snn.Lapicque factory + conversion
   synaptic.py        snn.Synaptic factory + conversion
   recurrent.py       snn.RLeaky factory + conversion
-snn_interpreter/simulator/
+spikeforge/simulator/
   __init__.py
   state.py           NeuronState / StateMap containers
   runner.py          run(stages, edges, spikes, track) -> outputs or trajectories
   trajectory.py      Trajectory: per-layer S[t], U[t], I[t]
-snn_interpreter/nir_bridge/
+spikeforge/nir_bridge/
   __init__.py
   api.py             isolated nir/nirtorch imports + capability check
   mapper.py          Stage kind <-> NIR node conversion table
@@ -182,18 +182,18 @@ Modified files:
 
 | File | Change |
 |---|---|
-| [`spiking_net.py`](snn_interpreter/network/spiking_net.py:10) | Re-implement as a wrapper over the `fc_legacy` preset; keep `_fc1/_lif1/_fc2/_lif2`, `forward`, `forward_spikes`, properties |
-| [`inference.py`](snn_interpreter/network/inference.py:8) | Consume the simulator; add optional membrane trajectory without changing existing payload keys |
-| [`training_engine.py`](snn_interpreter/training/training_engine.py:24) | Build the configured topology; expose the spec |
-| [`checkpoint_mixin.py`](snn_interpreter/training/checkpoint_mixin.py:19) | Persist the `TopologySpec` in `meta` |
-| [`encoding_mixin.py`](snn_interpreter/training/encoding_mixin.py:9) | Unchanged (encoder contract is stable) |
+| [`spiking_net.py`](spikeforge/network/spiking_net.py:10) | Re-implement as a wrapper over the `fc_legacy` preset; keep `_fc1/_lif1/_fc2/_lif2`, `forward`, `forward_spikes`, properties |
+| [`inference.py`](spikeforge/network/inference.py:8) | Consume the simulator; add optional membrane trajectory without changing existing payload keys |
+| [`training_engine.py`](spikeforge/training/training_engine.py:24) | Build the configured topology; expose the spec |
+| [`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:19) | Persist the `TopologySpec` in `meta` |
+| [`encoding_mixin.py`](spikeforge/training/encoding_mixin.py:9) | Unchanged (encoder contract is stable) |
 | [`train_config.py`](server/schemas/train_config.py:10) | Add `topology: str` and `topology_params: dict` |
 | [`handlers.py`](server/handlers.py:222) | Add `nir_export` / `nir_validate` dispatch and handlers |
 | [`server_message.py`](server/schemas/server_message.py:8) | Add `nir_graph` / `nir_validation` types |
 | [`requirements.txt`](requirements.txt:1), [`setup.py`](setup.py:38) | Add `nir` + `nirtorch` (an optional `nir` extra, on by default in Docker) |
 
-New CLI module `snn_interpreter/cli/verify.py` exposes
-`python -m snn_interpreter.cli.verify export --topology conv_net` and
+New CLI module `spikeforge/cli/verify.py` exposes
+`python -m spikeforge.cli.verify export --topology conv_net` and
 `... validate --topology conv_net --dataset mnist` for headless use.
 
 ---

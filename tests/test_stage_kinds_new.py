@@ -6,11 +6,11 @@ import pytest
 import torch
 import torch.nn as nn
 
-from snn_interpreter.nir_bridge import stage_builders
-from snn_interpreter.nir_bridge.errors import UnsupportedStageError
-from snn_interpreter.nir_bridge.mapper import map_stage
-from snn_interpreter.topology import stage_modules
-from snn_interpreter.topology.stage import Stage
+from spikeforge.nir_bridge import stage_builders
+from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.nir_bridge.mapper import map_stage
+from spikeforge.topology import stage_modules
+from spikeforge.topology.stage import Stage
 
 pytest.importorskip("nir")
 

@@ -3,8 +3,8 @@
 import pytest
 import torch
 
-from snn_interpreter.events.dense import to_frames, to_voxel
-from snn_interpreter.events.event_sample import EventSample
+from spikeforge.events.dense import to_frames, to_voxel
+from spikeforge.events.event_sample import EventSample
 
 
 def _sample() -> EventSample:

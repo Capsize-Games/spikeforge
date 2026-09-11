@@ -28,7 +28,7 @@ from server.hub_payloads import (
 from server.messages import send_locked
 from server.schemas import ClientMessage
 from server.session import Session
-from snn_hub.errors import HubError
+from spikeforge_hub.errors import HubError
 
 
 async def _error(ws: WebSocket, session: Session, detail: str) -> None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static core-boundary scan for the ``snn-interpreter`` distribution.
+"""Static core-boundary scan for the ``spikeforge`` distribution.
 
 ARCH-0001 Phase 1c. The core distribution must install and import without any
 of the forbidden root packages (see ``plans/arch-0001-core-boundary.md``). This
@@ -88,22 +88,22 @@ FROZEN_BOUNDARY: Sequence[str] = (
 #: sanctioned site, so it is listed here too.
 ALLOWED_LOCAL_IMPORTERS: Set[str] = frozenset(
     {
-        "snn_interpreter.nir_bridge.api",
-        "snn_interpreter.onnx_bridge.api",
-        "snn_interpreter.events.tonic_api",
-        "snn_interpreter.tracking.tensorboard_sink",
-        "snn_interpreter.tracking.wandb_sink",
-        "snn_interpreter.tracking.sink_probe",
+        "spikeforge.nir_bridge.api",
+        "spikeforge.onnx_bridge.api",
+        "spikeforge.events.tonic_api",
+        "spikeforge.tracking.tensorboard_sink",
+        "spikeforge.tracking.wandb_sink",
+        "spikeforge.tracking.sink_probe",
     }
 )
 
 #: Directories the core distribution never ships, so they are never scanned.
-#: Mirrors the ``exclude`` list in ``packages/snn-interpreter/pyproject.toml``
-#: (``server*``, ``tests*``, ``snn_targets*``, ``snn_hub*``).
-EXCLUDED_PREFIXES = ("server", "tests", "snn_targets", "snn_hub")
+#: Mirrors the ``exclude`` list in ``packages/spikeforge/pyproject.toml``
+#: (``server*``, ``tests*``, ``spikeforge_targets*``, ``spikeforge_hub*``).
+EXCLUDED_PREFIXES = ("server", "tests", "spikeforge_targets", "spikeforge_hub")
 
 #: Package directories the core distribution ships, relative to the repo root.
-SCAN_DIRS = ("snn_interpreter",)
+SCAN_DIRS = ("spikeforge",)
 
 #: Top-level single-file modules the core distribution ships.
 SCAN_FILES = ("main.py", "main_encodings.py")

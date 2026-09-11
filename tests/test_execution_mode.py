@@ -1,6 +1,6 @@
 """Tests for the ExecutionMode scaffold."""
 
-from snn_interpreter.runtime.execution_mode import ExecutionMode
+from spikeforge.runtime.execution_mode import ExecutionMode
 
 
 def test_both_modes_exist() -> None:

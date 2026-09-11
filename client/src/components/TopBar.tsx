@@ -30,7 +30,7 @@ export function TopBar({
   const { theme, toggle } = useTheme();
   return (
     <header className="topbar">
-      <span className="logo" role="img" aria-label="SNN Interpreter">
+      <span className="logo" role="img" aria-label="Spikeforge">
         <svg
           width="24"
           height="24"

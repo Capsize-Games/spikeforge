@@ -1,4 +1,4 @@
-# SNN Interpreter — WS-B: Hardware and Simulator Backend Execution
+# Spikeforge — WS-B: Hardware and Simulator Backend Execution
 
 > Focused design for workstream **B** of the
 > [`professional_roadmap.md`](plans/professional_roadmap.md). Read the roadmap
@@ -31,13 +31,13 @@ Norse is recommended first because it is pip-installable, pure PyTorch, and
 shares the torch stack, so it exercises the whole compile-run-drift pipeline
 with minimal new machinery. It also needs exactly one substitution
 (`IF` → `beta=0` `LIF`) that is **already declared**
-([`catalog.py`](snn_interpreter/targets/catalog.py:141)), making it the natural
+([`catalog.py`](spikeforge/targets/catalog.py:141)), making it the natural
 first *executed* substitution.
 
 ### 1.2 First hardware path — Lava / Loihi 2
 
 Lava is chosen as the first hardware path because its declared substitution
-(`AvgPool2d` → `SumPool2d`, [`catalog.py`](snn_interpreter/targets/catalog.py:87))
+(`AvgPool2d` → `SumPool2d`, [`catalog.py`](spikeforge/targets/catalog.py:87))
 is a clean, well-understood rewrite, and the SDK is pip-installable (if not
 trivially so). It ships executable-when-present and reports unavailable
 otherwise.
@@ -48,22 +48,22 @@ otherwise.
 
 | Capability | Current reality | Anchor |
 |---|---|---|
-| Target registry | Six entries, one available | [`registry.py`](snn_interpreter/targets/registry.py:14), [`catalog.py`](snn_interpreter/targets/catalog.py:145) |
-| Availability probe | Isolated module import | [`probe.py`](snn_interpreter/targets/probe.py:23) |
-| Capability matrix | Classifies supported/substituted/unsupported | [`capability_matrix.py`](snn_interpreter/targets/capability_matrix.py:13) |
-| Substitution record | Declared `primitive -> substitute` | [`substitution.py`](snn_interpreter/targets/substitution.py:6), [`target_spec.py`](snn_interpreter/targets/target_spec.py:35) |
-| Deployment report | `deployable` is a capability flag | [`report.py`](snn_interpreter/targets/report.py:56) |
-| NIR serialization | save/load graph | [`serialization.py`](snn_interpreter/nir_bridge/serialization.py) |
-| Reference interpreter | Runs emitted primitives independently | [`interpreter.py`](snn_interpreter/nir_bridge/interpreter.py:50) |
+| Target registry | Six entries, one available | [`registry.py`](spikeforge/targets/registry.py:14), [`catalog.py`](spikeforge/targets/catalog.py:145) |
+| Availability probe | Isolated module import | [`probe.py`](spikeforge/targets/probe.py:23) |
+| Capability matrix | Classifies supported/substituted/unsupported | [`capability_matrix.py`](spikeforge/targets/capability_matrix.py:13) |
+| Substitution record | Declared `primitive -> substitute` | [`substitution.py`](spikeforge/targets/substitution.py:6), [`target_spec.py`](spikeforge/targets/target_spec.py:35) |
+| Deployment report | `deployable` is a capability flag | [`report.py`](spikeforge/targets/report.py:56) |
+| NIR serialization | save/load graph | [`serialization.py`](spikeforge/nir_bridge/serialization.py) |
+| Reference interpreter | Runs emitted primitives independently | [`interpreter.py`](spikeforge/nir_bridge/interpreter.py:50) |
 | Compile/run a backend | None | n/a |
 | Substitution execution | None | n/a |
-| Backend trajectory compare | Only snnTorch vs NIR | [`validator.py`](snn_interpreter/nir_bridge/validator.py) |
+| Backend trajectory compare | Only snnTorch vs NIR | [`validator.py`](spikeforge/nir_bridge/validator.py) |
 
 ### 2.1 Invariants that must not break
 
 - `reference` stays available unconditionally
-  ([`catalog.py`](snn_interpreter/targets/catalog.py:61)); its report shape is
-  unchanged ([`report.py`](snn_interpreter/targets/report.py:76)).
+  ([`catalog.py`](spikeforge/targets/catalog.py:61)); its report shape is
+  unchanged ([`report.py`](spikeforge/targets/report.py:76)).
 - Existing `deployment_report` payload keys and the `deployment_report` /
   `target_list` messages stay additive
   ([`server_message.py`](server/schemas/server_message.py:11),
@@ -79,13 +79,13 @@ otherwise.
 ## 3. Substitution executor
 
 The executor applies a target's **declared** substitutions
-([`TargetSpec.substitutions`](snn_interpreter/targets/target_spec.py:35)) to
+([`TargetSpec.substitutions`](spikeforge/targets/target_spec.py:35)) to
 produce a target-ready graph, reports what changed, and re-validates drift.
 
 ### 3.1 Module layout
 
 ```
-snn_interpreter/targets/
+spikeforge/targets/
   substitute_ops.py     one rewrite function per (primitive -> substitute) pair
   rewrite.py            rewrite(graph_or_spec, target) -> RewriteResult
   rewrite_report.py     JSON-able deltas: applied, skipped, unfixable
@@ -103,7 +103,7 @@ Each rule is a small pure function `(node, meta) -> (nodes, edges)` so a rule
 that expands one node into several (AvgPool) and a rule that is one-for-one
 (IF) share one interface. A primitive with **no** substitution stays
 `unsupported` and is surfaced as `unfixable`, never dropped
-([`capability_matrix.py`](snn_interpreter/targets/capability_matrix.py:29)).
+([`capability_matrix.py`](spikeforge/targets/capability_matrix.py:29)).
 
 ### 3.3 Rewrite report and drift
 
@@ -121,9 +121,9 @@ that expands one node into several (AvgPool) and a rule that is one-for-one
 
 After rewriting, the executor runs a **drift check**: the rewritten graph is
 executed by the reference interpreter
-([`NirInterpreter`](snn_interpreter/nir_bridge/interpreter.py:50)) on the same
+([`NirInterpreter`](spikeforge/nir_bridge/interpreter.py:50)) on the same
 fixture and compared to the pre-rewrite execution using the existing drift
-machinery ([`drift.py`](snn_interpreter/nir_bridge/drift.py)). The report
+machinery ([`drift.py`](spikeforge/nir_bridge/drift.py)). The report
 includes the drift and whether it is within tolerance, so a lossy substitution
 (e.g. the AvgPool window edge case) is quantified rather than hidden.
 
@@ -134,7 +134,7 @@ includes the drift and whether it is within tolerance, so a lossy substitution
 ### 4.1 Module layout
 
 ```
-snn_interpreter/targets/backends/
+spikeforge/targets/backends/
   __init__.py        public compile_run + backend registry
   api.py             isolated per-SDK probes and import helpers (the only importer)
   result.py          BackendResult dataclass: readout, spikes, status, notes
@@ -146,8 +146,8 @@ snn_interpreter/targets/backends/
 ```
 
 `api.py` is the single module that imports a backend SDK, mirroring
-[`probe.py`](snn_interpreter/targets/probe.py:1) and
-[`nir_bridge/api.py`](snn_interpreter/nir_bridge/api.py:1). It exposes
+[`probe.py`](spikeforge/targets/probe.py:1) and
+[`nir_bridge/api.py`](spikeforge/nir_bridge/api.py:1). It exposes
 `module_available(name)` and version strings; nothing else imports a backend.
 
 ### 4.2 Backend protocol
@@ -160,7 +160,7 @@ class Backend(Protocol):
 ```
 
 `BackendResult` carries `readout`, per-stage `spikes`/`membranes` in the same
-shape as [`InterpreterResult`](snn_interpreter/nir_bridge/interpreter_result.py),
+shape as [`InterpreterResult`](spikeforge/nir_bridge/interpreter_result.py),
 a `status` in `{ok, unavailable, error}` with an honest `notes` list, and the
 `rewritten` report when a substitution preceded compilation.
 
@@ -189,7 +189,7 @@ Compiles the target-ready NIR graph into a Norse module set (`norse.LIF`,
 and returns a `BackendResult`. The `IF`→`beta=0` rewrite makes `norse.LIF`
 numerically reproduce `nir.IF`, so the comparison to the reference interpreter
 should be within tolerance. Unsupported-by-Norse nodes (`CubaLIF`, `Delay` per
-[`catalog.py`](snn_interpreter/targets/catalog.py:139)) are reported
+[`catalog.py`](spikeforge/targets/catalog.py:139)) are reported
 `unfixable`, and `run` is refused for a graph containing them.
 
 ### 4.5 Lava backend
@@ -219,16 +219,16 @@ adds the *executed* view. Routed via
 
 ### 5.2 CLI
 
-Extended in [`target_cli.py`](snn_interpreter/cli/target_cli.py:166):
+Extended in [`target_cli.py`](spikeforge/cli/target_cli.py:166):
 
 ```
-snn-targets rewrite --topology conv_net --target norse      # rewrite report + drift
-snn-targets run     --topology conv_net --target norse      # compile + run + compare
+spikeforge-targets rewrite --topology conv_net --target norse      # rewrite report + drift
+spikeforge-targets run     --topology conv_net --target norse      # compile + run + compare
 ```
 
 Both print JSON; `run` exits non-zero unless `status == "ok"` and the compare
 is within tolerance, so it is a CI gate (same convention as
-[`deploy_exit`](snn_interpreter/cli/target_cli.py:86)).
+[`deploy_exit`](spikeforge/cli/target_cli.py:86)).
 
 ### 5.3 Client
 
@@ -245,7 +245,7 @@ styling and [`DeploymentBuckets.tsx`](client/src/components/DeploymentBuckets.ts
 ### B1 — Substitution executor
 
 - **Deliverables:** `targets/substitute_ops.py`, `targets/rewrite.py`,
-  `targets/rewrite_report.py`, `targets/rewrite_result.py`; `snn-targets
+  `targets/rewrite_report.py`, `targets/rewrite_result.py`; `spikeforge-targets
   rewrite`.
 - **Acceptance:** rewriting `conv_net` for `norse` converts the declared `IF` to
   a `beta=0` `LIF` (when present) and reports it; rewriting for `lava_loihi2`
@@ -255,7 +255,7 @@ styling and [`DeploymentBuckets.tsx`](client/src/components/DeploymentBuckets.ts
 ### B2 — Norse simulator backend
 
 - **Deliverables:** `targets/backends/{__init__,api,base,result,compare,
-  reference_backend,norse_backend}.py`; `snn-targets run`.
+  reference_backend,norse_backend}.py`; `spikeforge-targets run`.
 - **Acceptance:** with `norse` installed, `conv_net` compiles and runs and its
   readout matches the reference within tolerance; the `IF`→`beta=0` rewrite
   reproduces `nir.IF`; without `norse`, `status=="unavailable"` and a note, never
@@ -281,7 +281,7 @@ styling and [`DeploymentBuckets.tsx`](client/src/components/DeploymentBuckets.ts
 ## 7. Risks and deferred items
 
 - **SDK API drift:** isolated in `backends/api.py`; each backend's `compile`
-  begins with a probe, mirroring [`api.py`](snn_interpreter/nir_bridge/api.py:1).
+  begins with a probe, mirroring [`api.py`](spikeforge/nir_bridge/api.py:1).
 - **Lava build weight:** `lava-nc` is heavy and platform-sensitive — it stays an
   optional extra and the reference/Norse paths remain the always-available
   fallback.

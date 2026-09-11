@@ -1,4 +1,4 @@
-# SNN Interpreter — Professionalization Roadmap
+# Spikeforge — Professionalization Roadmap
 
 Master design/spec for the professionalization program. **It shipped:** every
 workstream and phase below is implemented in the `0.2.0` tree, so this
@@ -23,7 +23,7 @@ grounded file references, Mermaid diagrams, and an explicit acceptance bar.
 
 ## 1. Vision and theme
 
-Make `snn-interpreter` the **lynchpin tooling layer for the neuromorphic model
+Make `spikeforge` the **lynchpin tooling layer for the neuromorphic model
 landscape**: a place where a model authored in snnTorch, NIR, SpikingJelly,
 Norse, Lava, or a Hugging Face repo can be **found, downloaded, inspected,
 imported, executed on a real backend, translated to sequence/attention
@@ -63,10 +63,10 @@ search/download behind a `hub` extra. Rationale and trade-offs are in
 sections 11 and each focused document.
 
 **The through-line invariant:** every workstream preserves the
-`TopologySpec` single source of truth ([`spec.py`](snn_interpreter/topology/spec.py:16)),
+`TopologySpec` single source of truth ([`spec.py`](spikeforge/topology/spec.py:16)),
 the legacy checkpoint keys `_fc1/_lif1/_fc2/_lif2`, `main.py`,
 `main_encodings.py`, existing WebSocket payload keys, and the `alpha`
-unexportable precedent ([`neuron_nodes.py`](snn_interpreter/nir_bridge/neuron_nodes.py:51)).
+unexportable precedent ([`neuron_nodes.py`](spikeforge/nir_bridge/neuron_nodes.py:51)).
 
 ---
 
@@ -76,41 +76,41 @@ Every row is grounded in the current source. "Gap" is what this program closes.
 
 | # | Capability the program requires | Current reality | Anchor | WS |
 |---|---|---|---|---|
-| 1 | Model browser / downloader | None. No download path for models, only datasets | [`datasets.py`](snn_interpreter/data/datasets.py:106), [`download_cli.py`](snn_interpreter/data/download_cli.py:15) | A |
-| 2 | External model import | NIR only, via file path; no weight-only import | [`ingest.py`](snn_interpreter/nir_bridge/ingest.py:21) | A |
+| 1 | Model browser / downloader | None. No download path for models, only datasets | [`datasets.py`](spikeforge/data/datasets.py:106), [`download_cli.py`](spikeforge/data/download_cli.py:15) | A |
+| 2 | External model import | NIR only, via file path; no weight-only import | [`ingest.py`](spikeforge/nir_bridge/ingest.py:21) | A |
 | 3 | Hugging Face Hub integration | Absent; no `huggingface_hub` anywhere | [`setup.py`](setup.py:46) | A |
 | 4 | Download progress + cancel | Exists for datasets only; not reusable yet | [`downloads.py`](server/downloads.py:41) | A |
-| 5 | Backend actually runs a graph | Declared only; `deployable` is a capability flag | [`report.py`](snn_interpreter/targets/report.py:56) | B |
-| 6 | Substitution *execution* | Declared, never applied | [`substitution.py`](snn_interpreter/targets/substitution.py:6), [`catalog.py`](snn_interpreter/targets/catalog.py:87) | B |
-| 7 | Layer vocabulary | Fixed to 5 module kinds + `add` | [`kinds.py`](snn_interpreter/topology/kinds.py:8) | C |
-| 8 | Per-stage heterogeneous neurons | One neuron kind for all stages | [`presets.py`](snn_interpreter/topology/presets.py:50) | C |
-| 9 | Sequence / attention primitives | None | [`stage_modules.py`](snn_interpreter/topology/stage_modules.py:59) | C |
-| 10 | Sparse / event-driven runtime | Dense unroll only | [`execution.py`](snn_interpreter/simulator/execution.py:122) | D |
-| 11 | Energy / latency accounting | None | [`harness.py`](snn_interpreter/benchmark/harness.py:1) | D |
-| 12 | Metrics persistence | In-memory registry only | [`metrics.py`](snn_interpreter/observability/metrics.py:14) | E |
-| 13 | External tracking | Local files only, by design | [`manifest.py`](snn_interpreter/tracking/manifest.py:35) | E |
+| 5 | Backend actually runs a graph | Declared only; `deployable` is a capability flag | [`report.py`](spikeforge/targets/report.py:56) | B |
+| 6 | Substitution *execution* | Declared, never applied | [`substitution.py`](spikeforge/targets/substitution.py:6), [`catalog.py`](spikeforge/targets/catalog.py:87) | B |
+| 7 | Layer vocabulary | Fixed to 5 module kinds + `add` | [`kinds.py`](spikeforge/topology/kinds.py:8) | C |
+| 8 | Per-stage heterogeneous neurons | One neuron kind for all stages | [`presets.py`](spikeforge/topology/presets.py:50) | C |
+| 9 | Sequence / attention primitives | None | [`stage_modules.py`](spikeforge/topology/stage_modules.py:59) | C |
+| 10 | Sparse / event-driven runtime | Dense unroll only | [`execution.py`](spikeforge/simulator/execution.py:122) | D |
+| 11 | Energy / latency accounting | None | [`harness.py`](spikeforge/benchmark/harness.py:1) | D |
+| 12 | Metrics persistence | In-memory registry only | [`metrics.py`](spikeforge/observability/metrics.py:14) | E |
+| 13 | External tracking | Local files only, by design | [`manifest.py`](spikeforge/tracking/manifest.py:35) | E |
 | 14 | Docs site | Markdown in `plans/` only | [`ecosystem_roadmap.md`](plans/ecosystem_roadmap.md:1) | E |
-| 15 | Event-dataset **training** | `build_dataset` refuses event specs | [`datasets.py`](snn_interpreter/data/datasets.py:111) | F |
-| 16 | ONNX bridge | None | [`nir_bridge/__init__.py`](snn_interpreter/nir_bridge/__init__.py:18) | F |
-| 17 | Third-party `nirtorch` extraction | Deferred, absent | [`api.py`](snn_interpreter/nir_bridge/api.py:63) | F |
-| 18 | Quantization applied | Declared in constraints only | [`target_spec.py`](snn_interpreter/targets/target_spec.py:28) | F |
-| 19 | Non-square sensor geometry | Hardcoded 28x28 / square conv math | [`presets.py`](snn_interpreter/topology/presets.py:128) | F |
+| 15 | Event-dataset **training** | `build_dataset` refuses event specs | [`datasets.py`](spikeforge/data/datasets.py:111) | F |
+| 16 | ONNX bridge | None | [`nir_bridge/__init__.py`](spikeforge/nir_bridge/__init__.py:18) | F |
+| 17 | Third-party `nirtorch` extraction | Deferred, absent | [`api.py`](spikeforge/nir_bridge/api.py:63) | F |
+| 18 | Quantization applied | Declared in constraints only | [`target_spec.py`](spikeforge/targets/target_spec.py:28) | F |
+| 19 | Non-square sensor geometry | Hardcoded 28x28 / square conv math | [`presets.py`](spikeforge/topology/presets.py:128) | F |
 | 20 | Per-step hidden animation | Raster snapshots only | [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md:21) | F |
 
 ### 3.1 Invariants that must not break (all workstreams)
 
 - Legacy checkpoints keep loading: state-dict keys `_fc1`, `_lif1`, `_fc2`,
-  `_lif2` ([`spiking_net.py`](snn_interpreter/network/spiking_net.py:10),
-  [`registry.py`](snn_interpreter/topology/registry.py:61)).
+  `_lif2` ([`spiking_net.py`](spikeforge/network/spiking_net.py:10),
+  [`registry.py`](spikeforge/topology/registry.py:61)).
 - `main.py` and `main_encodings.py` keep running unchanged.
 - Existing WebSocket payload keys stay additive-only
   ([`client_message.py`](server/schemas/client_message.py:12),
   [`server_message.py`](server/schemas/server_message.py:8)).
 - `TopologySpec` remains the single source of truth for module + NIR renderings
-  ([`spec.py`](snn_interpreter/topology/spec.py:16)).
+  ([`spec.py`](spikeforge/topology/spec.py:16)).
 - The `alpha` unexportable precedent: an unmappable stage raises the typed
   `UnsupportedStageError`, never silently degrades
-  ([`neuron_nodes.py`](snn_interpreter/nir_bridge/neuron_nodes.py:162)).
+  ([`neuron_nodes.py`](spikeforge/nir_bridge/neuron_nodes.py:162)).
 - Honesty rule: unsupported/unknown things are reported explicitly.
 
 ---
@@ -189,7 +189,7 @@ E and F close out.
 
 Phases A1–A4: bundled catalog + availability probe; isolated downloader with
 progress/cancel/checksum; import/inspect (NIR ingest plus preset weight-mapping);
-and the surfaces (WS actions, `snn-hub` CLI, `HubPanel`).
+and the surfaces (WS actions, `spikeforge-hub` CLI, `HubPanel`).
 
 ### 5.2 WS-B — Hardware/Simulator Backend Execution → [`backend_execution_plan.md`](plans/backend_execution_plan.md)
 
@@ -256,20 +256,20 @@ Added to [`setup.py`](setup.py:66):
 
 | Script | Module | Purpose |
 |---|---|---|
-| `snn-hub` | [`hub/cli.py`](snn_interpreter/hub/cli.py) | `list`, `search`, `download`, `inspect`, `import` |
-| `snn-energy` | [`energy/cli.py`](snn_interpreter/energy/cli.py) | `account`, `report` |
+| `spikeforge-hub` | [`hub/cli.py`](spikeforge/hub/cli.py) | `list`, `search`, `download`, `inspect`, `import` |
+| `spikeforge-energy` | [`energy/cli.py`](spikeforge/energy/cli.py) | `account`, `report` |
 
-Extended (not new): `snn-verify` gains `backend run`; `snn-targets` gains
-`rewrite` and `run` (see [`target_cli.py`](snn_interpreter/cli/target_cli.py:166)).
+Extended (not new): `spikeforge-verify` gains `backend run`; `spikeforge-targets` gains
+`rewrite` and `run` (see [`target_cli.py`](spikeforge/cli/target_cli.py:166)).
 
 ### 6.3 Python API entry points
 
-- `snn_interpreter.hub`: `catalog()`, `search()`, `download()`, `inspect()`,
+- `spikeforge.hub`: `catalog()`, `search()`, `download()`, `inspect()`,
   `import_model()`.
-- `snn_interpreter.targets.rewrite`: `rewrite(spec_or_graph, target) -> RewriteResult`.
-- `snn_interpreter.targets.backends`: `compile_run(target, graph, spikes) -> BackendResult`.
-- `snn_interpreter.event_runtime`: `sparse_run(module, spikes, ...) -> Trajectory`.
-- `snn_interpreter.energy`: `account(trajectory_or_spec, target) -> EnergyReport`.
+- `spikeforge.targets.rewrite`: `rewrite(spec_or_graph, target) -> RewriteResult`.
+- `spikeforge.targets.backends`: `compile_run(target, graph, spikes) -> BackendResult`.
+- `spikeforge.event_runtime`: `sparse_run(module, spikes, ...) -> Trajectory`.
+- `spikeforge.energy`: `account(trajectory_or_spec, target) -> EnergyReport`.
 
 ### 6.4 Client panels/components
 
@@ -297,8 +297,8 @@ Extras extend [`setup.py`](setup.py:46) (existing: `dev`, `web`, `nir`,
 | `tracking-wandb` | `wandb` | W&B sink | local file manifest remains default |
 
 Availability follows the **existing isolated-probe pattern**: a single module
-per subsystem owns the import ([`probe.py`](snn_interpreter/targets/probe.py:14),
-[`api.py`](snn_interpreter/nir_bridge/api.py:63)). New probes:
+per subsystem owns the import ([`probe.py`](spikeforge/targets/probe.py:14),
+[`api.py`](spikeforge/nir_bridge/api.py:63)). New probes:
 `hub/probe.py`, `energy/probe.py`, `nir_bridge/onnx_api.py`. Degradation is
 always explicit — an unavailable capability is reported, never faked.
 
@@ -313,54 +313,54 @@ verifiable. Order is priority-first (hub) but B/C can be parallelized.
 
 | Phase | Task | Key files | New tests | Acceptance command |
 |---|---|---|---|---|
-| A1 | Catalog + probe + cache | [`hub/catalog.py`](snn_interpreter/hub/catalog.py), [`hub/entry.py`](snn_interpreter/hub/entry.py), [`hub/probe.py`](snn_interpreter/hub/probe.py), [`hub/cache.py`](snn_interpreter/hub/cache.py), [`hub/models.json`](snn_interpreter/hub/models.json) | `test_hub_catalog.py`, `test_hub_cache.py` | `python -m snn_interpreter.hub.cli list` |
-| A2 | Downloader worker | [`hub/download_cli.py`](snn_interpreter/hub/download_cli.py), [`hub/downloads.py`](snn_interpreter/hub/downloads.py), [`hub/verify.py`](snn_interpreter/hub/verify.py) | `test_hub_download_routing.py`, `test_hub_verify.py` | `python -m snn_interpreter.hub.cli download <id>` |
-| A3 | Import + inspect | [`hub/inspect.py`](snn_interpreter/hub/inspect.py), [`hub/import_model.py`](snn_interpreter/hub/import_model.py), [`hub/weight_map.py`](snn_interpreter/hub/weight_map.py), [`hub/compat.py`](snn_interpreter/hub/compat.py) | `test_hub_inspect.py`, `test_hub_import.py`, `test_hub_compat.py` | `python -m snn_interpreter.hub.cli inspect <id>` |
-| A4 | Surfaces | [`hub/cli.py`](snn_interpreter/hub/cli.py), [`server/hub_handlers.py`](server/hub_handlers.py), [`server/hub_payloads.py`](server/hub_payloads.py), [`client/src/components/HubPanel.tsx`](client/src/components/HubPanel.tsx) | `test_server_hub_actions.py`, `test_cli_hub.py` | `pytest tests/test_server_hub_actions.py` |
+| A1 | Catalog + probe + cache | [`hub/catalog.py`](spikeforge/hub/catalog.py), [`hub/entry.py`](spikeforge/hub/entry.py), [`hub/probe.py`](spikeforge/hub/probe.py), [`hub/cache.py`](spikeforge/hub/cache.py), [`hub/models.json`](spikeforge/hub/models.json) | `test_hub_catalog.py`, `test_hub_cache.py` | `python -m spikeforge.hub.cli list` |
+| A2 | Downloader worker | [`hub/download_cli.py`](spikeforge/hub/download_cli.py), [`hub/downloads.py`](spikeforge/hub/downloads.py), [`hub/verify.py`](spikeforge/hub/verify.py) | `test_hub_download_routing.py`, `test_hub_verify.py` | `python -m spikeforge.hub.cli download <id>` |
+| A3 | Import + inspect | [`hub/inspect.py`](spikeforge/hub/inspect.py), [`hub/import_model.py`](spikeforge/hub/import_model.py), [`hub/weight_map.py`](spikeforge/hub/weight_map.py), [`hub/compat.py`](spikeforge/hub/compat.py) | `test_hub_inspect.py`, `test_hub_import.py`, `test_hub_compat.py` | `python -m spikeforge.hub.cli inspect <id>` |
+| A4 | Surfaces | [`hub/cli.py`](spikeforge/hub/cli.py), [`server/hub_handlers.py`](server/hub_handlers.py), [`server/hub_payloads.py`](server/hub_payloads.py), [`client/src/components/HubPanel.tsx`](client/src/components/HubPanel.tsx) | `test_server_hub_actions.py`, `test_cli_hub.py` | `pytest tests/test_server_hub_actions.py` |
 
 ### Milestone 2 — Backend Execution (WS-B)
 
 | Phase | Task | Key files | New tests | Acceptance command |
 |---|---|---|---|---|
-| B1 | Substitution executor | [`targets/rewrite.py`](snn_interpreter/targets/rewrite.py), [`targets/rewrite_report.py`](snn_interpreter/targets/rewrite_report.py), [`targets/substitute_ops.py`](snn_interpreter/targets/substitute_ops.py) | `test_substitution_rewrite.py`, `test_rewrite_report.py` | `python -m snn_interpreter.cli.verify rewrite --topology conv_net --target norse` |
-| B2 | Norse simulator backend | [`targets/backends/norse_backend.py`](snn_interpreter/targets/backends/norse_backend.py), [`targets/backends/api.py`](snn_interpreter/targets/backends/api.py), [`targets/backends/result.py`](snn_interpreter/targets/backends/result.py) | `test_norse_backend.py`, `test_backend_drift.py` | `python -m snn_interpreter.cli.verify backend run --topology conv_net --target norse` |
-| B3 | Lava hardware path | [`targets/backends/lava_backend.py`](snn_interpreter/targets/backends/lava_backend.py) | `test_lava_backend.py` | `python -m snn_interpreter.cli.verify backend run --target lava_loihi2` |
+| B1 | Substitution executor | [`targets/rewrite.py`](spikeforge/targets/rewrite.py), [`targets/rewrite_report.py`](spikeforge/targets/rewrite_report.py), [`targets/substitute_ops.py`](spikeforge/targets/substitute_ops.py) | `test_substitution_rewrite.py`, `test_rewrite_report.py` | `python -m spikeforge.cli.verify rewrite --topology conv_net --target norse` |
+| B2 | Norse simulator backend | [`targets/backends/norse_backend.py`](spikeforge/targets/backends/norse_backend.py), [`targets/backends/api.py`](spikeforge/targets/backends/api.py), [`targets/backends/result.py`](spikeforge/targets/backends/result.py) | `test_norse_backend.py`, `test_backend_drift.py` | `python -m spikeforge.cli.verify backend run --topology conv_net --target norse` |
+| B3 | Lava hardware path | [`targets/backends/lava_backend.py`](spikeforge/targets/backends/lava_backend.py) | `test_lava_backend.py` | `python -m spikeforge.cli.verify backend run --target lava_loihi2` |
 | B4 | Deploy wiring + surfaces | [`server/backend_handlers.py`](server/backend_handlers.py), [`client/src/components/BackendRunPanel.tsx`](client/src/components/BackendRunPanel.tsx) | `test_server_backend_actions.py` | `pytest tests/test_server_backend_actions.py` |
 
 ### Milestone 3 — Sequence Primitives (WS-C, parallel to B)
 
 | Phase | Task | Key files | New tests | Acceptance command |
 |---|---|---|---|---|
-| C1 | Per-stage heterogeneous neurons | [`topology/presets.py`](snn_interpreter/topology/presets.py), [`topology/registry.py`](snn_interpreter/topology/registry.py), [`server/schemas/train_config.py`](server/schemas/train_config.py) | `test_per_stage_neurons.py`, `test_train_config_stage_overrides.py` | `python -m snn_interpreter.cli.verify validate --topology fc_small` |
-| C2 | New module kinds + NIR contracts | [`topology/kinds.py`](snn_interpreter/topology/kinds.py), [`topology/stage_modules.py`](snn_interpreter/topology/stage_modules.py), [`nir_bridge/node_builders.py`](snn_interpreter/nir_bridge/node_builders.py), [`nir_bridge/mapper.py`](snn_interpreter/nir_bridge/mapper.py) | `test_stage_kinds_new.py`, `test_nir_unexportable_stages.py` | `python -m snn_interpreter.cli.verify export --topology sequence_net` |
-| C3 | Sequence/token data path | [`simulator/input_shape.py`](snn_interpreter/simulator/input_shape.py), [`data/sequence_source.py`](snn_interpreter/data/sequence_source.py) | `test_sequence_input.py` | `pytest tests/test_sequence_input.py` |
-| C4 | `sequence_net` preset + stage editor | [`topology/presets.py`](snn_interpreter/topology/presets.py), [`client/src/components/StageEditor.tsx`](client/src/components/StageEditor.tsx) | `test_sequence_preset.py` | `python -m snn_interpreter.cli.verify validate --topology sequence_net` |
+| C1 | Per-stage heterogeneous neurons | [`topology/presets.py`](spikeforge/topology/presets.py), [`topology/registry.py`](spikeforge/topology/registry.py), [`server/schemas/train_config.py`](server/schemas/train_config.py) | `test_per_stage_neurons.py`, `test_train_config_stage_overrides.py` | `python -m spikeforge.cli.verify validate --topology fc_small` |
+| C2 | New module kinds + NIR contracts | [`topology/kinds.py`](spikeforge/topology/kinds.py), [`topology/stage_modules.py`](spikeforge/topology/stage_modules.py), [`nir_bridge/node_builders.py`](spikeforge/nir_bridge/node_builders.py), [`nir_bridge/mapper.py`](spikeforge/nir_bridge/mapper.py) | `test_stage_kinds_new.py`, `test_nir_unexportable_stages.py` | `python -m spikeforge.cli.verify export --topology sequence_net` |
+| C3 | Sequence/token data path | [`simulator/input_shape.py`](spikeforge/simulator/input_shape.py), [`data/sequence_source.py`](spikeforge/data/sequence_source.py) | `test_sequence_input.py` | `pytest tests/test_sequence_input.py` |
+| C4 | `sequence_net` preset + stage editor | [`topology/presets.py`](spikeforge/topology/presets.py), [`client/src/components/StageEditor.tsx`](client/src/components/StageEditor.tsx) | `test_sequence_preset.py` | `python -m spikeforge.cli.verify validate --topology sequence_net` |
 
 ### Milestone 4 — Event Runtime and Energy (WS-D)
 
 | Phase | Task | Key files | New tests | Acceptance command |
 |---|---|---|---|---|
-| D1 | Sparse/event-driven runner | [`event_runtime/sparse_runner.py`](snn_interpreter/event_runtime/sparse_runner.py), [`event_runtime/spike_view.py`](snn_interpreter/event_runtime/spike_view.py), [`event_runtime/ops.py`](snn_interpreter/event_runtime/ops.py) | `test_sparse_runtime.py`, `test_sparse_dense_parity.py` | `pytest tests/test_sparse_dense_parity.py` |
-| D2 | Energy/latency accounting | [`energy/accounting.py`](snn_interpreter/energy/accounting.py), [`energy/cost_table.py`](snn_interpreter/energy/cost_table.py), [`targets/costs.py`](snn_interpreter/targets/costs.py) | `test_energy_accounting.py`, `test_cost_table.py` | `python -m snn_interpreter.energy.cli account --topology conv_net --target reference` |
-| D3 | Surfaces | [`energy/report.py`](snn_interpreter/energy/report.py), [`energy/cli.py`](snn_interpreter/energy/cli.py), [`server/energy_handlers.py`](server/energy_handlers.py), [`client/src/components/EnergyPanel.tsx`](client/src/components/EnergyPanel.tsx) | `test_energy_report.py`, `test_server_energy_action.py` | `pytest tests/test_server_energy_action.py` |
+| D1 | Sparse/event-driven runner | [`event_runtime/sparse_runner.py`](spikeforge/event_runtime/sparse_runner.py), [`event_runtime/spike_view.py`](spikeforge/event_runtime/spike_view.py), [`event_runtime/ops.py`](spikeforge/event_runtime/ops.py) | `test_sparse_runtime.py`, `test_sparse_dense_parity.py` | `pytest tests/test_sparse_dense_parity.py` |
+| D2 | Energy/latency accounting | [`energy/accounting.py`](spikeforge/energy/accounting.py), [`energy/cost_table.py`](spikeforge/energy/cost_table.py), [`targets/costs.py`](spikeforge/targets/costs.py) | `test_energy_accounting.py`, `test_cost_table.py` | `python -m spikeforge.energy.cli account --topology conv_net --target reference` |
+| D3 | Surfaces | [`energy/report.py`](spikeforge/energy/report.py), [`energy/cli.py`](spikeforge/energy/cli.py), [`server/energy_handlers.py`](server/energy_handlers.py), [`client/src/components/EnergyPanel.tsx`](client/src/components/EnergyPanel.tsx) | `test_energy_report.py`, `test_server_energy_action.py` | `pytest tests/test_server_energy_action.py` |
 
 ### Milestone 5 — Operations (WS-E)
 
 | Phase | Task | Key files | New tests | Acceptance command |
 |---|---|---|---|---|
-| E1 | Persist metrics | [`observability/store.py`](snn_interpreter/observability/store.py), [`observability/persistence.py`](snn_interpreter/observability/persistence.py) | `test_metrics_persistence.py` | `pytest tests/test_metrics_persistence.py` |
-| E2 | External tracking sinks | [`tracking/sinks.py`](snn_interpreter/tracking/sinks.py), [`tracking/tensorboard_sink.py`](snn_interpreter/tracking/tensorboard_sink.py), [`tracking/wandb_sink.py`](snn_interpreter/tracking/wandb_sink.py) | `test_tracking_sinks.py` | `pytest tests/test_tracking_sinks.py` |
-| E3 | Determinism + docs site | [`tracking/determinism.py`](snn_interpreter/tracking/determinism.py), [`mkdocs.yml`](mkdocs.yml), [`scripts/build_docs.sh`](scripts/build_docs.sh) | `test_determinism.py` | `bash scripts/build_docs.sh --check` |
+| E1 | Persist metrics | [`observability/store.py`](spikeforge/observability/store.py), [`observability/persistence.py`](spikeforge/observability/persistence.py) | `test_metrics_persistence.py` | `pytest tests/test_metrics_persistence.py` |
+| E2 | External tracking sinks | [`tracking/sinks.py`](spikeforge/tracking/sinks.py), [`tracking/tensorboard_sink.py`](spikeforge/tracking/tensorboard_sink.py), [`tracking/wandb_sink.py`](spikeforge/tracking/wandb_sink.py) | `test_tracking_sinks.py` | `pytest tests/test_tracking_sinks.py` |
+| E3 | Determinism + docs site | [`tracking/determinism.py`](spikeforge/tracking/determinism.py), [`mkdocs.yml`](mkdocs.yml), [`scripts/build_docs.sh`](scripts/build_docs.sh) | `test_determinism.py` | `bash scripts/build_docs.sh --check` |
 
 ### Milestone 6 — Interop Fold-Ins (WS-F)
 
 | Phase | Task | Key files | New tests | Acceptance command |
 |---|---|---|---|---|
-| F1 | Event-dataset training | [`training/event_engine.py`](snn_interpreter/training/event_engine.py), [`data/datasets.py`](snn_interpreter/data/datasets.py) | `test_event_training.py` | `pytest tests/test_event_training.py` |
-| F2 | ONNX bridge | [`onnx_bridge/api.py`](snn_interpreter/onnx_bridge/api.py), [`onnx_bridge/export.py`](snn_interpreter/onnx_bridge/export.py), [`onnx_bridge/import_onnx.py`](snn_interpreter/onnx_bridge/import_onnx.py) | `test_onnx_bridge.py` | `pytest tests/test_onnx_bridge.py` |
-| F3 | `nirtorch` extraction | [`nir_bridge/extract.py`](snn_interpreter/nir_bridge/extract.py) | `test_nir_extract.py` | `pytest tests/test_nir_extract.py` |
-| F4 | Quantization application | [`targets/quantize.py`](snn_interpreter/targets/quantize.py) | `test_quantize.py` | `pytest tests/test_quantize.py` |
-| F5 | Geometry + client animation | [`simulator/input_shape.py`](snn_interpreter/simulator/input_shape.py), [`client/src/components/NetworkActivity.tsx`](client/src/components/NetworkActivity.tsx) | `test_geometry.py` | `pytest tests/test_geometry.py` |
+| F1 | Event-dataset training | [`training/event_engine.py`](spikeforge/training/event_engine.py), [`data/datasets.py`](spikeforge/data/datasets.py) | `test_event_training.py` | `pytest tests/test_event_training.py` |
+| F2 | ONNX bridge | [`onnx_bridge/api.py`](spikeforge/onnx_bridge/api.py), [`onnx_bridge/export.py`](spikeforge/onnx_bridge/export.py), [`onnx_bridge/import_onnx.py`](spikeforge/onnx_bridge/import_onnx.py) | `test_onnx_bridge.py` | `pytest tests/test_onnx_bridge.py` |
+| F3 | `nirtorch` extraction | [`nir_bridge/extract.py`](spikeforge/nir_bridge/extract.py) | `test_nir_extract.py` | `pytest tests/test_nir_extract.py` |
+| F4 | Quantization application | [`targets/quantize.py`](spikeforge/targets/quantize.py) | `test_quantize.py` | `pytest tests/test_quantize.py` |
+| F5 | Geometry + client animation | [`simulator/input_shape.py`](spikeforge/simulator/input_shape.py), [`client/src/components/NetworkActivity.tsx`](client/src/components/NetworkActivity.tsx) | `test_geometry.py` | `pytest tests/test_geometry.py` |
 
 ---
 
@@ -394,10 +394,10 @@ verifiable. Order is priority-first (hub) but B/C can be parallelized.
 ```bash
 ruff check .
 pytest -q
-python -m snn_interpreter.cli.verify validate --topology conv_net
-python -m snn_interpreter.cli.verify validate --topology sequence_net
-python -m snn_interpreter.hub.cli list
-python -m snn_interpreter.energy.cli account --topology conv_net
+python -m spikeforge.cli.verify validate --topology conv_net
+python -m spikeforge.cli.verify validate --topology sequence_net
+python -m spikeforge.hub.cli list
+python -m spikeforge.energy.cli account --topology conv_net
 python main.py --help && python main_encodings.py --help
 cd client && npm run build
 ```
@@ -414,7 +414,7 @@ identical outputs, exactly as
   per file, files under 250 lines, functions under 20 lines, 79-column Python,
   80-column TS, full type hints, no `noqa`, no `any`, no shims.
 - **Back-compat:** changes are additive; new fields surface in `meta`
-  ([`checkpoint_mixin.py`](snn_interpreter/training/checkpoint_mixin.py:37)).
+  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:37)).
 - **Honesty:** estimated energy is labelled an estimate; declared substitutions
   become executed substitutions *with* a rewrite report and a drift check.
 - **Out of scope:** multi-user sessions and auth are explicitly deferred (see
@@ -438,7 +438,7 @@ snnTorch, NIR, SpikingJelly, Norse, Lava, and a small allow-list of HF repos;
 add live HF Hub search/download behind `hub`. This matches the project's
 existing "bake the browser in, download from wherever behind an extra"
 instinct and the `events`-extra precedent
-([`datasets.py`](snn_interpreter/data/datasets.py:51)).
+([`datasets.py`](spikeforge/data/datasets.py:51)).
 
 ### 11.2 First backend — Norse
 
@@ -452,7 +452,7 @@ instinct and the `events`-extra precedent
 **Recommendation:** `norse` first because it is pip-installable, pure PyTorch,
 and shares the torch stack, so it validates the compile-run-drift pipeline with
 minimal new machinery; the substitution it needs (`IF`→`beta=0` `LIF`) is
-already declared ([`catalog.py`](snn_interpreter/targets/catalog.py:141)) and
+already declared ([`catalog.py`](spikeforge/targets/catalog.py:141)) and
 becomes the first executed substitution. Lava follows as the first real
 hardware path, executable when `lava-nc` is present.
 
@@ -470,7 +470,7 @@ open in the first draft are closed with the stated default.
    `"see upstream"` seed entries were removed, so the catalog now ships only
    entries with a real source and a concrete license; an unverified candidate
    must be marked `unverified-candidate` and reports `available: false`. See
-   the repository's `NOTICE.md` and `snn_interpreter/hub/CURATION.md`.
+   the repository's `NOTICE.md` and `spikeforge/hub/CURATION.md`.
 2. **Live HF scope — resolved: allow-list first.** The catalog/allow-list path
    is the default; live full-text search is opt-in behind the `hub` extra and
    gated honestly when absent. General search stays a later, additive step.
@@ -481,8 +481,8 @@ open in the first draft are closed with the stated default.
    *experimentation* and is explicitly not a production LLM-training claim.
 5. **Energy cost tables — resolved.** Per-target values are declared in-repo
    estimates (`"measured": false` with a `source`), not measured.
-6. **Metrics persistence root — resolved.** Persisted under `SNN_METRICS_DIR`
-   (default `<DATA_DIR>/metrics`) with opt-in `SNN_METRICS_PERSIST`.
+6. **Metrics persistence root — resolved.** Persisted under `SPIKEFORGE_METRICS_DIR`
+   (default `<DATA_DIR>/metrics`) with opt-in `SPIKEFORGE_METRICS_PERSIST`.
 7. **Docs stack — resolved: MkDocs Material.** Generated from `plans/` and the
    README by [`scripts/build_docs.sh`](scripts/build_docs.sh).
 

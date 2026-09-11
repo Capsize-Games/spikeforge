@@ -13,8 +13,8 @@ offline. The membrane residual you see is the documented Euler-versus-
 zero-order-hold difference, reported rather than hidden.
 """
 
-from snn_interpreter.cli import fixture
-from snn_interpreter.nir_bridge import graph_summary, to_nir, validate
+from spikeforge.cli import fixture
+from spikeforge.nir_bridge import graph_summary, to_nir, validate
 
 #: Topology exported by this example.
 TOPOLOGY = "conv_net"

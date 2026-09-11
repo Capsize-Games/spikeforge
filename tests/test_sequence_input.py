@@ -2,12 +2,12 @@
 
 import torch
 
-from snn_interpreter.data import sequence_source
-from snn_interpreter.data.datasets import dataset_modality
-from snn_interpreter.simulator import input_shape
-from snn_interpreter.simulator.frames import normalise_frame
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import registry
+from spikeforge.data import sequence_source
+from spikeforge.data.datasets import dataset_modality
+from spikeforge.simulator import input_shape
+from spikeforge.simulator.frames import normalise_frame
+from spikeforge.simulator.runner import run
+from spikeforge.topology import registry
 
 
 def test_sequence_frames_keep_their_layout() -> None:

@@ -7,14 +7,14 @@ import numpy as np
 import pytest
 import torch
 
-from snn_interpreter.nir_bridge import api
-from snn_interpreter.nir_bridge.errors import UnsupportedNodeError
-from snn_interpreter.nir_bridge.ingest import (
+from spikeforge.nir_bridge import api
+from spikeforge.nir_bridge.errors import UnsupportedNodeError
+from spikeforge.nir_bridge.ingest import (
     interpret_file,
     interpret_graph,
     load_external,
 )
-from snn_interpreter.nir_bridge.serialization import save_graph
+from spikeforge.nir_bridge.serialization import save_graph
 
 pytest.importorskip("nir")
 

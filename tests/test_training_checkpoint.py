@@ -5,9 +5,9 @@ from typing import Any
 import pytest
 import torch
 
-from snn_interpreter.network import model_store
-from snn_interpreter.network.spiking_net import SpikingNet
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.network import model_store
+from spikeforge.network.spiking_net import SpikingNet
+from spikeforge.training.training_engine import TrainingEngine
 
 
 @pytest.fixture(autouse=True)

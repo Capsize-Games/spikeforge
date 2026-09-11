@@ -6,11 +6,11 @@ from typing import Any
 import pytest
 import torch
 
-from snn_hub import cache
-from snn_hub.catalog import get
-from snn_hub.entry import HubEntry
-from snn_hub.errors import HubArtifactError
-from snn_hub.inspect import (
+from spikeforge_hub import cache
+from spikeforge_hub.catalog import get
+from spikeforge_hub.entry import HubEntry
+from spikeforge_hub.errors import HubArtifactError
+from spikeforge_hub.inspect import (
     FRAMEWORK_WEIGHTS,
     NIR_GRAPH,
     STATE_DICT,
@@ -24,7 +24,7 @@ pytest.importorskip("nir")
 
 def _module(topology: str = "fc_small") -> Any:
     """Build a preset and return its runnable module."""
-    from snn_interpreter.topology.registry import build_topology
+    from spikeforge.topology.registry import build_topology
 
     _spec, module = build_topology(topology)
     return module
@@ -32,8 +32,8 @@ def _module(topology: str = "fc_small") -> Any:
 
 def _graph_file(tmp_path: Path, topology: str = "fc_small") -> str:
     """Save a topology's NIR graph to disk and return its path."""
-    from snn_interpreter.nir_bridge import save_graph, to_nir
-    from snn_interpreter.topology.registry import build_topology
+    from spikeforge.nir_bridge import save_graph, to_nir
+    from spikeforge.topology.registry import build_topology
 
     spec, module = build_topology(topology)
     path = tmp_path / "graph.json"

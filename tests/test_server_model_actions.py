@@ -10,7 +10,7 @@ import torch
 from server.handlers import dispatch
 from server.schemas import ClientMessage, ModelQuery
 from server.session import Session
-from snn_interpreter.network import model_store
+from spikeforge.network import model_store
 
 
 @pytest.fixture(autouse=True)

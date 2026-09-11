@@ -5,13 +5,13 @@ import math
 import pytest
 import torch
 
-from snn_interpreter.introspection.comparison import compare_neurons
-from snn_interpreter.neurons import contract
-from snn_interpreter.neurons.alpha import AlphaNeuron
-from snn_interpreter.neurons.registry import build_neuron, neuron_kinds
-from snn_interpreter.nir_bridge.errors import UnsupportedStageError
-from snn_interpreter.nir_bridge.mapper import map_stage
-from snn_interpreter.topology.stage import Stage
+from spikeforge.introspection.comparison import compare_neurons
+from spikeforge.neurons import contract
+from spikeforge.neurons.alpha import AlphaNeuron
+from spikeforge.neurons.registry import build_neuron, neuron_kinds
+from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.nir_bridge.mapper import map_stage
+from spikeforge.topology.stage import Stage
 
 pytest.importorskip("nir")
 

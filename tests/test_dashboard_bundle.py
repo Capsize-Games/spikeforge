@@ -1,8 +1,9 @@
 """Pinned dashboard bundle resolution (no browser required).
 
-``SNN_DASHBOARD_DIST`` lets the server serve a prebuilt ``dist/`` published by
-``w4ffl35/snn-dashboard`` instead of rebuilding the in-repo ``client/`` mirror.
-The fallback to today's ``client/dist`` behaviour must be preserved.
+``SPIKEFORGE_DASHBOARD_DIST`` lets the server serve a prebuilt ``dist/``
+published by ``capsize-games/spikeforge-dashboard`` instead of rebuilding
+the in-repo ``client/`` mirror. The fallback to today's ``client/dist``
+behaviour must be preserved.
 """
 
 from pathlib import Path
@@ -10,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from server import web
-from snn_interpreter import config
+from spikeforge import config
 
 
 def _absent(tmp_path: Path, name: str) -> Path:
@@ -21,7 +22,7 @@ def _absent(tmp_path: Path, name: str) -> Path:
 def test_a_pinned_bundle_is_preferred(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """When SNN_DASHBOARD_DIST is present it wins over client/dist."""
+    """When SPIKEFORGE_DASHBOARD_DIST is present it wins over client/dist."""
     dist = tmp_path / "dist"
     dist.mkdir()
     monkeypatch.setattr(config, "DASHBOARD_DIST", str(dist))

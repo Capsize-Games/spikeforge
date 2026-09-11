@@ -12,8 +12,8 @@ from server.messages import send_locked, send_nir_graph, send_nir_validation
 from server.payloads import nir_graph_payload, nir_validation_payload
 from server.schemas import ClientMessage, TrainConfig
 from server.session import Session
-from snn_interpreter.simulator import input_shape
-from snn_interpreter.topology import registry
+from spikeforge.simulator import input_shape
+from spikeforge.topology import registry
 
 
 def _resolve(cfg: TrainConfig) -> Tuple[Any, Any]:

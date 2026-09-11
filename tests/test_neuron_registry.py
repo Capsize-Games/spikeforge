@@ -5,8 +5,8 @@ from math import log
 import pytest
 import torch
 
-from snn_interpreter.neurons import contract
-from snn_interpreter.neurons.registry import (
+from spikeforge.neurons import contract
+from spikeforge.neurons.registry import (
     NEURONS,
     build_neuron,
     neuron_kinds,

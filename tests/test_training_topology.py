@@ -6,9 +6,9 @@ import pytest
 import torch
 from torch.nn.functional import cross_entropy
 
-from snn_interpreter.network.spiking_net import SpikingNet
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.network.spiking_net import SpikingNet
+from spikeforge.simulator.runner import run
+from spikeforge.training.training_engine import TrainingEngine
 
 _LEGACY_KEYS = {"_fc1.weight", "_fc1.bias", "_fc2.weight", "_fc2.bias"}
 

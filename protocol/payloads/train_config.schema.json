@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/train_config.schema.json",
+  "$id": "https://spikeforge.dev/protocol/1.0/payloads/train_config.schema.json",
   "title": "TrainConfig",
   "description": "Mirrors server/schemas/train_config.py::TrainConfig; defaults are documented and unknown keys are ignored.",
   "type": "object",

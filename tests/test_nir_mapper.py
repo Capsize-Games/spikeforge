@@ -5,12 +5,12 @@ from typing import Any, Mapping
 
 import pytest
 
-from snn_interpreter.nir_bridge import api
-from snn_interpreter.nir_bridge.errors import UnsupportedStageError
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.nir_bridge.mapper import map_stage
-from snn_interpreter.topology.spec import chain
-from snn_interpreter.topology.stage import Stage
+from spikeforge.nir_bridge import api
+from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.nir_bridge.mapper import map_stage
+from spikeforge.topology.spec import chain
+from spikeforge.topology.stage import Stage
 
 pytest.importorskip("nir")
 

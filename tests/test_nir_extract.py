@@ -13,14 +13,14 @@ from typing import Any
 import pytest
 import torch
 
-from snn_interpreter.cli import verify
-from snn_interpreter.nir_bridge import (
+from spikeforge.cli import verify
+from spikeforge.nir_bridge import (
     api,
     extract,
     extract_summary,
     run_extracted,
 )
-from snn_interpreter.nir_bridge.errors import (
+from spikeforge.nir_bridge.errors import (
     ExtractionExtraMissingError,
     UnsupportedNodeError,
 )
@@ -110,7 +110,7 @@ def _saved(tmp_path: Path, module: torch.nn.Module, name: str) -> str:
 def test_cli_extract_prints_a_runnable_report(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """``snn-targets extract`` prints the report and exits zero."""
+    """``spikeforge-targets extract`` prints the report and exits zero."""
     pytest.importorskip("nirtorch")
     args = ["extract", "--module", _saved(tmp_path, _sequential(), "ok.pt")]
     assert verify.main(args) == 0

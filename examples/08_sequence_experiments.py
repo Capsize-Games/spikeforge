@@ -14,10 +14,10 @@ This enables sequence and attention *experimentation*, not production LLM
 training.
 """
 
-from snn_interpreter.cli import fixture
-from snn_interpreter.nir_bridge import to_nir, validate
-from snn_interpreter.nir_bridge.errors import UnsupportedStageError
-from snn_interpreter.simulator.runner import run
+from spikeforge.cli import fixture
+from spikeforge.nir_bridge import to_nir, validate
+from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.simulator.runner import run
 
 
 def exportable() -> None:

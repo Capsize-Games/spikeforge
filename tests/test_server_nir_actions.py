@@ -11,8 +11,8 @@ from server.handlers import dispatch
 from server.payloads import nir_graph_payload, nir_validation_payload
 from server.schemas import ClientMessage, TrainConfig
 from server.session import Session
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.topology import registry
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.topology import registry
 
 pytest.importorskip("nir")
 

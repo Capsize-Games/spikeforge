@@ -2,13 +2,13 @@
 
 import torch
 
-from snn_interpreter.runtime.execution_mode import ExecutionMode
-from snn_interpreter.simulator.frames import normalise_frame
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.spec import TopologySpec, chain
-from snn_interpreter.topology.stage import Stage
+from spikeforge.runtime.execution_mode import ExecutionMode
+from spikeforge.simulator.frames import normalise_frame
+from spikeforge.simulator.runner import run
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.spec import TopologySpec, chain
+from spikeforge.topology.stage import Stage
 
 
 def _chain() -> TopologySpec:

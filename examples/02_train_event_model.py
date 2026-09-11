@@ -17,10 +17,10 @@ passing a synthetic stream off as a real recording.
 
 from typing import Any, Dict
 
-from snn_interpreter.events.event_bridge import EventSpikeBridge
-from snn_interpreter.events.event_source import EventSampleSource
-from snn_interpreter.topology.registry import build_topology
-from snn_interpreter.training.event_engine import EventTrainingEngine
+from spikeforge.events.event_bridge import EventSpikeBridge
+from spikeforge.events.event_source import EventSampleSource
+from spikeforge.topology.registry import build_topology
+from spikeforge.training.event_engine import EventTrainingEngine
 
 
 def inspect_source() -> None:

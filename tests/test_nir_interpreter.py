@@ -8,15 +8,15 @@ import numpy as np
 import pytest
 import torch
 
-from snn_interpreter.nir_bridge import (
+from spikeforge.nir_bridge import (
     api,
     interpreter,
     ops_linear,
     ops_neuron,
     ops_registry,
 )
-from snn_interpreter.nir_bridge.errors import UnsupportedNodeError
-from snn_interpreter.nir_bridge.interpreter import NirInterpreter
+from spikeforge.nir_bridge.errors import UnsupportedNodeError
+from spikeforge.nir_bridge.interpreter import NirInterpreter
 
 pytest.importorskip("nir")
 

@@ -3,16 +3,16 @@
 import pytest
 import torch
 
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.registry import build_topology
-from snn_interpreter.topology.spec import chain
-from snn_interpreter.topology.stage import Stage
-from snn_targets.event_runtime import (
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.registry import build_topology
+from spikeforge.topology.spec import chain
+from spikeforge.topology.stage import Stage
+from spikeforge_targets.event_runtime import (
     SparseResult,
     UnsupportedKindError,
     sparse_run,
 )
-from snn_targets.event_runtime.spike_view import SparseSpikes
+from spikeforge_targets.event_runtime.spike_view import SparseSpikes
 
 
 def _known_graph() -> torch.nn.Module:

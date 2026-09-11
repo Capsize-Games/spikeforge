@@ -6,11 +6,11 @@ from typing import Any, Dict, Iterator
 
 import pytest
 
-from snn_interpreter.network import model_store
-from snn_interpreter.tracking import sink_probe, sinks
-from snn_interpreter.tracking.tensorboard_sink import TensorBoardSink
-from snn_interpreter.tracking.wandb_sink import WandBSink
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.network import model_store
+from spikeforge.tracking import sink_probe, sinks
+from spikeforge.tracking.tensorboard_sink import TensorBoardSink
+from spikeforge.tracking.wandb_sink import WandBSink
+from spikeforge.training.training_engine import TrainingEngine
 
 
 @pytest.fixture(autouse=True)

@@ -1,0 +1,86 @@
+# PEP 621 packaging authority for the server distribution (ARCH-0001 Phase
+# 1b).
+#
+# The server distribution owns the top-level ``server`` package. It promotes
+# the dependencies that used to be the core ``web`` extra to its own base
+# dependencies, so core stays headless and the server is the only thing that
+# pulls FastAPI/uvicorn/websockets/pydantic.
+#
+# ``server/`` stays at its current repository path and is exposed to the build
+# via the ``server`` symlink next to this file (see the ``packages.find`` table
+# below). The package discovery here depends only on the top-level ``server``
+# package, never on core.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spikeforge-server"
+version = "0.1.0"
+description = "FastAPI + WebSocket server adapter for the spikeforge dashboard."
+# ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
+# files, mirroring the core distribution's metadata approach.
+readme = "README.md"
+requires-python = ">=3.10"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Capsize Games", email = "contact@capsizegames.com" },
+]
+maintainers = [
+    { name = "Capsize Games", email = "contact@capsizegames.com" },
+]
+keywords = [
+    "spiking neural networks",
+    "fastapi",
+    "websockets",
+    "dashboard",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "websockets>=12.0",
+    "pydantic>=2.5",
+    "spikeforge~=0.3.0",
+    "spikeforge-targets~=0.1.0",
+    "spikeforge-hub~=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.0.280",
+]
+
+[project.scripts]
+spikeforge-server = "server.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/capsize-games/spikeforge"
+Repository = "https://github.com/capsize-games/spikeforge"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+# Mirror the core distribution: the `server` import root is exposed next to
+# this file as a symlink to `../../server` so the default via-sdist
+# `python -m build` produces a complete wheel. Discovery depends only on this
+# top-level package, never on core.
+where = ["."]
+include = ["server*"]
+exclude = ["spikeforge*", "spikeforge_targets*", "spikeforge_hub*", "tests*"]

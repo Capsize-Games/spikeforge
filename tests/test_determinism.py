@@ -5,14 +5,14 @@ from typing import Any, Iterator
 import pytest
 import torch
 
-from snn_interpreter.network import model_store
-from snn_interpreter.tracking.determinism import (
+from spikeforge.network import model_store
+from spikeforge.tracking.determinism import (
     bit_exactness_check,
     disable_deterministic,
     enable_deterministic,
 )
-from snn_interpreter.tracking.seed import set_seed
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.tracking.seed import set_seed
+from spikeforge.training.training_engine import TrainingEngine
 
 
 @pytest.fixture(autouse=True)

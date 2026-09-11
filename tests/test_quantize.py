@@ -6,14 +6,14 @@ import numpy as np
 import pytest
 import torch
 
-from snn_interpreter.nir_bridge import api
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_targets.quantize import NO_QUANTIZATION, quantize
-from snn_targets.registry import get_target
-from snn_targets.report import deployment_report
-from snn_targets.target_spec import TargetSpec
+from spikeforge.nir_bridge import api
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge_targets.quantize import NO_QUANTIZATION, quantize
+from spikeforge_targets.registry import get_target
+from spikeforge_targets.report import deployment_report
+from spikeforge_targets.target_spec import TargetSpec
 
 pytest.importorskip("nir")
 
@@ -136,7 +136,7 @@ def test_deployment_report_applies_with_a_built_module() -> None:
 
 def test_registry_targets_all_declare_a_known_scheme() -> None:
     """Every shipped target's scheme is either known or honestly unknown."""
-    from snn_targets.quantize_schemes import SCHEMES
+    from spikeforge_targets.quantize_schemes import SCHEMES
 
     for name in ("reference", "lava_loihi2", "xylo", "norse"):
         scheme = str(get_target(name).constraints.get("quantization"))

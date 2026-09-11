@@ -1,14 +1,14 @@
-# Project Rules — snn-interpreter
+# Project Rules — spikeforge
 
 ## Project Overview
 
-`snn-interpreter` is a spike-encoding playground for spiking neural networks
+`spikeforge` is a spike-encoding playground for spiking neural networks
 (SNNs), built on [snnTorch](https://snntorch.readthedocs.io/) and PyTorch. It
 loads MNIST-style datasets, converts samples into **rate**, **latency**,
 **delta**, and **random** spike codes, and drives them through a fully
 connected LIF network for training, inference, and matplotlib/MP4 exports.
 
-- `snn_interpreter/` — importable Python package: datasets, spike encoders,
+- `spikeforge/` — importable Python package: datasets, spike encoders,
   the FC LIF `SpikingNet`, the training loop, checkpointing, and exporters.
 - `server/` — FastAPI backend that runs encoding/training and streams results
   to the client over a JSON WebSocket protocol.

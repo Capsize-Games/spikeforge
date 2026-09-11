@@ -4,12 +4,12 @@ from typing import Any, Dict
 
 import pytest
 
-from snn_interpreter.network.spiking_net import SpikingNet
-from snn_interpreter.neurons.registry import NEURONS
-from snn_interpreter.nir_bridge import to_nir
-from snn_interpreter.topology import registry
-from snn_interpreter.topology.spec import TopologySpec
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.network.spiking_net import SpikingNet
+from spikeforge.neurons.registry import NEURONS
+from spikeforge.nir_bridge import to_nir
+from spikeforge.topology import registry
+from spikeforge.topology.spec import TopologySpec
+from spikeforge.training.training_engine import TrainingEngine
 
 pytest.importorskip("nir")
 

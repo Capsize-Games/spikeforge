@@ -11,16 +11,17 @@ Run from the repository root::
 
 A target whose SDK is absent is reported honestly as unavailable (with a
 named reason), never silently treated as ready. The equivalent shell
-commands are ``snn-verify deploy --topology conv_net --target reference``
-and ``snn-verify run --topology conv_net --target reference``.
+commands are ``spikeforge-verify deploy --topology conv_net
+--target reference`` and ``spikeforge-verify run --topology conv_net
+--target reference``.
 """
 
 from typing import Any, Dict
 
-from snn_interpreter.cli import fixture
-from snn_interpreter.nir_bridge import to_nir
-from snn_targets.backends import compile_run
-from snn_targets.report import deployment_report
+from spikeforge.cli import fixture
+from spikeforge.nir_bridge import to_nir
+from spikeforge_targets.backends import compile_run
+from spikeforge_targets.report import deployment_report
 
 #: Topology exercised by this example.
 TOPOLOGY = "conv_net"

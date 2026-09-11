@@ -1,4 +1,4 @@
-# snn-interpreter documentation
+# spikeforge documentation
 
 This site is generated from the authoritative design documents in `plans/`
 and the project [README](README.md). The markdown remains the single source

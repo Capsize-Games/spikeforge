@@ -4,7 +4,7 @@
 # working.
 #
 # The FastAPI server stack (fastapi/uvicorn/websockets/pydantic) is intentionally
-# absent: it is now the base dependency set of the `snn-interpreter-server`
+# absent: it is now the base dependency set of the `spikeforge-server`
 # distribution, so core stays headless.
 torch>=2.5
 torchvision>=0.20
@@ -15,7 +15,7 @@ numpy>=1.26
 psutil>=5.9
 
 # NIR interop: the official Neuromorphic Intermediate Representation packages.
-# They are isolated behind snn_interpreter/nir_bridge/api.py and are installed
+# They are isolated behind spikeforge/nir_bridge/api.py and are installed
 # by default so the Docker image can probe them (see the `nir` extra too).
 nir>=1.0
 nirtorch>=1.0

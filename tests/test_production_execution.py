@@ -5,12 +5,12 @@ from typing import Any, Dict, List, Tuple
 import pytest
 import torch
 
-from snn_interpreter.runtime.execution_mode import ExecutionMode
-from snn_interpreter.simulator import input_shape
-from snn_interpreter.simulator.production import run_production
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import registry
-from snn_interpreter.topology.spec import TopologySpec
+from spikeforge.runtime.execution_mode import ExecutionMode
+from spikeforge.simulator import input_shape
+from spikeforge.simulator.production import run_production
+from spikeforge.simulator.runner import run
+from spikeforge.topology import registry
+from spikeforge.topology.spec import TopologySpec
 
 _CASES: List[Tuple[str, Dict[str, Any]]] = [
     ("fc_legacy", {"hidden": 6, "beta": 0.5, "num_classes": 4}),

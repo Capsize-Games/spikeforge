@@ -2,9 +2,9 @@
 
 import pytest
 
-from snn_interpreter.topology import registry
-from snn_interpreter.topology.spec import TopologySpec
-from snn_interpreter.topology.stage_module import StageModule
+from spikeforge.topology import registry
+from spikeforge.topology.spec import TopologySpec
+from spikeforge.topology.stage_module import StageModule
 
 _NAMES = (
     "fc_legacy", "fc_small", "conv_net", "recurrent_net",

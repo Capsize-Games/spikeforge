@@ -7,8 +7,8 @@ from typing import Any, Dict
 
 import pytest
 
-from snn_hub import probe
-from snn_hub.catalog import (
+from spikeforge_hub import probe
+from spikeforge_hub.catalog import (
     SCHEMA_VERSION,
     availability,
     entries,
@@ -18,13 +18,13 @@ from snn_hub.catalog import (
     load_catalog,
     search,
 )
-from snn_hub.catalog import catalog as entry_cards
-from snn_hub.entry import (
+from spikeforge_hub.catalog import catalog as entry_cards
+from spikeforge_hub.entry import (
     FRAMEWORKS,
     UNVERIFIED_CANDIDATE,
     HubEntry,
 )
-from snn_hub.errors import HubCatalogError
+from spikeforge_hub.errors import HubCatalogError
 
 _EXPECTED_KEYS = {"huggingface_hub_available", "huggingface_hub_version"}
 

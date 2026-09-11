@@ -1,15 +1,15 @@
 """JSON-able payloads for the model-registry WebSocket actions.
 
 Mirrors :mod:`server.target_payloads`: the search reuses
-:func:`snn_interpreter.network.model_search.search_models` so the socket
+:func:`spikeforge.network.model_search.search_models` so the socket
 surface matches the ``records`` CLI exactly, and the diff reuses
-:func:`snn_interpreter.network.model_diff.checkpoint_diff`.
+:func:`spikeforge.network.model_diff.checkpoint_diff`.
 """
 
 from typing import Any, Dict
 
 from server.schemas import ModelQuery
-from snn_interpreter.network import model_search
+from spikeforge.network import model_search
 
 
 def search_payload(query: ModelQuery) -> Dict[str, Any]:

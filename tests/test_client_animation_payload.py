@@ -10,9 +10,9 @@ from server import animation
 from server.handlers import stream_frames
 from server.schemas import EncodeConfig
 from server.session import Session
-from snn_interpreter.network import hidden_frames
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
+from spikeforge.network import hidden_frames
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
 
 _SPEC = presets.fc_legacy(
     hidden=4, beta=0.5, num_classes=3, input_size=784

@@ -7,8 +7,8 @@ import sys
 from typing import Any, Awaitable, Callable, Dict, Optional, Set
 
 from server.download_errors import DownloadCancelledError
-from snn_interpreter.config import DATA_DIR
-from snn_interpreter.data.datasets import build_dataset
+from spikeforge.config import DATA_DIR
+from spikeforge.data.datasets import build_dataset
 
 _POLL_SECONDS = 0.4
 
@@ -20,7 +20,7 @@ def _spawn(dataset: str, train: bool) -> subprocess.Popen:
     return subprocess.Popen([
         sys.executable,
         "-m",
-        "snn_interpreter.data.download_cli",
+        "spikeforge.data.download_cli",
         dataset,
         "1" if train else "0",
     ])

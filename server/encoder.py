@@ -5,8 +5,8 @@ from typing import Any, Dict, Optional
 import torch
 
 from server.schemas import EncodeConfig
-from snn_interpreter.data.sample_source import SampleSource
-from snn_interpreter.encoding.spike_encoder import SpikeEncoder
+from spikeforge.data.sample_source import SampleSource
+from spikeforge.encoding.spike_encoder import SpikeEncoder
 
 
 def to_list(tensor: torch.Tensor) -> Any:

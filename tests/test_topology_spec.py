@@ -2,15 +2,15 @@
 
 import pytest
 
-from snn_interpreter.topology.edge import Edge
-from snn_interpreter.topology.spec import (
+from spikeforge.topology.edge import Edge
+from spikeforge.topology.spec import (
     TopologySpec,
     chain,
     multi_branch,
     recurrent,
     residual,
 )
-from snn_interpreter.topology.stage import Stage
+from spikeforge.topology.stage import Stage
 
 _A = Stage("a", "linear", {"in_features": 2, "out_features": 2})
 _B = Stage("b", "linear", {"in_features": 2, "out_features": 2})

@@ -2,14 +2,14 @@
 
 **Status: accepted (proposed for maintainer sign-off).**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
-**Owner:** w4ffl35 (maintainer) · **Extends:** [`plans/repo_topology_plan.md`](plans/repo_topology_plan.md)
+**Owner:** Capsize Games (maintainer) · **Extends:** [`plans/repo_topology_plan.md`](plans/repo_topology_plan.md)
 
 ## Context
 
-The repository is one Python distribution (`snn-interpreter` version `0.2.0`,
+The repository is one Python distribution (`spikeforge` version `0.2.0`,
 declared only in [`setup.py`](setup.py:22)), one FastAPI + WebSocket adapter
 (`server/`), and one React dashboard (`client/`, npm package
-`snn-interpreter-client`). The source analysis in
+`spikeforge-dashboard`). The source analysis in
 [`plans/repo_topology_plan.md`](plans/repo_topology_plan.md) establishes that the
 component seams are real but that the right first move is *multiple
 distributions in one repository*, not multiple repositories. This ADR records
@@ -72,15 +72,15 @@ this ADR records only the named conditions.
 - **T1 — extract the dashboard (Phase 2).** Fires when dashboard-only work
   cannot ship without a library release at the rate defined in the metrics
   document, or when the client build dominates CI cost past its threshold.
-- **T2 — extract `snn-targets` (Phase 3).** Fires when backend SDK churn
+- **T2 — extract `spikeforge-targets` (Phase 3).** Fires when backend SDK churn
   (`norse`, `lava-nc`) forces unplanned *core* patch releases at the rate
   defined in the metrics document. This is the strongest technical case for a
   split because those SDKs are external and fast-moving.
-- **T3 — extract `snn-hub` (Phase 4, **go**).** Fires when hub-only release
+- **T3 — extract `spikeforge-hub` (Phase 4, **go**).** Fires when hub-only release
   demand and catalog-format stability both meet their thresholds. The hub is
   marked **go** because it owns network I/O and a curated-catalog versioning
   cadence that genuinely diverges from the library.
-- **T4 — extract `snn-server` (Phase 4, **conditional**).** Fires only when the
+- **T4 — extract `spikeforge-server` (Phase 4, **conditional**).** Fires only when the
   server must release on a cadence that the core cannot absorb, as measured in
   the metrics document. Until then the server ships as a separate *distribution*
   in this repo (Phase 1), which already satisfies "install the library without
@@ -100,7 +100,7 @@ repository as a separate distribution. No repository is created speculatively.
 - **Negative.** Release cadence stays coupled until a trigger fires, and the
   monorepo must carry deliberate compat shims for moved import paths
   ([`plans/arch-0001-migration-plan.md`](plans/arch-0001-migration-plan.md)).
-- **Neutral.** The `snn_interpreter` import root is not renamed by this ADR; the
+- **Neutral.** The `spikeforge` import root is not renamed by this ADR; the
   project rename noted in `plans/repo_topology_plan.md` §4 stays out of scope
   for ARCH-0001.
 
@@ -112,11 +112,11 @@ The verified facts govern:
 1. **Server is not a separate distribution today.** `plans/repo_topology_plan.md`
    §1.2 labels `server/` "`web` extra (separate dist today)". Verified: there is
    no separate distribution; `find_packages(exclude=("tests", "tests.*"))` in
-   [`setup.py`](setup.py:37) packages `server/` into `snn-interpreter`. Phase 1
+   [`setup.py`](setup.py:37) packages `server/` into `spikeforge`. Phase 1
    makes the separation real.
 2. **Test-file counts.** `plans/repo_topology_plan.md` §2 states 105 test files
-   with "208 reference `snn_interpreter`" and "the 17 server tests". Verified:
-   105 files under `tests/`; about 102 reference `snn_interpreter`; 17 reference
+   with "208 reference `spikeforge`" and "the 17 server tests". Verified:
+   105 files under `tests/`; about 102 reference `spikeforge`; 17 reference
    `server`. The "17" is the number of test *files* touching `server/`, not a
    pass count.
 3. **CI job count.** `plans/repo_topology_plan.md` §5 says "Today's five jobs".

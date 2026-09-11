@@ -4,10 +4,10 @@ from typing import Any, Iterator
 
 import pytest
 
-from snn_interpreter.observability import metrics, persistence
-from snn_interpreter.observability.persistence import MetricsPersistence
-from snn_interpreter.observability.snapshot import MetricSnapshot
-from snn_interpreter.observability.store import SnapshotStore, safe_run_id
+from spikeforge.observability import metrics, persistence
+from spikeforge.observability.persistence import MetricsPersistence
+from spikeforge.observability.snapshot import MetricSnapshot
+from spikeforge.observability.store import SnapshotStore, safe_run_id
 
 
 @pytest.fixture(autouse=True)
@@ -55,9 +55,9 @@ def test_disabled_by_default_writes_nothing(tmp_path: Any) -> None:
 def test_env_flag_and_dir_override(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SNN_METRICS_PERSIST enables writing under SNN_METRICS_DIR."""
+    """SPIKEFORGE_METRICS_PERSIST enables writing under the env dir."""
     monkeypatch.setenv(persistence.ENV_FLAG, "1")
-    monkeypatch.setenv("SNN_METRICS_DIR", str(tmp_path / "metrics"))
+    monkeypatch.setenv("SPIKEFORGE_METRICS_DIR", str(tmp_path / "metrics"))
     persistence.reset_default()
     metrics.counter("env.steps", 2)
     assert persistence.flush(run_id="envrun") is not None

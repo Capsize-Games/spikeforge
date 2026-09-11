@@ -24,7 +24,7 @@ WORKDIR /app
 
 # Copy the repository so the two distributions can be installed from their
 # `packages/` pyproject.toml files. Both resolve their import roots
-# (`snn_interpreter/`, `server/`, `main*.py`) from the repo root.
+# (`spikeforge/`, `server/`, `main*.py`) from the repo root.
 COPY . .
 
 # Install the shared core runtime pins first (better layer caching).
@@ -35,14 +35,14 @@ ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu132
 RUN pip install --upgrade pip \
     && pip install --index-url ${TORCH_INDEX_URL} torch torchvision \
     && pip install -r requirements.txt \
-    && pip install ./packages/snn-interpreter \
-        ./packages/snn-interpreter-server
+    && pip install ./packages/spikeforge \
+        ./packages/spikeforge-server
 
 # Built client bundle (the Dockerfile's own copy overrides client/dist).
 COPY --from=client-build /build/dist /app/client/dist
 
 # The exporter output and dataset cache live in /data (mounted in compose).
-ENV SNN_DATA_DIR=/data
+ENV SPIKEFORGE_DATA_DIR=/data
 VOLUME ["/data"]
 
 EXPOSE 8877

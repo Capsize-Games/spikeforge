@@ -3,13 +3,13 @@
 import pytest
 import torch
 
-from snn_interpreter.cli import verify
-from snn_interpreter.data import sequence_source
-from snn_interpreter.nir_bridge import to_nir
-from snn_interpreter.nir_bridge.errors import UnsupportedStageError
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import registry
-from snn_targets.rewrite import rewrite
+from spikeforge.cli import verify
+from spikeforge.data import sequence_source
+from spikeforge.nir_bridge import to_nir
+from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.simulator.runner import run
+from spikeforge.topology import registry
+from spikeforge_targets.rewrite import rewrite
 
 pytest.importorskip("nir")
 

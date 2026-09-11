@@ -17,15 +17,15 @@ process's control). The benchmark writes into a temporary directory.
 import tempfile
 from typing import Any, Dict
 
-from snn_interpreter.benchmark import (
+from spikeforge.benchmark import (
     BenchmarkConfig,
     BenchmarkStore,
     compare_runs,
     run_benchmark,
     with_metadata,
 )
-from snn_interpreter.tracking.config_hash import config_hash
-from snn_interpreter.tracking.manifest import ReproducibilityManifest
+from spikeforge.tracking.config_hash import config_hash
+from spikeforge.tracking.manifest import ReproducibilityManifest
 
 #: Example run configuration, deliberately written in two key orders.
 CONFIG: Dict[str, Any] = {

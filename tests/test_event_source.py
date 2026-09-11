@@ -5,9 +5,9 @@ from typing import Tuple
 
 import pytest
 
-from snn_interpreter.events import event_source
-from snn_interpreter.events.event_sample import EventSample
-from snn_interpreter.events.synthetic import moving_dot
+from spikeforge.events import event_source
+from spikeforge.events.event_sample import EventSample
+from spikeforge.events.synthetic import moving_dot
 
 
 def _fake_pair(

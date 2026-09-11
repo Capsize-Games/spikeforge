@@ -8,8 +8,8 @@ import torch
 
 from server.schemas import TrainConfig
 from server.training import TrainingService
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.simulator.runner import run
+from spikeforge.training.training_engine import TrainingEngine
 
 _Grads = Dict[str, torch.Tensor]
 

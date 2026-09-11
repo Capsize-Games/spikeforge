@@ -1,4 +1,4 @@
-# SNN Interpreter — WS-C: Sequence Primitives and Per-Stage Heterogeneous Neurons
+# Spikeforge — WS-C: Sequence Primitives and Per-Stage Heterogeneous Neurons
 
 > Focused design for workstream **C** of the
 > [`professional_roadmap.md`](plans/professional_roadmap.md). Read the roadmap
@@ -25,28 +25,28 @@ scope and noted as deferred.
 
 | Capability | Current reality | Anchor |
 |---|---|---|
-| Module kinds | `flatten, linear, conv2d, avgpool2d, sumpool2d` + `add` | [`kinds.py`](snn_interpreter/topology/kinds.py:8) |
-| Stage model | `Stage(name, kind, params)` already per-stage | [`stage.py`](snn_interpreter/topology/stage.py:7) |
-| Neuron selection | One kind for all stages in a preset | [`presets.py`](snn_interpreter/topology/presets.py:50), [`registry.py`](snn_interpreter/topology/registry.py:122) |
-| Module factories | Fixed builder table | [`stage_modules.py`](snn_interpreter/topology/stage_modules.py:59) |
-| NIR builders | Fixed builder table | [`mapper.py`](snn_interpreter/nir_bridge/mapper.py:20), [`node_builders.py`](snn_interpreter/nir_bridge/node_builders.py) |
-| Unexportable precedent | `alpha` -> typed error | [`neuron_nodes.py`](snn_interpreter/nir_bridge/neuron_nodes.py:51), [`mapper.py`](snn_interpreter/nir_bridge/mapper.py:58) |
-| Emitted primitives | Fixed set | [`primitives.py`](snn_interpreter/targets/primitives.py:12) |
-| Input shape | Feature vs. spatial only | [`input_shape.py`](snn_interpreter/simulator/input_shape.py), [`frames.py`](snn_interpreter/simulator/frames.py) |
+| Module kinds | `flatten, linear, conv2d, avgpool2d, sumpool2d` + `add` | [`kinds.py`](spikeforge/topology/kinds.py:8) |
+| Stage model | `Stage(name, kind, params)` already per-stage | [`stage.py`](spikeforge/topology/stage.py:7) |
+| Neuron selection | One kind for all stages in a preset | [`presets.py`](spikeforge/topology/presets.py:50), [`registry.py`](spikeforge/topology/registry.py:122) |
+| Module factories | Fixed builder table | [`stage_modules.py`](spikeforge/topology/stage_modules.py:59) |
+| NIR builders | Fixed builder table | [`mapper.py`](spikeforge/nir_bridge/mapper.py:20), [`node_builders.py`](spikeforge/nir_bridge/node_builders.py) |
+| Unexportable precedent | `alpha` -> typed error | [`neuron_nodes.py`](spikeforge/nir_bridge/neuron_nodes.py:51), [`mapper.py`](spikeforge/nir_bridge/mapper.py:58) |
+| Emitted primitives | Fixed set | [`primitives.py`](spikeforge/targets/primitives.py:12) |
+| Input shape | Feature vs. spatial only | [`input_shape.py`](spikeforge/simulator/input_shape.py), [`frames.py`](spikeforge/simulator/frames.py) |
 | Sequence / attention | None | n/a |
 
 ### 1.1 Invariants that must not break
 
 - The default `neuron` selection still applies to every neuron stage when no
   per-stage override is given; a preset built with defaults is byte-identical to
-  today ([`presets.py`](snn_interpreter/topology/presets.py:18)).
+  today ([`presets.py`](spikeforge/topology/presets.py:18)).
 - `fc_legacy` keeps `_fc1/_lif1/_fc2/_lif2` and the legacy wrapper
-  ([`registry.py`](snn_interpreter/topology/registry.py:115)).
+  ([`registry.py`](spikeforge/topology/registry.py:115)).
 - `TopologySpec.to_dict`/`from_dict` round-trips heterogeneous stages with no
   schema change — per-stage kind+params are already captured
-  ([`spec.py`](snn_interpreter/topology/spec.py:50)).
+  ([`spec.py`](spikeforge/topology/spec.py:50)).
 - `alpha` continues to raise `UnsupportedStageError`
-  ([`neuron_nodes.py`](snn_interpreter/nir_bridge/neuron_nodes.py:162)).
+  ([`neuron_nodes.py`](spikeforge/nir_bridge/neuron_nodes.py:162)).
 - Existing `topology_params` keys and `TrainConfig` fields stay valid and
   additive ([`train_config.py`](server/schemas/train_config.py:28)).
 - Existing WebSocket payload keys are unchanged.
@@ -58,10 +58,10 @@ scope and noted as deferred.
 ### 2.1 Design
 
 `Stage` already stores `(kind, params)` per stage, and `build_neuron` already
-resolves any registered kind ([`registry.py`](snn_interpreter/neurons/registry.py:36)).
+resolves any registered kind ([`registry.py`](spikeforge/neurons/registry.py:36)).
 The only thing forcing homogeneity is the presets: `_neuron_stage` applies one
 `neuron`/`surrogate` to every neuron stage
-([`presets.py`](snn_interpreter/topology/presets.py:50)). The change is to let a
+([`presets.py`](spikeforge/topology/presets.py:50)). The change is to let a
 preset resolve a neuron kind **per stage name**, with the single-`neuron`
 argument remaining the default.
 
@@ -78,9 +78,9 @@ New preset parameters (additive, forwarded by the registry):
 returning `neurons[name]` when present, else the default, and merging
 `stage_params[name]` over the computed params. Because `resolved_params` only
 forwards keys already in a preset's defaults
-([`registry.py`](snn_interpreter/topology/registry.py:99)), `neurons` and
+([`registry.py`](spikeforge/topology/registry.py:99)), `neurons` and
 `stage_params` are added to each preset's default mapping in
-[`registry.py`](snn_interpreter/topology/registry.py:25).
+[`registry.py`](spikeforge/topology/registry.py:25).
 
 ### 2.2 Schema and persistence
 
@@ -90,17 +90,17 @@ forwards keys already in a preset's defaults
   ([`train_config.py`](server/schemas/train_config.py:29)). Existing clients are
   unaffected.
 - Checkpoint `meta` already stores the resolved `spec`, which carries per-stage
-  kind+params ([`checkpoint_mixin.py`](snn_interpreter/training/checkpoint_mixin.py:52)).
+  kind+params ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:52)).
   Add a readable `stage_neurons` summary to `meta` (additive), so a checkpoint's
   heterogeneity is visible without decoding the spec.
 - Reproducibility: the manifest already includes the spec
-  ([`manifest.py`](snn_interpreter/tracking/manifest.py:35)); no change needed.
+  ([`manifest.py`](spikeforge/tracking/manifest.py:35)); no change needed.
 
 ### 2.3 NIR export per stage
 
 The mapper already dispatches per `stage.kind`
-([`mapper.py`](snn_interpreter/nir_bridge/mapper.py:41)) and neurons map
-per-kind ([`neuron_nodes.py`](snn_interpreter/nir_bridge/neuron_nodes.py:154)).
+([`mapper.py`](spikeforge/nir_bridge/mapper.py:41)) and neurons map
+per-kind ([`neuron_nodes.py`](spikeforge/nir_bridge/neuron_nodes.py:154)).
 So heterogeneous neurons export correctly with **no mapper change**: a `leaky`
 stage emits `LI`+`Threshold`, a `synaptic` stage emits `CubaLIF`, and so on,
 side by side. This is a key reason the spine's per-stage design pays off.
@@ -111,7 +111,7 @@ side by side. This is a key reason the spine's per-stage design pays off.
 
 ### 3.1 Vocabulary
 
-Added to [`kinds.py`](snn_interpreter/topology/kinds.py:8):
+Added to [`kinds.py`](spikeforge/topology/kinds.py:8):
 
 `embedding`, `conv1d`, `maxpool1d`, `maxpool2d`, `layer_norm`, `batch_norm`,
 `dropout`, `positional_encoding`, `attention`, `multihead_attention`.
@@ -120,12 +120,12 @@ Each kind declares a **NIR contract** with exactly one of three outcomes:
 
 | Outcome | Meaning | Precedent |
 |---|---|---|
-| `mapped` | a builder emits NIR node(s) | [`node_builders.py`](snn_interpreter/nir_bridge/node_builders.py) |
+| `mapped` | a builder emits NIR node(s) | [`node_builders.py`](spikeforge/nir_bridge/node_builders.py) |
 | `passthrough` | inference-equivalent to identity; emits no node | new, documented |
-| `unexportable` | no faithful NIR primitive; raises typed error | `alpha` ([`neuron_nodes.py`](snn_interpreter/nir_bridge/neuron_nodes.py:51)) |
+| `unexportable` | no faithful NIR primitive; raises typed error | `alpha` ([`neuron_nodes.py`](spikeforge/nir_bridge/neuron_nodes.py:51)) |
 
 Proposed contracts (each verified against the installed `nir` at build time via
-[`api.py`](snn_interpreter/nir_bridge/api.py:76), so a future `nir` that adds a
+[`api.py`](spikeforge/nir_bridge/api.py:76), so a future `nir` that adds a
 primitive flips the contract honestly):
 
 | Kind | Factory | NIR contract |
@@ -147,11 +147,11 @@ raises a typed error naming the stage instead of silently dropping it.
 ### 3.2 Module layout
 
 ```
-snn_interpreter/topology/
+spikeforge/topology/
   kinds.py                 extend MODULE_KINDS with the new kinds
   stage_modules.py         register factories in _BUILDERS
   sequence_stages.py       embedding, positional_encoding, attention, norms factories
-snn_interpreter/nir_bridge/
+spikeforge/nir_bridge/
   stage_builders.py        conv1d/pool/norm/attention builder table
   stages_unmappable.py     kind -> reason, for unexportable kinds
   mapper.py                consult stage_builders then stages_unmappable
@@ -164,7 +164,7 @@ already does this with `ops_linear.py`/`ops_neuron.py`).
 ### 3.3 Target coverage
 
 New emitted primitives (e.g. `Conv1d`) are added to
-[`EMITTED_PRIMITIVES`](snn_interpreter/targets/primitives.py:12) only when a
+[`EMITTED_PRIMITIVES`](spikeforge/targets/primitives.py:12) only when a
 mapper can actually emit them, so the capability matrix and the mapper agree on
 one vocabulary.
 
@@ -174,20 +174,20 @@ one vocabulary.
 
 ### 4.1 Input contract
 
-`input_shape` ([`input_shape.py`](snn_interpreter/simulator/input_shape.py))
+`input_shape` ([`input_shape.py`](spikeforge/simulator/input_shape.py))
 gains a sequence layout `[T, B, L, D]` (steps, batch, sequence length, feature
 dim), selected when the spec's input stage is a sequence kind (`embedding`,
 `attention`, `conv1d`). `normalise_frame`
-([`frames.py`](snn_interpreter/simulator/frames.py)) must pass sequence frames
+([`frames.py`](spikeforge/simulator/frames.py)) must pass sequence frames
 through unflattened, exactly as it already does for spatial kinds
-([`interpreter.py`](snn_interpreter/nir_bridge/interpreter.py:106) shows the
+([`interpreter.py`](spikeforge/nir_bridge/interpreter.py:106) shows the
 analogous spatial special-case).
 
 ### 4.2 Token source
 
-New [`data/sequence_source.py`](snn_interpreter/data/sequence_source.py) serves
+New [`data/sequence_source.py`](spikeforge/data/sequence_source.py) serves
 `(tokens, label)` pairs for a synthetic/registered sequence task; the dataset
-registry ([`dataset_spec.py`](snn_interpreter/data/dataset_spec.py)) gains a
+registry ([`dataset_spec.py`](spikeforge/data/dataset_spec.py)) gains a
 `sequence` modality. This is deliberately small — a toy token task that
 exercises the vocabulary, not a corpus pipeline.
 
@@ -200,8 +200,8 @@ Two presets, for two honest purposes:
 1. **`sequence_mlp`** — built **only** from NIR-mappable kinds (`linear`,
    `flatten`, `leaky`) applied to a `[T, B, L, D]` sequence. This is the preset
    that **NIR-validates end to end** and proves the sequence data path. It is
-   added to [`presets.py`](snn_interpreter/topology/presets.py) and
-   [`registry.py`](snn_interpreter/topology/registry.py:78).
+   added to [`presets.py`](spikeforge/topology/presets.py) and
+   [`registry.py`](spikeforge/topology/registry.py:78).
 2. **`sequence_attn`** — the demonstration spiking-transformer-shaped preset
    (`embedding` -> `positional_encoding` -> `multihead_attention` ->
    `layer_norm` -> `linear` -> neuron, stacked). It is **simulation-only**;
@@ -247,7 +247,7 @@ typed unexportable error on the existing `error` channel with the stage named.
 
 ### 6.3 CLI
 
-`python -m snn_interpreter.cli.verify validate --topology sequence_mlp` must
+`python -m spikeforge.cli.verify validate --topology sequence_mlp` must
 report `within_tolerance=True`; `export --topology sequence_attn` must exit
 non-zero with the unexportable stage named.
 

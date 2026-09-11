@@ -1,11 +1,11 @@
-"""The ``snn-energy`` CLI subcommands and their JSON output."""
+"""The ``spikeforge-energy`` CLI subcommands and their JSON output."""
 
 import json
 from pathlib import Path
 
 import pytest
 
-from snn_targets.energy import cli
+from spikeforge_targets.energy import cli
 
 _SMALL = ["--topology", "fc_small", "--steps", "2", "--batch-size", "1"]
 

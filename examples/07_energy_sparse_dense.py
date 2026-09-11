@@ -17,7 +17,7 @@ figure.
 
 from typing import Any, Dict
 
-from snn_targets.energy.accounting import measure_topology
+from spikeforge_targets.energy.accounting import measure_topology
 
 #: Topology and target accounted by this example.
 TOPOLOGY = "conv_net"

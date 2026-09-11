@@ -2,21 +2,21 @@
 
 ## License
 
-`snn-interpreter` is distributed under the **BSD 3-Clause License**; see
-[`LICENSE`](LICENSE). The copyright line points at the contributors listed in
-[`AUTHORS`](AUTHORS).
+`spikeforge` is distributed under the **BSD 3-Clause License**; see
+[`LICENSE`](LICENSE). The copyright is held by **Capsize Games
+<contact@capsizegames.com>**, the contributor listed in [`AUTHORS`](AUTHORS).
 
 ## Third-party models: metadata-only, fetched on demand
 
 The model hub ships a **curated catalog of metadata only**
-([`snn_hub/models.json`](snn_hub/models.json)). This
+([`spikeforge_hub/models.json`](spikeforge_hub/models.json)). This
 repository does **not** redistribute third-party model weights. Every shipped
 entry is a NIR graph derived from this project's own presets (BSD-3-Clause,
 authored here); the catalog ships **only verified entries**. Weights a user
 chooses to add are fetched on demand from their source into a local cache using
 the Hugging Face ingestion mechanism
-([`hub/hf_api.py`](snn_hub/hf_api.py),
-[`hub/download_cli.py`](snn_hub/download_cli.py)) plus the `hub`
+([`hub/hf_api.py`](spikeforge_hub/hf_api.py),
+[`hub/download_cli.py`](spikeforge_hub/download_cli.py)) plus the `hub`
 extra.
 
 **Consequences for a redistributor and for users:**
@@ -38,7 +38,7 @@ license, and a checksum where one is available. A known-but-unverified
 candidate must be marked `"license": "unverified-candidate"`, which loads the
 record but reports it `available: false` with a named reason and never presents
 it as ready. The full policy is in
-[`snn_hub/CURATION.md`](snn_hub/CURATION.md). The hub
+[`spikeforge_hub/CURATION.md`](spikeforge_hub/CURATION.md). The hub
 ships only verified entries plus an on-demand downloader for vetted repositories
 the user chooses to add.
 

@@ -1,4 +1,4 @@
-# SNN Interpreter — WS-A: Model Hub and Import
+# Spikeforge — WS-A: Model Hub and Import
 
 > Focused design for workstream **A** of the
 > [`professional_roadmap.md`](plans/professional_roadmap.md). Read the roadmap
@@ -20,7 +20,7 @@ rejected; it is never silently loaded wrong.
 
 **Bundled curated catalog first, optional live Hugging Face Hub second.**
 
-- A local JSON catalog (`snn_interpreter/hub/models.json`) enumerates known
+- A local JSON catalog (`spikeforge/hub/models.json`) enumerates known
   models across snnTorch, NIR, SpikingJelly, Norse, and Lava. It renders fully
   offline and ships only **verified** entries; the Hugging Face ingestion path
   (`hub/hf_api.py`, `hub/download_cli.py`, and the `hub` extra) downloads any
@@ -28,8 +28,8 @@ rejected; it is never silently loaded wrong.
 - Live Hugging Face search/download is opt-in behind the `hub` extra
   (`huggingface_hub`), isolated in one module so its absence is reported, not
   raised. This mirrors the `tonic`/`events` precedent
-  ([`datasets.py`](snn_interpreter/data/datasets.py:51)) and the isolated SDK
-  probe precedent ([`probe.py`](snn_interpreter/targets/probe.py:14)).
+  ([`datasets.py`](spikeforge/data/datasets.py:51)) and the isolated SDK
+  probe precedent ([`probe.py`](spikeforge/targets/probe.py:14)).
 
 Why not live-search-only: network dependence, no offline story, and no way to
 keep the honesty rule (an uncurated hit is not a verified, runnable SNN). Why
@@ -48,15 +48,15 @@ compatibility is verified (Phase A3).
 
 | Capability the goal requires | Current reality | Anchor |
 |---|---|---|
-| Model browser | None; only dataset pickers | [`datasets.py`](snn_interpreter/data/datasets.py:143) |
-| Model download | None; no download path for weights | [`model_store.py`](snn_interpreter/network/model_store.py:34) |
-| Isolated download worker | Exists for datasets, reusable pattern | [`download_cli.py`](snn_interpreter/data/download_cli.py:15), [`downloads.py`](server/downloads.py:41) |
+| Model browser | None; only dataset pickers | [`datasets.py`](spikeforge/data/datasets.py:143) |
+| Model download | None; no download path for weights | [`model_store.py`](spikeforge/network/model_store.py:34) |
+| Isolated download worker | Exists for datasets, reusable pattern | [`download_cli.py`](spikeforge/data/download_cli.py:15), [`downloads.py`](server/downloads.py:41) |
 | Progress + cancel UI | Exists for datasets | [`DownloadProgress.tsx`](client/src/components/DownloadProgress.tsx) |
 | Checksum/size verification | None | n/a |
-| Offline cache dir | Only `DATA_DIR` / `MODEL_DIR` | [`config.py`](snn_interpreter/config.py:10) |
-| External NIR import | Partial, file-path only | [`ingest.py`](snn_interpreter/nir_bridge/ingest.py:21), [`serialization.py`](snn_interpreter/nir_bridge/serialization.py) |
-| Weight import into a preset | None | [`model_store.py`](snn_interpreter/network/model_store.py:57) |
-| Compatibility validation | None for foreign artifacts | [`registry.py`](snn_interpreter/topology/registry.py:129) |
+| Offline cache dir | Only `DATA_DIR` / `MODEL_DIR` | [`config.py`](spikeforge/config.py:10) |
+| External NIR import | Partial, file-path only | [`ingest.py`](spikeforge/nir_bridge/ingest.py:21), [`serialization.py`](spikeforge/nir_bridge/serialization.py) |
+| Weight import into a preset | None | [`model_store.py`](spikeforge/network/model_store.py:57) |
+| Compatibility validation | None for foreign artifacts | [`registry.py`](spikeforge/topology/registry.py:129) |
 | HF dependency | Absent | [`setup.py`](setup.py:46) |
 
 ### 2.1 Invariants that must not break
@@ -67,9 +67,9 @@ compatibility is verified (Phase A3).
 - `model_store` remains the local registry for **trained** models; imported
   foreign models land in a separate hub cache and are only *promoted* into
   `MODEL_DIR` after a successful compat check
-  ([`config.py`](snn_interpreter/config.py:17)).
+  ([`config.py`](spikeforge/config.py:17)).
 - NIR import keeps raising the typed errors from
-  [`errors.py`](snn_interpreter/nir_bridge/errors.py) — never a silent partial
+  [`errors.py`](spikeforge/nir_bridge/errors.py) — never a silent partial
   load.
 - All new WebSocket fields are additive; the `ClientMessage`/`ServerMessage`
   literals only grow ([`client_message.py`](server/schemas/client_message.py:15),
@@ -79,10 +79,10 @@ compatibility is verified (Phase A3).
 
 ## 3. Module layout
 
-New package `snn_interpreter/hub/` (one class per file, files under 250 lines):
+New package `spikeforge/hub/` (one class per file, files under 250 lines):
 
 ```
-snn_interpreter/hub/
+spikeforge/hub/
   __init__.py          public API: catalog, search, download, inspect, import_model
   entry.py             HubEntry dataclass: id, name, framework, kind, source...
   catalog.py           load/validate models.json; list + filter
@@ -98,15 +98,15 @@ snn_interpreter/hub/
   weight_map.py        load compatible weights into a built preset module
   import_model.py      orchestrate inspect -> compat -> promote into MODEL_DIR
   errors.py            typed hub errors
-  cli.py               snn-hub entry point
+  cli.py               spikeforge-hub entry point
 ```
 
 Modified files:
 
 | File | Change |
 |---|---|
-| [`setup.py`](setup.py:46) | add `hub` extra; add `snn-hub` console script |
-| [`config.py`](snn_interpreter/config.py:10) | add `HUB_CACHE_DIR` (env `SNN_HUB_DIR`, default `DATA_DIR/hub`) |
+| [`setup.py`](setup.py:46) | add `hub` extra; add `spikeforge-hub` console script |
+| [`config.py`](spikeforge/config.py:10) | add `HUB_CACHE_DIR` (env `SPIKEFORGE_HUB_DIR`, default `DATA_DIR/hub`) |
 | [`server/protocol_handlers.py`](server/protocol_handlers.py:19) | route `hub_*` actions to `server/hub_handlers.py` |
 | [`server/schemas/client_message.py`](server/schemas/client_message.py:15) | add `hub_list`, `hub_search`, `hub_download`, `hub_cancel`, `hub_inspect`, `hub_import` |
 | [`server/schemas/server_message.py`](server/schemas/server_message.py:11) | add `hub_list`, `hub_search`, `hub_download_state`, `hub_inspect`, `hub_import` |
@@ -132,7 +132,7 @@ New client files: `client/src/hubTypes.ts`,
 ## 4. The catalog schema
 
 `hub/models.json` is a versioned list of entries. Each entry is validated into
-a `HubEntry` ([`hub/entry.py`](snn_interpreter/hub/entry.py)). Required fields:
+a `HubEntry` ([`hub/entry.py`](spikeforge/hub/entry.py)). Required fields:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -153,8 +153,8 @@ a `HubEntry` ([`hub/entry.py`](snn_interpreter/hub/entry.py)). Required fields:
 The catalog loader validates every entry and **reports** unknown frameworks
 rather than dropping them (honesty rule). `catalog.list()` returns JSON-able
 dicts with an additive `available` flag computed from
-[`hub/probe.py`](snn_interpreter/hub/probe.py), exactly as
-[`datasets.catalog()`](snn_interpreter/data/datasets.py:143) does.
+[`hub/probe.py`](spikeforge/hub/probe.py), exactly as
+[`datasets.catalog()`](spikeforge/data/datasets.py:143) does.
 
 Proposed seed entries (≥12 across ≥5 frameworks): the four shipped presets as
 bundled NIR graphs, a small SpikingJelly reference, a Norse reference, a Lava
@@ -165,15 +165,15 @@ reference, and a handful of allow-listed HF SNN repos.
 ## 5. Download design
 
 Reuse the **isolated child-process worker** pattern verbatim
-([`download_cli.py`](snn_interpreter/data/download_cli.py:15),
+([`download_cli.py`](spikeforge/data/download_cli.py:15),
 [`downloads.py`](server/downloads.py:87)) so a download never blocks the
 FastAPI event loop and can be terminated to cancel in flight.
 
-- [`hub/download_cli.py`](snn_interpreter/hub/download_cli.py) downloads one
+- [`hub/download_cli.py`](spikeforge/hub/download_cli.py) downloads one
   entry (or HF repo) into the cache, then verifies checksum and size via
-  [`hub/verify.py`](snn_interpreter/hub/verify.py). Non-zero exit on
+  [`hub/verify.py`](spikeforge/hub/verify.py). Non-zero exit on
   verification failure.
-- [`hub/downloads.py`](snn_interpreter/hub/downloads.py) mirrors
+- [`hub/downloads.py`](spikeforge/hub/downloads.py) mirrors
   `DownloadManager`: `ensure`, `_poll`, `_finish`, `snapshot`, `cancel`, with a
   `hub_download_state` payload carrying `{id, status, bytes, total_bytes,
   verified}`. Terminal states stay `{idle, downloading, done, cancelled,
@@ -191,22 +191,22 @@ FastAPI event loop and can be terminated to cancel in flight.
 Import is a three-gate funnel; a model must pass each gate or be explicitly
 rejected with a typed reason.
 
-1. **Inspect** ([`hub/inspect.py`](snn_interpreter/hub/inspect.py)): detect the
+1. **Inspect** ([`hub/inspect.py`](spikeforge/hub/inspect.py)): detect the
    artifact kind (`nir_graph`, `state_dict`, `framework_weights`) and describe
    its structure without committing. NIR artifacts are summarized with
-   [`graph_summary`](snn_interpreter/nir_bridge/exporter.py:86); state dicts are
+   [`graph_summary`](spikeforge/nir_bridge/exporter.py:86); state dicts are
    described by key/shape. Unknown or unreadable artifacts are rejected with
    `HubArtifactError`.
-2. **Compat** ([`hub/compat.py`](snn_interpreter/hub/compat.py)): compare the
+2. **Compat** ([`hub/compat.py`](spikeforge/hub/compat.py)): compare the
    inspected structure against the shipped presets in
-   [`topology/registry.py`](snn_interpreter/topology/registry.py:78). Produce a
+   [`topology/registry.py`](spikeforge/topology/registry.py:78). Produce a
    `CompatibilityVerdict`: `exact`, `mappable` (with the stage mapping), or
    `incompatible` (with the specific mismatches named).
-3. **Promote** ([`hub/import_model.py`](snn_interpreter/hub/import_model.py)):
+3. **Promote** ([`hub/import_model.py`](spikeforge/hub/import_model.py)):
    only on `exact`/`mappable`, build the preset via
-   [`build_topology`](snn_interpreter/topology/registry.py:129), load weights via
-   [`hub/weight_map.py`](snn_interpreter/hub/weight_map.py), run a drift check
-   with [`validate`](snn_interpreter/nir_bridge/__init__.py:39), and only then
+   [`build_topology`](spikeforge/topology/registry.py:129), load weights via
+   [`hub/weight_map.py`](spikeforge/hub/weight_map.py), run a drift check
+   with [`validate`](spikeforge/nir_bridge/__init__.py:39), and only then
    save into `MODEL_DIR` with hub provenance recorded in `meta`.
 
 This satisfies "reported and either mapped or explicitly rejected, never
@@ -214,7 +214,7 @@ silently loaded wrong". The weight loader reuses `load_state_dict` semantics
 and refuses strict mismatches, reporting missing/unexpected keys.
 
 NIR-only models that match no preset are still runnable: they are registered as
-**imported NIR graphs** ([`ingest.py`](snn_interpreter/nir_bridge/ingest.py:21))
+**imported NIR graphs** ([`ingest.py`](spikeforge/nir_bridge/ingest.py:21))
 and executed by the reference interpreter, so import is useful even without a
 preset match.
 
@@ -240,22 +240,22 @@ incompatible, so the client can render *why*.
 
 ---
 
-## 8. CLI surface (`snn-hub`)
+## 8. CLI surface (`spikeforge-hub`)
 
-[`hub/cli.py`](snn_interpreter/hub/cli.py), mirroring the argparse style of
-[`target_cli.py`](snn_interpreter/cli/target_cli.py:166):
+[`hub/cli.py`](spikeforge/hub/cli.py), mirroring the argparse style of
+[`target_cli.py`](spikeforge/cli/target_cli.py:166):
 
 ```
-snn-hub list [--framework snntorch] [--available]
-snn-hub search <query> [--limit 20]
-snn-hub download <id> [--no-verify]
-snn-hub inspect <id>
-snn-hub import <id> [--topology conv_net]
+spikeforge-hub list [--framework snntorch] [--available]
+spikeforge-hub search <query> [--limit 20]
+spikeforge-hub download <id> [--no-verify]
+spikeforge-hub inspect <id>
+spikeforge-hub import <id> [--topology conv_net]
 ```
 
 Every command prints JSON. `import` exits non-zero when the verdict is
 `incompatible`, so it doubles as a CI gate (same convention as
-[`deploy_exit`](snn_interpreter/cli/target_cli.py:86)).
+[`deploy_exit`](spikeforge/cli/target_cli.py:86)).
 
 ---
 
@@ -285,14 +285,14 @@ Types live in `client/src/hubTypes.ts` (no `any`, 80-column).
 - **Deliverables:** `hub/entry.py`, `hub/catalog.py`, `hub/models.json`,
   `hub/probe.py`, `hub/cache.py`, `hub/errors.py`, `hub/__init__.py`; `config.py`
   `HUB_CACHE_DIR`; `models.json` schema validation.
-- **Acceptance:** `python -m snn_interpreter.hub.cli list` prints ≥10 entries with
+- **Acceptance:** `python -m spikeforge.hub.cli list` prints ≥10 entries with
   `available` flags; a malformed entry is reported (not silently skipped); no
   `huggingface_hub` import occurs without the extra.
 
 ### A2 — Downloader
 
 - **Deliverables:** `hub/download_cli.py`, `hub/downloads.py`, `hub/verify.py`.
-- **Acceptance:** `snn-hub download <id>` fetches into the cache, verifies
+- **Acceptance:** `spikeforge-hub download <id>` fetches into the cache, verifies
   sha256 + size, and exits non-zero on a seeded checksum mismatch; cancellation
   terminates the child and reports `cancelled`.
 
@@ -310,7 +310,7 @@ Types live in `client/src/hubTypes.ts` (no `any`, 80-column).
 - **Deliverables:** `server/hub_handlers.py`, `server/hub_payloads.py`,
   `server/hub_downloads.py`, schema additions, `hub/cli.py`, client panel.
 - **Acceptance:** the six WS actions round-trip over a live connection;
-  `snn-hub import` gates on the verdict; the client builds and renders the panel
+  `spikeforge-hub import` gates on the verdict; the client builds and renders the panel
   from live payloads; existing dataset `download_state` payloads are unchanged.
 
 ---
@@ -321,7 +321,7 @@ Types live in `client/src/hubTypes.ts` (no `any`, 80-column).
   decision (decision 1 in the roadmap). Default: metadata-only catalog; fetch
   weights on demand.
 - **Network flakiness / HF API drift:** isolated in `hub/hf_api.py` behind the
-  `hub` extra, exactly like [`api.py`](snn_interpreter/nir_bridge/api.py:1).
+  `hub` extra, exactly like [`api.py`](spikeforge/nir_bridge/api.py:1).
 - **Checksum unknowns:** when a source publishes no checksum, `sha256` is
   `null` and the verifier reports "unverified" rather than passing silently
   (honesty rule).

@@ -12,7 +12,7 @@ from server.event_engine import EventEngine
 from server.messages import send_download_state
 from server.schemas import EncodeConfig
 from server.session import Session
-from snn_interpreter.data.datasets import (
+from spikeforge.data.datasets import (
     dataset_available,
     dataset_modality,
 )

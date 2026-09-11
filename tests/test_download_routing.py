@@ -2,7 +2,7 @@
 
 import pytest
 
-from snn_interpreter.data import download_cli
+from spikeforge.data import download_cli
 
 
 def test_event_dataset_routes_to_event_loader(

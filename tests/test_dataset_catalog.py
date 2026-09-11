@@ -2,8 +2,8 @@
 
 import json
 
-from snn_interpreter.data import datasets
-from snn_interpreter.data.dataset_spec import DatasetSpec
+from spikeforge.data import datasets
+from spikeforge.data.dataset_spec import DatasetSpec
 
 
 def test_catalog_includes_modality_and_availability() -> None:

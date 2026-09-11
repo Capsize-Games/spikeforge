@@ -21,7 +21,7 @@ from server.protocol_handlers import PROTOCOL_ACTIONS, dispatch_protocol
 from server.schemas import ClientMessage, EncodeConfig, TrainConfig
 from server.session import Session
 from server.stats import handle_stats
-from snn_interpreter.network import model_store
+from spikeforge.network import model_store
 
 
 async def stream_frames(

@@ -2,11 +2,11 @@
 
 import pytest
 
-from snn_interpreter.nir_bridge import stages_unmappable, to_nir
-from snn_interpreter.nir_bridge.errors import UnsupportedStageError
-from snn_interpreter.nir_bridge.mapper import map_stage
-from snn_interpreter.topology import registry
-from snn_interpreter.topology.stage import Stage
+from spikeforge.nir_bridge import stages_unmappable, to_nir
+from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.nir_bridge.mapper import map_stage
+from spikeforge.topology import registry
+from spikeforge.topology.stage import Stage
 
 pytest.importorskip("nir")
 

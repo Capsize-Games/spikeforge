@@ -2,7 +2,7 @@
 
 **Status: accepted (proposed for maintainer sign-off).**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
-**Owner:** w4ffl35 (maintainer) · **Depends on:** [`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)
+**Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)
 
 ## Decision
 
@@ -70,7 +70,7 @@ source and must stay in sync via the parity test.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://snn-interpreter.dev/protocol/1.0/client_message.schema.json",
+  "$id": "https://spikeforge.dev/protocol/1.0/client_message.schema.json",
   "title": "ClientMessage",
   "type": "object",
   "required": ["protocol_version", "type"],
@@ -107,7 +107,7 @@ source and must stay in sync via the parity test.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://snn-interpreter.dev/protocol/1.0/server_message.schema.json",
+  "$id": "https://spikeforge.dev/protocol/1.0/server_message.schema.json",
   "title": "ServerMessage",
   "type": "object",
   "required": ["protocol_version", "type"],

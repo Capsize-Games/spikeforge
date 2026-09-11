@@ -6,25 +6,25 @@ from typing import Any, Dict, List, Tuple
 import pytest
 import torch
 
-from snn_interpreter.nir_bridge import array_codec
-from snn_interpreter.nir_bridge.errors import (
+from spikeforge.nir_bridge import array_codec
+from spikeforge.nir_bridge.errors import (
     GraphNotFoundError,
     MalformedGraphError,
     UnknownNodeKindError,
 )
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.nir_bridge.interpreter import NirInterpreter
-from snn_interpreter.nir_bridge.ops_registry import SUPPORTED_KINDS
-from snn_interpreter.nir_bridge.serialization import (
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.nir_bridge.interpreter import NirInterpreter
+from spikeforge.nir_bridge.ops_registry import SUPPORTED_KINDS
+from spikeforge.nir_bridge.serialization import (
     FORMAT_NAME,
     FORMAT_VERSION,
     load_graph,
     save_graph,
 )
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.spec import TopologySpec
-from snn_targets.primitives import EMITTED_PRIMITIVES
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.spec import TopologySpec
+from spikeforge_targets.primitives import EMITTED_PRIMITIVES
 
 pytest.importorskip("nir")
 

@@ -5,8 +5,8 @@ from typing import Dict, List
 
 import pytest
 
-from snn_interpreter.data import event_loader
-from snn_interpreter.data.event_errors import EventsExtraMissingError
+from spikeforge.data import event_loader
+from spikeforge.data.event_errors import EventsExtraMissingError
 
 
 def _stream() -> Dict[str, List[int]]:

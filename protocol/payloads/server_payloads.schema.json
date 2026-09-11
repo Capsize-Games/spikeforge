@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/server_payloads.schema.json",
+  "$id": "https://spikeforge.dev/protocol/1.0/payloads/server_payloads.schema.json",
   "title": "ServerPayload",
   "description": "Free-form outbound payloads discriminated by the envelope's 'type'. The wire shape is additive-by-default (unknown keys are allowed at every level), so this container must accept any JSON value. The $defs name the shapes the server emits today and are documentation, not constraints: the envelopes carry 'payload: true'.",
   "$defs": {

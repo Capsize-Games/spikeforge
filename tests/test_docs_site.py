@@ -42,5 +42,5 @@ def test_link_checker_fails_on_a_broken_page_link(tmp_path: Path) -> None:
 def test_link_checker_ignores_source_references(tmp_path: Path) -> None:
     """Repository source references are not documentation page links."""
     page = tmp_path / "index.md"
-    page.write_text("[src](snn_interpreter/a.py:14)\n", encoding="utf-8")
+    page.write_text("[src](spikeforge/a.py:14)\n", encoding="utf-8")
     assert main(["check", str(tmp_path)]) == 0

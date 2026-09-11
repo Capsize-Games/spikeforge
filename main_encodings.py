@@ -4,23 +4,23 @@ Produces latency curve + rasters + animation, delta plots, and random
 spike visuals under build/.
 """
 
-from snn_interpreter.encoding.delta_trainer import DeltaTrainer
-from snn_interpreter.encoding.latency_trainer import LatencyTrainer
-from snn_interpreter.encoding.random_spikegen import RandomSpikeGenerator
-from snn_interpreter.exporters.delta_exporter import DeltaPlotExporter
-from snn_interpreter.exporters.latency_curve_exporter import (
+from spikeforge.encoding.delta_trainer import DeltaTrainer
+from spikeforge.encoding.latency_trainer import LatencyTrainer
+from spikeforge.encoding.random_spikegen import RandomSpikeGenerator
+from spikeforge.exporters.delta_exporter import DeltaPlotExporter
+from spikeforge.exporters.latency_curve_exporter import (
     LatencyCurveExporter,
 )
-from snn_interpreter.exporters.latency_raster_exporter import (
+from spikeforge.exporters.latency_raster_exporter import (
     LatencyRasterExporter,
 )
-from snn_interpreter.exporters.latency_video_exporter import (
+from spikeforge.exporters.latency_video_exporter import (
     LatencyVideoExporter,
 )
-from snn_interpreter.exporters.random_spike_raster_exporter import (
+from spikeforge.exporters.random_spike_raster_exporter import (
     RandomSpikeRasterExporter,
 )
-from snn_interpreter.exporters.random_spike_video_exporter import (
+from spikeforge.exporters.random_spike_video_exporter import (
     RandomSpikeVideoExporter,
 )
 

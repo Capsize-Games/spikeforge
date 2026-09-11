@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from snn_targets.energy import target_costs
-from snn_targets.energy.cost_table import REQUIRED_KEYS, CostTable
-from snn_targets.energy.errors import EnergyCostError
+from spikeforge_targets.energy import target_costs
+from spikeforge_targets.energy.cost_table import REQUIRED_KEYS, CostTable
+from spikeforge_targets.energy.errors import EnergyCostError
 
 
 def test_bundled_tables_load_and_are_declared() -> None:

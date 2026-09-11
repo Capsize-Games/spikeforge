@@ -6,8 +6,8 @@ from typing import Any, Dict, Optional
 import pytest
 import torch
 
-from snn_interpreter.cli import verify
-from snn_interpreter.network import model_store
+from spikeforge.cli import verify
+from spikeforge.network import model_store
 
 
 @pytest.fixture(autouse=True)

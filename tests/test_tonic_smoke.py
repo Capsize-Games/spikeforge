@@ -2,11 +2,11 @@
 
 import pytest
 
-from snn_interpreter.data import event_loader
-from snn_interpreter.events.event_bridge import EventSpikeBridge
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
+from spikeforge.data import event_loader
+from spikeforge.events.event_bridge import EventSpikeBridge
+from spikeforge.simulator.runner import run
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
 
 
 def test_tonic_sample_converts_and_drives_simulator() -> None:

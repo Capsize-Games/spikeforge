@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from snn_interpreter.benchmark.__main__ import main
-from snn_interpreter.benchmark.config import BenchmarkConfig, default_config
-from snn_interpreter.benchmark.harness import run_benchmark
+from spikeforge.benchmark.__main__ import main
+from spikeforge.benchmark.config import BenchmarkConfig, default_config
+from spikeforge.benchmark.harness import run_benchmark
 
 _FORWARD_KEYS = {
     "total_ms",

@@ -12,7 +12,7 @@ from server.messages import send_locked, send_model_diff, send_model_search
 from server.model_payloads import search_payload
 from server.schemas import ClientMessage
 from server.session import Session
-from snn_interpreter.network import model_diff
+from spikeforge.network import model_diff
 
 #: Number of names a metadata diff requires.
 DIFF_NAMES = 2

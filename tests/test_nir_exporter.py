@@ -6,15 +6,15 @@ from typing import Any, List, Set, Tuple
 import numpy as np
 import pytest
 
-from snn_interpreter.nir_bridge.exporter import graph_summary, to_nir
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.spec import (
+from spikeforge.nir_bridge.exporter import graph_summary, to_nir
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.spec import (
     TopologySpec,
     multi_branch,
     residual,
 )
-from snn_interpreter.topology.stage import Stage
+from spikeforge.topology.stage import Stage
 
 pytest.importorskip("nir")
 

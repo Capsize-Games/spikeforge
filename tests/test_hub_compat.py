@@ -8,10 +8,10 @@ import numpy as np
 import pytest
 import torch
 
-from snn_hub import compat
-from snn_hub.inspect import inspect_artifact
-from snn_interpreter.nir_bridge import save_graph, to_nir
-from snn_interpreter.topology.registry import build_topology
+from spikeforge.nir_bridge import save_graph, to_nir
+from spikeforge.topology.registry import build_topology
+from spikeforge_hub import compat
+from spikeforge_hub.inspect import inspect_artifact
 
 pytest.importorskip("nir")
 

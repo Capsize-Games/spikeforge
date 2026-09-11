@@ -6,12 +6,12 @@ from typing import Tuple
 import pytest
 import torch
 
-from snn_interpreter.cli import verify
-from snn_interpreter.nir_bridge import to_nir
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.spec import TopologySpec
-from snn_interpreter.topology.stage_module import StageModule
+from spikeforge.cli import verify
+from spikeforge.nir_bridge import to_nir
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.spec import TopologySpec
+from spikeforge.topology.stage_module import StageModule
 
 pytest.importorskip("nir")
 

@@ -7,7 +7,7 @@ from typing import Iterator
 
 import pytest
 
-from snn_interpreter.observability.logging_setup import (
+from spikeforge.observability.logging_setup import (
     LOGGER_NAME,
     configure_logging,
     logging_enabled,
@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(LOGGER_NAME)
 @pytest.fixture(autouse=True)
 def _clean_logging(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Clear the logging environment and always reset the logger."""
-    for name in ("SNN_LOG_JSON", "SNN_LOG_LEVEL"):
+    for name in ("SPIKEFORGE_LOG_JSON", "SPIKEFORGE_LOG_LEVEL"):
         monkeypatch.delenv(name, raising=False)
     reset_logging()
     yield
@@ -51,8 +51,8 @@ def test_json_mode_emits_parseable_lines_with_expected_keys() -> None:
 def test_json_mode_reads_the_environment_variable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``SNN_LOG_JSON`` alone enables JSON output."""
-    monkeypatch.setenv("SNN_LOG_JSON", "1")
+    """``SPIKEFORGE_LOG_JSON`` alone enables JSON output."""
+    monkeypatch.setenv("SPIKEFORGE_LOG_JSON", "1")
     assert logging_enabled() is True
     stream = io.StringIO()
     assert configure_logging(stream=stream) is not None
@@ -64,7 +64,7 @@ def test_json_disabled_stays_human_readable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """With only a level set the output stays human-readable text."""
-    monkeypatch.setenv("SNN_LOG_LEVEL", "INFO")
+    monkeypatch.setenv("SPIKEFORGE_LOG_LEVEL", "INFO")
     stream = io.StringIO()
     configure_logging(stream=stream)
     _LOGGER.info("hello world")

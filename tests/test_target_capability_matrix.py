@@ -4,14 +4,14 @@ import json
 
 import pytest
 
-from snn_interpreter.topology import presets
-from snn_targets import (
+from spikeforge.topology import presets
+from spikeforge_targets import (
     EMITTED_PRIMITIVES,
     capability_matrix,
     registry,
 )
-from snn_targets.node_view import node_kinds
-from snn_targets.target_spec import TargetSpec
+from spikeforge_targets.node_view import node_kinds
+from spikeforge_targets.target_spec import TargetSpec
 
 pytest.importorskip("nir")
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://snn-interpreter.dev/protocol/1.0/client_message.schema.json",
+  "$id": "https://spikeforge.dev/protocol/1.0/client_message.schema.json",
   "title": "ClientMessage",
   "description": "Inbound (browser to server) envelope. Additive-by-default: unknown fields are ignored.",
   "type": "object",

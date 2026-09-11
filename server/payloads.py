@@ -5,12 +5,12 @@ from typing import Any, Dict, Optional
 import torch
 
 from server.schemas import EncodeConfig
-from snn_interpreter.data.datasets import catalog
-from snn_interpreter.network import model_store
-from snn_interpreter.neurons.registry import neuron_kinds
-from snn_interpreter.nir_bridge import graph_summary, to_nir, validate
-from snn_interpreter.topology.registry import topology_names
-from snn_interpreter.topology.spec import TopologySpec
+from spikeforge.data.datasets import catalog
+from spikeforge.network import model_store
+from spikeforge.neurons.registry import neuron_kinds
+from spikeforge.nir_bridge import graph_summary, to_nir, validate
+from spikeforge.topology.registry import topology_names
+from spikeforge.topology.spec import TopologySpec
 
 
 def model_list_payload() -> Dict[str, Any]:

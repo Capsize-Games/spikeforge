@@ -1,4 +1,4 @@
-# SNN Interpreter — Left → Center → Right Integration Plan
+# Spikeforge — Left → Center → Right Integration Plan
 
 Design/spec only. **No production code is changed by this document.** Every recommendation below is grounded in the current source (file/line references included). A Code-mode agent should be able to execute this file-by-file without further interpretation.
 
@@ -31,19 +31,19 @@ The left-hand coding controls (`gain`, `tau`, `threshold`, `delta_threshold`, `c
 | Encoder factory | `EncoderEngine(config)` builds `SSNTrainer` / `LatencyTrainer` / `DeltaTrainer` / `RandomSpikeGenerator` | [`server/encoder.py`](server/encoder.py:18), [`_build_trainer()`](server/encoder.py:120) |
 | Encoder dataset | Hard-coded MNIST via `trainer.SSNTrainer`; `EncodeConfig.dataset` ignored | [`server/encoder.py`](server/encoder.py:130) |
 | Encoder sample | `sample_image()` uses `sample_index`; spikes/raster always use batch index `0` | [`EncoderEngine.spike_frame()`](server/encoder.py:47), [`_spike_sample_matrix()`](server/encoder.py:108) |
-| Delta source | Hard-coded `[0,1,0,2,8,-20,20,-5,0,1,0]` | [`delta_trainer.py`](snn_interpreter/delta_trainer.py:19) |
-| Random source | Pure noise, `(num_steps, 28, 28)` | [`random_spikegen.py`](snn_interpreter/random_spikegen.py:22) |
-| Trainer input | Raw normalized pixels, re-applied every step | [`SpikingNet.forward()`](snn_interpreter/spiking_net.py:23), [`_train_batch()`](snn_interpreter/training_engine.py:120) |
-| Training dataset | Registry via `build_loader` → `build_dataset` | [`build_loader()`](snn_interpreter/training_engine.py:16), [`datasets.build_dataset()`](snn_interpreter/datasets.py:52) |
-| Training sample | Shuffled loader; unrelated to encoder sample | [`TrainingEngine.train()`](snn_interpreter/training_engine.py:100) |
-| Inference | Held-out batch of 32, not the displayed sample | [`predict_sample()`](snn_interpreter/training_engine.py:138) |
-| Checkpoint meta | `dataset, hidden, beta, lr, num_steps, num_classes` (no input mode) | [`TrainingEngine.save()`](snn_interpreter/training_engine.py:60) |
+| Delta source | Hard-coded `[0,1,0,2,8,-20,20,-5,0,1,0]` | [`delta_trainer.py`](spikeforge/delta_trainer.py:19) |
+| Random source | Pure noise, `(num_steps, 28, 28)` | [`random_spikegen.py`](spikeforge/random_spikegen.py:22) |
+| Trainer input | Raw normalized pixels, re-applied every step | [`SpikingNet.forward()`](spikeforge/spiking_net.py:23), [`_train_batch()`](spikeforge/training_engine.py:120) |
+| Training dataset | Registry via `build_loader` → `build_dataset` | [`build_loader()`](spikeforge/training_engine.py:16), [`datasets.build_dataset()`](spikeforge/datasets.py:52) |
+| Training sample | Shuffled loader; unrelated to encoder sample | [`TrainingEngine.train()`](spikeforge/training_engine.py:100) |
+| Inference | Held-out batch of 32, not the displayed sample | [`predict_sample()`](spikeforge/training_engine.py:138) |
+| Checkpoint meta | `dataset, hidden, beta, lr, num_steps, num_classes` (no input mode) | [`TrainingEngine.save()`](spikeforge/training_engine.py:60) |
 | Protocol | JSON WS; `ClientMessage`/`ServerMessage` unions | [`schemas.py`](server/schemas.py:46), [`types.ts`](client/src/types.ts:127) |
 | Stream | `spike_frame` per step, no `source` field | [`messages.emit_frame()`](server/messages.py:75) |
 | Style limits | Python files < 200 lines, functions < 20 lines, one class per file | convention |
 
 ### Exporter compatibility surface (must not break)
-`*_exporter.py` read these trainer attributes/properties: `spike_data`, `spike_data_low_gain`, `spike_targets`, `input_data`, `rate_coded_vector`, `subset_size`, `data_size`, `num_steps`, `interval`, `gain` ([`SSNTrainer`](snn_interpreter/trainer.py:106)); `latency_data`, `latency_targets`, `latency_input`, `tau`, `threshold`, `latency_steps` ([`LatencyTrainer`](snn_interpreter/latency_trainer.py:66)); `data`, `spike_data`, `spike_data_off`, `threshold`, `off_spike` ([`DeltaTrainer`](snn_interpreter/delta_trainer.py:34)); `spike_rand`, `num_steps`, `size`, `scale` ([`RandomSpikeGenerator`](snn_interpreter/random_spikegen.py:28)).
+`*_exporter.py` read these trainer attributes/properties: `spike_data`, `spike_data_low_gain`, `spike_targets`, `input_data`, `rate_coded_vector`, `subset_size`, `data_size`, `num_steps`, `interval`, `gain` ([`SSNTrainer`](spikeforge/trainer.py:106)); `latency_data`, `latency_targets`, `latency_input`, `tau`, `threshold`, `latency_steps` ([`LatencyTrainer`](spikeforge/latency_trainer.py:66)); `data`, `spike_data`, `spike_data_off`, `threshold`, `off_spike` ([`DeltaTrainer`](spikeforge/delta_trainer.py:34)); `spike_rand`, `num_steps`, `size`, `scale` ([`RandomSpikeGenerator`](spikeforge/random_spikegen.py:28)).
 
 **Invariant:** the four trainer classes keep their constructor defaults, positional compatibility (`main_encodings.py` calls `LatencyTrainer(animation_interval=100)`, `DeltaTrainer()`, `RandomSpikeGenerator(num_steps=100)`), and full property surface. The server stops *using* them, but they remain importable and unchanged in behavior.
 
@@ -73,7 +73,7 @@ Core idea: **`SpikeEncoder` is the single source of truth for encoding math.** B
 ## 4. Design decisions and invariants
 
 1. **One encoding function, two consumers.** `SpikeEncoder.encode_image()` feeds the viewer; `SpikeEncoder.encode()` feeds training batches. Same code path ⇒ identical normalization.
-2. **One transform.** All datasets go through [`datasets.transform()`](snn_interpreter/datasets.py:31) via [`build_dataset()`](snn_interpreter/datasets.py:52). `SampleSource` and `build_loader` both use it; no per-class transforms.
+2. **One transform.** All datasets go through [`datasets.transform()`](spikeforge/datasets.py:31) via [`build_dataset()`](spikeforge/datasets.py:52). `SampleSource` and `build_loader` both use it; no per-class transforms.
 3. **One selected dataset + sample.** `EncodeConfig.dataset` and `EncodeConfig.sample_index` are authoritative. Training consumes the same `dataset` (the trainer learns on all samples; the *displayed* sample is what inference scores).
 4. **Spikes into the network.** The model consumes `(time, batch, features)` spike tensors. Legacy raw-pixel behavior is preserved through a delegation shim so old checkpoints and `main.py` keep working.
 5. **`num_steps` flows from the encoder.** For spike input, `T = encode.num_steps = spikes.shape[0]`; `TrainConfig.num_steps` is retained only for legacy raw mode.
@@ -86,7 +86,7 @@ Core idea: **`SpikeEncoder` is the single source of truth for encoding math.** B
 
 ### 5.1 Shared data layer (dataset + sample index)
 
-**New module `snn_interpreter/sample_source.py`** — one class per file:
+**New module `spikeforge/sample_source.py`** — one class per file:
 
 ```python
 class SampleSource:
@@ -131,7 +131,7 @@ The existing method names consumed by [`server/messages.py`](server/messages.py:
 
 ### 5.2 Spike-encoded inputs into the network
 
-**New module `snn_interpreter/spike_encoder.py`** — one class per file:
+**New module `spikeforge/spike_encoder.py`** — one class per file:
 
 ```python
 class SpikeEncoder:
@@ -154,7 +154,7 @@ class SpikeEncoder:
 
 All encoders return **`[T, B, 784]`** float tensors (`[T,B,1,28,28]` reshaped). `num_steps` is the encoder's `num_steps`.
 
-**`SpikingNet` change** — [`snn_interpreter/spiking_net.py`](snn_interpreter/spiking_net.py:23). Add a spike path and keep the raw path as a delegation shim (no callers break):
+**`SpikingNet` change** — [`spikeforge/spiking_net.py`](spikeforge/spiking_net.py:23). Add a spike path and keep the raw path as a delegation shim (no callers break):
 
 ```python
 def forward(self, x, num_steps):
@@ -184,7 +184,7 @@ def _pack(self, out_sum, steps, hidden, output, track): ...
 - `track=True` returns `{"logits":..., "hidden":[T], "output":[T], "steps":T}`.
 - `forward(x, num_steps)` reproduces the old static-pixel semantics exactly, so legacy raw checkpoints still infer correctly.
 
-**`TrainingEngine` change** — [`snn_interpreter/training_engine.py`](snn_interpreter/training_engine.py:24):
+**`TrainingEngine` change** — [`spikeforge/training_engine.py`](spikeforge/training_engine.py:24):
 
 ```python
 def __init__(self, ..., num_steps=10, subset=10, batch_size=64,
@@ -209,11 +209,11 @@ def predict(self, inputs):
 
 - `_input_mode` resolution order: explicit `input_mode` arg → checkpoint `meta["input_mode"]` → `"raw"` (legacy) → otherwise `encode.coding` for new trainings.
 - `num_steps` provenance: for spike mode, `T` comes from `self._encoder.num_steps` (i.e. `EncodeConfig.num_steps`); for `"raw"` mode, from `self._num_steps` (checkpoint meta / `TrainConfig.num_steps`).
-- Move [`build_loader()`](snn_interpreter/training_engine.py:16) into a new **`snn_interpreter/data_loader.py`** so `training_engine.py` stays under 200 lines.
+- Move [`build_loader()`](spikeforge/training_engine.py:16) into a new **`spikeforge/data_loader.py`** so `training_engine.py` stays under 200 lines.
 
 ### 5.3 Inference on the displayed sample
 
-**New module `snn_interpreter/inference.py`** (functions, kept small):
+**New module `spikeforge/inference.py`** (functions, kept small):
 
 ```python
 def infer_spikes(net, spikes, num_classes, true_label=None, coding="rate") -> dict:
@@ -287,7 +287,7 @@ Frontend holds three raster slots; `ViewerPanels` renders “Input spikes”, �
 
 ### 5.5 Checkpoint / config coupling and back-compat
 
-**`TrainingEngine.save()` meta** ([`training_engine.py`](snn_interpreter/training_engine.py:60)) gains:
+**`TrainingEngine.save()` meta** ([`training_engine.py`](spikeforge/training_engine.py:60)) gains:
 
 ```python
 meta = {
@@ -300,7 +300,7 @@ meta = {
 
 **Back-compat / migration:**
 - Existing `.pt` files have no `input_mode` ⇒ `_restore` sets `self._input_mode = "raw"` and `TrainingEngine._encode_batch` repeats normalized pixels across `num_steps` (old behavior).
-- `model_store._describe()` ([`model_store.py`](snn_interpreter/model_store.py:60)) is extended to copy `meta.get("input_mode", "raw")` and `meta.get("coding", "raw")` into the summary so the list can label each checkpoint (“trained on raw pixels”, “trained on rate coding”).
+- `model_store._describe()` ([`model_store.py`](spikeforge/model_store.py:60)) is extended to copy `meta.get("input_mode", "raw")` and `meta.get("coding", "raw")` into the summary so the list can label each checkpoint (“trained on raw pixels”, “trained on rate coding”).
 - `model_loaded` payload adds `input_mode`, `coding`, `hidden`, `beta`, `num_steps`, `meta`, and a `compatibility` object:
 ```jsonc
 "compatibility": { "dataset_match": true, "coding_match": false,
@@ -400,19 +400,19 @@ No changes to `ClientMessage` TS — outbound payloads are plain objects in [`us
 ### New files
 | File | Contents |
 |---|---|
-| `snn_interpreter/sample_source.py` | `class SampleSource` — dataset-backed `image/label/clamp/len/size/dataset`; uses `build_dataset` + `transform`. |
-| `snn_interpreter/spike_encoder.py` | `class SpikeEncoder` — `from_encode_config`, `encode`, `encode_image`, `_rate`, `_latency`, `_delta`, `_random`; returns `[T,B,784]`. |
-| `snn_interpreter/data_loader.py` | `build_loader(dataset, subset, batch_size, train)` (moved out of `training_engine.py`). |
-| `snn_interpreter/inference.py` | `infer_spikes(net, spikes, num_classes, true_label, coding)`, `layer_raster(frames, max_neurons)`, `_class_totals`, `_over_time`. |
+| `spikeforge/sample_source.py` | `class SampleSource` — dataset-backed `image/label/clamp/len/size/dataset`; uses `build_dataset` + `transform`. |
+| `spikeforge/spike_encoder.py` | `class SpikeEncoder` — `from_encode_config`, `encode`, `encode_image`, `_rate`, `_latency`, `_delta`, `_random`; returns `[T,B,784]`. |
+| `spikeforge/data_loader.py` | `build_loader(dataset, subset, batch_size, train)` (moved out of `training_engine.py`). |
+| `spikeforge/inference.py` | `infer_spikes(net, spikes, num_classes, true_label, coding)`, `layer_raster(frames, max_neurons)`, `_class_totals`, `_over_time`. |
 | `client/src/components/ClassSpikeBars.tsx` | Per-class output-spike bar visualization. |
 
 ### Modified files
 | File | Changes |
 |---|---|
-| `snn_interpreter/spiking_net.py` | Add `forward_spikes`, `_step`, `_pack`; rewrite `forward` to delegate (repeat frames). Keep properties. |
-| `snn_interpreter/training_engine.py` | Add `encode`/`input_mode`; `_encode_batch`; use `forward_spikes` in `_train_batch`/`predict`; add `infer`, `num_classes`, `input_mode`, `coding`; extend `save` meta; `_restore` reads `input_mode`; import `build_loader` from new module. |
-| `snn_interpreter/model_store.py` | `_describe` copies `input_mode`/`coding` from meta. |
-| `snn_interpreter/trainer.py` | Optional: add `dataset="mnist"` kwarg routed through `build_dataset` (keeps parity for tutorials/exporters). Defaults unchanged. |
+| `spikeforge/spiking_net.py` | Add `forward_spikes`, `_step`, `_pack`; rewrite `forward` to delegate (repeat frames). Keep properties. |
+| `spikeforge/training_engine.py` | Add `encode`/`input_mode`; `_encode_batch`; use `forward_spikes` in `_train_batch`/`predict`; add `infer`, `num_classes`, `input_mode`, `coding`; extend `save` meta; `_restore` reads `input_mode`; import `build_loader` from new module. |
+| `spikeforge/model_store.py` | `_describe` copies `input_mode`/`coding` from meta. |
+| `spikeforge/trainer.py` | Optional: add `dataset="mnist"` kwarg routed through `build_dataset` (keeps parity for tutorials/exporters). Defaults unchanged. |
 | `server/encoder.py` | Rewrite `EncoderEngine` on `SampleSource` + `SpikeEncoder`; drop trainer imports; add `sample_index`, `sample_label`, `spike_input`; keep existing method names/signatures. |
 | `server/schemas.py` | Per Section 5.7. |
 | `server/messages.py` | `emit_frame(..., source)`, `send_inference`, `send_activity`, `send_status` fields. |

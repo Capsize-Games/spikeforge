@@ -4,8 +4,8 @@ from typing import Any, Dict
 
 import torch
 
-from snn_interpreter.topology import registry
-from snn_interpreter.tracking.seed import set_seed
+from spikeforge.topology import registry
+from spikeforge.tracking.seed import set_seed
 
 
 def _weights(seed: int) -> Dict[str, Any]:

@@ -10,8 +10,8 @@ import torch
 from server.handlers import dispatch
 from server.schemas import ClientMessage, TrainConfig
 from server.session import Session
-from snn_interpreter.topology import registry
-from snn_targets.registry import target_names
+from spikeforge.topology import registry
+from spikeforge_targets.registry import target_names
 
 pytest.importorskip("nir")
 

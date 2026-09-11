@@ -7,13 +7,13 @@ from typing import Any, Optional, Tuple
 import pytest
 import torch
 
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.spec import chain
-from snn_interpreter.topology.stage import Stage
-from snn_targets.backends import compile_run
-from snn_targets.backends.norse_backend import NorseBackend
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.spec import chain
+from spikeforge.topology.stage import Stage
+from spikeforge_targets.backends import compile_run
+from spikeforge_targets.backends.norse_backend import NorseBackend
 
 pytest.importorskip("nir")
 

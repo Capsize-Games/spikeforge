@@ -2,7 +2,7 @@
 
 import pytest
 
-from snn_targets.energy import (
+from spikeforge_targets.energy import (
     BASIS_MEASURED,
     BASIS_TABLE,
     BASIS_UNAVAILABLE,

@@ -14,14 +14,14 @@ from typing import Any, Dict, List
 import torch
 
 from server.schemas import TrainConfig
-from snn_interpreter.benchmark import BenchmarkConfig, default_config
-from snn_interpreter.benchmark.harness import run_benchmark
-from snn_interpreter.introspection.metrics import trajectory_metrics
-from snn_interpreter.runtime.execution_mode import ExecutionMode
-from snn_interpreter.simulator import input_shape
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.simulator.trajectory import Trajectory
-from snn_interpreter.topology.spec import TopologySpec
+from spikeforge.benchmark import BenchmarkConfig, default_config
+from spikeforge.benchmark.harness import run_benchmark
+from spikeforge.introspection.metrics import trajectory_metrics
+from spikeforge.runtime.execution_mode import ExecutionMode
+from spikeforge.simulator import input_shape
+from spikeforge.simulator.runner import run
+from spikeforge.simulator.trajectory import Trajectory
+from spikeforge.topology.spec import TopologySpec
 
 #: At most this many neuron stages appear in a trajectory payload.
 MAX_STAGES = 8

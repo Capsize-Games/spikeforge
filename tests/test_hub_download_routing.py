@@ -8,9 +8,9 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from snn_hub import download_cli, downloads, hf_api, verify
-from snn_hub.entry import HubEntry
-from snn_hub.errors import (
+from spikeforge_hub import download_cli, downloads, hf_api, verify
+from spikeforge_hub.entry import HubEntry
+from spikeforge_hub.errors import (
     HubDownloadCancelledError,
     HubDownloadError,
     HubExtraMissingError,

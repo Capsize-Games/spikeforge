@@ -1,6 +1,6 @@
-# Contributing to snn-interpreter
+# Contributing to spikeforge
 
-Thanks for your interest in improving `snn-interpreter`. This document explains
+Thanks for your interest in improving `spikeforge`. This document explains
 how to set up the project, the conventions a change must follow, and the gates
 it must pass before it can be merged.
 
@@ -29,8 +29,8 @@ Or, by hand:
 
 ```bash
 python -m venv venv
-venv/bin/pip install -e "./packages/snn-interpreter[dev]"
-venv/bin/pip install -e ./packages/snn-interpreter-server
+venv/bin/pip install -e "./packages/spikeforge[dev]"
+venv/bin/pip install -e ./packages/spikeforge-server
 (cd client && npm install)
 ```
 

@@ -14,9 +14,9 @@ reconstructions are explicitly approximate and documented in the report's
 ``approximation`` field.
 """
 
-from snn_interpreter.data.sample_source import SampleSource
-from snn_interpreter.encoding.spike_encoder import SpikeEncoder
-from snn_interpreter.introspection.encoding import encoding_report
+from spikeforge.data.sample_source import SampleSource
+from spikeforge.encoding.spike_encoder import SpikeEncoder
+from spikeforge.introspection.encoding import encoding_report
 
 #: Codings the shared encoder supports, in report order.
 CODINGS = ("rate", "latency", "delta", "random")

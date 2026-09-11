@@ -5,13 +5,13 @@ from typing import Any, Dict, List
 import pytest
 import torch
 
-from snn_interpreter.introspection.surrogate import list_surrogates
-from snn_interpreter.network.spiking_net import SpikingNet
-from snn_interpreter.neurons.registry import NEURONS
-from snn_interpreter.nir_bridge import to_nir
-from snn_interpreter.nir_bridge.errors import UnsupportedStageError
-from snn_interpreter.topology import registry
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.introspection.surrogate import list_surrogates
+from spikeforge.network.spiking_net import SpikingNet
+from spikeforge.neurons.registry import NEURONS
+from spikeforge.nir_bridge import to_nir
+from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.topology import registry
+from spikeforge.training.training_engine import TrainingEngine
 
 _SMALL: Dict[str, Any] = {"hidden": 4, "beta": 0.9, "num_classes": 3}
 _LEGACY_KEYS = {"_fc1.weight", "_fc1.bias", "_fc2.weight", "_fc2.bias"}

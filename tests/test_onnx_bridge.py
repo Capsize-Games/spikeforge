@@ -2,7 +2,7 @@
 
 Real export/import runs when the optional ``onnx`` extra is present; the
 absent path hides ``onnx`` so the typed named error is covered without it, and
-the orchestration tests stub :mod:`snn_interpreter.onnx_bridge.api` so the
+the orchestration tests stub :mod:`spikeforge.onnx_bridge.api` so the
 present path is exercised even when the extra is missing. An unmappable op is
 always refused by name rather than silently dropped.
 """
@@ -16,19 +16,19 @@ from typing import Any, Dict
 import pytest
 import torch
 
-from snn_interpreter.cli import verify
-from snn_interpreter.onnx_bridge import (
+from spikeforge.cli import verify
+from spikeforge.onnx_bridge import (
     api,
     export,
     import_onnx,
     metadata,
     roundtrip,
 )
-from snn_interpreter.onnx_bridge.errors import (
+from spikeforge.onnx_bridge.errors import (
     OnnxExtraMissingError,
     UnsupportedOnnxOpError,
 )
-from snn_interpreter.topology.registry import build_topology
+from spikeforge.topology.registry import build_topology
 
 # --- metadata round-trip (no onnx needed) ---------------------------------
 

@@ -2,7 +2,7 @@
 
 **Status: accepted (proposed for maintainer sign-off).**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
-**Owner:** w4ffl35 (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
+**Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
 
 ## Decision
 
@@ -19,11 +19,11 @@ from `git log`, GitHub releases, and CI timings, and prints one table per
 release cycle. Definitions:
 
 - **Release** = a pushed `*-v*` tag from the release workflow.
-- **Unplanned core release** = a `snn-interpreter` tag whose changelog names only
+- **Unplanned core release** = a `spikeforge` tag whose changelog names only
   a backend-SDK or other satellite-owned cause.
 - **Isolated change set** = a merged PR whose changed paths fall entirely inside
-  one component's prefix (`client/`, or `snn_interpreter/{targets,energy,event_runtime}/`,
-  or `snn_interpreter/hub/`, or `server/`).
+  one component's prefix (`client/`, or `spikeforge/{targets,energy,event_runtime}/`,
+  or `spikeforge/hub/`, or `server/`).
 - **Rolling window** = the trailing 90 days.
 - **CI wall-clock share** = component build/step time divided by total pipeline
   time, from the workflow run timing API.
@@ -36,14 +36,14 @@ re-baselined after every phase that fires.
 | Trigger | Phase | Condition — fires if **all** clauses in a block hold | Rationale |
 |---|---|---|---|
 | **T1 — dashboard** | Phase 2 | (a) ≥ 4 isolated `client/`-only changes in the rolling window could not ship without a core release, **or** (b) client build time ≥ 10 minutes **or** ≥ 40% of pipeline wall-clock for 2 consecutive weeks, **or** (c) ≥ 3 PRs in the rolling window were blocked waiting on Python-side review. Any single clause fires. | The dashboard is already an isolated npm package; independence pays off only when client-only work is throttled by the library cadence. |
-| **T2 — `snn-targets`** | Phase 3 | (a) ≥ 2 unplanned **core** releases per quarter are caused solely by `norse` or `lava-nc` version churn, **or** (b) a single backend SDK forces ≥ 2 core releases within 30 days, **or** (c) ≥ 6 isolated `targets`/`energy`/`event_runtime` change sets per quarter require a core release. Any single clause fires. | The volatile external backend SDKs are the strongest technical reason to decouple; their churn should not gate the library. |
-| **T3 — `snn-hub`** | Phase 4 (go) | (a) hub-only release demand ≥ 2 in the rolling window, **and** (b) the catalog `schema_version` is unchanged across ≥ 2 consecutive releases, **and** (c) isolated `hub/` change sets are ≥ 15% of core-only commits over a quarter. All clauses must hold. | The hub owns network I/O and curated-catalog versioning; the catalog must be stable before it can own its own cadence. |
-| **T4 — `snn-server`** | Phase 4 (conditional) | (a) server-only release demand ≥ 3 in the rolling window, **and** (b) ≥ 2 core pin conflicts or downgrades within the window, **and** (c) isolated `server/` change sets are ≥ 20% of core commits over a quarter. All clauses must hold. | The server already has its own distribution after Phase 1; a repository is warranted only when it must release faster than core. |
+| **T2 — `spikeforge-targets`** | Phase 3 | (a) ≥ 2 unplanned **core** releases per quarter are caused solely by `norse` or `lava-nc` version churn, **or** (b) a single backend SDK forces ≥ 2 core releases within 30 days, **or** (c) ≥ 6 isolated `targets`/`energy`/`event_runtime` change sets per quarter require a core release. Any single clause fires. | The volatile external backend SDKs are the strongest technical reason to decouple; their churn should not gate the library. |
+| **T3 — `spikeforge-hub`** | Phase 4 (go) | (a) hub-only release demand ≥ 2 in the rolling window, **and** (b) the catalog `schema_version` is unchanged across ≥ 2 consecutive releases, **and** (c) isolated `hub/` change sets are ≥ 15% of core-only commits over a quarter. All clauses must hold. | The hub owns network I/O and curated-catalog versioning; the catalog must be stable before it can own its own cadence. |
+| **T4 — `spikeforge-server`** | Phase 4 (conditional) | (a) server-only release demand ≥ 3 in the rolling window, **and** (b) ≥ 2 core pin conflicts or downgrades within the window, **and** (c) isolated `server/` change sets are ≥ 20% of core commits over a quarter. All clauses must hold. | The server already has its own distribution after Phase 1; a repository is warranted only when it must release faster than core. |
 
 ## Ordering and conflict rules
 
-- **Fixed extraction order:** dashboard, then `snn-targets`, then `snn-hub`, then
-  `snn-server`. If two triggers fire in the same review, only the earliest in
+- **Fixed extraction order:** dashboard, then `spikeforge-targets`, then `spikeforge-hub`, then
+  `spikeforge-server`. If two triggers fire in the same review, only the earliest in
   this order proceeds; the other is re-evaluated next cycle.
 - **One extraction per release cycle.** A cycle is a core minor release. This
   bounds coordination cost (SR-2 in

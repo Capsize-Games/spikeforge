@@ -4,8 +4,8 @@ from fastapi import WebSocket
 
 from server.messages import send_locked
 from server.session import Session
-from snn_interpreter.observability import metrics, persistence
-from snn_interpreter.runtime.system_stats import snapshot
+from spikeforge.observability import metrics, persistence
+from spikeforge.runtime.system_stats import snapshot
 
 
 async def handle_stats(ws: WebSocket, session: Session) -> None:

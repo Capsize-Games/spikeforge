@@ -5,9 +5,9 @@ from typing import Iterator
 
 import pytest
 
-from snn_interpreter.observability import metrics
-from snn_interpreter.observability.registry import MetricsRegistry
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.observability import metrics
+from spikeforge.observability.registry import MetricsRegistry
+from spikeforge.training.training_engine import TrainingEngine
 
 
 @pytest.fixture(autouse=True)

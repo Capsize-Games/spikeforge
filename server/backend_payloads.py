@@ -10,10 +10,10 @@ from typing import Any, Dict, Optional
 
 import torch
 
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.topology.spec import TopologySpec
-from snn_targets.backends import STATUS_ERROR, compile_run
-from snn_targets.backends.result import BackendResult
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.topology.spec import TopologySpec
+from spikeforge_targets.backends import STATUS_ERROR, compile_run
+from spikeforge_targets.backends.result import BackendResult
 
 #: Reason reported when no shaped sample is available to run.
 NO_SAMPLE = "no sample is loaded; select a sample before running a backend"

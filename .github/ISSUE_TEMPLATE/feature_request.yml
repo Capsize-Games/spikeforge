@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a capability or improvement for snn-interpreter
+description: Suggest a capability or improvement for spikeforge
 title: "[Feature]: "
 labels: ["enhancement", "needs-triage"]
 body:

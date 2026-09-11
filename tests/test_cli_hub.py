@@ -1,4 +1,4 @@
-"""The ``snn-hub`` CLI subcommands."""
+"""The ``spikeforge-hub`` CLI subcommands."""
 
 import json
 from pathlib import Path
@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from snn_hub import cache, cli
-from snn_interpreter.network import model_store
+from spikeforge.network import model_store
+from spikeforge_hub import cache, cli
 
 pytest.importorskip("nir")
 

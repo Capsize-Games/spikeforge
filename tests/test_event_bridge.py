@@ -4,13 +4,13 @@ import json
 
 import pytest
 
-from snn_interpreter.events.event_bridge import EventSpikeBridge
-from snn_interpreter.events.event_sample import EventSample
-from snn_interpreter.events.synthetic import moving_dot
-from snn_interpreter.nir_bridge.validator import validate
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
+from spikeforge.events.event_bridge import EventSpikeBridge
+from spikeforge.events.event_sample import EventSample
+from spikeforge.events.synthetic import moving_dot
+from spikeforge.nir_bridge.validator import validate
+from spikeforge.simulator.runner import run
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
 
 
 def _sample() -> EventSample:

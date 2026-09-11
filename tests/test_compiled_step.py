@@ -6,8 +6,8 @@ from typing import Any, Callable
 import pytest
 import torch
 
-from snn_interpreter.runtime.execution_mode import ExecutionMode
-from snn_interpreter.simulator.compiled_step import (
+from spikeforge.runtime.execution_mode import ExecutionMode
+from spikeforge.simulator.compiled_step import (
     STATUS_COMPILED,
     STATUS_EAGER,
     STATUS_FALLBACK,
@@ -15,11 +15,11 @@ from snn_interpreter.simulator.compiled_step import (
     CompiledStep,
     compiled_step_available,
 )
-from snn_interpreter.simulator.production import run_production
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.stage_module import StageModule
+from spikeforge.simulator.production import run_production
+from spikeforge.simulator.runner import run
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.stage_module import StageModule
 
 
 def _module() -> StageModule:

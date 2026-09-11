@@ -13,7 +13,7 @@ from fastapi import WebSocket
 
 from server.messages import send_locked
 from server.session import Session
-from snn_interpreter.network.hidden_frames import hidden_frame_series
+from spikeforge.network.hidden_frames import hidden_frame_series
 
 #: Named reasons the hidden animation cannot run.
 NO_MODEL = "no model loaded; train or load one"

@@ -19,8 +19,8 @@ from server.introspection_payloads import (
 from server.messages import send_introspection, send_locked
 from server.schemas import ClientMessage, TrainConfig
 from server.session import Session
-from snn_interpreter.introspection.encoding import encoding_report
-from snn_interpreter.introspection.surrogate import (
+from spikeforge.introspection.encoding import encoding_report
+from spikeforge.introspection.surrogate import (
     list_surrogates,
     surrogate_curve,
 )

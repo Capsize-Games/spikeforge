@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Developer utility for the snn-interpreter project.
+# Developer utility for the spikeforge project.
 #
 # One entry point for the tasks an engineer or AI agent reaches for most:
 # environment setup, linting/tests, running the servers, inspecting and
@@ -13,8 +13,8 @@ cd "$ROOT"
 
 CLIENT="$ROOT/client"
 VENV="$ROOT/venv"
-DATA_DIR="${SNN_DATA_DIR:-$ROOT/build}"
-SERVICE="snn-interpreter"
+DATA_DIR="${SPIKEFORGE_DATA_DIR:-$ROOT/build}"
+SERVICE="spikeforge"
 DATASETS=(
   MNIST FashionMNIST KMNIST QMNIST USPS EMNIST cifar-10-batches-py mnist
 )
@@ -53,8 +53,8 @@ require_client_deps() {
 
 cmd_setup() {
   info "Installing the core dev extra and the server distribution"
-  py -m pip install -e "./packages/snn-interpreter[dev]"
-  py -m pip install -e ./packages/snn-interpreter-server
+  py -m pip install -e "./packages/spikeforge[dev]"
+  py -m pip install -e ./packages/spikeforge-server
   info "Installing client dependencies"
   (cd "$CLIENT" && npm install)
 }
@@ -63,14 +63,14 @@ cmd_setup() {
 
 cmd_bench() {
   info "Benchmark suite"
-  py -m snn_interpreter.benchmark "$@"
+  py -m spikeforge.benchmark "$@"
 }
 
 # --- python quality ----------------------------------------------------------
 
 cmd_lint() {
   info "ruff check"
-  venv_tool ruff check snn_interpreter server main.py main_encodings.py tests
+  venv_tool ruff check spikeforge server main.py main_encodings.py tests
 }
 
 cmd_test() {
@@ -182,7 +182,7 @@ cmd_docker_data_clear() {
 }
 
 cmd_docker_reset() {
-  warn "This deletes the snn-data volume (datasets AND saved models)"
+  warn "This deletes the spikeforge-data volume (datasets AND saved models)"
   docker_compose down -v
   docker_compose up --build
 }
@@ -207,13 +207,13 @@ Quality
   lint                      ruff check the Python package and server
   test [pytest args]        run the test suite
   check                     lint + test + client type-check + client build
-  bench [args]              run the benchmark suite (snn-benchmark)
+  bench [args]              run the benchmark suite (spikeforge-benchmark)
                             e.g. bench --topology fc_small --steps 8
                             add --save then --list to record/compare runs
 
 Observability (environment variables, opt-in)
-  SNN_LOG_JSON=1            emit structured JSON log lines
-  SNN_LOG_LEVEL=DEBUG       set the log level
+  SPIKEFORGE_LOG_JSON=1            emit structured JSON log lines
+  SPIKEFORGE_LOG_LEVEL=DEBUG       set the log level
 
 Servers
   server [args]             run the FastAPI server (:8877)

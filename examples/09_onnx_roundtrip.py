@@ -12,14 +12,15 @@ Run from the repository root::
 The exported file is **not** a complete temporal SNN: the time loop stays in
 the simulator, so another runtime will not reproduce multi-timestep
 dynamics. Requires the ``onnx`` extra; without it the script degrades to a
-clear message. The equivalent shell commands are ``snn-verify onnx-export``,
-``snn-verify onnx-import``, and ``snn-verify onnx-roundtrip``.
+clear message. The equivalent shell commands are ``spikeforge-verify
+onnx-export``, ``spikeforge-verify onnx-import``, and
+``spikeforge-verify onnx-roundtrip``.
 """
 
 import tempfile
 from pathlib import Path
 
-from snn_interpreter.onnx_bridge import (
+from spikeforge.onnx_bridge import (
     available,
     export_topology,
     import_report,

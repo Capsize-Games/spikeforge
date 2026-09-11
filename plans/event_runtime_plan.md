@@ -1,4 +1,4 @@
-# SNN Interpreter — WS-D: Event-Driven Sparse Runtime and Energy Accounting
+# Spikeforge — WS-D: Event-Driven Sparse Runtime and Energy Accounting
 
 > Focused design for workstream **D** of the
 > [`professional_roadmap.md`](plans/professional_roadmap.md). Read the roadmap
@@ -25,25 +25,25 @@ timing. Every `EnergyReport` carries an explicit `estimate: true` field and a
 
 | Capability | Current reality | Anchor |
 |---|---|---|
-| Execution loop | One dense temporal loop | [`execution.py`](snn_interpreter/simulator/execution.py:122) |
-| Runner entry | `run(...)` with modes | [`runner.py`](snn_interpreter/simulator/runner.py:22) |
-| Trajectory capture | `S[t]`/`U[t]`/`I[t]` | [`trajectory.py`](snn_interpreter/simulator/trajectory.py:9) |
-| Stage step | Stateless per-step `(input, state)` | [`stage_module.py`](snn_interpreter/topology/stage_module.py) |
-| Benchmark harness | Time/memory only | [`harness.py`](snn_interpreter/benchmark/harness.py:1) |
+| Execution loop | One dense temporal loop | [`execution.py`](spikeforge/simulator/execution.py:122) |
+| Runner entry | `run(...)` with modes | [`runner.py`](spikeforge/simulator/runner.py:22) |
+| Trajectory capture | `S[t]`/`U[t]`/`I[t]` | [`trajectory.py`](spikeforge/simulator/trajectory.py:9) |
+| Stage step | Stateless per-step `(input, state)` | [`stage_module.py`](spikeforge/topology/stage_module.py) |
+| Benchmark harness | Time/memory only | [`harness.py`](spikeforge/benchmark/harness.py:1) |
 | Op counting | None | n/a |
 | Energy model | None | n/a |
-| Target cost data | Constraints only (dtype, quantization) | [`target_spec.py`](snn_interpreter/targets/target_spec.py:28) |
-| Sparse input | Input is already binary spikes | [`input_shape.py`](snn_interpreter/simulator/input_shape.py) |
+| Target cost data | Constraints only (dtype, quantization) | [`target_spec.py`](spikeforge/targets/target_spec.py:28) |
+| Sparse input | Input is already binary spikes | [`input_shape.py`](spikeforge/simulator/input_shape.py) |
 
 ### 1.1 Invariants that must not break
 
-- The dense path ([`execute`](snn_interpreter/simulator/execution.py:122),
-  [`run`](snn_interpreter/simulator/runner.py:22)) is the default and is
+- The dense path ([`execute`](spikeforge/simulator/execution.py:122),
+  [`run`](spikeforge/simulator/runner.py:22)) is the default and is
   unchanged; existing trajectories and tests stay byte-identical.
 - The sparse path returns a `Trajectory` with the same shape contract, so it is
   a drop-in for readout comparison.
 - `ExecutionMode.PRODUCTION`/`EDUCATIONAL` semantics are unchanged
-  ([`execution_mode.py`](snn_interpreter/runtime/execution_mode.py:12)).
+  ([`execution_mode.py`](spikeforge/runtime/execution_mode.py:12)).
 - Existing benchmark payload keys stay additive
   ([`server_message.py`](server/schemas/server_message.py:11)).
 - `reference` target remains available; energy cost tables are declared, so an
@@ -57,7 +57,7 @@ timing. Every `EnergyReport` carries an explicit `estimate: true` field and a
 
 The simulator already treats each stage as a pure `(input, state) -> (output,
 state)` function driven by binary spike frames
-([`execution.py`](snn_interpreter/simulator/execution.py:82)). Dense execution
+([`execution.py`](spikeforge/simulator/execution.py:82)). Dense execution
 multiplies full spike tensors by weight matrices, paying for zeros. The sparse
 path instead propagates **events**: for each step, only indices where
 `spike == 1` contribute, and synaptic operations are applied to those indices
@@ -70,7 +70,7 @@ sparse inference. Training continues to use the dense path.
 ### 2.2 Module layout
 
 ```
-snn_interpreter/event_runtime/
+spikeforge/event_runtime/
   __init__.py
   spike_view.py      SparseSpikes: indices/values per frame; density helpers
   ops.py             event-driven linear/conv/pool applied to sparse spikes
@@ -111,7 +111,7 @@ timestep. Stored as bundled JSON next to the catalog and surfaced through the
 same `TargetSpec` shape, so a target's costs travel with its capability matrix.
 
 ```
-snn_interpreter/energy/costs/
+spikeforge/energy/costs/
   reference.json     in-process estimates
   norse.json         simulator estimates
   lava_loihi2.json   declared device estimates
@@ -135,14 +135,14 @@ A target with no bundled table still produces a report with `basis:
 ### 3.2 Module layout
 
 ```
-snn_interpreter/energy/
+spikeforge/energy/
   __init__.py
   cost_table.py      load/validate a target's declared costs
   target_costs.py    bundled per-target table lookup
   accounting.py      account(run_or_spec, target) -> EnergyReport
   report.py          JSON-able report assembly
   probe.py           isolated device probe (measured energy when present)
-  cli.py             snn-energy entry point
+  cli.py             spikeforge-energy entry point
   errors.py          typed energy errors
 ```
 
@@ -171,11 +171,11 @@ timing, in which case `measured` fields are added and the note changes.
 
 ### 4.1 Benchmark harness
 
-[`benchmark/harness.py`](snn_interpreter/benchmark/harness.py:1) gains an opt-in
+[`benchmark/harness.py`](spikeforge/benchmark/harness.py:1) gains an opt-in
 `--energy` path that runs the sparse runner and attaches an `energy` block to
 each topology/mode record. Because the harness already reports unavailable
 metrics as `null`, an unavailable cost table is `null` with a note, consistent
-with [`harness.py`](snn_interpreter/benchmark/harness.py:1).
+with [`harness.py`](spikeforge/benchmark/harness.py:1).
 
 ### 4.2 WebSocket
 
@@ -188,15 +188,15 @@ Routed via [`protocol_handlers.py`](server/protocol_handlers.py:19) to a new
 
 ### 4.3 CLI
 
-New console script `snn-energy` ([`energy/cli.py`](snn_interpreter/energy/cli.py)):
+New console script `spikeforge-energy` ([`energy/cli.py`](spikeforge/energy/cli.py)):
 
 ```
-snn-energy account --topology conv_net --target reference [--sparse]
-snn-energy report  --topology conv_net --target lava_loihi2 --out energy.json
+spikeforge-energy account --topology conv_net --target reference [--sparse]
+spikeforge-energy report  --topology conv_net --target lava_loihi2 --out energy.json
 ```
 
 JSON output; `report` writes to `--out` when given, mirroring
-[`_run_export`](snn_interpreter/cli/verify.py:72).
+[`_run_export`](spikeforge/cli/verify.py:72).
 
 ### 4.4 Client
 
@@ -230,7 +230,7 @@ per-stage breakdown, and the target cost source note. Types in
 
 - **Deliverables:** `energy/cli.py`, harness `--energy`, `server/energy_handlers.py`,
   `server/energy_payloads.py`, schema additions, `EnergyPanel.tsx`.
-- **Acceptance:** `snn-energy account` runs headless; `energy_report` round-trips
+- **Acceptance:** `spikeforge-energy account` runs headless; `energy_report` round-trips
   over a live connection; the benchmark record carries the `energy` block; the
   client builds and renders; existing benchmark payload keys are unchanged.
 

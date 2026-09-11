@@ -17,7 +17,7 @@ describe the local source tree.
   [`NOTICE.md`](NOTICE.md), issue and pull-request templates, and a
   `py.typed` marker.
 - A hub catalog curation policy,
-  [`snn_hub/CURATION.md`](snn_hub/CURATION.md): remote
+  [`spikeforge_hub/CURATION.md`](spikeforge_hub/CURATION.md): remote
   entries must name a real repository/reference plus a verified license (and a
   checksum where available), and unverified candidates must be marked
   `unverified-candidate` and reported `available: false`.
@@ -28,74 +28,74 @@ describe the local source tree.
   [`tests/test_protocol_schema_parity.py`](tests/test_protocol_schema_parity.py)
   keeping both sides in agreement.
 - A `packages/` workspace defining two PEP 621 distributions **without moving a
-  source file**: `snn-interpreter` `0.3.0` (core, import root `snn_interpreter`)
-  and `snn-interpreter-server` `0.1.0` (import root `server`, which depends on
+  source file**: `spikeforge` `0.3.0` (core, import root `spikeforge`)
+  and `spikeforge-server` `0.1.0` (import root `server`, which depends on
   core). `packages/*/pyproject.toml` is now the packaging authority.
 - [`compatibility.json`](compatibility.json) at the repository root, recording
   the `protocol_version` (`"1.0"`), the released distribution versions, and the
   pinned dashboard bundle version (`dashboard: "0.1.0"`, now built in
-  `w4ffl35/snn-dashboard`).
+  `capsize-games/spikeforge-dashboard`).
 - The dashboard extraction (ARCH-0001 Phase 2): the browser UI now lives in its
   own repository,
-  [`w4ffl35/snn-dashboard`](https://github.com/w4ffl35/snn-dashboard), created
+  [`capsize-games/spikeforge-dashboard`](https://github.com/capsize-games/spikeforge-dashboard), created
   from this repository's history with `git subtree split --prefix=client`.
   `client/` remains here for one release as a read-only mirror.
-- `SNN_DASHBOARD_DIST` (see [`snn_interpreter/config.py`](snn_interpreter/config.py))
+- `SPIKEFORGE_DASHBOARD_DIST` (see [`spikeforge/config.py`](spikeforge/config.py))
   lets the server serve a pinned prebuilt dashboard bundle instead of the
   in-repo `client/dist`; [`server/web.py`](server/web.py) prefers it when
   present and otherwise keeps today's resolution, covered by
   [`tests/test_dashboard_bundle.py`](tests/test_dashboard_bundle.py).
 
-- The `snn-targets` distribution (ARCH-0001 Phase 3): the deploy layer —
+- The `spikeforge-targets` distribution (ARCH-0001 Phase 3): the deploy layer —
   `targets/` (plus `backends/`), `energy/`, `event_runtime/`, and the
-  `target_cli` entry point — moved out of core into the top-level `snn_targets`
-  import root, packaged as `packages/snn-targets` (`snn-targets` `0.1.0`,
-  depending on `snn-interpreter~=0.3.0`). The `norse` and `lava` extras moved
-  with the code they gate, and the server pins `snn-targets~=0.1.0`. The
-  `snn_interpreter.{targets,energy,event_runtime}` import paths remain as
+  `target_cli` entry point — moved out of core into the top-level `spikeforge_targets`
+  import root, packaged as `packages/spikeforge-targets` (`spikeforge-targets` `0.1.0`,
+  depending on `spikeforge~=0.3.0`). The `norse` and `lava` extras moved
+  with the code they gate, and the server pins `spikeforge-targets~=0.1.0`. The
+  `spikeforge.{targets,energy,event_runtime}` import paths remain as
   deprecated re-export shims that emit a `DeprecationWarning` and raise a clear
-  `ImportError` when `snn-targets` is not installed.
-- The standalone [`w4ffl35/snn-targets`](https://github.com/w4ffl35/snn-targets)
+  `ImportError` when `spikeforge-targets` is not installed.
+- The standalone [`capsize-games/spikeforge-targets`](https://github.com/capsize-games/spikeforge-targets)
   satellite repository (ARCH-0001 Phase 3): created (private) and populated from
-  this repository's history with `git subtree split --prefix=snn_targets`, it
-  lays out the `snn_targets/` package at its root alongside `pyproject.toml`
-  (`snn-targets` `0.1.0`, core pin `snn-interpreter~=0.3.0`), `README.md`,
+  this repository's history with `git subtree split --prefix=spikeforge_targets`, it
+  lays out the `spikeforge_targets/` package at its root alongside `pyproject.toml`
+  (`spikeforge-targets` `0.1.0`, core pin `spikeforge~=0.3.0`), `README.md`,
   `LICENSE`, `.gitignore`, a Python 3.10–3.13 CI workflow, and the 19 test
-  modules that exercise `snn_targets`. Core has not been pushed and no
+  modules that exercise `spikeforge_targets`. Core has not been pushed and no
   distribution is on PyPI yet, so the satellite CI installs core from its git
-  remote as a temporary stopgap until `snn-interpreter` `0.3.0` is published.
-- The `snn-hub` distribution (ARCH-0001 Phase 4): the model hub — the curated
+  remote as a temporary stopgap until `spikeforge` `0.3.0` is published.
+- The `spikeforge-hub` distribution (ARCH-0001 Phase 4): the model hub — the curated
   catalog, cache, isolated download worker, and the inspect → compat → promote
-  import funnel — moved out of core into the top-level `snn_hub` import root,
-  packaged as `packages/snn-hub` (`snn-hub` `0.1.0`, depending on
-  `snn-interpreter~=0.3.0`). `huggingface_hub` is now a base dependency of this
+  import funnel — moved out of core into the top-level `spikeforge_hub` import root,
+  packaged as `packages/spikeforge-hub` (`spikeforge-hub` `0.1.0`, depending on
+  `spikeforge~=0.3.0`). `huggingface_hub` is now a base dependency of this
   distribution rather than a core `hub` extra, and the server pins
-  `snn-hub~=0.1.0`. The `snn_interpreter.hub` import path remains a deprecated
+  `spikeforge-hub~=0.1.0`. The `spikeforge.hub` import path remains a deprecated
   re-export shim that emits a `DeprecationWarning` and raises a clear
-  `ImportError` when `snn-hub` is not installed.
-- The standalone [`w4ffl35/snn-hub`](https://github.com/w4ffl35/snn-hub)
+  `ImportError` when `spikeforge-hub` is not installed.
+- The standalone [`capsize-games/spikeforge-hub`](https://github.com/capsize-games/spikeforge-hub)
   satellite repository (ARCH-0001 Phase 4): created (private) and populated
-  from this repository's history with `git subtree split --prefix=snn_hub`, it
-  lays out the `snn_hub/` package at its root alongside `pyproject.toml`
-  (`snn-hub` `0.1.0`, core pin `snn-interpreter~=0.3.0`, a `dev` extra),
+  from this repository's history with `git subtree split --prefix=spikeforge_hub`, it
+  lays out the `spikeforge_hub/` package at its root alongside `pyproject.toml`
+  (`spikeforge-hub` `0.1.0`, core pin `spikeforge~=0.3.0`, a `dev` extra),
   `README.md`, `LICENSE`, `.gitignore`, a Python 3.10–3.13 CI workflow, and the
-  hub test modules that exercise `snn_hub`. Its CI uses the same PyPI-or-git
-  core-install stopgap as `w4ffl35/snn-targets` until `snn-interpreter` `0.3.0`
+  hub test modules that exercise `spikeforge_hub`. Its CI uses the same PyPI-or-git
+  core-install stopgap as `capsize-games/spikeforge-targets` until `spikeforge` `0.3.0`
   is published.
-- Removed the stray, unreferenced `packages/snn_interpreter/` duplicate (263
-  tracked files) that shadowed the real `snn_interpreter/` package; no
+- Removed the stray, unreferenced `packages/spikeforge/` duplicate (263
+  tracked files) that shadowed the real `spikeforge/` package; no
   `pyproject.toml`, CI job, test, or build script referenced it (the builds use
-  the `packages/snn-interpreter/snn_interpreter` symlink to the real package).
+  the `packages/spikeforge/spikeforge` symlink to the real package).
 
 ### Changed
 
-- Console-script ownership of `snn-energy` and `snn-targets` moved to the
-  `snn-targets` distribution and `snn-hub` moved to the `snn-hub` distribution,
-  resolving to `snn_targets.energy.cli:main`, `snn_targets.cli.target_cli:main`,
-  and `snn_hub.cli:main`; core keeps the five remaining scripts
-  (`snn-interpreter`, `snn-interpreter-encodings`, `snn-verify`, `snn-records`,
-  `snn-benchmark`). The `snn_targets` and `snn_hub` import roots, not
-  `snn_interpreter.{targets,hub}`, are now the canonical paths; the old paths
+- Console-script ownership of `spikeforge-energy` and `spikeforge-targets` moved to the
+  `spikeforge-targets` distribution and `spikeforge-hub` moved to the `spikeforge-hub` distribution,
+  resolving to `spikeforge_targets.energy.cli:main`, `spikeforge_targets.cli.target_cli:main`,
+  and `spikeforge_hub.cli:main`; core keeps the five remaining scripts
+  (`spikeforge`, `spikeforge-encodings`, `spikeforge-verify`, `spikeforge-records`,
+  `spikeforge-benchmark`). The `spikeforge_targets` and `spikeforge_hub` import roots, not
+  `spikeforge.{targets,hub}`, are now the canonical paths; the old paths
   are deprecated shims.
 - The maintainer contact address is now `contact@capsizegames.com` in
   [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md), and
@@ -104,14 +104,14 @@ describe the local source tree.
 - The catalog schema rejects free-text licenses: an entry's `license` must be a
   concrete SPDX-style id or the explicit `unverified-candidate` marker.
 - Core is now version `0.3.0` and no longer packages `server/`: a headless
-  `pip install snn-interpreter` ships only `snn_interpreter/`, `main.py`, and
+  `pip install spikeforge` ships only `spikeforge/`, `main.py`, and
   `main_encodings.py`. The core distribution excludes the server root in its
   package discovery, and the server's FastAPI stack is no longer a core extra.
 - The core `web` extra is removed; its `fastapi`, `uvicorn[standard]`,
   `websockets`, and `pydantic` dependencies become the base dependencies of
-  `snn-interpreter-server`.
+  `spikeforge-server`.
 - [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml)
-  install the `packages/snn-interpreter-server` distribution instead of the
+  install the `packages/spikeforge-server` distribution instead of the
   removed `web` extra, keeping the `TORCH_INDEX_URL` build arg and the `:8877`
   port mapping.
 - [`requirements.txt`](requirements.txt) no longer lists the FastAPI server
@@ -125,7 +125,7 @@ describe the local source tree.
 - The core CI `client` job is reduced to the protocol-codegen guard
   (`npm ci`; `npm run gen:protocol`; `git diff --exit-code --
   client/src/protocol/generated.ts`); the full dashboard build is now owned by
-  `w4ffl35/snn-dashboard`.
+  `capsize-games/spikeforge-dashboard`.
 
 ### Removed
 
@@ -140,14 +140,14 @@ describe the local source tree.
 
 ### Phase 4 status
 
-- **`snn-hub` extraction shipped.** ARCH-0001 Phase 4 moved the model hub to the
-  `snn_hub` import root and the `packages/snn-hub` distribution, and published
+- **`spikeforge-hub` extraction shipped.** ARCH-0001 Phase 4 moved the model hub to the
+  `spikeforge_hub` import root and the `packages/spikeforge-hub` distribution, and published
   the private satellite repository
-  [`w4ffl35/snn-hub`](https://github.com/w4ffl35/snn-hub) (see Added/Changed
+  [`capsize-games/spikeforge-hub`](https://github.com/capsize-games/spikeforge-hub) (see Added/Changed
   above). The hub extraction was executed per the Phase 4 directive; the T3
   catalog-stability clause still reads *unavailable* because no release baseline
   exists yet (`scripts/topology_metrics.py`).
-- **`snn-server` extraction: no-go — `w4ffl35/snn-server` was not created.** Per
+- **`spikeforge-server` extraction: no-go — `capsize-games/spikeforge-server` was not created.** Per
   [`plans/arch-0001-decision-metrics.md`](plans/arch-0001-decision-metrics.md)
   the server is extracted only when trigger **T4** fires, which requires *all*
   of: (a) server-only release demand ≥ 3 in the trailing 90 days, (b) ≥ 2 core
@@ -156,14 +156,14 @@ describe the local source tree.
   `scripts/topology_metrics.py` reported verbatim:
 
   ```text
-  T4 snn-server (Phase 4 conditional): not fired
+  T4 spikeforge-server (Phase 4 conditional): not fired
       [         no] server-only release demand >= 3
       [        yes] core pin conflicts >= 2 in window
       [         no] isolated server change sets >= 20% of core commits
   ```
 
   With T4 not fired, the no-go stands and the server stays in the monorepo as
-  the `snn-interpreter-server` distribution. The trigger is re-measured each
+  the `spikeforge-server` distribution. The trigger is re-measured each
   release cycle.
 
 ## [0.2.0] - 2026-09-10
@@ -176,11 +176,11 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
 ### Added
 
 - **Model hub (WS-A).** A bundled, offline-first curated catalog
-  (`snn_interpreter/hub/models.json`, 10 verified entries across five
+  (`spikeforge/hub/models.json`, 10 verified entries across five
   frameworks),
   optional live Hugging Face access behind the `hub` extra, an isolated
   download worker with progress/cancel and checksum verification, and an
-  inspect → compat → promote import funnel. Surfaces: the `snn-hub` CLI, six
+  inspect → compat → promote import funnel. Surfaces: the `spikeforge-hub` CLI, six
   additive WebSocket actions, and the `HubPanel` client browser.
 - **Backend execution (WS-B).** A substitution executor that applies a
   target's declared rewrites with a rewrite report and a drift check, and
@@ -192,11 +192,11 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
   outcome), a sequence/token data path, and the `sequence_mlp`/`sequence_attn`
   presets.
 - **Event runtime and energy (WS-D).** A sparse/event-driven runner with a
-  dense-parity acceptance test, SOP/MAC/AC counting, and an `snn-energy` report
+  dense-parity acceptance test, SOP/MAC/AC counting, and an `spikeforge-energy` report
   that maps op counts to a declared, per-target cost table (all tables are
   `"measured": false` with a source).
 - **Operational maturity (WS-E).** Opt-in persisted metrics under
-  `SNN_METRICS_DIR`, optional TensorBoard/W&B tracking sinks behind extras,
+  `SPIKEFORGE_METRICS_DIR`, optional TensorBoard/W&B tracking sinks behind extras,
   determinism tooling, and a MkDocs Material docs site generated from
   `plans/` by `scripts/build_docs.sh`.
 - **Interop fold-ins (WS-F).** Event-dataset training, an ONNX export/import
@@ -223,8 +223,8 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
 
 ### Fixed
 
-- `python -m snn_interpreter.cli.records_cli` and
-  `python -m snn_interpreter.cli.target_cli` now execute under module
+- `python -m spikeforge.cli.records_cli` and
+  `python -m spikeforge.cli.target_cli` now execute under module
   invocation, matching the other console-script modules.
 - Splitting `server/messages.py` keeps it within the project's 250-line style
   contract; the hub message helpers moved to `server/hub_messages.py`.
@@ -249,6 +249,6 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
   a searchable checkpoint registry, opt-in scale-ups, a stored benchmark
   suite, JSON logging, packaged console scripts, and Docker CPU/GPU profiles.
 
-[Unreleased]: https://github.com/w4ffl35/snn_interpreter/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/w4ffl35/snn_interpreter/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/w4ffl35/snn_interpreter/releases/tag/v0.1.0
+[Unreleased]: https://github.com/capsize-games/spikeforge/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/capsize-games/spikeforge/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/capsize-games/spikeforge/releases/tag/v0.1.0

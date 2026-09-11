@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from snn_interpreter.events import tonic_api
+from spikeforge.events import tonic_api
 
 _EXPECTED_KEYS = {"tonic_available", "tonic_version", "dataset_classes"}
 

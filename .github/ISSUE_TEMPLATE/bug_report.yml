@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible defect in snn-interpreter
+description: Report a reproducible defect in spikeforge
 title: "[Bug]: "
 labels: ["bug", "needs-triage"]
 body:
@@ -44,7 +44,7 @@ body:
     id: version
     attributes:
       label: Version / commit
-      description: The reported version (`python -c "import snn_interpreter"`) or the git commit.
+      description: The reported version (`python -c "import spikeforge"`) or the git commit.
     validations:
       required: true
 
@@ -71,7 +71,7 @@ body:
       description: |
         Which optional extras are installed (e.g. `web`, `events`, `onnx`,
         `hub`, `norse`, `lava`, `tracking`, `docs`)? The output of
-        `pip show snn-interpreter` is ideal.
+        `pip show spikeforge` is ideal.
       render: text
     validations:
       required: false

@@ -6,8 +6,8 @@ import sys
 
 import pytest
 
-import snn_targets as targets
-from snn_targets import (
+import spikeforge_targets as targets
+from spikeforge_targets import (
     EMITTED_PRIMITIVES,
     capability_matrix,
     catalog,

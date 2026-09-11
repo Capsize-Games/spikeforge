@@ -5,11 +5,11 @@ import json
 import numpy as np
 import pytest
 
-from snn_interpreter.nir_bridge import api
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.topology import presets
-from snn_targets.rewrite import rewrite
-from snn_targets.rewrite_report import RewriteReport
+from spikeforge.nir_bridge import api
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.topology import presets
+from spikeforge_targets.rewrite import rewrite
+from spikeforge_targets.rewrite_report import RewriteReport
 
 pytest.importorskip("nir")
 

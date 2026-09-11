@@ -8,15 +8,16 @@ Run from the repository root::
 
     venv/bin/python examples/01_train_image_model.py
 
-The first run downloads MNIST into ``SNN_DATA_DIR`` (default ``build/``);
-later runs are offline. Note that ``train_accuracy`` is ``-1.0`` until the
+The first run downloads MNIST into ``SPIKEFORGE_DATA_DIR`` (default
+``build/``); later runs are offline. Note that ``train_accuracy`` is
+``-1.0`` until the
 metric is first computed, and ``test_accuracy`` is a percentage (``null``
 until an evaluation step runs).
 """
 
 from typing import Any, Dict
 
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.training.training_engine import TrainingEngine
 
 
 def train_once() -> Dict[str, Any]:

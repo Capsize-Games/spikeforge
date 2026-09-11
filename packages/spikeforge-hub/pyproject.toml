@@ -1,0 +1,91 @@
+# PEP 621 packaging authority for the spikeforge-hub distribution (ARCH-0001 Phase 4).
+#
+# The distribution owns the ``spikeforge_hub`` import root, which absorbs the former
+# ``spikeforge.hub`` subpackage (catalog, cache, live Hugging Face access,
+# isolated download worker, and the inspect/compat/promote import funnel). It
+# depends on core, but core never depends on it. The optional
+# ``huggingface_hub`` dependency is a base dependency here, isolated in
+# ``spikeforge_hub.probe`` so the offline catalog still works without network access.
+#
+# ``spikeforge_hub/`` stays at its repository-root path and is exposed to the build via
+# the ``spikeforge_hub`` symlink next to this file (the same pattern the core, server,
+# and targets distributions use; see the ``packages.find`` table below).
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spikeforge-hub"
+version = "0.1.0"
+description = "Curated SNN model hub (catalog, cache, download, import) for spikeforge."
+# ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
+# files, mirroring the core, server, and targets distributions' metadata.
+readme = "README.md"
+requires-python = ">=3.10"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Capsize Games", email = "contact@capsizegames.com" },
+]
+maintainers = [
+    { name = "Capsize Games", email = "contact@capsizegames.com" },
+]
+keywords = [
+    "spiking neural networks",
+    "model hub",
+    "huggingface",
+    "catalog",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    # The core library owns the interpreter/simulator, ``nir_bridge``, and the
+    # hub cache configuration; this distribution owns catalog/network I/O. The
+    # pin is a pre-1.0 compatible-release: >=0.3.0,<0.4.0.
+    "spikeforge~=0.3.0",
+    "torch>=2.5",
+    "huggingface_hub>=0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+
+[project.scripts]
+spikeforge-hub = "spikeforge_hub.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/capsize-games/spikeforge"
+Repository = "https://github.com/capsize-games/spikeforge"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+# Mirror the core/server/targets distributions: the `spikeforge_hub` import root is
+# exposed next to this file as a symlink to `../../spikeforge_hub` so the default
+# via-sdist `python -m build` produces a complete wheel. Discovery depends only
+# on this top-level package, never on core.
+where = ["."]
+include = ["spikeforge_hub*"]
+exclude = ["spikeforge", "server*", "spikeforge_targets*", "tests*"]
+
+[tool.setuptools.package-data]
+# The catalog and its curation policy are runtime data, not code: without
+# these lines a `pip install spikeforge-hub` wheel would ship `spikeforge_hub/` with no
+# `models.json`, so the offline catalog could not load.
+spikeforge_hub = ["models.json", "CURATION.md"]

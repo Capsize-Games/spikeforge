@@ -1,4 +1,4 @@
-# SNN Interpreter — Ecosystem Roadmap
+# Spikeforge — Ecosystem Roadmap
 
 Master plan. Design/spec only; no production code is changed by this document.
 Phase 1 is detailed in [`interpreter_spine_plan.md`](interpreter_spine_plan.md);
@@ -49,15 +49,15 @@ both.
 
 | Asset | Location | Role in roadmap |
 |---|---|---|
-| Spike encoding math | [`SpikeEncoder`](snn_interpreter/encoding/spike_encoder.py:9) | Phase 2 decoding + Phase 4 bridge |
-| Dataset registry | [`datasets.py`](snn_interpreter/data/datasets.py:15) | Phase 4 extends to event modality |
-| Sample source | [`SampleSource`](snn_interpreter/data/sample_source.py:10) | Phases 2, 3 reuse as-is |
-| FC LIF model | [`SpikingNet`](snn_interpreter/network/spiking_net.py:10) | Phase 1 wraps as `fc_legacy` preset |
-| Training loop | [`TrainingEngine`](snn_interpreter/training/training_engine.py:24) | Phases 1, 2, 6 extend |
-| Inference payload | [`infer_spikes`](snn_interpreter/network/inference.py:8) | Phase 2 adds membrane trajectories |
+| Spike encoding math | [`SpikeEncoder`](spikeforge/encoding/spike_encoder.py:9) | Phase 2 decoding + Phase 4 bridge |
+| Dataset registry | [`datasets.py`](spikeforge/data/datasets.py:15) | Phase 4 extends to event modality |
+| Sample source | [`SampleSource`](spikeforge/data/sample_source.py:10) | Phases 2, 3 reuse as-is |
+| FC LIF model | [`SpikingNet`](spikeforge/network/spiking_net.py:10) | Phase 1 wraps as `fc_legacy` preset |
+| Training loop | [`TrainingEngine`](spikeforge/training/training_engine.py:24) | Phases 1, 2, 6 extend |
+| Inference payload | [`infer_spikes`](spikeforge/network/inference.py:8) | Phase 2 adds membrane trajectories |
 | WS protocol | [`server/schemas`](server/schemas/server_message.py:8) | Phases 1, 3, 5 add message types |
 | Dashboard | [`client/src/App.tsx`](client/src/App.tsx:17) | Phase 3 expands panels |
-| Device/runtime | [`device.py`](snn_interpreter/runtime/device.py:126) | Phases 2, 6 extend for perf |
+| Device/runtime | [`device.py`](spikeforge/runtime/device.py:126) | Phases 2, 6 extend for perf |
 
 ## 4. Phase overview
 
@@ -160,7 +160,7 @@ the validator is the safety net and conversion constants are pinned by tests.
 > split, full `U[t]`/`I[t]`/`S[t]` capture, trajectory metrics,
 > encoding/decoding introspection, the surrogate registry and derivative
 > curve, the neuron comparison lab, and the benchmark harness
-> (`run_benchmark` plus `python -m snn_interpreter.benchmark`) all run live.
+> (`run_benchmark` plus `python -m spikeforge.benchmark`) all run live.
 > The Python suite is green at 214 tests (up from 143), `ruff` is clean, and
 > the client builds; six data-only WebSocket actions (`trajectory`,
 > `metrics`, `encoding_report`, `surrogates`, `surrogate_curve`, `benchmark`)
@@ -184,13 +184,13 @@ neuron-state introspection promised by the goal.
   path selected by `ExecutionMode`, not a fork.
 - **Neuron comparison lab:** run the same input through Leaky, Lapicque,
   Synaptic, and Alpha and diff their trajectories.
-- **Encoding introspection and decoding:** reuse [`SpikeEncoder`](snn_interpreter/encoding/spike_encoder.py:9)
+- **Encoding introspection and decoding:** reuse [`SpikeEncoder`](spikeforge/encoding/spike_encoder.py:9)
   to add rate/latency/delta reconstruction and sparsity reporting alongside
   the existing raster view.
 - **Surrogate-gradient introspection:** selectable surrogate functions with
   the derivative visualised, so training behaviour is inspectable rather than
   opaque.
-- Extend [`infer_spikes`](snn_interpreter/network/inference.py:8) to carry
+- Extend [`infer_spikes`](spikeforge/network/inference.py:8) to carry
   membrane trajectories without changing existing payload keys.
 
 **Acceptance:** every preset produces a full `U[t]`, `S[t]`, `I[t]`
@@ -213,7 +213,7 @@ the trade-off.
 > benchmark panels, and seven guided walkthroughs all render from live server
 > payloads. The Python suite is green at 234 tests (up from 214), `ruff` is
 > clean, the client builds, and the `verify` CLI plus
-> `python -m snn_interpreter.benchmark` run. Deferred with intent: the
+> `python -m spikeforge.benchmark` run. Deferred with intent: the
 > hardware-target picker is Phase 5 and event datasets are Phase 4.
 
 **Objective:** make the dashboard the goto surface for both audiences.

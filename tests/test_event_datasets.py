@@ -2,8 +2,8 @@
 
 import pytest
 
-from snn_interpreter.data import datasets
-from snn_interpreter.events import tonic_api
+from spikeforge.data import datasets
+from spikeforge.events import tonic_api
 
 _EVENT_KEYS = {
     "n_mnist": 10,

@@ -5,10 +5,10 @@ from typing import Any, Dict, Optional, Tuple
 import torch
 
 from server.schemas import EncodeConfig
-from snn_interpreter.events.dense import to_frames
-from snn_interpreter.events.event_bridge import EventSpikeBridge
-from snn_interpreter.events.event_source import EventSampleSource
-from snn_interpreter.topology.spec import TopologySpec
+from spikeforge.events.dense import to_frames
+from spikeforge.events.event_bridge import EventSpikeBridge
+from spikeforge.events.event_source import EventSampleSource
+from spikeforge.topology.spec import TopologySpec
 
 
 def _grid(frame: torch.Tensor) -> Any:
@@ -25,13 +25,13 @@ class EventEngine:
     """Expose an event sample like :class:`~server.encoder.EncoderEngine`.
 
     The sample is densified once by
-    :func:`~snn_interpreter.events.dense.to_frames` into ``[T, 2, H, W]``
+    :func:`~spikeforge.events.dense.to_frames` into ``[T, 2, H, W]``
     ON/OFF frames. ``spike_input`` returns the flat feature layout
     ``[T, 1, H*W]`` the image engine also returns, so the shared
     ``input_shape.to_input_shape`` consumers reshape it for spatial
     topologies; when a ``spec`` is supplied the tensor is laid out for it
     immediately through
-    :class:`~snn_interpreter.events.event_bridge.EventSpikeBridge`.
+    :class:`~spikeforge.events.event_bridge.EventSpikeBridge`.
     """
 
     def __init__(

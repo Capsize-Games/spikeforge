@@ -1,4 +1,4 @@
-# snn-interpreter
+# spikeforge
 
 A rate-coding and spike-encoding playground for spiking neural networks
 (SNNs), built on [snnTorch](https://snntorch.readthedocs.io/) and PyTorch.
@@ -19,24 +19,38 @@ The encoding pipeline mirrors [snnTorch Tutorial 1](https://snntorch.readthedocs
 
 ## Quickstart
 
-Install a minimal set — the core package plus the extras the examples use —
-then run one headless example and launch the dashboard:
+Two supported install paths: editable from a clone, or from PyPI once the
+distributions are published.
+
+### From a clone (one command)
 
 ```bash
-# 1. Install the core distribution plus the extras the examples use.
-pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,norse,tracking]"
+./install.sh              # editable: core + targets + hub + server
+./install.sh --no-server  # the library only (no dashboard/server)
+./install.sh --dev        # add the [dev] extra to every distribution
+```
 
-# 2. Install the model hub (import root snn_hub; distribution snn-hub).
-pip install -e ./packages/snn-hub
+`./install.sh` installs all four distributions in editable mode. Then:
 
-# 3. Install the server distribution (pulls core + hub + the FastAPI stack).
-pip install -e ./packages/snn-interpreter-server
+```bash
+spikeforge --help         # the library CLI
+spikeforge-server         # the dashboard/WebSocket server on :8877
+```
 
-# 4. Run one headless example (no browser needed).
+`python -m server` remains an equivalent way to launch the server.
+
+### From PyPI (once published)
+
+```bash
+pip install "spikeforge[all]"  # library bundle: core + targets + hub
+pip install spikeforge-server  # the server, pulling core + targets + hub
+```
+
+Run one headless example (no browser needed), then launch the dashboard:
+
+```bash
 python examples/04_nir_export_validate.py
-
-# 5. Launch the dashboard (FastAPI + WebSocket on :8877).
-python -m server
+spikeforge-server
 ```
 
 Open <http://localhost:8877> for the single-port build, or run the Vite dev
@@ -49,7 +63,7 @@ copy-pasteable recipes are in [`COOKBOOK.md`](COOKBOOK.md).
 ## Architecture
 
 A model is declared once as a
-[`TopologySpec`](snn_interpreter/topology/spec.py:1) and rendered twice —
+[`TopologySpec`](spikeforge/topology/spec.py:1) and rendered twice —
 into the snnTorch module that trains and into the `nir.NIRGraph` that
 exports and validates — so the two cannot silently diverge. Every surface
 (CLI, WebSocket, dashboard) renders from the same payload shapes.
@@ -76,21 +90,21 @@ The same spine powers the recipes in [`COOKBOOK.md`](COOKBOOK.md) and the
 scripts in [`examples/`](examples/).
 
 The browser dashboard is extracted to its own repository,
-[`w4ffl35/snn-dashboard`](https://github.com/w4ffl35/snn-dashboard)
+[`capsize-games/spikeforge-dashboard`](https://github.com/capsize-games/spikeforge-dashboard)
 (ARCH-0001 Phase 2). [`client/`](client) stays here for one release as a
 read-only mirror; the pinned dashboard bundle version is recorded in
 [`compatibility.json`](compatibility.json), and the server serves a pinned
-prebuilt bundle when `SNN_DASHBOARD_DIST` is set. The versioned WebSocket
+prebuilt bundle when `SPIKEFORGE_DASHBOARD_DIST` is set. The versioned WebSocket
 contract lives under `protocol/` (see its `README.md`).
 
 The deploy layer — deploy backends, quantization, energy accounting, and the
 sparse event runtime — is likewise extracted to
-[`w4ffl35/snn-targets`](https://github.com/w4ffl35/snn-targets)
-(ARCH-0001 Phase 3; distribution `snn-targets`, import root `snn_targets`). It
-depends on core (`snn-interpreter~=0.3.0`) but core never depends on it. The
-top-level `snn_targets/` package stays here as the `packages/snn-targets`
+[`capsize-games/spikeforge-targets`](https://github.com/capsize-games/spikeforge-targets)
+(ARCH-0001 Phase 3; distribution `spikeforge-targets`, import root `spikeforge_targets`). It
+depends on core (`spikeforge~=0.3.0`) but core never depends on it. The
+top-level `spikeforge_targets/` package stays here as the `packages/spikeforge-targets`
 workspace distribution, and the legacy
-`snn_interpreter.{targets,energy,event_runtime}` paths remain as deprecated
+`spikeforge.{targets,energy,event_runtime}` paths remain as deprecated
 re-export shims.
 
 ## Features
@@ -142,7 +156,7 @@ re-export shims.
 - **Model hub (WS-A)**: a bundled curated catalog (10 verified entries across
   five frameworks) plus optional live Hugging Face access, an isolated
   downloader with progress/cancel and checksum verification, and an
-  inspect → compat → promote import funnel, surfaced through `snn-hub`, six
+  inspect → compat → promote import funnel, surfaced through `spikeforge-hub`, six
   WebSocket actions, and the `HubPanel` browser (see below)
 - **Backend execution (WS-B)**: a substitution executor that applies a
   target's declared rewrites with a report and drift check, and executable
@@ -152,7 +166,7 @@ re-export shims.
   stage kinds with explicit NIR contracts, and the `sequence_mlp`/`sequence_attn`
   demonstration presets (see below)
 - **Event runtime and energy (WS-D)**: a sparse/event-driven runner with a
-  dense-parity check, SOP/MAC/AC counting, and a `snn-energy` report that maps
+  dense-parity check, SOP/MAC/AC counting, and a `spikeforge-energy` report that maps
   op counts to a declared per-target cost table (see below)
 - **Operational maturity (WS-E)**: opt-in persisted metrics, optional
   TensorBoard/W&B tracking sinks, determinism tooling, and a generated docs
@@ -187,7 +201,7 @@ and infer unchanged.
 
 ### Neuron registry
 
-`snn_interpreter/neurons/` maps a neuron name to its snnTorch factory and
+`spikeforge/neurons/` maps a neuron name to its snnTorch factory and
 its canonical NIR parameter contract. The registry ships `leaky`,
 `lapicque`, `synaptic`, and `recurrent` (RLeaky) neurons.
 
@@ -208,10 +222,10 @@ Headless `export` and `validate` commands. `validate` exits non-zero when a
 report falls outside tolerance, so it doubles as a CI gate:
 
 ```bash
-python -m snn_interpreter.cli.verify export --topology conv_net
-python -m snn_interpreter.cli.verify export --topology fc_legacy --out g.json
-python -m snn_interpreter.cli.verify validate --topology conv_net
-python -m snn_interpreter.cli.verify validate --topology recurrent_net
+python -m spikeforge.cli.verify export --topology conv_net
+python -m spikeforge.cli.verify export --topology fc_legacy --out g.json
+python -m spikeforge.cli.verify validate --topology conv_net
+python -m spikeforge.cli.verify validate --topology recurrent_net
 ```
 
 ### WebSocket actions
@@ -227,15 +241,15 @@ neuron-state introspection behind one shared code path.
 
 ### Execution modes
 
-`ExecutionMode` ([`runtime/execution_mode.py`](snn_interpreter/runtime/execution_mode.py))
+`ExecutionMode` ([`runtime/execution_mode.py`](spikeforge/runtime/execution_mode.py))
 is a flag on the single temporal loop, not a fork:
 
 - `EDUCATIONAL` records every per-step trace; `PRODUCTION` records none and
   runs lean.
-- [`simulator.run()`](snn_interpreter/simulator/runner.py:21) takes
+- [`simulator.run()`](spikeforge/simulator/runner.py:21) takes
   `mode=...` and also exposes `track` / `membrane` / `current` for
   finer-grained capture.
-- [`simulator.run_production()`](snn_interpreter/simulator/production.py:14)
+- [`simulator.run_production()`](spikeforge/simulator/production.py:14)
   returns a `ProductionResult(trajectory, compiled, status)`. `compiled` is
   opt-in (`torch.compile`) and falls back transparently to eager, with
   `status` in `{"eager", "unavailable", "compiled", "fallback"}`.
@@ -245,7 +259,7 @@ behaviour.
 
 ### Trajectory capture
 
-`Trajectory` ([`simulator/trajectory.py`](snn_interpreter/simulator/trajectory.py:9))
+`Trajectory` ([`simulator/trajectory.py`](spikeforge/simulator/trajectory.py:9))
 carries the averaged readout `logits` plus per-neuron-stage traces of spikes
 `S[t]`, membrane `U[t]`, and input current `I[t]` (`currents` is the merged
 inbound activation each stage received before its update). Educational mode
@@ -253,7 +267,7 @@ fills all three; production mode leaves them empty.
 
 ### Trajectory metrics
 
-[`introspection.metrics.trajectory_metrics()`](snn_interpreter/introspection/metrics.py:28)
+[`introspection.metrics.trajectory_metrics()`](spikeforge/introspection/metrics.py:28)
 gathers, per stage:
 
 - **firing rate** — mean spikes per neuron per step.
@@ -266,7 +280,7 @@ The result holds only plain JSON types.
 
 ### Encoding and decoding introspection
 
-[`introspection.encoding.encoding_report()`](snn_interpreter/introspection/encoding.py:142)
+[`introspection.encoding.encoding_report()`](spikeforge/introspection/encoding.py:142)
 encodes one image, reconstructs it where the coding is invertible, and
 reports firing rate, sparsity, and coding-specific stats. The reconstruction
 is explicitly approximate, documented in the report's `approximation` field:
@@ -283,32 +297,32 @@ is explicitly approximate, documented in the report's `approximation` field:
 
 ### Surrogate gradients
 
-[`introspection.surrogate`](snn_interpreter/introspection/surrogate.py:1)
+[`introspection.surrogate`](spikeforge/introspection/surrogate.py:1)
 discovers the selectable surrogate factories from the installed
 `snntorch.surrogate` (so the list always matches what snnTorch provides).
 `list_surrogates()` names them and
-[`surrogate_curve()`](snn_interpreter/introspection/surrogate.py:94) samples
+[`surrogate_curve()`](spikeforge/introspection/surrogate.py:94) samples
 the backward-pass derivative `dS/dU` into parallel `x`/`y` lists. Neurons
 accept an optional `surrogate` build parameter; leaving it unset (the
 default) keeps the build byte-identical to before.
 
 ### Neuron comparison lab
 
-[`introspection.comparison.compare_neurons()`](snn_interpreter/introspection/comparison.py:59)
+[`introspection.comparison.compare_neurons()`](spikeforge/introspection/comparison.py:59)
 runs the same seeded input through every registered neuron kind (Leaky,
 Lapicque, Synaptic, recurrent LIF, and Alpha) and returns
 `{kind: Trajectory}` for side-by-side diffing.
 
 ### Benchmark harness
 
-[`snn_interpreter/benchmark/`](snn_interpreter/benchmark/__init__.py:1)
+[`spikeforge/benchmark/`](spikeforge/benchmark/__init__.py:1)
 measures wall time and memory of forward and backward passes for each mode
 (and, with `--compiled`, the compiled production path):
 
 ```bash
-python -m snn_interpreter.benchmark                     # tiny default fixture
-python -m snn_interpreter.benchmark --topology conv_net --steps 16 --compiled
-python -m snn_interpreter.benchmark --out bench.json
+python -m spikeforge.benchmark                     # tiny default fixture
+python -m spikeforge.benchmark --topology conv_net --steps 16 --compiled
+python -m spikeforge.benchmark --out bench.json
 ```
 
 The same report is available from Python via
@@ -356,8 +370,8 @@ existing WebSocket protocol, so nothing needs a page reload.
 > - **Hub panel** — entry cards, a compat badge, and an import verdict.
 > - **Demo GIF** — apply-and-run streaming spike frames into the raster.
 >
-> To reproduce: `pip install -e ./packages/snn-interpreter-server`, then
-> `python -m server` (port
+> To reproduce: `./install.sh`, then
+> `spikeforge-server` (port
 > 8877) and `cd client && npm install && npm run dev`; open
 > <http://localhost:5173>. Commit the captures under a top-level `assets/`
 > directory (the gitignored `build/` and `docs/` trees are not suitable) and
@@ -482,7 +496,7 @@ encoded images.
 Event loading is opt-in so the default install stays lean:
 
 ```bash
-pip install -e "./packages/snn-interpreter[events]"
+pip install -e "./packages/spikeforge[events]"
 ```
 
 `tonic` is deliberately kept out of `requirements.txt`; without it the
@@ -587,8 +601,8 @@ import/export surface with a round-trip fidelity guarantee. Every surface
 
 ### Target registry and availability model
 
-[`snn_interpreter/targets/`](snn_interpreter/targets/__init__.py:1) declares
-what each target *can* run as a [`TargetSpec`](snn_interpreter/targets/target_spec.py:10):
+[`spikeforge/targets/`](spikeforge/targets/__init__.py:1) declares
+what each target *can* run as a [`TargetSpec`](spikeforge/targets/target_spec.py:10):
 its kind, the pip `extra` that would install its SDK, the primitives it
 supports, its substitutions, and its constraints (dtype, timestep,
 quantization). The registry ships:
@@ -604,8 +618,8 @@ quantization). The registry ships:
 
 SDKs are optional and are reported **honestly**. Availability is resolved on
 demand through isolated probes
-([`targets/probe.py`](snn_interpreter/targets/probe.py:1) and
-[`targets/backends/api.py`](snn_interpreter/targets/backends/api.py:1) — the
+([`targets/probe.py`](spikeforge/targets/probe.py:1) and
+[`targets/backends/api.py`](spikeforge/targets/backends/api.py:1) — the
 only modules that import a backend SDK; both import nothing at module load
 time). A target whose SDK is absent is returned with `"available": false` and
 named in the report notes; it is never hidden or silently treated as ready.
@@ -614,9 +628,9 @@ executable backends when their extras are installed (see WS-B above).
 
 ### Capability matrix
 
-[`classify(graph_or_spec, target)`](snn_interpreter/targets/capability_matrix.py:13)
+[`classify(graph_or_spec, target)`](spikeforge/targets/capability_matrix.py:13)
 places every node of a graph in exactly one
-[`CapabilityMatrix`](snn_interpreter/targets/matrix_result.py:10) bucket:
+[`CapabilityMatrix`](spikeforge/targets/matrix_result.py:10) bucket:
 
 - **supported** — the target runs the node's primitive natively.
 - **substituted** — the target lacks the primitive but declares a replacement
@@ -631,7 +645,7 @@ dropped**.
 
 ### Deployment report and `deployable`
 
-[`deployment_report(spec_or_graph, target)`](snn_interpreter/targets/report.py:47)
+[`deployment_report(spec_or_graph, target)`](spikeforge/targets/report.py:47)
 returns JSON carrying the classified `nodes` (with per-bucket counts), the
 target's `constraints`, an optional `validation` drift section, and
 human-readable `notes`. `deployable` is true **only** when the target is
@@ -641,27 +655,27 @@ command and the WebSocket `deployment_report` action emit the same payload.
 
 ### External NIR import/export and round-trip fidelity
 
-[`snn_interpreter/nir_bridge/`](snn_interpreter/nir_bridge/__init__.py:1)
+[`spikeforge/nir_bridge/`](spikeforge/nir_bridge/__init__.py:1)
 grows a cross-library surface:
 
-- [`save_graph`](snn_interpreter/nir_bridge/serialization.py:52) /
-  [`load_graph`](snn_interpreter/nir_bridge/serialization.py:125) persist a
+- [`save_graph`](spikeforge/nir_bridge/serialization.py:52) /
+  [`load_graph`](spikeforge/nir_bridge/serialization.py:125) persist a
   graph in a version-stamped JSON envelope. Node semantics stay owned by
   `nir`'s own `to_dict`/`dict2NIRNode`; numpy values are tagged with dtype and
   shape, so a reload reconstructs the exact array rather than a rounded list.
-- [`load_external`](snn_interpreter/nir_bridge/ingest.py:21) /
-  [`interpret_graph`](snn_interpreter/nir_bridge/ingest.py:30) /
-  [`interpret_file`](snn_interpreter/nir_bridge/ingest.py:35) ingest a graph
+- [`load_external`](spikeforge/nir_bridge/ingest.py:21) /
+  [`interpret_graph`](spikeforge/nir_bridge/ingest.py:30) /
+  [`interpret_file`](spikeforge/nir_bridge/ingest.py:35) ingest a graph
   produced elsewhere and run it on the independent interpreter, which never
   touches snnTorch.
-- [`roundtrip`](snn_interpreter/nir_bridge/roundtrip.py:84) persists, reloads,
+- [`roundtrip`](spikeforge/nir_bridge/roundtrip.py:84) persists, reloads,
   and compares the reloaded interpretation against the in-memory export. The
   report is `identical: true` only when every spike and membrane trace and the
   readout match with zero maximum absolute error.
 
 Failures are typed and named, never silent:
 `GraphNotFoundError`, `MalformedGraphError`, `UnknownNodeKindError`, and
-`UnsupportedNodeError` ([`errors.py`](snn_interpreter/nir_bridge/errors.py:1)).
+`UnsupportedNodeError` ([`errors.py`](spikeforge/nir_bridge/errors.py:1)).
 
 ### CLI subcommands
 
@@ -669,11 +683,11 @@ The `verify` CLI gains four subcommands (all print JSON; they exit non-zero
 on a negative result so they double as CI gates):
 
 ```bash
-python -m snn_interpreter.cli.verify targets
-python -m snn_interpreter.cli.verify deploy --topology conv_net --target reference
-python -m snn_interpreter.cli.verify deploy --topology conv_net --target xylo
-python -m snn_interpreter.cli.verify roundtrip --topology conv_net --out build/graph.json
-python -m snn_interpreter.cli.verify ingest --file build/graph.json
+python -m spikeforge.cli.verify targets
+python -m spikeforge.cli.verify deploy --topology conv_net --target reference
+python -m spikeforge.cli.verify deploy --topology conv_net --target xylo
+python -m spikeforge.cli.verify roundtrip --topology conv_net --out build/graph.json
+python -m spikeforge.cli.verify ingest --file build/graph.json
 ```
 
 `targets` lists the registry with live availability; `deploy` classifies a
@@ -738,16 +752,16 @@ workflow is unchanged.
 
 ### Reproducibility manifest and config hash
 
-[`snn_interpreter/tracking/`](snn_interpreter/tracking/__init__.py:1) records
+[`spikeforge/tracking/`](spikeforge/tracking/__init__.py:1) records
 what a run needs to be recreated and compared. A
-[`ReproducibilityManifest`](snn_interpreter/tracking/manifest.py:35) captures
+[`ReproducibilityManifest`](spikeforge/tracking/manifest.py:35) captures
 the dataset, topology and params, encode config, hyperparameters, the resolved
 `TopologySpec`, the library versions, the seed, and the metric history.
-[`config_hash()`](snn_interpreter/tracking/config_hash.py:19) hashes the
+[`config_hash()`](spikeforge/tracking/config_hash.py:19) hashes the
 reproducibility-relevant config as canonical JSON (sorted keys, tight
 separators), so two runs with identical settings compare equal regardless of
 when they ran or what their histories show, and
-[`set_seed()`](snn_interpreter/tracking/seed.py:31) seeds Python, PyTorch, and
+[`set_seed()`](spikeforge/tracking/seed.py:31) seeds Python, PyTorch, and
 every CUDA device.
 
 Reproducibility is stated honestly in the manifest's `reproducible` block; it
@@ -764,21 +778,21 @@ alone so seeding never slows the default training path.
 
 The file-based `MODEL_DIR` registry stays the source of truth, but two
 read-only helpers make it searchable and comparable.
-[`search_models(...)`](snn_interpreter/network/model_search.py:87) filters
+[`search_models(...)`](spikeforge/network/model_search.py:87) filters
 checkpoint summaries by dataset, topology, coding, device, minimum accuracy,
 and a case-insensitive name substring; each result carries the newest non-null
 test accuracy and the stored manifest (or `null` for a legacy checkpoint).
-[`checkpoint_diff(...)`](snn_interpreter/network/model_diff.py:102) classifies
+[`checkpoint_diff(...)`](spikeforge/network/model_diff.py:102) classifies
 every metadata key as `added`, `removed`, `changed`, or `same` and compares the
 two manifests' config hashes. `list_models` and its payload shape are
 untouched, so existing callers are unaffected.
 
-The `snn-records` console script (also `verify records ...`) exposes both:
+The `spikeforge-records` console script (also `verify records ...`) exposes both:
 
 ```bash
-snn-records list --dataset mnist --topology conv_net --min-accuracy 90
-snn-records diff old_model new_model
-snn-records manifest my_model
+spikeforge-records list --dataset mnist --topology conv_net --min-accuracy 90
+spikeforge-records diff old_model new_model
+spikeforge-records manifest my_model
 ```
 
 The server mirrors this with read-only `model_search` and `model_diff`
@@ -787,7 +801,7 @@ two names emits the existing `error` message.
 
 ### Training scale-ups (opt-in, default-off)
 
-[`ScaleUpMixin`](snn_interpreter/training/scaleup_mixin.py:29) adds four
+[`ScaleUpMixin`](spikeforge/training/scaleup_mixin.py:29) adds four
 additive options to `TrainConfig`. Every default reproduces the previous
 behaviour exactly:
 
@@ -799,38 +813,38 @@ behaviour exactly:
 | `multi_gpu` | `False` | `DataParallel` fan-out when more than one CUDA device is visible |
 
 AMP numerics are close to, but not bit-identical to, fp32.
-[`MultiDeviceManager`](snn_interpreter/training/multi_device.py:26) reports an
+[`MultiDeviceManager`](spikeforge/training/multi_device.py:26) reports an
 honest status (`disabled`, `unavailable: ...`, or `active: N cuda devices`)
 instead of failing, and both gradient policies live in the one shared temporal
-loop via [`GradPolicy`](snn_interpreter/simulator/grad_policy.py:44), so the
+loop via [`GradPolicy`](spikeforge/simulator/grad_policy.py:44), so the
 forward values are untouched when either is off.
 
 ### Performance suite: store, suite, and compare
 
 Runs can be recorded and regressions caught over time. A
-[`BenchmarkStore`](snn_interpreter/benchmark/store.py:40) keeps one JSON record
-per run under `SNN_BENCHMARK_DIR` (default `<DATA_DIR>/benchmarks`), and
-[`run_suite(...)`](snn_interpreter/benchmark/suite.py:55) benchmarks a set of
+[`BenchmarkStore`](spikeforge/benchmark/store.py:40) keeps one JSON record
+per run under `SPIKEFORGE_BENCHMARK_DIR` (default `<DATA_DIR>/benchmarks`), and
+[`run_suite(...)`](spikeforge/benchmark/suite.py:55) benchmarks a set of
 topologies, attaches the library versions plus a timestamp, and saves the
 record:
 
 ```bash
 # record a CI-sized suite (the saved run id is <timestamp>-<label>)
-python -m snn_interpreter.benchmark --topology fc_small --topology conv_net \
+python -m spikeforge.benchmark --topology fc_small --topology conv_net \
     --steps 8 --repeats 3 --save --label main
 
 # list every stored run, newest first (the list prints each run_id)
-python -m snn_interpreter.benchmark --list
+python -m spikeforge.benchmark --list
 
 # compare a stored baseline against a fresh run; exit 1 on regression
-python -m snn_interpreter.benchmark --compare <run-id> --threshold 0.1 \
+python -m spikeforge.benchmark --compare <run-id> --threshold 0.1 \
     --fail-on-regression
 
 # or diff two stored runs
-python -m snn_interpreter.benchmark --compare <baseline-id> --against <run-id>
+python -m spikeforge.benchmark --compare <baseline-id> --against <run-id>
 ```
 
-[`compare_runs(...)`](snn_interpreter/benchmark/compare.py:123) matches records
+[`compare_runs(...)`](spikeforge/benchmark/compare.py:123) matches records
 on `(topology, mode)` and reports the relative change in `ms/step`, `steps/s`,
 and peak memory, flagging a regression when a metric moves the wrong way past
 the threshold (`--fail-on-regression` turns that into a non-zero exit, so the
@@ -839,18 +853,18 @@ label**; `--list` prints the ids. The contract is JSON-able end to end.
 
 ### Observability: opt-in logs and metrics
 
-[`snn_interpreter/observability/`](snn_interpreter/observability/__init__.py:1)
+[`spikeforge/observability/`](spikeforge/observability/__init__.py:1)
 adds two opt-in surfaces, neither enabled unless asked:
 
 - **Structured logging.** `configure_logging()` attaches one handler to the
-  `snn_interpreter` logger (never the root) and `reset_logging()` restores the
-  exact prior state. Set `SNN_LOG_JSON=1` for JSON lines (`timestamp`,
+  `spikeforge` logger (never the root) and `reset_logging()` restores the
+  exact prior state. Set `SPIKEFORGE_LOG_JSON=1` for JSON lines (`timestamp`,
   `level`, `event`, `logger`, plus optional `run_id` / `config_id` /
-  `config_hash` / `fields`) or `SNN_LOG_LEVEL=DEBUG` for a level. With neither
+  `config_hash` / `fields`) or `SPIKEFORGE_LOG_LEVEL=DEBUG` for a level. With neither
   variable set the default human-readable behaviour is untouched, and no entry
   point calls `configure_logging()` for you.
-- **Metrics snapshot.** `snn_interpreter.observability.metrics` is a
-  process-wide [`MetricsRegistry`](snn_interpreter/observability/registry.py:27)
+- **Metrics snapshot.** `spikeforge.observability.metrics` is a
+  process-wide [`MetricsRegistry`](spikeforge/observability/registry.py:27)
   of counters, gauges, and timers. The training loop records `train.steps`,
   `train.encode_seconds`, `train.forward_seconds`, and
   `train.backward_seconds`; the validation path records `validation.runs`,
@@ -865,14 +879,14 @@ a stable name:
 
 | Script | Equivalent |
 |---|---|
-| `snn-interpreter` | `python main.py` |
-| `snn-interpreter-encodings` | `python main_encodings.py` |
-| `snn-verify` | `python -m snn_interpreter.cli.verify` |
-| `snn-records` | `python -m snn_interpreter.cli.verify records` |
-| `snn-targets` | `python -m snn_targets.cli.target_cli` |
-| `snn-hub` | `python -m snn_hub.cli` |
-| `snn-energy` | `python -m snn_targets.energy.cli` |
-| `snn-benchmark` | `python -m snn_interpreter.benchmark` |
+| `spikeforge` | `python main.py` |
+| `spikeforge-encodings` | `python main_encodings.py` |
+| `spikeforge-verify` | `python -m spikeforge.cli.verify` |
+| `spikeforge-records` | `python -m spikeforge.cli.verify records` |
+| `spikeforge-targets` | `python -m spikeforge_targets.cli.target_cli` |
+| `spikeforge-hub` | `python -m spikeforge_hub.cli` |
+| `spikeforge-energy` | `python -m spikeforge_targets.energy.cli` |
+| `spikeforge-benchmark` | `python -m spikeforge.benchmark` |
 
 ### Docker CPU/GPU profiles
 
@@ -889,64 +903,64 @@ every artifact through an honest compatibility gate.
 
 ### Curated catalog + optional live Hugging Face
 
-[`snn_hub/models.json`](snn_hub/models.json) bundles
+[`spikeforge_hub/models.json`](spikeforge_hub/models.json) bundles
 **10 curated entries across five frameworks** (NIR, snnTorch, SpikingJelly,
 Norse, Lava): ten NIR graphs rendered from this project's own presets. It
 renders fully offline. Entries are validated into a
-[`HubEntry`](snn_hub/entry.py:1); a malformed entry is *reported*
+[`HubEntry`](spikeforge_hub/entry.py:1); a malformed entry is *reported*
 in `issues()` rather than silently skipped. The catalog ships **only verified
 entries** — a remote entry must name a real repository/reference and a concrete
 SPDX-style license, and a known-but-unverified candidate is marked
 `"unverified-candidate"` and reported `available: false`. The full policy is in
-`snn_hub/CURATION.md`.
+`spikeforge_hub/CURATION.md`.
 
-Live Hugging Face search/download is provided by the **`snn-hub`
-distribution** (`packages/snn-hub`, import root `snn_hub`; ARCH-0001 Phase 4),
+Live Hugging Face search/download is provided by the **`spikeforge-hub`
+distribution** (`packages/spikeforge-hub`, import root `spikeforge_hub`; ARCH-0001 Phase 4),
 whose `huggingface_hub` dependency is isolated in
-[`snn_hub/hf_api.py`](snn_hub/hf_api.py:1) and
-[`snn_hub/probe.py`](snn_hub/probe.py:1). When `huggingface_hub` is absent,
+[`spikeforge_hub/hf_api.py`](spikeforge_hub/hf_api.py:1) and
+[`spikeforge_hub/probe.py`](spikeforge_hub/probe.py:1). When `huggingface_hub` is absent,
 `search` returns `available: false` with an explicit reason — never an error
-and never a fabricated hit. The legacy `snn_interpreter.hub` import path
+and never a fabricated hit. The legacy `spikeforge.hub` import path
 remains a `DeprecationWarning` re-export shim for one minor release.
 
 ### Downloading
 
 Downloads reuse the isolated child-process worker pattern so the FastAPI loop
-never blocks: [`snn_hub/download_cli.py`](snn_hub/download_cli.py:1)
+never blocks: [`spikeforge_hub/download_cli.py`](spikeforge_hub/download_cli.py:1)
 fetches one entry into the offline cache and
-[`snn_hub/verify.py`](snn_hub/verify.py:1) checks its sha256 and size.
-[`snn_hub/downloads.py`](snn_hub/downloads.py:1) streams progress and
+[`spikeforge_hub/verify.py`](spikeforge_hub/verify.py:1) checks its sha256 and size.
+[`spikeforge_hub/downloads.py`](spikeforge_hub/downloads.py:1) streams progress and
 supports cancellation, exactly like the dataset downloader. The cache lives
-under `HUB_CACHE_DIR` (`SNN_HUB_DIR`, default `<DATA_DIR>/hub`), kept separate
+under `HUB_CACHE_DIR` (`SPIKEFORGE_HUB_DIR`, default `<DATA_DIR>/hub`), kept separate
 from the trained-model store. A source that publishes no checksum is reported
 **unverified**, not passed silently.
 
 ### Inspect → compat → promote
 
-[`snn_hub/import_model.py`](snn_hub/import_model.py:1) runs a
+[`spikeforge_hub/import_model.py`](spikeforge_hub/import_model.py:1) runs a
 three-gate funnel:
 
-1. **Inspect** ([`snn_hub/inspect.py`](snn_hub/inspect.py:1)) detects
+1. **Inspect** ([`spikeforge_hub/inspect.py`](spikeforge_hub/inspect.py:1)) detects
    the artifact kind (`nir_graph`, `state_dict`, `framework_weights`) and
    describes its structure.
-2. **Compat** ([`snn_hub/compat.py`](snn_hub/compat.py:1)) returns a
+2. **Compat** ([`spikeforge_hub/compat.py`](spikeforge_hub/compat.py:1)) returns a
    verdict — `exact`, `mappable` (with a stage mapping), or `incompatible`
    (with the specific mismatches named).
 3. **Promote** loads weights via
-   [`snn_hub/weight_map.py`](snn_hub/weight_map.py:1), runs a drift
+   [`spikeforge_hub/weight_map.py`](spikeforge_hub/weight_map.py:1), runs a drift
    check, and only then saves into `MODEL_DIR` with hub provenance in `meta`.
 
 A NIR-only artifact that matches no preset is still runnable through the
 reference interpreter, so import is useful even without a weight mapping.
 
-### `snn-hub` CLI
+### `spikeforge-hub` CLI
 
 ```bash
-snn-hub list [--framework nir] [--kind nir_graph] [--available]
-snn-hub search <query> [--limit 20]
-snn-hub download <id> [--no-verify]
-snn-hub inspect <id>
-snn-hub import <id> [--topology conv_net]
+spikeforge-hub list [--framework nir] [--kind nir_graph] [--available]
+spikeforge-hub search <query> [--limit 20]
+spikeforge-hub download <id> [--no-verify]
+spikeforge-hub inspect <id>
+spikeforge-hub import <id> [--topology conv_net]
 ```
 
 Every command prints JSON; `download` and `import` exit non-zero on a failed
@@ -968,9 +982,9 @@ Capability *declaration* becomes executable *deployment*.
 
 ### Substitution executor
 
-[`targets/rewrite.py`](snn_interpreter/targets/rewrite.py:1) applies a target's
+[`targets/rewrite.py`](spikeforge/targets/rewrite.py:1) applies a target's
 **declared** substitutions to produce a target-ready graph and reports what
-changed ([`rewrite_report.py`](snn_interpreter/targets/rewrite_report.py:1)):
+changed ([`rewrite_report.py`](spikeforge/targets/rewrite_report.py:1)):
 `applied`, `skipped`, `unfixable`. Two rules ship — `IF`→`beta=0` `LIF` for
 `norse` and `AvgPool2d`→`SumPool2d`+`Scale` for `lava_loihi2`. An unfixable
 primitive is named, never dropped, and a post-rewrite **drift check** quantifies
@@ -978,7 +992,7 @@ any residual.
 
 ### Real backends: reference, norse, lava_loihi2
 
-[`targets/backends.compile_run()`](snn_interpreter/targets/backends/__init__.py:137)
+[`targets/backends.compile_run()`](spikeforge/targets/backends/__init__.py:137)
 is the single entry point. It rewrites, optionally quantizes, gates on the
 backend's availability, then compiles, runs, and compares the result to the
 reference interpreter — returning a `BackendResult` whose `status` is `ok`,
@@ -992,17 +1006,17 @@ reference interpreter — returning a `BackendResult` whose `status` is `ok`,
 
 An absent SDK yields `status: "unavailable"` with a note naming the extra. SDK
 imports are confined to
-[`backends/api.py`](snn_interpreter/targets/backends/api.py:1).
+[`backends/api.py`](spikeforge/targets/backends/api.py:1).
 
 ### `deploy` / `rewrite` / `run`
 
 ```bash
-snn-verify deploy  --topology conv_net --target reference   # capability view
-snn-verify rewrite --topology conv_net --target norse       # substitutions + drift
-snn-verify run     --topology conv_net --target reference   # compile + run + compare
+spikeforge-verify deploy  --topology conv_net --target reference   # capability view
+spikeforge-verify rewrite --topology conv_net --target norse       # substitutions + drift
+spikeforge-verify run     --topology conv_net --target reference   # compile + run + compare
 ```
 
-The same commands are on `snn-targets`. `deploy` exits `0` only when
+The same commands are on `spikeforge-targets`. `deploy` exits `0` only when
 `deployable`; `run` exits non-zero unless `status == "ok"` and the comparison
 to the reference is within tolerance.
 
@@ -1025,7 +1039,7 @@ before, and `fc_legacy` keeps its `_fc1/_lif1/_fc2/_lif2` contract.
 
 ### New stage kinds
 
-[`topology/kinds.py`](snn_interpreter/topology/kinds.py:8) grows `conv1d`,
+[`topology/kinds.py`](spikeforge/topology/kinds.py:8) grows `conv1d`,
 `maxpool1d`, `maxpool2d`, `embedding`, `layer_norm`, `batch_norm`, `dropout`,
 `positional_encoding`, `attention`, and `multihead_attention`, each with a
 module factory and an explicit NIR contract — `mapped`, `passthrough`
@@ -1045,7 +1059,7 @@ module factory and an explicit NIR contract — `mapped`, `passthrough`
   introspection — the honest `alpha` precedent, applied to stages.
 
 The toy token task
-([`data/sequence_source.py`](snn_interpreter/data/sequence_source.py:1))
+([`data/sequence_source.py`](spikeforge/data/sequence_source.py:1))
 supplies `[T, B, L, D]` frames, and the client
 [`StageNeuronEditor`](client/src/components/StageNeuronEditor.tsx:1) edits the
 per-stage configuration. This enables sequence/attention *experimentation*, not
@@ -1055,30 +1069,30 @@ production LLM training.
 
 ### Sparse runner
 
-[`event_runtime.sparse_run()`](snn_interpreter/event_runtime/sparse_runner.py:1)
+[`event_runtime.sparse_run()`](spikeforge/event_runtime/sparse_runner.py:1)
 is a parallel, training-free inference path that propagates spike events
 instead of dense MACs. It returns a `SparseResult` with the same readout
 contract as the dense `Trajectory`, and
-[`dense_compare`](snn_interpreter/event_runtime/dense_compare.py:1) proves
+[`dense_compare`](spikeforge/event_runtime/dense_compare.py:1) proves
 parity within tolerance. The dense path stays the untouched default.
 
-[`SynapticCounter`](snn_interpreter/event_runtime/counters.py:1) tallies **SOP**
+[`SynapticCounter`](spikeforge/event_runtime/counters.py:1) tallies **SOP**
 (synaptic ops), **MAC** (dense baseline), **AC**, and timesteps; for a sparse
 input `SOP < MAC` by the active-spike ratio.
 
 ### Declared per-target cost tables
 
 Each target carries a declared cost table under
-[`energy/costs/`](snn_interpreter/energy/costs/reference.json:1) (`reference`,
+[`energy/costs/`](spikeforge/energy/costs/reference.json:1) (`reference`,
 `norse`, `lava_loihi2`, `spinnaker2`, `speck`, `xylo`), giving energy per
 SOP/MAC/AC and latency per timestep. Every table is `"measured": false` and
 carries its `source`.
 
-### `snn-energy`
+### `spikeforge-energy`
 
 ```bash
-snn-energy account --topology conv_net --target reference --sparse
-snn-energy report  --topology conv_net --target reference
+spikeforge-energy account --topology conv_net --target reference --sparse
+spikeforge-energy report  --topology conv_net --target reference
 ```
 
 `account` prints the report; `report` adds the sparse-vs-dense parity block.
@@ -1098,10 +1112,10 @@ until a device reports its own timing.
 ### Persisted metrics
 
 The in-process registry can be snapshotted to disk. Persistence is **opt-in**
-via `SNN_METRICS_PERSIST`; with it unset, `flush()` is a no-op and behaviour is
+via `SPIKEFORGE_METRICS_PERSIST`; with it unset, `flush()` is a no-op and behaviour is
 unchanged. Snapshots
-([`MetricSnapshot`](snn_interpreter/observability/snapshot.py:14)) are written
-under `METRICS_DIR` (`SNN_METRICS_DIR`, default `<DATA_DIR>/metrics`).
+([`MetricSnapshot`](spikeforge/observability/snapshot.py:14)) are written
+under `METRICS_DIR` (`SPIKEFORGE_METRICS_DIR`, default `<DATA_DIR>/metrics`).
 `system_stats` gains additive `metrics_persisted` and `metrics_last_flush`
 keys; existing keys are untouched.
 
@@ -1111,15 +1125,15 @@ keys; existing keys are untouched.
 (extra `tracking-wandb`), default `null`. The **local manifest is always
 written first**, so a tracker outage never loses a run; an absent backend
 becomes a recorded `reason` in the manifest's `tracking` block
-([`sinks.describe()`](snn_interpreter/tracking/sinks.py:68)). Probes are
-isolated in [`tracking/sink_probe.py`](snn_interpreter/tracking/sink_probe.py:1).
+([`sinks.describe()`](spikeforge/tracking/sinks.py:68)). Probes are
+isolated in [`tracking/sink_probe.py`](spikeforge/tracking/sink_probe.py:1).
 
 ### Determinism
 
-[`tracking.determinism.enable_deterministic()`](snn_interpreter/tracking/determinism.py:82)
+[`tracking.determinism.enable_deterministic()`](spikeforge/tracking/determinism.py:82)
 seeds Python/NumPy/torch and sets the deterministic-algorithm flags, returning
 a report of what it could and could not enforce;
-[`bit_exactness_check()`](snn_interpreter/tracking/determinism.py:117) reruns a
+[`bit_exactness_check()`](spikeforge/tracking/determinism.py:117) reruns a
 fixture and reports exactness. `TrainConfig.deterministic` (default off) opts a
 run in, and the manifest gains an additive `determinism` block. This narrows
 the bit-exactness gap; it does not claim universal bit-exactness.
@@ -1141,8 +1155,8 @@ extra provides MkDocs Material.
 
 ### Event-dataset training
 
-[`training/event_engine.py`](snn_interpreter/training/event_engine.py:1) and
-[`training/event_batches.py`](snn_interpreter/training/event_batches.py:1)
+[`training/event_engine.py`](spikeforge/training/event_engine.py:1) and
+[`training/event_batches.py`](spikeforge/training/event_batches.py:1)
 batch an event stream through the existing bridge into the `[T, B, …]`
 contract the training loop already consumes, so the loss/optimizer/metrics/
 checkpointing path is shared. A checkpoint records `modality: event`; without
@@ -1151,35 +1165,35 @@ stream is never presented as a recording.
 
 ### ONNX bridge
 
-[`onnx_bridge/`](snn_interpreter/onnx_bridge/__init__.py:1) exports a topology's
+[`onnx_bridge/`](spikeforge/onnx_bridge/__init__.py:1) exports a topology's
 **single forward step** to ONNX (the time loop stays in the simulator) with the
 spec in metadata, and imports a third-party graph by mapping ops to stage kinds
 — or failing with a typed error naming the op. The `onnx` extra provides
 `onnx`/`onnxruntime`; imports are confined to `onnx_bridge/api.py`.
 
 ```bash
-snn-verify onnx-export    --topology conv_net --out build/model.onnx
-snn-verify onnx-import    --file build/model.onnx
-snn-verify onnx-roundtrip --topology conv_net
+spikeforge-verify onnx-export    --topology conv_net --out build/model.onnx
+spikeforge-verify onnx-import    --file build/model.onnx
+spikeforge-verify onnx-roundtrip --topology conv_net
 ```
 
 ### `nirtorch` extraction
 
-[`nir_bridge/extract.py`](snn_interpreter/nir_bridge/extract.py:1) lifts an
+[`nir_bridge/extract.py`](spikeforge/nir_bridge/extract.py:1) lifts an
 arbitrary `torch.nn.Module` into NIR through the isolated `nirtorch` wrapper,
 then runs it on the independent interpreter:
 
 ```bash
-snn-targets extract --module model.pt
+spikeforge-targets extract --module model.pt
 ```
 
-[`torch_map.NODE_MAP`](snn_interpreter/nir_bridge/torch_map.py:39) maps only
+[`torch_map.NODE_MAP`](spikeforge/nir_bridge/torch_map.py:39) maps only
 `nn.Linear` and `nn.Flatten`; any other module raises the typed
 `UnsupportedNodeError` naming the class — no silent truncation.
 
 ### Quantization
 
-[`targets/quantize.py`](snn_interpreter/targets/quantize.py:103) applies a
+[`targets/quantize.py`](spikeforge/targets/quantize.py:103) applies a
 target's **declared** scheme (`none`, `weight_int8`, `weight_uint8`) to a
 graph's weights, reporting per-layer before/after ranges and the induced drift.
 It is **weight-level only** (no activations, no device), a `none` target is a
@@ -1187,7 +1201,7 @@ reported no-op, and an unknown scheme is reported unapplied.
 
 ### Non-square geometry and `input_size`
 
-[`data/image_size.py`](snn_interpreter/data/image_size.py:16) normalises a
+[`data/image_size.py`](spikeforge/data/image_size.py:16) normalises a
 geometry declared as an `int` side or an explicit `(H, W)` pair, and
 `EncodeConfig.input_size` propagates it. Presets keep 28×28 by default, so
 every shipped preset is byte-identical until a shape is requested.
@@ -1196,7 +1210,7 @@ every shipped preset is byte-identical until a shape is requested.
 
 `EncodeConfig.animate_hidden` (default off) streams a per-step hidden-layer
 frame over the existing `spike_frame`/`animation_state` channel;
-[`network/hidden_frames.py`](snn_interpreter/network/hidden_frames.py:1) caps
+[`network/hidden_frames.py`](spikeforge/network/hidden_frames.py:1) caps
 the width so an oversized layer cannot flood the socket. With the flag unset,
 the payload stream is identical to before.
 
@@ -1237,7 +1251,7 @@ consequence.
   unexportable stage when export is attempted.
 - **Implication.** You can build, train, and introspect `sequence_attn` in the
   snnTorch simulator, but you cannot export it to NIR or deploy it:
-  `snn-verify export`/`validate --topology sequence_attn` exit non-zero with the
+  `spikeforge-verify export`/`validate --topology sequence_attn` exit non-zero with the
   named stage (for the shipped preset, `embedding`). `sequence_mlp` is the
   NIR-exportable sequence preset because it uses only mappable kinds.
 
@@ -1291,7 +1305,7 @@ consequence.
   platform-specific and are not installed.
 - **Implication.** `reference` is always available; `norse`, `lava_loihi2`,
   `spinnaker2`, `speck`, and `xylo` report `available: false` with a named
-  reason (see `snn-verify targets`), and no deployment report claims a device
+  reason (see `spikeforge-verify targets`), and no deployment report claims a device
   result that was not produced — `compile_run` returns `status: "unavailable"`
   with a note naming the enabling extra. Note that `norse` is pip-installable
   and pure-PyTorch, so it is usable for CPU cross-checking even without any
@@ -1305,14 +1319,13 @@ consequence.
 - Node.js 18+ and npm (for the `client/` dashboard)
 - `ffmpeg` (only when exporting MP4s)
 
-Install the core distribution, and the server distribution for the dashboard:
+From a clone, `./install.sh` installs every distribution in editable mode.
+Otherwise install the library bundle and, for the dashboard, the server
+distribution:
 
 ```bash
-# Core library only (headless).
-pip install -e ./packages/snn-interpreter
-
-# The FastAPI dashboard/WebSocket server (installs core as a dependency).
-pip install -e ./packages/snn-interpreter-server
+pip install "spikeforge[all]"   # core library + targets + hub
+pip install spikeforge-server   # FastAPI dashboard/WebSocket server
 ```
 
 ### Optional event datasets (Tonic)
@@ -1322,7 +1335,8 @@ Speech Commands) are powered by [Tonic](https://tonic.readthedocs.io/) and
 gated behind the optional `events` extra so the default image stays lean:
 
 ```bash
-pip install -e "./packages/snn-interpreter[events]"
+pip install "spikeforge[events]"                 # from PyPI
+pip install -e "./packages/spikeforge[events]"   # from a clone
 ```
 
 `tonic` is deliberately kept out of `requirements.txt`; the event loader and
@@ -1334,28 +1348,34 @@ until it is installed.
 
 Every capability beyond the core is an opt-in extra; each has an isolated
 probe, so a missing package is *reported* rather than raising at import. The
-dashboard/WebSocket server is **not** a core extra: it ships as its own
-distribution, `packages/snn-interpreter-server`. The model hub is likewise its
-own distribution, `packages/snn-hub` (import root `snn_hub`), whose
-`huggingface_hub` dependency is now a base dependency of that distribution
-rather than a core `hub` extra.
+`all` extra bundles the `spikeforge-targets` and `spikeforge-hub`
+distributions. The dashboard/WebSocket server is **not** a core extra: it
+ships as its own distribution, `spikeforge-server`. The model hub is likewise
+its own distribution, `spikeforge-hub` (import root `spikeforge_hub`), whose
+`huggingface_hub` dependency is a base dependency of that distribution rather
+than a core `hub` extra. `norse` and `lava` are extras of
+`spikeforge-targets`, not of core.
 
 | Extra | Enables | Absent behavior |
 |---|---|---|
+| `all` | the `spikeforge-targets` + `spikeforge-hub` bundles | not installed |
 | `nir` | NIR export, interpretation, `nirtorch` extraction | typed unavailable error |
 | `events` | Tonic event datasets (+ event training) | datasets reported unavailable |
 | `onnx` | ONNX export/import bridge | typed unavailable error |
-| `norse` | real Norse simulator backend | `norse` target `available: false` |
-| `lava` | Lava/Loihi 2 backend path | `lava_loihi2` target `available: false` |
+| `norse` | real Norse simulator backend (targets extra) | `norse` target `available: false` |
+| `lava` | Lava/Loihi 2 backend path (targets extra) | `lava_loihi2` target `available: false` |
 | `tracking` | TensorBoard sink | local manifest remains the default |
 | `tracking-wandb` | Weights & Biases sink | local manifest remains the default |
 | `docs` | MkDocs Material for the docs site | `build_docs.sh` reports the gap |
 | `dev` | `pytest`, `pytest-cov`, `ruff` | — |
 
 ```bash
-pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,norse,tracking,docs]"
-pip install -e ./packages/snn-hub
-pip install -e ./packages/snn-interpreter-server
+pip install "spikeforge[all]"                       # core + targets + hub
+pip install "spikeforge[nir,events,onnx,tracking,docs]"
+pip install "spikeforge-targets[norse,lava]"        # backend extras
+pip install spikeforge-server                       # dashboard/server
+# Editable equivalent from a clone:
+./install.sh --dev
 ```
 
 ## Usage
@@ -1466,7 +1486,7 @@ server from the Docker container:
 ```bash
 scripts/dev.sh help          # list every command
 scripts/dev.sh check         # ruff + client type-check + client build
-scripts/dev.sh bench         # run the benchmark suite (snn-benchmark)
+scripts/dev.sh bench         # run the benchmark suite (spikeforge-benchmark)
 scripts/dev.sh dev           # run the API and Vite dev server together
 scripts/dev.sh data          # show the dataset cache and sizes
 scripts/dev.sh data-clear    # clear dataset caches (keeps models)
@@ -1479,12 +1499,12 @@ scripts/dev.sh docker-reset  # rebuild the Docker volume from scratch
 ```
 main.py                      Thin entry point: rate pipeline -> exporters
 main_encodings.py            Extra tutorial-1 encodings (latency/delta/random)
-packages/snn-interpreter/    Core distribution (pyproject.toml authority)
-packages/snn-interpreter-server/  Server distribution (pulls core)
-packages/snn-targets/        Deploy targets distribution (pulls core)
-packages/snn-hub/            Model hub distribution (pulls core)
+packages/spikeforge/    Core distribution (pyproject.toml authority)
+packages/spikeforge-server/  Server distribution (pulls core)
+packages/spikeforge-targets/        Deploy targets distribution (pulls core)
+packages/spikeforge-hub/            Model hub distribution (pulls core)
 examples/                    Small runnable scripts (see examples/README.md)
-snn_interpreter/
+spikeforge/
   config.py                  Paths/settings resolved from the environment
   data/                      Dataset registry, loaders, sample access
     datasets.py              Dataset registry (MNIST/Fashion/KMNIST/...)
@@ -1571,8 +1591,8 @@ snn_interpreter/
     store.py                 BenchmarkStore: file-based JSON run records
     suite.py                 run_suite(...): multi-topology run + metadata
     compare.py               compare_runs(...) + regression exit code
-    cli.py                   save / list / compare CLI (snn-benchmark)
-    __main__.py              python -m snn_interpreter.benchmark
+    cli.py                   save / list / compare CLI (spikeforge-benchmark)
+    __main__.py              python -m spikeforge.benchmark
   observability/             Opt-in structured logging + metrics
     logging_setup.py         configure_logging / reset_logging (reversible)
     json_formatter.py        JsonFormatter: one JSON object per log line
@@ -1581,7 +1601,7 @@ snn_interpreter/
     metrics.py               Shared registry + snapshot/JSON helpers
     snapshot.py              MetricSnapshot: metrics + run id + timestamp
     store.py                 SnapshotStore: write/read metric snapshots
-    persistence.py           Opt-in flush/load hook (SNN_METRICS_PERSIST)
+    persistence.py           Opt-in flush/load hook (SPIKEFORGE_METRICS_PERSIST)
   nir_bridge/                NIR export, interpreter, validation, interop
     api.py                   The only module importing nir/nirtorch
     exporter.py              to_nir(spec, module); graph_summary(...)
@@ -1599,7 +1619,7 @@ snn_interpreter/
     neuron_nodes.py          Neuron-kind -> NIR node(s); alpha precedent
     stage_builders.py        Builder table for the new stage kinds
     stages_unmappable.py     kind -> honest reason export cannot map it
-  targets/                   DEPRECATED shim -> snn_targets (Phase 3)
+  targets/                   DEPRECATED shim -> spikeforge_targets (Phase 3)
   tracking/                  Reproducibility: manifest, hash, seed, versions
     manifest.py              ReproducibilityManifest: config/seed/history
     config_hash.py           Canonical-JSON SHA-256 of the run config
@@ -1610,9 +1630,9 @@ snn_interpreter/
     tensorboard_sink.py      TensorBoard SummaryWriter sink (tracking extra)
     wandb_sink.py            Weights & Biases sink (tracking-wandb extra)
     sink_probe.py            Isolated tensorboard / wandb probes
-  hub/                       DEPRECATED shim -> snn_hub (Phase 4)
-  energy/                    DEPRECATED shim -> snn_targets.energy (Phase 3)
-  event_runtime/             DEPRECATED shim -> snn_targets.event_runtime
+  hub/                       DEPRECATED shim -> spikeforge_hub (Phase 4)
+  energy/                    DEPRECATED shim -> spikeforge_targets.energy (Phase 3)
+  event_runtime/             DEPRECATED shim -> spikeforge_targets.event_runtime
   onnx_bridge/               Optional ONNX import/export (onnx extra)
     api.py                   The only module importing onnx/onnxruntime
     export.py                One-step topology export with spec metadata
@@ -1620,7 +1640,7 @@ snn_interpreter/
     roundtrip.py             Export + re-import fidelity check
   cli/                       Headless commands
     verify.py                export / validate + the shared subcommands
-    records_cli.py           records list / diff / manifest (snn-records)
+    records_cli.py           records list / diff / manifest (spikeforge-records)
     backend_cli.py           rewrite / run backend commands
     extract_cli.py           extract a torch module via nirtorch
     onnx_cli.py              onnx-export / onnx-import / onnx-roundtrip
@@ -1633,9 +1653,9 @@ snn_interpreter/
     device.py                CPU/GPU selection + auto benchmark
     execution_mode.py        Educational/Production execution flag
     system_stats.py          CPU RAM / GPU VRAM snapshots
-snn_targets/                 Deployment targets, energy, event runtime
-                               (ARCH-0001 Phase 3; distribution snn-targets;
-                               extracted to w4ffl35/snn-targets)
+spikeforge_targets/                 Deployment targets, energy, event runtime
+                               (ARCH-0001 Phase 3; distribution spikeforge-targets;
+                               extracted to capsize-games/spikeforge-targets)
   target_spec.py             TargetSpec: support, substitutions, constraints
   catalog.py                 Built-in targets (reference + placeholders)
   registry.py                name -> spec; live availability lookup
@@ -1665,7 +1685,7 @@ snn_targets/                 Deployment targets, energy, event runtime
     accounting.py            account(...) -> EnergyReport (estimate: true)
     report.py                JSON-able report assembly
     costs/*.json             reference / norse / lava_loihi2 / ... tables
-    cli.py                   snn-energy entry point
+    cli.py                   spikeforge-energy entry point
   event_runtime/             Sparse / event-driven execution path
     spike_view.py            SparseSpikes: indices/values per frame
     ops.py / sparse_step.py  Event-driven ops for one temporal step
@@ -1674,8 +1694,8 @@ snn_targets/                 Deployment targets, energy, event runtime
     dense_compare.py         Sparse-vs-dense readout parity check
   cli/
     target_cli.py            targets / deploy / roundtrip / ingest
-snn_hub/                     Curated model hub (ARCH-0001 Phase 4; distribution
-                               snn-hub; extracted to w4ffl35/snn-hub)
+spikeforge_hub/                     Curated model hub (ARCH-0001 Phase 4; distribution
+                               spikeforge-hub; extracted to capsize-games/spikeforge-hub)
   models.json                Bundled catalog (10 entries, five frameworks)
   entry.py / catalog.py      Validate and list/search the catalog
   probe.py / hf_api.py       Isolated huggingface_hub probe + live access
@@ -1686,7 +1706,7 @@ snn_hub/                     Curated model hub (ARCH-0001 Phase 4; distribution
   inspect.py / compat.py     Structure report + exact/mappable/incompatible
   weight_map.py              Load compatible weights into a preset module
   import_model.py            inspect -> compat -> promote into MODEL_DIR
-  cli.py                     snn-hub entry point (snn-hub distribution)
+  cli.py                     spikeforge-hub entry point (spikeforge-hub distribution)
 server/
   app.py                     FastAPI app + WebSocket endpoint
   handlers.py                Inbound message routing (encode + train)
@@ -1747,7 +1767,7 @@ Python function stays under 20 lines, and each class lives in its own file.
   zero-order-hold form, and `Synaptic`'s subtract reset carries a small
   residual; both residuals are reported in the `ValidationReport` rather
   than hidden. Extracting NIR graphs from arbitrary external modules via
-  `nirtorch` landed in WS-F (`snn-targets extract`; see below).
+  `nirtorch` landed in WS-F (`spikeforge-targets extract`; see below).
 - **Introspection limitations (Phase 2).** Four behaviours are deliberate.
   (1) `snn.Alpha` is simulation/introspection-only: the installed `nir` has
   no alpha-function primitive that matches its three-state dynamics, so
@@ -1804,9 +1824,9 @@ Python function stays under 20 lines, and each class lives in its own file.
   a metric a few percent, so CI regressions use a threshold (default 10
   percent) rather than bit-exact equality, and `--compare` takes a run id, not
   a label. (4) The metrics registry is per-process and in-memory by default;
-  WS-E adds opt-in JSON snapshot persistence (`SNN_METRICS_PERSIST`) but does
-  not aggregate across workers. (5) Structured logging is opt-in via `SNN_LOG_JSON` /
-  `SNN_LOG_LEVEL`; nothing calls `configure_logging()` automatically, so the
+  WS-E adds opt-in JSON snapshot persistence (`SPIKEFORGE_METRICS_PERSIST`) but does
+  not aggregate across workers. (5) Structured logging is opt-in via `SPIKEFORGE_LOG_JSON` /
+  `SPIKEFORGE_LOG_LEVEL`; nothing calls `configure_logging()` automatically, so the
   default log output is unchanged. (6) AMP, gradient checkpointing, truncated
   BPTT, and multi-GPU are all opt-in and default-off, so a default run is
   numerically identical; multi-GPU needs more than one visible CUDA device and

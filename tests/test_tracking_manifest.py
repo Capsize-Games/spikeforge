@@ -4,11 +4,11 @@ from typing import Any
 
 import pytest
 
-from snn_interpreter.network import model_store
-from snn_interpreter.network.spiking_net import SpikingNet
-from snn_interpreter.tracking.config_hash import config_hash
-from snn_interpreter.tracking.manifest import ReproducibilityManifest
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.network import model_store
+from spikeforge.network.spiking_net import SpikingNet
+from spikeforge.tracking.config_hash import config_hash
+from spikeforge.tracking.manifest import ReproducibilityManifest
+from spikeforge.training.training_engine import TrainingEngine
 
 
 @pytest.fixture(autouse=True)

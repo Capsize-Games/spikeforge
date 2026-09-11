@@ -6,7 +6,7 @@ It makes the listed optional packages unimportable so the test suite can prove
 graceful degradation *even when the extras are installed in the environment*,
 without uninstalling anything.
 
-This file is CI scaffolding, not product code: nothing in ``snn_interpreter``
+This file is CI scaffolding, not product code: nothing in ``spikeforge``
 or ``server`` imports it.
 
 ``find_spec`` deliberately returns a spec (rather than raising) so that
@@ -20,7 +20,7 @@ import sys
 #: Optional dependencies whose absence must be handled honestly.
 #:
 #: The ``fastapi``/``pydantic``/``uvicorn`` entries are the ARCH-0001 Phase 1c
-#: addition: they are the base dependencies of the ``snn-interpreter-server``
+#: addition: they are the base dependencies of the ``spikeforge-server``
 #: distribution ([`plans/arch-0001-core-boundary.md`]), so blocking them proves
 #: that a headless core install does not reach for the server stack. The
 #: remaining entries are the pre-existing data/event, tracking, hub, and

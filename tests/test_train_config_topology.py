@@ -2,8 +2,8 @@
 
 from server.schemas import TrainConfig
 from server.training import TrainingService
-from snn_interpreter.network.spiking_net import SpikingNet
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.network.spiking_net import SpikingNet
+from spikeforge.training.training_engine import TrainingEngine
 
 
 def _engine(config: TrainConfig) -> TrainingEngine:

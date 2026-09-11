@@ -1,14 +1,29 @@
 """Offline cache path resolution and size accounting."""
 
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
-from snn_hub import cache
-from snn_interpreter import config
+from spikeforge import config
+from spikeforge_hub import cache
 
 _ROOT = Path(__file__).resolve().parent.parent
+
+#: Probe run in a subprocess so the import-time env read is fresh per case.
+_HUB_DIR_PROBE = (
+    "import importlib, os\n"
+    "import spikeforge.config as c\n"
+    "os.environ['SPIKEFORGE_HUB_DIR'] = 'NEW'\n"
+    "os.environ['SNN_HUB_DIR'] = 'LEGACY'\n"
+    "importlib.reload(c)\n"
+    "print('both=' + c.HUB_CACHE_DIR)\n"
+    "os.environ.pop('SPIKEFORGE_HUB_DIR')\n"
+    "importlib.reload(c)\n"
+    "print('legacy=' + c.HUB_CACHE_DIR)\n"
+)
 
 
 def test_cache_root_is_configurable(
@@ -64,14 +79,31 @@ def test_dir_bytes_walks_nested_files(tmp_path: Path) -> None:
 
 def test_config_declares_the_hub_cache_dir() -> None:
     """``config`` exposes the hub cache dir and its env override."""
-    source = (_ROOT / "snn_interpreter" / "config.py").read_text("utf-8")
-    assert "SNN_HUB_DIR" in source
+    source = (_ROOT / "spikeforge" / "config.py").read_text("utf-8")
+    assert "SPIKEFORGE_HUB_DIR" in source
     assert "HUB_CACHE_DIR" in source
 
 
 def test_config_hub_cache_defaults_under_data_dir() -> None:
     """Without an override the cache lives at ``DATA_DIR/hub``."""
-    if os.environ.get("SNN_HUB_DIR"):
-        pytest.skip("SNN_HUB_DIR is overridden in this environment")
+    if os.environ.get("SPIKEFORGE_HUB_DIR"):
+        pytest.skip("SPIKEFORGE_HUB_DIR is overridden in this environment")
     default = os.path.join(config.DATA_DIR, "hub")
     assert default == config.HUB_CACHE_DIR
+
+
+def test_config_prefers_spikeforge_env_with_legacy_fallback() -> None:
+    """SPIKEFORGE_* wins; the legacy SNN_* name still resolves when unset."""
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(_ROOT)
+    env.pop("SPIKEFORGE_HUB_DIR", None)
+    env.pop("SNN_HUB_DIR", None)
+    result = subprocess.run(
+        [sys.executable, "-c", _HUB_DIR_PROBE],
+        cwd=str(_ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.splitlines() == ["both=NEW", "legacy=LEGACY"]

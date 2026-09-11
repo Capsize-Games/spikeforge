@@ -5,11 +5,11 @@ from typing import Any, Dict, Optional, Tuple
 
 from server.event_engine import EventEngine
 from server.schemas import EncodeConfig
-from snn_interpreter.events.event_source import EventSampleSource
-from snn_interpreter.simulator import input_shape
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import registry
-from snn_interpreter.topology.spec import TopologySpec
+from spikeforge.events.event_source import EventSampleSource
+from spikeforge.simulator import input_shape
+from spikeforge.simulator.runner import run
+from spikeforge.topology import registry
+from spikeforge.topology.spec import TopologySpec
 
 _STEPS = 10
 _SIDE = 28

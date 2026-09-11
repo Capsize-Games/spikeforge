@@ -13,9 +13,9 @@ from server.protocol_version import PROTOCOL_MAJOR, PROTOCOL_VERSION
 from server.schemas import ClientMessage
 from server.session import Session
 from server.web import mount_client
-from snn_interpreter.runtime import device as device_mod
+from spikeforge.runtime import device as device_mod
 
-app = FastAPI(title="snn-interpreter server")
+app = FastAPI(title="spikeforge server")
 
 # Warm the CUDA context once at startup so training/benchmarks don't stall.
 device_mod.prime()

@@ -3,11 +3,11 @@
 import json
 from typing import Any, Dict
 
-from snn_interpreter.benchmark.config import BenchmarkConfig
-from snn_interpreter.benchmark.harness import run_benchmark
-from snn_targets.energy import account, measure_topology
-from snn_targets.energy.report import EnergyReport
-from snn_targets.event_runtime.sparse_result import SparseResult
+from spikeforge.benchmark.config import BenchmarkConfig
+from spikeforge.benchmark.harness import run_benchmark
+from spikeforge_targets.energy import account, measure_topology
+from spikeforge_targets.energy.report import EnergyReport
+from spikeforge_targets.event_runtime.sparse_result import SparseResult
 
 _COUNTS = {"sop": 20, "mac": 80, "ac": 10, "timesteps": 4}
 

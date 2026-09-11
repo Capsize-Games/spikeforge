@@ -2,11 +2,11 @@
 
 **Status: accepted (proposed for maintainer sign-off).**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
-**Owner:** w4ffl35 (maintainer) · **Depends on:** [`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)
+**Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-target-topology.md`](plans/arch-0001-target-topology.md)
 
 ## Decision
 
-The `snn-interpreter` distribution MUST install and import **without any of the
+The `spikeforge` distribution MUST install and import **without any of the
 following distributions present**. This list is the enforced core boundary and is
 frozen for `protocol_version` 1.0.
 
@@ -107,8 +107,8 @@ unavailable path — including "the server stack is not installed" — in one ru
 ### 2. Static import scan
 
 Add `scripts/check_core_boundary.py`, run in a new `core-boundary` job. It walks
-the core distribution's packages (everything in `include = ["snn_interpreter*"]`,
-`exclude = ["server*", "snn_targets*", "snn_hub*"]`), parses each module's AST,
+the core distribution's packages (everything in `include = ["spikeforge*"]`,
+`exclude = ["server*", "spikeforge_targets*", "spikeforge_hub*"]`), parses each module's AST,
 and fails if any *module-level* import names a forbidden root. Function-local
 imports are permitted only inside the enumerated shim allow-list; a
 function-local import of a forbidden SDK anywhere else is a failure too, so the
@@ -118,17 +118,17 @@ boundary cannot be widened silently.
 check_core_boundary.py
   forbidden = {fastapi, pydantic, uvicorn, huggingface_hub, nir, nirtorch,
                onnx, onnxruntime, norse, lava, tonic, tensorboard, wandb}
-  scan roots = snn_interpreter/**  and  main.py, main_encodings.py
+  scan roots = spikeforge/**  and  main.py, main_encodings.py
   rule       = no module-level import of a forbidden root, anywhere
   rule       = no function-level import of a forbidden root outside
-               {"snn_interpreter.nir_bridge.api",
-                "snn_interpreter.onnx_bridge.api",
-                "snn_interpreter.targets.backends.api",
-                "snn_interpreter.events.tonic_api",
-                "snn_interpreter.hub.probe",
-                "snn_interpreter.targets.probe",
-                "snn_interpreter.tracking.tensorboard_sink",
-                "snn_interpreter.tracking.wandb_sink"}
+               {"spikeforge.nir_bridge.api",
+                "spikeforge.onnx_bridge.api",
+                "spikeforge.targets.backends.api",
+                "spikeforge.events.tonic_api",
+                "spikeforge.hub.probe",
+                "spikeforge.targets.probe",
+                "spikeforge.tracking.tensorboard_sink",
+                "spikeforge.tracking.wandb_sink"}
 ```
 
 ### 3. Headless install proof
@@ -137,16 +137,16 @@ Add a `headless` verification step that builds the distribution **with no
 extras** and asserts the boundary from the outside:
 
 ```bash
-python -m build packages/snn-interpreter            # no extras requested
+python -m build packages/spikeforge            # no extras requested
 python -m venv /tmp/headless && . /tmp/headless/bin/activate
-pip install dist/snn_interpreter-*.whl
+pip install dist/spikeforge-*.whl
 python - <<'PY'
 import importlib.util as u
 for mod in ("fastapi", "pydantic", "uvicorn", "huggingface_hub",
             "nir", "nirtorch", "onnx", "onnxruntime",
             "norse", "lava", "tonic", "tensorboard", "wandb"):
     assert u.find_spec(mod) is None, f"core install leaked forbidden dep: {mod}"
-import snn_interpreter  # must import cleanly with the forbidden set absent
+import spikeforge  # must import cleanly with the forbidden set absent
 PY
 ```
 
@@ -161,7 +161,7 @@ asserting no `server/` entry is present.
   removed. Extending `BLOCKED` as above is part of this decision.
 - **The `web` extra is the wrong home for the server stack.** `setup.py` §extras
   declares `web = [fastapi, uvicorn, websockets, pydantic]`. Phase 1 promotes
-  those to the base dependencies of the `snn-interpreter-server` distribution
+  those to the base dependencies of the `spikeforge-server` distribution
   and removes `web` from core
   ([`plans/arch-0001-packaging-versioning.md`](plans/arch-0001-packaging-versioning.md)).
 - **`nir` and `huggingface_hub` remain core-optional, not core-required.** The

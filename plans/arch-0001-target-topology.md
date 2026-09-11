@@ -2,7 +2,7 @@
 
 **Status: accepted (proposed for maintainer sign-off).**
 **Date:** 2026-09-11 · **Issue:** ARCH-0001 *Phased repo split: core library, deploy targets, dashboard*
-**Owner:** w4ffl35 (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
+**Owner:** Capsize Games (maintainer) · **Depends on:** [`plans/arch-0001-adr-repo-topology.md`](plans/arch-0001-adr-repo-topology.md)
 
 ## Decision
 
@@ -12,52 +12,52 @@ escape hatch (`plans/repo_topology_plan.md` §4) is deliberately **not** used.
 
 | Distribution | Import root | Source of truth today | Owner phase |
 |---|---|---|---|
-| `snn-interpreter` | `snn_interpreter` | `snn_interpreter/` (minus any extracted subpackages) | Phase 1 |
-| `snn-interpreter-server` | `server` (kept) | `server/` | Phase 1 |
-| `snn-targets` | `snn_targets` | `snn_interpreter.targets`, `snn_interpreter.targets.backends`, `snn_interpreter.energy`, `snn_interpreter.event_runtime` | Phase 3 |
-| `snn-hub` | `snn_hub` | `snn_interpreter.hub` | Phase 4 (go) |
-| `snn-dashboard` (npm `snn-interpreter-client`, private) | n/a — npm | `client/` | Phase 2 |
+| `spikeforge` | `spikeforge` | `spikeforge/` (minus any extracted subpackages) | Phase 1 |
+| `spikeforge-server` | `server` (kept) | `server/` | Phase 1 |
+| `spikeforge-targets` | `spikeforge_targets` | `spikeforge.targets`, `spikeforge.targets.backends`, `spikeforge.energy`, `spikeforge.event_runtime` | Phase 3 |
+| `spikeforge-hub` | `spikeforge_hub` | `spikeforge.hub` | Phase 4 (go) |
+| `spikeforge-dashboard` (npm `spikeforge-dashboard`, private) | n/a — npm | `client/` | Phase 2 |
 
 ### Core import root
 
-The core distribution keeps the import root `snn_interpreter`. **The project
+The core distribution keeps the import root `spikeforge`. **The project
 rename is explicitly out of scope for ARCH-0001.** No aliasing, no shim, no
 namespace package is introduced for core.
 
 ### Server import root
 
 Adopt the recommendation and **keep the existing top-level package `server`** as
-the `snn-interpreter-server` import root. Rationale: `server/` is already a
+the `spikeforge-server` import root. Rationale: `server/` is already a
 top-level package with 30 modules and every one of its 24 library-importing
-files imports `snn_interpreter`, so keeping `server` avoids churn in CI, Docker,
+files imports `spikeforge`, so keeping `server` avoids churn in CI, Docker,
 and the WS entry point while the boundary is being made real.
 
-A future rename to `snn_server` is **documented as a possibility, not
+A future rename to `spikeforge_server` is **documented as a possibility, not
 scheduled**, and if it is ever performed it MUST follow this shim policy: ship
-`snn_server/` as the new import root, retain `server/` as a deprecated alias
-package that re-exports `snn_server` and emits `DeprecationWarning`, keep both
+`spikeforge_server/` as the new import root, retain `server/` as a deprecated alias
+package that re-exports `spikeforge_server` and emits `DeprecationWarning`, keep both
 paths working for at least one minor release, and only then remove `server/`.
 
 ### Targets, hub, and dashboard import roots
 
-- `snn-targets` owns `snn_targets` and absorbs `targets`, `targets/backends`,
+- `spikeforge-targets` owns `spikeforge_targets` and absorbs `targets`, `targets/backends`,
   `energy`, and `event_runtime`. These four subpackages move together because
   `targets/backends` depends on `energy`/`event_runtime` and all carry the
   volatile backend SDK surface.
-- `snn-hub` owns `snn_hub` and absorbs `hub`.
-- The dashboard keeps the npm package name `snn-interpreter-client` even though
-  its GitHub repository and product name become `snn-dashboard`. The npm package
+- `spikeforge-hub` owns `spikeforge_hub` and absorbs `hub`.
+- The dashboard keeps the npm package name `spikeforge-dashboard` even though
+  its GitHub repository and product name become `spikeforge-dashboard`. The npm package
   stays `private: true`.
 
 ## GitHub repository names
 
 | Repository | Phase | Status |
 |---|---|---|
-| `w4ffl35/snn-dashboard` | Phase 2 | create when T1 fires |
-| `w4ffl35/snn-targets` | Phase 3 | create when T2 fires |
-| `w4ffl35/snn-hub` | Phase 4 | **go** — create when T3 fires |
-| `w4ffl35/snn-server` | Phase 4 | **conditional** — create only when T4 fires |
-| `w4ffl35/snn_interpreter` | — | existing core repository; not renamed |
+| `capsize-games/spikeforge-dashboard` | Phase 2 | create when T1 fires |
+| `capsize-games/spikeforge-targets` | Phase 3 | create when T2 fires |
+| `capsize-games/spikeforge-hub` | Phase 4 | **go** — create when T3 fires |
+| `capsize-games/spikeforge-server` | Phase 4 | **conditional** — create only when T4 fires |
+| `capsize-games/spikeforge` | — | existing core repository; not renamed |
 
 New repositories use hyphenated names; the existing core repository keeps its
 underscored name as published in [`setup.py`](setup.py:33).
@@ -65,16 +65,16 @@ underscored name as published in [`setup.py`](setup.py:33).
 ## Dependency direction
 
 The invariant is **dependency arrows point from a component to what it
-requires**, and there is no cycle. A satellite may depend on `snn-interpreter`;
-`snn-interpreter` never depends on a satellite.
+requires**, and there is no cycle. A satellite may depend on `spikeforge`;
+`spikeforge` never depends on a satellite.
 
 ```mermaid
 flowchart TB
-    dashboard[snn-dashboard React plus Vite]
-    server[snn-interpreter-server server package]
-    hub[snn-hub snn_hub]
-    targets[snn-targets snn_targets]
-    core[snn-interpreter snn_interpreter]
+    dashboard[spikeforge-dashboard React plus Vite]
+    server[spikeforge-server server package]
+    hub[spikeforge-hub spikeforge_hub]
+    targets[spikeforge-targets spikeforge_targets]
+    core[spikeforge spikeforge]
     protocol[protocol JSON Schema contract]
 
     targets --> core
@@ -87,22 +87,22 @@ flowchart TB
     core --> protocol
 ```
 
-Reading the edges as "depends on": `snn-targets`, `snn-hub`, and
-`snn-interpreter-server` each depend on core; the server additionally depends on
+Reading the edges as "depends on": `spikeforge-targets`, `spikeforge-hub`, and
+`spikeforge-server` each depend on core; the server additionally depends on
 `targets` and `hub` because 24 of its files import those capability roots today
-(via `snn_interpreter.*` until Phase 3/4); and both the server and the dashboard
+(via `spikeforge.*` until Phase 3/4); and both the server and the dashboard
 depend on the `protocol/` contract, never on each other's code.
 
 ### Why this direction is stable
 
 - **Core is the floor.** It has no incoming packaging dependency on a
-  satellite, which is what makes a headless `pip install snn-interpreter`
+  satellite, which is what makes a headless `pip install spikeforge`
   provably free of the forbidden list in
   [`plans/arch-0001-core-boundary.md`](plans/arch-0001-core-boundary.md).
 - **The protocol is a leaf, not a library.** Because `protocol/` is data (JSON
   Schema), the dashboard and the server can both depend on it without depending
   on each other — which is what makes the Phase 2 dashboard extraction safe.
-- **Capabilities are siblings.** `snn-targets` and `snn-hub` do not depend on
+- **Capabilities are siblings.** `spikeforge-targets` and `spikeforge-hub` do not depend on
   each other, so either can be extracted without ordering constraints beyond
   core.
 
@@ -116,13 +116,13 @@ packages remain at their current paths and extraction is a later, explicit step.
 
 ```text
 packages/
-  snn-interpreter/
-    pyproject.toml            # distribution snn-interpreter, import root snn_interpreter
-  snn-interpreter-server/
-    pyproject.toml            # distribution snn-interpreter-server, import root server
-  snn-targets/                # created in Phase 3
+  spikeforge/
+    pyproject.toml            # distribution spikeforge, import root spikeforge
+  spikeforge-server/
+    pyproject.toml            # distribution spikeforge-server, import root server
+  spikeforge-targets/                # created in Phase 3
     pyproject.toml
-  snn-hub/                    # created in Phase 4
+  spikeforge-hub/                    # created in Phase 4
     pyproject.toml
 ```
 
@@ -132,12 +132,12 @@ does not own, so `server/` can no longer leak into the core wheel:
 ```toml
 [tool.setuptools.packages.find]
 where = ["../.."]
-include = ["snn_interpreter*"]
-exclude = ["server*", "tests*", "snn_targets*", "snn_hub*"]
+include = ["spikeforge*"]
+exclude = ["server*", "tests*", "spikeforge_targets*", "spikeforge_hub*"]
 ```
 
 This is the direct fix for the verified fact that
-[`setup.py`](setup.py:37) currently packages `server/` into `snn-interpreter`.
+[`setup.py`](setup.py:37) currently packages `server/` into `spikeforge`.
 
 ## Related decisions
 

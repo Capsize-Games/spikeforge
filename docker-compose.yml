@@ -1,22 +1,22 @@
 services:
   # Default service: `docker compose up --build` still builds the CUDA-capable
   # image and serves the dashboard on port 8877. The image (see Dockerfile)
-  # installs the `packages/snn-interpreter-server` distribution, which pulls
+  # installs the `packages/spikeforge-server` distribution, which pulls
   # core, so the removed core `web` extra is no longer involved. Services below
   # are opt-in alternatives selected with `--profile cpu` / `--profile gpu`.
-  snn-interpreter:
+  spikeforge:
     build: .
-    container_name: snn-interpreter
+    container_name: spikeforge
     ports:
       # Host 8877 -> container 8877 (single port for web + ws + api).
-      # Override the host port with SNN_HOST_PORT (scripts/docker_server.sh
+      # Override the host port with SPIKEFORGE_HOST_PORT (scripts/docker_server.sh
       # --port N sets this for you).
-      - "${SNN_HOST_PORT:-8877}:8877"
+      - "${SPIKEFORGE_HOST_PORT:-8877}:8877"
     volumes:
       # Persist downloaded datasets + generated outputs across restarts.
-      - snn-data:/data
+      - spikeforge-data:/data
     environment:
-      - SNN_DATA_DIR=/data
+      - SPIKEFORGE_DATA_DIR=/data
     # Request the host GPU so the container can train on CUDA. Needs the
     # NVIDIA Container Toolkit; ignored when no GPU is present.
     deploy:
@@ -30,36 +30,36 @@ services:
 
   # CPU-only image: `docker compose --profile cpu up --build`.
   # Smaller and portable; no GPU reserved.
-  snn-interpreter-cpu:
+  spikeforge-cpu:
     profiles: ["cpu"]
     build:
       context: .
       args:
         TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
-    container_name: snn-interpreter-cpu
+    container_name: spikeforge-cpu
     ports:
-      - "${SNN_HOST_PORT:-8877}:8877"
+      - "${SPIKEFORGE_HOST_PORT:-8877}:8877"
     volumes:
-      - snn-data:/data
+      - spikeforge-data:/data
     environment:
-      - SNN_DATA_DIR=/data
+      - SPIKEFORGE_DATA_DIR=/data
     restart: unless-stopped
 
   # Explicit CUDA image: `docker compose --profile gpu up --build`.
   # Same build as the default service, kept explicit for parity with `cpu`.
-  snn-interpreter-gpu:
+  spikeforge-gpu:
     profiles: ["gpu"]
     build:
       context: .
       args:
         TORCH_INDEX_URL: https://download.pytorch.org/whl/cu132
-    container_name: snn-interpreter-gpu
+    container_name: spikeforge-gpu
     ports:
-      - "${SNN_HOST_PORT:-8877}:8877"
+      - "${SPIKEFORGE_HOST_PORT:-8877}:8877"
     volumes:
-      - snn-data:/data
+      - spikeforge-data:/data
     environment:
-      - SNN_DATA_DIR=/data
+      - SPIKEFORGE_DATA_DIR=/data
     deploy:
       resources:
         reservations:
@@ -70,4 +70,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  snn-data:
+  spikeforge-data:

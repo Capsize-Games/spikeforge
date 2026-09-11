@@ -5,11 +5,11 @@ import json
 import pytest
 import torch
 
-from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_targets import probe
-from snn_targets.report import deployment_report
+from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge_targets import probe
+from spikeforge_targets.report import deployment_report
 
 pytest.importorskip("nir")
 

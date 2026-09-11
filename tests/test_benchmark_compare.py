@@ -2,7 +2,7 @@
 
 from typing import Any, Dict
 
-from snn_interpreter.benchmark.compare import (
+from spikeforge.benchmark.compare import (
     DEFAULT_THRESHOLD,
     compare_runs,
     exit_code,

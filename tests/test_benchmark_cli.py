@@ -6,8 +6,8 @@ from typing import Any, Dict, List
 
 import pytest
 
-from snn_interpreter.benchmark.__main__ import main
-from snn_interpreter.benchmark.store import BenchmarkStore
+from spikeforge.benchmark.__main__ import main
+from spikeforge.benchmark.store import BenchmarkStore
 
 
 def _args(store: Path, *extra: str) -> List[str]:

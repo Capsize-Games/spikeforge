@@ -5,8 +5,8 @@ from typing import Dict, Tuple
 
 import torch
 
-from snn_interpreter.network import inference
-from snn_interpreter.network.spiking_net import SpikingNet
+from spikeforge.network import inference
+from spikeforge.network.spiking_net import SpikingNet
 
 _LEGACY_KEYS = {"_fc1.weight", "_fc1.bias", "_fc2.weight", "_fc2.bias"}
 

@@ -4,10 +4,10 @@ from typing import Any, Dict
 
 import torch
 
-from snn_interpreter.runtime.execution_mode import ExecutionMode
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.training import training_engine as engine_mod
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.runtime.execution_mode import ExecutionMode
+from spikeforge.simulator.runner import run
+from spikeforge.training import training_engine as engine_mod
+from spikeforge.training.training_engine import TrainingEngine
 
 
 def _engine(**kwargs: Any) -> TrainingEngine:

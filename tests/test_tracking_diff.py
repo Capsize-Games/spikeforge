@@ -6,8 +6,8 @@ from typing import Any, Dict
 import pytest
 import torch
 
-from snn_interpreter.network import model_store
-from snn_interpreter.network.model_diff import checkpoint_diff, metadata_diff
+from spikeforge.network import model_store
+from spikeforge.network.model_diff import checkpoint_diff, metadata_diff
 
 
 @pytest.fixture(autouse=True)

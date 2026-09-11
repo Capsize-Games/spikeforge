@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from snn_interpreter import config
+from spikeforge import config
 
 # In Docker this is /app/client/dist; local fallback is client/dist.
 _CLIENT_DIST = Path("/app/client/dist")
@@ -26,9 +26,10 @@ def pinned_dist() -> Optional[Path]:
 def client_dist() -> Optional[Path]:
     """Return the dashboard build directory, preferring a pinned bundle.
 
-    ``SNN_DASHBOARD_DIST`` (see :mod:`snn_interpreter.config`) lets a deploy
-    serve a ``dist/`` published by ``w4ffl35/snn-dashboard`` without rebuilding
-    ``client/`` in-repo. When it is unset or absent, the legacy resolution --
+    ``SPIKEFORGE_DASHBOARD_DIST`` (see :mod:`spikeforge.config`) lets a deploy
+    serve a ``dist/`` published by
+    ``capsize-games/spikeforge-dashboard`` without rebuilding ``client/``
+    in-repo. When it is unset or absent, the legacy resolution --
     the Docker ``/app/client/dist`` then the in-repo ``client/dist`` -- is
     unchanged.
     """

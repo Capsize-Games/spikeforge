@@ -8,11 +8,11 @@ from typing import Any, Dict, List, Optional, Type
 import torch
 
 from server.schemas import EncodeConfig, TrainConfig
-from snn_interpreter.data.datasets import dataset_modality
-from snn_interpreter.network import model_store
-from snn_interpreter.observability import persistence
-from snn_interpreter.training.event_engine import EventTrainingEngine
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.data.datasets import dataset_modality
+from spikeforge.network import model_store
+from spikeforge.observability import persistence
+from spikeforge.training.event_engine import EventTrainingEngine
+from spikeforge.training.training_engine import TrainingEngine
 
 
 def _checkpoint_meta(checkpoint: Optional[str]) -> Dict[str, Any]:

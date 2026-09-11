@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-`snn-interpreter` is pre-1.0. Security fixes are made against the latest
+`spikeforge` is pre-1.0. Security fixes are made against the latest
 released line and `main`; older `0.x` releases are not maintained.
 
 | Version | Supported |

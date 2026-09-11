@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Tuple
 import pytest
 import torch
 
-from snn_interpreter.network import inference
-from snn_interpreter.simulator import input_shape
-from snn_interpreter.topology import registry
+from spikeforge.network import inference
+from spikeforge.simulator import input_shape
+from spikeforge.topology import registry
 
 _Cases = Tuple[str, Dict[str, Any], str]
 

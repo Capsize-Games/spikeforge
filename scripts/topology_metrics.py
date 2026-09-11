@@ -45,30 +45,26 @@ DEFAULT_WINDOW_DAYS = 90
 QUARTER_DAYS = 91
 
 #: The core distribution owns this tag prefix and this import root.
-CORE_DISTRIBUTION = "snn-interpreter"
-CORE_PREFIX = "snn_interpreter/"
+CORE_DISTRIBUTION = "spikeforge"
+CORE_PREFIX = "spikeforge/"
 
 #: Component prefixes from ``plans/arch-0001-decision-metrics.md``.
 COMPONENTS: Dict[str, Tuple[str, ...]] = {
     "dashboard": ("client/",),
-    "targets": (
-        "snn_interpreter/targets/",
-        "snn_interpreter/energy/",
-        "snn_interpreter/event_runtime/",
-    ),
-    "hub": ("snn_hub/",),
+    "targets": ("spikeforge_targets/",),
+    "hub": ("spikeforge_hub/",),
     "server": ("server/",),
 }
 
 #: Backend-SDK paths/tokens, used to spot backend-churn-driven releases.
-BACKEND_SDK_PREFIX = "snn_interpreter/targets/backends/"
+BACKEND_SDK_PREFIX = "spikeforge_targets/backends/"
 BACKEND_SDK_TOKENS = ("norse", "lava")
 
 #: Files whose churn proxies a core pin conflict or downgrade.
-SERVER_PIN_PATH = "packages/snn-interpreter-server/pyproject.toml"
+SERVER_PIN_PATH = "packages/spikeforge-server/pyproject.toml"
 
 #: File whose ``schema_version`` gates the T3(b) clause.
-CATALOG_PATH = "snn_hub/models.json"
+CATALOG_PATH = "spikeforge_hub/models.json"
 
 #: Release tags are ``<distribution>-v<version>``.
 TAG_RE = re.compile(r"^(?P<dist>.+)-v(?P<version>\d+\.\d+.*)$")
@@ -541,7 +537,7 @@ def _build_triggers(metrics: Dict[str, object]) -> List[Trigger]:
         ),
         Trigger(
             name="T2",
-            phase="snn-targets (Phase 3)",
+            phase="spikeforge-targets (Phase 3)",
             mode="any",
             clauses=(
                 Clause(
@@ -560,7 +556,7 @@ def _build_triggers(metrics: Dict[str, object]) -> List[Trigger]:
         ),
         Trigger(
             name="T3",
-            phase="snn-hub (Phase 4 go)",
+            phase="spikeforge-hub (Phase 4 go)",
             mode="all",
             clauses=(
                 Clause(
@@ -579,7 +575,7 @@ def _build_triggers(metrics: Dict[str, object]) -> List[Trigger]:
         ),
         Trigger(
             name="T4",
-            phase="snn-server (Phase 4 conditional)",
+            phase="spikeforge-server (Phase 4 conditional)",
             mode="all",
             clauses=(
                 Clause(

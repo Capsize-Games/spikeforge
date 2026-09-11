@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from snn_interpreter.nir_bridge import api
+from spikeforge.nir_bridge import api
 
 _EXPECTED_KEYS = {
     "nir_available",

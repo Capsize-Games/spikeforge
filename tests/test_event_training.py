@@ -11,18 +11,18 @@ import pytest
 import torch
 
 from server import training as training_service
-from snn_interpreter.data import event_loader
-from snn_interpreter.data.datasets import build_dataset
-from snn_interpreter.data.event_errors import EventsExtraMissingError
-from snn_interpreter.data.event_geometry import EventGeometryError
-from snn_interpreter.events import event_source, synthetic
-from snn_interpreter.events.event_sample import EventSample
-from snn_interpreter.events.event_source import EventSampleSource
-from snn_interpreter.network import model_store
-from snn_interpreter.topology import registry
-from snn_interpreter.training.event_batches import event_batches
-from snn_interpreter.training.event_engine import EventTrainingEngine
-from snn_interpreter.training.training_engine import TrainingEngine
+from spikeforge.data import event_loader
+from spikeforge.data.datasets import build_dataset
+from spikeforge.data.event_errors import EventsExtraMissingError
+from spikeforge.data.event_geometry import EventGeometryError
+from spikeforge.events import event_source, synthetic
+from spikeforge.events.event_sample import EventSample
+from spikeforge.events.event_source import EventSampleSource
+from spikeforge.network import model_store
+from spikeforge.topology import registry
+from spikeforge.training.event_batches import event_batches
+from spikeforge.training.event_engine import EventTrainingEngine
+from spikeforge.training.training_engine import TrainingEngine
 
 _STEPS = 4
 

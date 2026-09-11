@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/model_query.schema.json",
+  "$id": "https://spikeforge.dev/protocol/1.0/payloads/model_query.schema.json",
   "title": "ModelQuery",
   "description": "Mirrors server/schemas/model_query.py::ModelQuery; unknown keys are ignored.",
   "type": "object",

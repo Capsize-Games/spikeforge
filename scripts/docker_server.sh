@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build and run the snn-interpreter server from the Docker container.
+# Build and run the spikeforge server from the Docker container.
 #
 # This is the one-shot "get the dashboard up" entry point: it selects the
 # CPU/GPU image profile, builds it, starts the container, waits for the
@@ -15,7 +15,7 @@
 #   --cpu             use the CPU-only torch image (`--profile cpu`)
 #   --gpu             use the explicit CUDA torch image (`--profile gpu`)
 #   --default         use the default service (CUDA build); this is the default
-#   --port N          host port to publish (default: 8877 / $SNN_HOST_PORT)
+#   --port N          host port to publish (default: 8877 / $SPIKEFORGE_HOST_PORT)
 #   --no-build        start without rebuilding the image
 #   -d, --detach      run the container in the background and return
 #   --follow          with -d, tail the logs after the health check
@@ -33,14 +33,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-SERVICE="snn-interpreter"
+SERVICE="spikeforge"
 PROFILE=""
 BUILD=1
 DETACH=0
 FOLLOW=0
 WAIT=1
-HOST_PORT="${SNN_HOST_PORT:-8877}"
-HEALTH_TIMEOUT="${SNN_HEALTH_TIMEOUT:-180}"
+HOST_PORT="${SPIKEFORGE_HOST_PORT:-8877}"
+HEALTH_TIMEOUT="${SPIKEFORGE_HEALTH_TIMEOUT:-180}"
 
 info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
@@ -60,14 +60,14 @@ usage() {
   cat <<'EOF'
 Usage: scripts/docker_server.sh [options]
 
-Build and run the snn-interpreter server from the Docker container and serve
+Build and run the spikeforge server from the Docker container and serve
 the dashboard on a single port (default 8877).
 
 Options:
   --cpu             use the CPU-only torch image (--profile cpu)
   --gpu             use the explicit CUDA torch image (--profile gpu)
   --default         use the default service (CUDA build); this is the default
-  --port N          host port to publish (default: 8877 / $SNN_HOST_PORT)
+  --port N          host port to publish (default: 8877 / $SPIKEFORGE_HOST_PORT)
   --no-build        start without rebuilding the image
   -d, --detach      run the container in the background and return
   --follow          with -d, tail the logs after the health check
@@ -87,9 +87,9 @@ EOF
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --cpu) PROFILE="cpu"; SERVICE="snn-interpreter-cpu" ;;
-    --gpu) PROFILE="gpu"; SERVICE="snn-interpreter-gpu" ;;
-    --default) PROFILE=""; SERVICE="snn-interpreter" ;;
+    --cpu) PROFILE="cpu"; SERVICE="spikeforge-cpu" ;;
+    --gpu) PROFILE="gpu"; SERVICE="spikeforge-gpu" ;;
+    --default) PROFILE=""; SERVICE="spikeforge" ;;
     --port)
       [ $# -ge 2 ] || die "--port requires a value"
       HOST_PORT="$2"; shift
@@ -118,8 +118,8 @@ if [ -n "$PROFILE" ]; then
   COMPOSE_ARGS+=(--profile "$PROFILE")
 fi
 
-# The compose files publish ${SNN_HOST_PORT}:8877; export the chosen port.
-export SNN_HOST_PORT="$HOST_PORT"
+# The compose files publish ${SPIKEFORGE_HOST_PORT}:8877; export the chosen port.
+export SPIKEFORGE_HOST_PORT="$HOST_PORT"
 
 # --- run ---------------------------------------------------------------------
 

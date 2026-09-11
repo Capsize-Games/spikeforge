@@ -4,9 +4,9 @@ import pytest
 import snntorch as snn
 import torch
 
-from snn_interpreter.network.spiking_net import SpikingNet
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
+from spikeforge.network.spiking_net import SpikingNet
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
 
 
 def test_fc_legacy_state_dict_matches_spiking_net() -> None:

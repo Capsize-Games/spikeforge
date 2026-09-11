@@ -5,15 +5,15 @@ import json
 import pytest
 import torch
 
-from snn_interpreter.introspection.firing_rate import (
+from spikeforge.introspection.firing_rate import (
     firing_rate,
     stage_firing_rates,
 )
-from snn_interpreter.introspection.histogram import firing_rate_histogram
-from snn_interpreter.introspection.isi import isi_stats
-from snn_interpreter.introspection.metrics import trajectory_metrics
-from snn_interpreter.introspection.sparsity import sparsity, stage_sparsity
-from snn_interpreter.simulator.trajectory import Trajectory
+from spikeforge.introspection.histogram import firing_rate_histogram
+from spikeforge.introspection.isi import isi_stats
+from spikeforge.introspection.metrics import trajectory_metrics
+from spikeforge.introspection.sparsity import sparsity, stage_sparsity
+from spikeforge.simulator.trajectory import Trajectory
 
 
 def _spikes() -> torch.Tensor:

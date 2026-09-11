@@ -6,17 +6,17 @@ import pytest
 import torch
 
 from server.schemas import EncodeConfig
-from snn_interpreter.data import sample_source
-from snn_interpreter.data.datasets import transform
-from snn_interpreter.data.event_geometry import EventGeometryError
-from snn_interpreter.data.image_size import as_size
-from snn_interpreter.data.sample_source import SampleSource
-from snn_interpreter.events import event_source
-from snn_interpreter.simulator import input_shape
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.training.event_engine import EventTrainingEngine
+from spikeforge.data import sample_source
+from spikeforge.data.datasets import transform
+from spikeforge.data.event_geometry import EventGeometryError
+from spikeforge.data.image_size import as_size
+from spikeforge.data.sample_source import SampleSource
+from spikeforge.events import event_source
+from spikeforge.simulator import input_shape
+from spikeforge.simulator.runner import run
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge.training.event_engine import EventTrainingEngine
 
 _SIZE = (32, 28)
 

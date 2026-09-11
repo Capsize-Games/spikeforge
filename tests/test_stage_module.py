@@ -3,11 +3,11 @@
 import torch
 import torch.nn as nn
 
-from snn_interpreter.topology import presets
-from snn_interpreter.topology.builder import build_module
-from snn_interpreter.topology.spec import chain, multi_branch, residual
-from snn_interpreter.topology.stage import Stage
-from snn_interpreter.topology.stage_module import PREV_KEY
+from spikeforge.topology import presets
+from spikeforge.topology.builder import build_module
+from spikeforge.topology.spec import chain, multi_branch, residual
+from spikeforge.topology.stage import Stage
+from spikeforge.topology.stage_module import PREV_KEY
 
 
 def _identity_module(module: nn.Module, name: str) -> None:

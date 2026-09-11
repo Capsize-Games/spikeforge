@@ -1,7 +1,7 @@
 """Fail when a documentation page links to a missing relative page.
 
 The plan documents intentionally reference repository source files (for
-example ``snn_interpreter/...py:14``), which are not documentation pages and
+example ``spikeforge/...py:14``), which are not documentation pages and
 which MkDocs cannot distinguish from a broken page link. This checker narrows
 the contract to what matters for a browsable site: every relative link that
 targets another markdown page must resolve inside the generated docs tree.

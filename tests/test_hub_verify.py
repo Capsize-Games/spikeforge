@@ -3,7 +3,7 @@
 import hashlib
 from pathlib import Path
 
-from snn_hub import verify
+from spikeforge_hub import verify
 
 
 def _written(tmp_path: Path, blob: bytes) -> str:

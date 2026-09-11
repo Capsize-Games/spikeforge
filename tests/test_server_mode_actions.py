@@ -9,9 +9,9 @@ from server.handlers import dispatch
 from server.introspection_handlers import EDUCATIONAL_ONLY
 from server.schemas import ClientMessage, TrainConfig
 from server.session import Session
-from snn_interpreter.neurons.registry import neuron_kinds
-from snn_interpreter.topology import registry
-from snn_interpreter.topology.registry import topology_names
+from spikeforge.neurons.registry import neuron_kinds
+from spikeforge.topology import registry
+from spikeforge.topology.registry import topology_names
 
 _STEPS = 4
 _SMALL = {"hidden": 4, "beta": 0.5, "num_classes": 3}

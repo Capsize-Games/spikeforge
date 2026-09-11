@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from snn_interpreter.benchmark.config import BenchmarkConfig
-from snn_interpreter.benchmark.store import BenchmarkStore, default_directory
-from snn_interpreter.benchmark.suite import run_suite
+from spikeforge.benchmark.config import BenchmarkConfig
+from spikeforge.benchmark.store import BenchmarkStore, default_directory
+from spikeforge.benchmark.suite import run_suite
 
 
 def _config() -> BenchmarkConfig:
@@ -49,7 +49,7 @@ def test_default_directory_is_under_data_dir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Without an override the store lives under the data directory."""
-    monkeypatch.delenv("SNN_BENCHMARK_DIR", raising=False)
+    monkeypatch.delenv("SPIKEFORGE_BENCHMARK_DIR", raising=False)
     assert default_directory().endswith("benchmarks")
 
 
