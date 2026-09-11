@@ -8,8 +8,13 @@ Three release-blocking health metrics from
   distributions (the PEP 420 / packaging-profile health metric);
 * **console-script ownership** - no console-script name may appear in two
   distributions;
-* **compatibility pin** - every satellite's ``spikeforge~=X.Y.0`` pin must
-  equal the core version recorded in ``compatibility.json``.
+* **compatibility pin** - every non-core distribution's ``spikeforge~=X.Y.0``
+  pin must equal the core version recorded in ``compatibility.json``. This
+  mirrors the ``release.yml`` verify step exactly: a distribution listed in
+  :data:`CORE_FREE_DISTRIBUTIONS` (currently ``spikeforge-clients``, which must
+  never pull the torch-backed core) is exempt from the pin but must declare no
+  ``spikeforge`` dependency at all, while every other satellite must declare
+  exactly the matrix pin.
 
 Import roots and scripts are read from each distribution's ``pyproject.toml``.
 When built wheels are passed with ``--core-wheel``, ``--server-wheel``,
@@ -66,6 +71,13 @@ TARGETS_PYPROJECT = (
 HUB_PYPROJECT = REPO_ROOT / "packages" / HUB_DISTRIBUTION / "pyproject.toml"
 IO_PYPROJECT = REPO_ROOT / "packages" / IO_DISTRIBUTION / "pyproject.toml"
 COMPATIBILITY = REPO_ROOT / "compatibility.json"
+
+#: Distributions that deliberately declare no ``spikeforge`` core dependency.
+#: A client install must never pull the torch-backed core, so these are exempt
+#: from the core-pin rule; declaring a core dependency in one is itself an
+#: error. Keep this in sync with ``core_free_distributions`` in
+#: ``.github/workflows/release.yml``.
+CORE_FREE_DISTRIBUTIONS = frozenset({CLIENTS_DISTRIBUTION})
 
 
 def _read_toml(path: Path) -> Dict[str, object]:
@@ -186,6 +198,45 @@ def _requirement_name(requirement: object) -> str:
     return text
 
 
+def check_core_pin(
+    distribution: str,
+    dependencies: Sequence[object],
+    core_version: object,
+) -> Optional[str]:
+    """Return an error when a distribution's core pin breaks the rule.
+
+    The rule mirrors the ``release.yml`` verify step so local guards and CI
+    agree:
+
+    * the core distribution itself is exempt;
+    * a distribution in :data:`CORE_FREE_DISTRIBUTIONS` must declare no
+      ``spikeforge`` dependency at all;
+    * every other non-core distribution must declare exactly one
+      ``spikeforge`` dependency pinned ``spikeforge~=<core_version>``.
+    """
+    if distribution == CORE_DISTRIBUTION:
+        return None
+    expected_pin = f"{CORE_DISTRIBUTION}~={core_version}"
+    pins = [
+        dependency
+        for dependency in dependencies
+        if _requirement_name(dependency) == CORE_DISTRIBUTION
+    ]
+    if distribution in CORE_FREE_DISTRIBUTIONS:
+        if pins:
+            return (
+                f"{distribution} is declared core-free but declares core "
+                f"dependencies {pins}"
+            )
+        return None
+    if pins != [expected_pin]:
+        return (
+            f"{distribution} core pin {pins} is not the matrix pin "
+            f"{expected_pin!r}"
+        )
+    return None
+
+
 def check_matrix_pins(pyprojects: Dict[str, Path]) -> Optional[str]:
     """Return an error when a distribution disagrees with the matrix."""
     release = _latest_release()
@@ -201,18 +252,13 @@ def check_matrix_pins(pyprojects: Dict[str, Path]) -> Optional[str]:
             )
         if distribution == CORE_DISTRIBUTION:
             continue
-        expected_pin = (
-            f"{CORE_DISTRIBUTION}~={release.get(CORE_DISTRIBUTION)}"
+        problem = check_core_pin(
+            distribution,
+            project.get("dependencies", []),
+            release.get(CORE_DISTRIBUTION),
         )
-        for dependency in project.get("dependencies", []):
-            if (
-                _requirement_name(dependency) == CORE_DISTRIBUTION
-                and dependency != expected_pin
-            ):
-                problems.append(
-                    f"{distribution} pin {dependency!r} != "
-                    f"{expected_pin!r}"
-                )
+        if problem:
+            problems.append(problem)
     if problems:
         return "compatibility pin mismatch: " + "; ".join(problems)
     return None

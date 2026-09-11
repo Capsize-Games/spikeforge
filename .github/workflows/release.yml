@@ -85,6 +85,13 @@ jobs:
 
           core = "spikeforge"
 
+          # Core-free distributions deliberately ship no ``spikeforge`` core
+          # dependency (a client install must never pull torch), so they are
+          # exempt from the core-pin rule -- but they must declare NO core
+          # dependency at all. Every other non-core distribution must pin core
+          # exactly ``spikeforge~=<matrix core version>``.
+          core_free_distributions = {"spikeforge-clients"}
+
           def _requirement_name(requirement):
               """Return the bare distribution name of a requirement."""
               for index, char in enumerate(requirement):
@@ -99,7 +106,13 @@ jobs:
                   for dep in project.get("dependencies", [])
                   if _requirement_name(dep) == core
               ]
-              if pins != [expected]:
+              if distribution in core_free_distributions:
+                  if pins:
+                      sys.exit(
+                          f"refusing to publish {distribution}: it is declared "
+                          f"core-free but declares core dependencies {pins}"
+                      )
+              elif pins != [expected]:
                   sys.exit(
                       f"refusing to publish {distribution}: core pin "
                       f"{pins} is not the matrix pin {expected!r}"
