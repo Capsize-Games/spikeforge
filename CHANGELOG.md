@@ -55,6 +55,19 @@ describe the local source tree.
   `snn_interpreter.{targets,energy,event_runtime}` import paths remain as
   deprecated re-export shims that emit a `DeprecationWarning` and raise a clear
   `ImportError` when `snn-targets` is not installed.
+- The standalone [`w4ffl35/snn-targets`](https://github.com/w4ffl35/snn-targets)
+  satellite repository (ARCH-0001 Phase 3): created (private) and populated from
+  this repository's history with `git subtree split --prefix=snn_targets`, it
+  lays out the `snn_targets/` package at its root alongside `pyproject.toml`
+  (`snn-targets` `0.1.0`, core pin `snn-interpreter~=0.3.0`), `README.md`,
+  `LICENSE`, `.gitignore`, a Python 3.10–3.13 CI workflow, and the 19 test
+  modules that exercise `snn_targets`. Core has not been pushed and no
+  distribution is on PyPI yet, so the satellite CI installs core from its git
+  remote as a temporary stopgap until `snn-interpreter` `0.3.0` is published.
+- Removed the stray, unreferenced `packages/snn_interpreter/` duplicate (263
+  tracked files) that shadowed the real `snn_interpreter/` package; no
+  `pyproject.toml`, CI job, test, or build script referenced it (the builds use
+  the `packages/snn-interpreter/snn_interpreter` symlink to the real package).
 
 ### Changed
 

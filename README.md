@@ -80,6 +80,16 @@ read-only mirror; the pinned dashboard bundle version is recorded in
 prebuilt bundle when `SNN_DASHBOARD_DIST` is set. The versioned WebSocket
 contract lives under `protocol/` (see its `README.md`).
 
+The deploy layer — deploy backends, quantization, energy accounting, and the
+sparse event runtime — is likewise extracted to
+[`w4ffl35/snn-targets`](https://github.com/w4ffl35/snn-targets)
+(ARCH-0001 Phase 3; distribution `snn-targets`, import root `snn_targets`). It
+depends on core (`snn-interpreter~=0.3.0`) but core never depends on it. The
+top-level `snn_targets/` package stays here as the `packages/snn-targets`
+workspace distribution, and the legacy
+`snn_interpreter.{targets,energy,event_runtime}` paths remain as deprecated
+re-export shims.
+
 ## Features
 
 - MNIST loading + `snntorch.utils.data_subset` reduction
@@ -1463,6 +1473,7 @@ main.py                      Thin entry point: rate pipeline -> exporters
 main_encodings.py            Extra tutorial-1 encodings (latency/delta/random)
 packages/snn-interpreter/    Core distribution (pyproject.toml authority)
 packages/snn-interpreter-server/  Server distribution (pulls core)
+packages/snn-targets/        Deploy targets distribution (pulls core)
 examples/                    Small runnable scripts (see examples/README.md)
 snn_interpreter/
   config.py                  Paths/settings resolved from the environment
@@ -1623,7 +1634,8 @@ snn_interpreter/
     execution_mode.py        Educational/Production execution flag
     system_stats.py          CPU RAM / GPU VRAM snapshots
 snn_targets/                 Deployment targets, energy, event runtime
-                               (ARCH-0001 Phase 3; distribution snn-targets)
+                               (ARCH-0001 Phase 3; distribution snn-targets;
+                               extracted to w4ffl35/snn-targets)
   target_spec.py             TargetSpec: support, substitutions, constraints
   catalog.py                 Built-in targets (reference + placeholders)
   registry.py                name -> spec; live availability lookup
