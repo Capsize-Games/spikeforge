@@ -132,36 +132,64 @@ else
   info "Skipping build (reusing the existing image)"
 fi
 
-if [ "$DETACH" -eq 1 ]; then
-  info "Starting the server container in the background"
-  docker_compose "${COMPOSE_ARGS[@]}" up -d "$SERVICE"
-else
-  info "Starting the server container (Ctrl-C stops it)"
-fi
+# Always start detached. This returns as soon as the container is created, so
+# the health wait always applies to a real, running container. (A blocking
+# foreground `up` relative to the health wait is what caused the hang: the
+# wait could run while no container was actually attached.)
+info "Starting the server container"
+docker_compose "${COMPOSE_ARGS[@]}" up -d "$SERVICE"
 
-if [ "$WAIT" -eq 1 ]; then
+container_state() {
+  docker inspect -f '{{.State.Status}}' "$SERVICE" 2>/dev/null || echo "missing"
+}
+
+wait_for_health() {
   info "Waiting for the server to become healthy at ${URL}/health"
-  waited=0
-  until curl -fsS "${URL}/health" >/dev/null 2>&1; do
+  local waited=0 state
+  while :; do
+    if curl -fsS "${URL}/health" >/dev/null 2>&1; then
+      info "Server is healthy: ${URL}"
+      return 0
+    fi
+    state="$(container_state)"
+    if [ "$state" != "running" ]; then
+      warn "the '$SERVICE' container is not running (state: $state)"
+      warn "recent logs:"
+      docker_compose "${COMPOSE_ARGS[@]}" logs --tail=50 "$SERVICE" || true
+      return 1
+    fi
     if [ "$waited" -ge "$HEALTH_TIMEOUT" ]; then
       warn "server did not report healthy within ${HEALTH_TIMEOUT}s"
+      docker_compose "${COMPOSE_ARGS[@]}" ps || true
       warn "recent logs:"
-      docker_compose "${COMPOSE_ARGS[@]}" logs --tail=40 "$SERVICE" || true
-      exit 1
+      docker_compose "${COMPOSE_ARGS[@]}" logs --tail=50 "$SERVICE" || true
+      return 1
     fi
     sleep 2
     waited=$((waited + 2))
   done
-  info "Server is healthy: ${URL}"
+}
+
+if [ "$WAIT" -eq 1 ]; then
+  wait_for_health || exit 1
 fi
 
+info "Dashboard: ${URL}"
+
 if [ "$DETACH" -eq 1 ]; then
-  info "Dashboard: ${URL}"
   info "Stop with: docker compose down   (or: docker compose stop $SERVICE)"
   if [ "$FOLLOW" -eq 1 ]; then
     info "Following logs (Ctrl-C stops following; the container keeps running)"
     docker_compose "${COMPOSE_ARGS[@]}" logs -f "$SERVICE"
   fi
-else
-  info "Dashboard: ${URL} (streaming logs; Ctrl-C stops the container)"
+  exit 0
 fi
+
+# Foreground: stream logs and stop the container when the user hits Ctrl-C.
+info "Streaming logs; Ctrl-C stops the container"
+stop_container() {
+  info "Stopping the server container"
+  docker_compose "${COMPOSE_ARGS[@]}" stop "$SERVICE" >/dev/null 2>&1 || true
+}
+trap stop_container INT TERM EXIT
+docker_compose "${COMPOSE_ARGS[@]}" logs -f "$SERVICE"
