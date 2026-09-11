@@ -61,3 +61,13 @@ def test_spatial_topology_reshapes_and_trains() -> None:
     metrics = engine._train_batch(images, torch.randint(0, 10, (4,)))
     assert metrics["loss"] > 0.0
     assert 0.0 <= metrics["train_accuracy"] <= 1.0
+
+
+def test_conv_topology_dropout_param_reaches_the_module() -> None:
+    """``topology_params["dropout"]`` builds a matching nn.Dropout stage."""
+    engine = _engine(
+        topology="conv_net",
+        topology_params={"channels": 2, "dropout": 0.4},
+    )
+    dropout = engine.net.get_submodule("dropout")
+    assert dropout.p == pytest.approx(0.4)

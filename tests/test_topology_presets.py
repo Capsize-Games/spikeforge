@@ -63,6 +63,42 @@ def test_conv_net_builds_and_steps() -> None:
     assert outputs["out"].shape == (2, 5)
 
 
+def test_conv_net_default_dropout_is_identity() -> None:
+    """The default dropout probability is 0.0, changing nothing."""
+    module = build_module(
+        presets.conv_net(
+            in_channels=1, channels=4, num_classes=5, input_size=28
+        )
+    )
+    dropout = module.get_submodule("dropout")
+    assert isinstance(dropout, torch.nn.Dropout)
+    assert dropout.p == 0.0
+
+
+def test_conv_net_dropout_param_sets_probability() -> None:
+    """A non-zero ``dropout`` reaches the rendered nn.Dropout stage."""
+    module = build_module(
+        presets.conv_net(
+            in_channels=1, channels=4, num_classes=5, input_size=28,
+            dropout=0.3,
+        )
+    )
+    dropout = module.get_submodule("dropout")
+    assert dropout.p == pytest.approx(0.3)
+
+
+def test_conv_net_with_dropout_still_builds_and_steps() -> None:
+    """A dropout-enabled conv_net still runs one step end to end."""
+    module = build_module(
+        presets.conv_net(
+            in_channels=1, channels=4, num_classes=5, input_size=28,
+            dropout=0.5,
+        )
+    )
+    outputs, _ = module.step(torch.randn(2, 1, 28, 28))
+    assert outputs["out"].shape == (2, 5)
+
+
 def test_recurrent_net_builds_and_validates() -> None:
     """recurrent_net is a valid graph and runs one step."""
     spec = presets.recurrent_net(

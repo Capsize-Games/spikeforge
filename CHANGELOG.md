@@ -18,6 +18,12 @@ describe the local source tree.
   reproducibility manifest's hyperparameter block, alongside `lr`.
   Every subclass (`EventTrainingEngine` included) already forwards
   unrecognised keyword arguments, so no subclass changes were needed.
+- **`dropout` on the `conv_net` topology preset.** A new `dropout`
+  parameter (default `0.0`, the identity) adds a `dropout`-kind stage
+  between the flattened features and the readout, using the stage
+  system's existing generic `dropout` kind (already NIR-export-safe
+  as a passthrough at inference). Reaches training the same way
+  every other `conv_net` param does, via `topology_params`.
 
 ## [spikeforge-targets-v0.1.1] - 2026-09-11
 
