@@ -6,17 +6,17 @@ from typing import Tuple
 import pytest
 import torch
 
-from snn_interpreter.event_runtime import (
+from snn_interpreter.simulator.runner import run
+from snn_interpreter.topology.registry import build_topology
+from snn_interpreter.topology.spec import TopologySpec
+from snn_interpreter.topology.stage_module import StageModule
+from snn_targets.event_runtime import (
     DEFAULT_TOLERANCE,
     compare,
     matches,
     sparse_run,
 )
-from snn_interpreter.event_runtime.spike_view import synthetic_spikes
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology.registry import build_topology
-from snn_interpreter.topology.spec import TopologySpec
-from snn_interpreter.topology.stage_module import StageModule
+from snn_targets.event_runtime.spike_view import synthetic_spikes
 
 
 def _pair(

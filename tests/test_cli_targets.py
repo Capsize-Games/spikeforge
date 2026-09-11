@@ -6,10 +6,11 @@ from typing import Any
 
 import pytest
 
-from snn_interpreter.cli import target_cli, verify
+from snn_interpreter.cli import verify
 from snn_interpreter.nir_bridge import save_graph, to_nir
-from snn_interpreter.targets import registry
 from snn_interpreter.topology.registry import build_topology
+from snn_targets import registry
+from snn_targets.cli import target_cli
 
 pytest.importorskip("nir")
 

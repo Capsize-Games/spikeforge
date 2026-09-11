@@ -1,6 +1,6 @@
 """The ``snn-hub`` console script: list, search, download, inspect, import.
 
-Mirrors the argparse style of :mod:`snn_interpreter.cli.target_cli`. Every
+Mirrors the argparse style of :mod:`snn_targets.cli.target_cli`. Every
 command prints JSON. ``import`` exits non-zero when the verdict is
 ``incompatible``, but still prints the named mismatches, so the command doubles
 as a CI gate without hiding *why* an artifact was rejected.

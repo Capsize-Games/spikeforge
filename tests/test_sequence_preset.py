@@ -8,8 +8,8 @@ from snn_interpreter.data import sequence_source
 from snn_interpreter.nir_bridge import to_nir
 from snn_interpreter.nir_bridge.errors import UnsupportedStageError
 from snn_interpreter.simulator.runner import run
-from snn_interpreter.targets.rewrite import rewrite
 from snn_interpreter.topology import registry
+from snn_targets.rewrite import rewrite
 
 pytest.importorskip("nir")
 

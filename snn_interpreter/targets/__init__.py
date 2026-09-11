@@ -1,46 +1,25 @@
-"""Deployment targets, their declared capabilities, and reports.
+"""Deprecated alias for :mod:`snn_targets`.
 
-This package declares what each target *can* run (a :class:`TargetSpec`),
-resolves whether it is actually installed through one isolated probe, and
-classifies a graph node-by-node against a target. The reference interpreter
-is always available; every other entry is an honest placeholder until its
-optional SDK extra is installed. No backend SDK is imported at import time.
+ARCH-0001 Phase 3 moved ``snn_interpreter.targets`` to the ``snn-targets``
+distribution and the ``snn_targets`` import root. This module re-exports the
+new package and is kept for one minor release; import ``snn_targets`` directly
+instead.
 """
 
-from snn_interpreter.targets.capability_matrix import (
-    classify,
-    classify_by_name,
-    compare_targets,
-)
-from snn_interpreter.targets.matrix_result import CapabilityMatrix
-from snn_interpreter.targets.primitives import EMITTED_PRIMITIVES
-from snn_interpreter.targets.registry import (
-    available,
-    available_names,
-    get_target,
-    target_names,
-    unavailable_names,
-)
-from snn_interpreter.targets.report import deployment_report
-from snn_interpreter.targets.substitution import Substitution
-from snn_interpreter.targets.summary import target_summaries, target_summary
-from snn_interpreter.targets.target_spec import TargetKind, TargetSpec
+import warnings
 
-__all__ = [
-    "EMITTED_PRIMITIVES",
-    "CapabilityMatrix",
-    "Substitution",
-    "TargetKind",
-    "TargetSpec",
-    "available",
-    "available_names",
-    "classify",
-    "classify_by_name",
-    "compare_targets",
-    "deployment_report",
-    "get_target",
-    "target_names",
-    "target_summaries",
-    "target_summary",
-    "unavailable_names",
-]
+warnings.warn(
+    "snn_interpreter.targets moved to snn_targets; "
+    "install the 'snn-targets' distribution.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+try:
+    from snn_targets import *  # noqa: F403
+except ModuleNotFoundError as error:  # pragma: no cover - satellite absent
+    raise ImportError(
+        "snn_interpreter.targets moved to the 'snn-targets' distribution "
+        "(import root 'snn_targets'); install it with "
+        "`pip install snn-targets`."
+    ) from error

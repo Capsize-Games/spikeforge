@@ -10,9 +10,9 @@ from typing import Any, Dict, Optional
 import torch
 
 from snn_interpreter.benchmark.config import BenchmarkConfig
-from snn_interpreter.energy.accounting import account
-from snn_interpreter.event_runtime.sparse_runner import sparse_run
 from snn_interpreter.topology.stage_module import StageModule
+from snn_targets.energy.accounting import account
+from snn_targets.event_runtime.sparse_runner import sparse_run
 
 
 def energy_block(

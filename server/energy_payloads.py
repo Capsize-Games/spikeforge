@@ -1,6 +1,6 @@
 """JSON-able payload for the event-driven energy WebSocket action.
 
-The report reuses :func:`snn_interpreter.energy.accounting.account_spikes`, so
+The report reuses :func:`snn_targets.energy.accounting.account_spikes`, so
 the socket surface matches the ``snn-energy`` CLI exactly. A dense-vs-sparse
 comparison is attached because the parity check is meaningfully different from
 the energy estimate; without a configured sample a deterministic synthetic
@@ -12,17 +12,17 @@ from typing import Any, Dict, Optional
 import torch
 
 from server.target_payloads import shaped_spikes
-from snn_interpreter.energy.accounting import (
+from snn_interpreter.simulator.runner import run
+from snn_interpreter.topology.spec import TopologySpec
+from snn_targets.energy.accounting import (
     BATCH,
     DENSITY,
     SEED,
     STEPS,
     account_spikes,
 )
-from snn_interpreter.event_runtime.dense_compare import compare
-from snn_interpreter.event_runtime.spike_view import synthetic_spikes
-from snn_interpreter.simulator.runner import run
-from snn_interpreter.topology.spec import TopologySpec
+from snn_targets.event_runtime.dense_compare import compare
+from snn_targets.event_runtime.spike_view import synthetic_spikes
 
 
 def _on_device(module: Any, spikes: torch.Tensor) -> torch.Tensor:

@@ -46,8 +46,25 @@ describe the local source tree.
   present and otherwise keeps today's resolution, covered by
   [`tests/test_dashboard_bundle.py`](tests/test_dashboard_bundle.py).
 
+- The `snn-targets` distribution (ARCH-0001 Phase 3): the deploy layer —
+  `targets/` (plus `backends/`), `energy/`, `event_runtime/`, and the
+  `target_cli` entry point — moved out of core into the top-level `snn_targets`
+  import root, packaged as `packages/snn-targets` (`snn-targets` `0.1.0`,
+  depending on `snn-interpreter~=0.3.0`). The `norse` and `lava` extras moved
+  with the code they gate, and the server pins `snn-targets~=0.1.0`. The
+  `snn_interpreter.{targets,energy,event_runtime}` import paths remain as
+  deprecated re-export shims that emit a `DeprecationWarning` and raise a clear
+  `ImportError` when `snn-targets` is not installed.
+
 ### Changed
 
+- Console-script ownership of `snn-energy` and `snn-targets` moved to the
+  `snn-targets` distribution, resolving to `snn_targets.energy.cli:main` and
+  `snn_targets.cli.target_cli:main`; core keeps the six remaining scripts
+  (`snn-interpreter`, `snn-interpreter-encodings`, `snn-verify`, `snn-records`,
+  `snn-hub`, `snn-benchmark`). The `snn-targets` import root, not
+  `snn_interpreter.targets`, is now the canonical path; the old paths are
+  deprecated shims.
 - The maintainer contact address is now `contact@capsizegames.com` in
   [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md), and
   the `packages/` packaging metadata; the `<maintainer@example.com>` placeholder

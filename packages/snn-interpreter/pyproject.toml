@@ -89,21 +89,13 @@ tracking-wandb = [
 docs = [
     "mkdocs-material>=9.0",
 ]
-norse = [
-    "norse",
-]
-lava = [
-    "lava-nc",
-]
 
 [project.scripts]
 snn-interpreter = "main:main"
 snn-interpreter-encodings = "main_encodings:main"
 snn-verify = "snn_interpreter.cli.verify:main"
 snn-records = "snn_interpreter.cli.records_cli:main"
-snn-targets = "snn_interpreter.cli.target_cli:main"
 snn-hub = "snn_interpreter.hub.cli:main"
-snn-energy = "snn_interpreter.energy.cli:main"
 snn-benchmark = "snn_interpreter.benchmark.cli:main"
 
 [project.urls]

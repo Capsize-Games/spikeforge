@@ -1,35 +1,25 @@
-"""Energy/latency accounting built on the event-driven runtime.
+"""Deprecated alias for :mod:`snn_targets.energy`.
 
-Public API: :func:`account` maps operation counts to a target's declared cost
-table (or reports ``basis: "unavailable"``), and :func:`measure_topology` runs
-a topology's sparse path and accounts it in one call. Every report is an
-estimate unless a real device reports its own timing.
+ARCH-0001 Phase 3 moved ``snn_interpreter.energy`` to the ``snn-targets``
+distribution and the ``snn_targets.energy`` import root. This module
+re-exports the new package and is kept for one minor release; import
+``snn_targets.energy`` directly instead.
 """
 
-from snn_interpreter.energy.accounting import (
-    BASIS_MEASURED,
-    BASIS_TABLE,
-    BASIS_UNAVAILABLE,
-    account,
-    measure_topology,
-)
-from snn_interpreter.energy.cost_table import REQUIRED_KEYS, CostTable
-from snn_interpreter.energy.errors import EnergyCostError, EnergyError
-from snn_interpreter.energy.report import EnergyReport
-from snn_interpreter.energy.target_costs import declared, load, names
+import warnings
 
-__all__ = [
-    "BASIS_MEASURED",
-    "BASIS_TABLE",
-    "BASIS_UNAVAILABLE",
-    "REQUIRED_KEYS",
-    "CostTable",
-    "EnergyCostError",
-    "EnergyError",
-    "EnergyReport",
-    "account",
-    "declared",
-    "load",
-    "measure_topology",
-    "names",
-]
+warnings.warn(
+    "snn_interpreter.energy moved to snn_targets.energy; "
+    "install the 'snn-targets' distribution.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+try:
+    from snn_targets.energy import *  # noqa: F403
+except ModuleNotFoundError as error:  # pragma: no cover - satellite absent
+    raise ImportError(
+        "snn_interpreter.energy moved to the 'snn-targets' distribution "
+        "(import root 'snn_targets.energy'); install it with "
+        "`pip install snn-targets`."
+    ) from error

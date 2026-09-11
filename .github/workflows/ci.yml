@@ -54,19 +54,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install core + server editable
+      - name: Install core + targets + server editable
         run: |
           pip install -e "./packages/snn-interpreter[dev,nir]" \
+                      -e ./packages/snn-targets \
                       -e ./packages/snn-interpreter-server
 
       - name: Test (pytest)
         run: pytest
 
   extras:
-    # Prove every advertised core extra still installs and does not rot.
+    # Prove every advertised extra still installs and does not rot.
     # `web` is gone: the server stack is now the server distribution's base
-    # dependencies. `norse` is install-only here (the suite asserts the
-    # SDK-gated backends are *absent*), and `docs` builds the site.
+    # dependencies. `norse`/`lava` now live on `snn-targets`; `norse` is
+    # install-only here (the suite asserts the SDK-gated backends are
+    # *absent*), and `docs` builds the site.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -85,11 +87,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install the ${{ matrix.extra }} extra (+ server)
+      - name: Install the ${{ matrix.extra }} extra (+ targets, server)
         run: |
-          pip install \
-            -e "./packages/snn-interpreter[dev,nir,${{ matrix.extra }}]" \
-            -e ./packages/snn-interpreter-server
+          if [ "${{ matrix.extra }}" = "norse" ]; then
+            pip install \
+              -e "./packages/snn-interpreter[dev,nir]" \
+              -e "./packages/snn-targets[norse]" \
+              -e ./packages/snn-interpreter-server
+          else
+            pip install \
+              -e "./packages/snn-interpreter[dev,nir,${{ matrix.extra }}]" \
+              -e ./packages/snn-targets \
+              -e ./packages/snn-interpreter-server
+          fi
 
       - name: Exercise the ${{ matrix.extra }} extra
         run: |
@@ -128,10 +138,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install core + server editable with the optional extras
+      - name: Install core + targets + server editable with the extras
         run: |
           pip install \
             -e "./packages/snn-interpreter[dev,nir,events,onnx,hub,tracking,tracking-wandb]" \
+            -e ./packages/snn-targets \
             -e ./packages/snn-interpreter-server
 
       - name: Test with the optional extras and the server stack blocked
@@ -269,10 +280,10 @@ jobs:
           with zipfile.ZipFile(wheel) as archive:
               leaked = [
                   name for name in archive.namelist()
-                  if name == "server" or name.startswith("server/")
+                  if name.split("/", 1)[0] in ("server", "snn_targets")
               ]
-          assert not leaked, f"core wheel contains server/: {leaked}"
-          print("wheel is server/-free:", wheel.name)
+          assert not leaked, f"core wheel contains satellite roots: {leaked}"
+          print("wheel is satellite-free:", wheel.name)
           PY
 
   packaging-guards:
@@ -286,14 +297,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build both wheels
+      - name: Build all three wheels
         run: |
           python -m pip install --upgrade pip build
           python -m build ./packages/snn-interpreter
           python -m build ./packages/snn-interpreter-server
+          python -m build ./packages/snn-targets
 
       - name: Run the packaging guards
         run: |
           python scripts/check_packaging_guards.py \
             --core-wheel packages/snn-interpreter/dist/snn_interpreter-*.whl \
-            --server-wheel packages/snn-interpreter-server/dist/snn_interpreter_server-*.whl
+            --server-wheel packages/snn-interpreter-server/dist/snn_interpreter_server-*.whl \
+            --targets-wheel packages/snn-targets/dist/snn_targets-*.whl

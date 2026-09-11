@@ -18,7 +18,7 @@ from server.messages import send_backend_run, send_locked
 from server.schemas import ClientMessage
 from server.session import Session
 from server.target_handlers import DEFAULT_TARGET, shaped_sample, target_pair
-from snn_interpreter.targets.registry import target_names
+from snn_targets.registry import target_names
 
 
 async def _resolve(

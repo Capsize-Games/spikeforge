@@ -2,7 +2,7 @@
 
 import pytest
 
-from snn_interpreter.energy import (
+from snn_targets.energy import (
     BASIS_MEASURED,
     BASIS_TABLE,
     BASIS_UNAVAILABLE,

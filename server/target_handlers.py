@@ -26,8 +26,8 @@ from server.target_payloads import (
     shaped_spikes,
     target_list_payload,
 )
-from snn_interpreter.targets.registry import target_names
 from snn_interpreter.topology import registry
+from snn_targets.registry import target_names
 
 #: Target used when the client does not name one.
 DEFAULT_TARGET = "reference"

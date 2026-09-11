@@ -9,10 +9,10 @@ import torch
 
 from snn_interpreter.nir_bridge import api
 from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.targets.rewrite import rewrite
-from snn_interpreter.targets.rewrite_drift import rewrite_drift
-from snn_interpreter.targets.target_spec import TargetSpec
 from snn_interpreter.topology import presets
+from snn_targets.rewrite import rewrite
+from snn_targets.rewrite_drift import rewrite_drift
+from snn_targets.target_spec import TargetSpec
 
 pytest.importorskip("nir")
 

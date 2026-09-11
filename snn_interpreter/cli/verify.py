@@ -4,7 +4,8 @@ Run as ``python -m snn_interpreter.cli.verify export --topology conv_net`` or
 ``python -m snn_interpreter.cli.verify validate --topology conv_net``. The
 ``validate`` command exits non-zero when the report falls outside tolerance,
 so it works as a CI gate. The deployment subcommands (``targets``, ``deploy``,
-``roundtrip``, ``ingest``) are registered from :mod:`.target_cli`, and the
+``roundtrip``, ``ingest``) are registered from
+:mod:`snn_targets.cli.target_cli`, and the
 checkpoint-tracking subcommands (``records list|diff|manifest``) from
 :mod:`.records_cli`.
 """
@@ -17,7 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 
-from snn_interpreter.cli import fixture, onnx_cli, records_cli, target_cli
+from snn_interpreter.cli import fixture, onnx_cli, records_cli
 from snn_interpreter.data.datasets import dataset_info
 from snn_interpreter.data.sample_source import SampleSource
 from snn_interpreter.encoding.spike_encoder import SpikeEncoder
@@ -29,6 +30,7 @@ from snn_interpreter.topology import registry
 from snn_interpreter.topology.registry import build_topology
 from snn_interpreter.topology.spec import TopologySpec
 from snn_interpreter.topology.stage_module import StageModule
+from snn_targets.cli import target_cli
 
 _Input = Tuple[TopologySpec, StageModule, torch.Tensor]
 

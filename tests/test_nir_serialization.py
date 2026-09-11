@@ -21,10 +21,10 @@ from snn_interpreter.nir_bridge.serialization import (
     load_graph,
     save_graph,
 )
-from snn_interpreter.targets.primitives import EMITTED_PRIMITIVES
 from snn_interpreter.topology import presets
 from snn_interpreter.topology.builder import build_module
 from snn_interpreter.topology.spec import TopologySpec
+from snn_targets.primitives import EMITTED_PRIMITIVES
 
 pytest.importorskip("nir")
 

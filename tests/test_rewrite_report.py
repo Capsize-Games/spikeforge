@@ -7,9 +7,9 @@ import pytest
 
 from snn_interpreter.nir_bridge import api
 from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.targets.rewrite import rewrite
-from snn_interpreter.targets.rewrite_report import RewriteReport
 from snn_interpreter.topology import presets
+from snn_targets.rewrite import rewrite
+from snn_targets.rewrite_report import RewriteReport
 
 pytest.importorskip("nir")
 

@@ -20,7 +20,8 @@ Usage::
 
     python scripts/check_packaging_guards.py \
         --core-wheel dist/snn_interpreter-*.whl \
-        --server-wheel dist/snn_interpreter_server-*.whl
+        --server-wheel dist/snn_interpreter_server-*.whl \
+        --targets-wheel dist/snn_targets-*.whl
 """
 
 import argparse
@@ -40,9 +41,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 CORE_DISTRIBUTION = "snn-interpreter"
 SERVER_DISTRIBUTION = "snn-interpreter-server"
+TARGETS_DISTRIBUTION = "snn-targets"
 CORE_PYPROJECT = REPO_ROOT / "packages" / CORE_DISTRIBUTION / "pyproject.toml"
 SERVER_PYPROJECT = (
     REPO_ROOT / "packages" / SERVER_DISTRIBUTION / "pyproject.toml"
+)
+TARGETS_PYPROJECT = (
+    REPO_ROOT / "packages" / TARGETS_DISTRIBUTION / "pyproject.toml"
 )
 COMPATIBILITY = REPO_ROOT / "compatibility.json"
 
@@ -102,12 +107,24 @@ def roots_from_wheel(path: Path) -> Set[str]:
 
 
 def check_disjoint_roots(
-    core_roots: Set[str], server_roots: Set[str]
+    roots_by_distribution: Dict[str, Set[str]],
 ) -> Optional[str]:
-    """Return an error message when the import roots overlap, else None."""
-    overlap = sorted(core_roots & server_roots)
-    if overlap:
-        return f"import roots shared by core and server: {', '.join(overlap)}"
+    """Return an error when two distributions ship the same import root."""
+    names = sorted(roots_by_distribution)
+    clashes: List[str] = []
+    for index, left in enumerate(names):
+        for right in names[index + 1:]:
+            overlap = sorted(
+                roots_by_distribution[left] & roots_by_distribution[right]
+            )
+            if overlap:
+                clashes.append(
+                    f"{', '.join(overlap)} shared by {left} and {right}"
+                )
+    if clashes:
+        return "import roots shipped by multiple distributions: " + (
+            "; ".join(clashes)
+        )
     return None
 
 
@@ -178,6 +195,7 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     )
     parser.add_argument("--core-wheel", type=Path, default=None)
     parser.add_argument("--server-wheel", type=Path, default=None)
+    parser.add_argument("--targets-wheel", type=Path, default=None)
     return parser.parse_args(argv)
 
 
@@ -187,19 +205,29 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     pyprojects = {
         CORE_DISTRIBUTION: CORE_PYPROJECT,
         SERVER_DISTRIBUTION: SERVER_PYPROJECT,
+        TARGETS_DISTRIBUTION: TARGETS_PYPROJECT,
     }
-    if args.core_wheel and args.server_wheel:
-        core_roots = roots_from_wheel(args.core_wheel)
-        server_roots = roots_from_wheel(args.server_wheel)
+    wheels = {
+        CORE_DISTRIBUTION: args.core_wheel,
+        SERVER_DISTRIBUTION: args.server_wheel,
+        TARGETS_DISTRIBUTION: args.targets_wheel,
+    }
+    if all(wheels.values()):
+        roots_by_distribution = {
+            name: roots_from_wheel(path)  # type: ignore[arg-type]
+            for name, path in wheels.items()
+        }
         source = "built wheels"
     else:
-        core_roots = roots_from_pyproject(CORE_PYPROJECT)
-        server_roots = roots_from_pyproject(SERVER_PYPROJECT)
+        roots_by_distribution = {
+            name: roots_from_pyproject(path)
+            for name, path in pyprojects.items()
+        }
         source = "pyproject discovery"
     checks = (
         (
             "disjoint import roots",
-            check_disjoint_roots(core_roots, server_roots),
+            check_disjoint_roots(roots_by_distribution),
         ),
         ("console-script ownership", check_script_ownership(pyprojects)),
         ("compatibility pin", check_matrix_pins(pyprojects)),

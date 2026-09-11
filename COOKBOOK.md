@@ -882,9 +882,9 @@ Two entry points exist and they are **not** always interchangeable:
 |---|---|---|
 | verify family (export/validate/targets/deploy/rewrite/run/roundtrip/ingest/extract/onnx-*) | `venv/bin/snn-verify …` or `venv/bin/python -m snn_interpreter.cli.verify …` | — |
 | records | `venv/bin/snn-records …` or `venv/bin/snn-verify records …` | `python -m snn_interpreter.cli.records_cli` (no `__main__`; prints nothing) |
-| targets/deploy/rewrite/run/extract | `venv/bin/snn-targets …` or `venv/bin/snn-verify …` | `python -m snn_interpreter.cli.target_cli` (no `__main__`; prints nothing) |
+| targets/deploy/rewrite/run/extract | `venv/bin/snn-targets …` or `venv/bin/snn-verify …` | bare `python -m snn_targets.cli.target_cli` (needs a subcommand) |
 | hub | `venv/bin/snn-hub …` or `venv/bin/python -m snn_interpreter.hub.cli …` | — |
-| energy | `venv/bin/snn-energy …` or `venv/bin/python -m snn_interpreter.energy.cli …` | — |
+| energy | `venv/bin/snn-energy …` or `venv/bin/python -m snn_targets.energy.cli …` | — |
 | benchmark | `venv/bin/snn-benchmark …` or `venv/bin/python -m snn_interpreter.benchmark …` | — |
 
 ### 12.2 Record, list, and compare benchmark runs

@@ -13,19 +13,19 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 _ROOT = Path(__file__).resolve().parent.parent
 _CORE = _ROOT / "packages" / "snn-interpreter" / "pyproject.toml"
 _SERVER = _ROOT / "packages" / "snn-interpreter-server" / "pyproject.toml"
+_TARGETS = _ROOT / "packages" / "snn-targets" / "pyproject.toml"
 
 _EXPECTED_SCRIPTS = {
     "snn-interpreter",
     "snn-interpreter-encodings",
     "snn-verify",
     "snn-records",
-    "snn-targets",
     "snn-hub",
-    "snn-energy",
     "snn-benchmark",
 }
 # ``web`` is intentionally absent: its dependencies are now the base
-# dependencies of the ``snn-interpreter-server`` distribution.
+# dependencies of the ``snn-interpreter-server`` distribution. ``norse`` and
+# ``lava`` moved to ``snn-targets`` with the code they gate.
 _EXPECTED_EXTRAS = {
     "dev",
     "nir",
@@ -35,8 +35,6 @@ _EXPECTED_EXTRAS = {
     "tracking",
     "tracking-wandb",
     "docs",
-    "norse",
-    "lava",
 }
 _EXPECTED_CORE_DEPS = {
     "torch>=2.5",
@@ -52,6 +50,19 @@ _EXPECTED_SERVER_DEPS = {
     "uvicorn[standard]>=0.27",
     "websockets>=12.0",
     "pydantic>=2.5",
+    "snn-targets~=0.1.0",
+}
+_EXPECTED_TARGETS_SCRIPTS = {
+    "snn-energy",
+    "snn-targets",
+}
+_EXPECTED_TARGETS_EXTRAS = {
+    "norse",
+    "lava",
+}
+_EXPECTED_TARGETS_DEPS = {
+    "numpy>=1.26",
+    "torch>=2.5",
 }
 
 
@@ -81,23 +92,22 @@ def test_core_dependencies_match_the_design() -> None:
 
 
 def test_console_script_targets_are_stable() -> None:
-    """The eight entry points resolve to their unchanged targets."""
+    """The six remaining core entry points resolve to their targets."""
     scripts = _pyproject(_CORE)["project"]["scripts"]
     assert scripts["snn-interpreter"] == "main:main"
     assert scripts["snn-interpreter-encodings"] == "main_encodings:main"
     assert scripts["snn-verify"] == "snn_interpreter.cli.verify:main"
     assert scripts["snn-records"] == "snn_interpreter.cli.records_cli:main"
-    assert scripts["snn-targets"] == "snn_interpreter.cli.target_cli:main"
     assert scripts["snn-hub"] == "snn_interpreter.hub.cli:main"
-    assert scripts["snn-energy"] == "snn_interpreter.energy.cli:main"
     assert scripts["snn-benchmark"] == "snn_interpreter.benchmark.cli:main"
 
 
 def test_core_excludes_the_server_root() -> None:
-    """Core discovery excludes the server root so it cannot leak."""
+    """Core discovery excludes the satellite roots so they cannot leak."""
     find = _pyproject(_CORE)["tool"]["setuptools"]["packages"]["find"]
     assert find["include"] == ["snn_interpreter*"]
     assert "server*" in find["exclude"]
+    assert "snn_targets*" in find["exclude"]
 
 
 def test_server_declares_base_dependencies() -> None:
@@ -112,6 +122,31 @@ def test_server_owns_only_the_server_root() -> None:
     find = _pyproject(_SERVER)["tool"]["setuptools"]["packages"]["find"]
     assert find["include"] == ["server*"]
     assert "snn_interpreter*" in find["exclude"]
+
+
+def test_targets_distribution_owns_the_moved_surface() -> None:
+    """snn-targets owns the moved extras, scripts, and import root."""
+    project = _pyproject(_TARGETS)["project"]
+    assert set(project["optional-dependencies"]) == _EXPECTED_TARGETS_EXTRAS
+    assert set(project["scripts"]) == _EXPECTED_TARGETS_SCRIPTS
+    deps = set(project["dependencies"])
+    assert deps >= _EXPECTED_TARGETS_DEPS
+    assert "snn-interpreter~=0.3.0" in deps
+
+
+def test_targets_console_script_targets_resolve_to_the_new_root() -> None:
+    """The moved console scripts resolve inside the ``snn_targets`` root."""
+    scripts = _pyproject(_TARGETS)["project"]["scripts"]
+    assert scripts["snn-energy"] == "snn_targets.energy.cli:main"
+    assert scripts["snn-targets"] == "snn_targets.cli.target_cli:main"
+
+
+def test_targets_owns_only_the_targets_root() -> None:
+    """Targets discovery is independent of core and the server."""
+    find = _pyproject(_TARGETS)["tool"]["setuptools"]["packages"]["find"]
+    assert find["include"] == ["snn_targets*"]
+    assert "snn_interpreter*" in find["exclude"]
+    assert "server*" in find["exclude"]
 
 
 def _compose() -> Dict[str, Any]:

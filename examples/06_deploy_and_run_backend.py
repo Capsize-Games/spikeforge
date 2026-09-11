@@ -19,8 +19,8 @@ from typing import Any, Dict
 
 from snn_interpreter.cli import fixture
 from snn_interpreter.nir_bridge import to_nir
-from snn_interpreter.targets.backends import compile_run
-from snn_interpreter.targets.report import deployment_report
+from snn_targets.backends import compile_run
+from snn_targets.report import deployment_report
 
 #: Topology exercised by this example.
 TOPOLOGY = "conv_net"

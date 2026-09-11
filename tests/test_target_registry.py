@@ -6,8 +6,8 @@ import sys
 
 import pytest
 
-from snn_interpreter import targets
-from snn_interpreter.targets import (
+import snn_targets as targets
+from snn_targets import (
     EMITTED_PRIMITIVES,
     capability_matrix,
     catalog,

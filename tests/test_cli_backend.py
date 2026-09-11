@@ -4,7 +4,8 @@ import json
 
 import pytest
 
-from snn_interpreter.cli import target_cli, verify
+from snn_interpreter.cli import verify
+from snn_targets.cli import target_cli
 
 pytest.importorskip("nir")
 

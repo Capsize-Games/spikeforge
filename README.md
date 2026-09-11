@@ -856,9 +856,9 @@ a stable name:
 | `snn-interpreter-encodings` | `python main_encodings.py` |
 | `snn-verify` | `python -m snn_interpreter.cli.verify` |
 | `snn-records` | `python -m snn_interpreter.cli.verify records` |
-| `snn-targets` | `python -m snn_interpreter.cli.verify targets` |
+| `snn-targets` | `python -m snn_targets.cli.target_cli` |
 | `snn-hub` | `python -m snn_interpreter.hub.cli` |
-| `snn-energy` | `python -m snn_interpreter.energy.cli` |
+| `snn-energy` | `python -m snn_targets.energy.cli` |
 | `snn-benchmark` | `python -m snn_interpreter.benchmark` |
 
 ### Docker CPU/GPU profiles
@@ -1579,30 +1579,7 @@ snn_interpreter/
     neuron_nodes.py          Neuron-kind -> NIR node(s); alpha precedent
     stage_builders.py        Builder table for the new stage kinds
     stages_unmappable.py     kind -> honest reason export cannot map it
-  targets/                   Deployment targets: spec, matrix, reports
-    target_spec.py           TargetSpec: support, substitutions, constraints
-    catalog.py               Built-in targets (reference + placeholders)
-    registry.py              name -> spec; live availability lookup
-    primitives.py            EMITTED_PRIMITIVES: the mapper's NIR vocabulary
-    probe.py                 The only module importing a backend SDK
-    capability_matrix.py     classify(...) -> per-node CapabilityMatrix
-    matrix_result.py         Buckets, counts, and deployable() semantics
-    node_view.py             Node name/kind view of a spec or graph
-    substitution.py          Substitution record
-    rewrite.py               rewrite(graph, target) -> RewriteResult
-    rewrite_report.py        JSON-able applied/skipped/unfixable deltas
-    substitute_ops.py        One rewrite function per declared substitution
-    rewrite_drift.py         Post-rewrite drift check vs. the original
-    quantize.py              Apply a target's declared weight quantization
-    quantize_schemes.py      none / weight_int8 / weight_uint8 schemes
-    report.py                deployment_report(...) -> JSON
-    summary.py               Availability-annotated registry summaries
-    backends/                Executable backends behind one isolated probe
-      __init__.py            compile_run(...) -> BackendResult (never raises)
-      reference_backend.py   In-process NIR interpreter (always available)
-      norse_backend.py       Norse PyTorch simulator (norse extra)
-      lava_backend.py        Lava / Loihi 2 path (lava extra)
-      compare.py             Backend result vs. reference comparison
+  targets/                   DEPRECATED shim -> snn_targets (Phase 3)
   tracking/                  Reproducibility: manifest, hash, seed, versions
     manifest.py              ReproducibilityManifest: config/seed/history
     config_hash.py           Canonical-JSON SHA-256 of the run config
@@ -1623,6 +1600,53 @@ snn_interpreter/
     weight_map.py            Load compatible weights into a preset module
     import_model.py          inspect -> compat -> promote into MODEL_DIR
     cli.py                   snn-hub entry point
+  energy/                    DEPRECATED shim -> snn_targets.energy (Phase 3)
+  event_runtime/             DEPRECATED shim -> snn_targets.event_runtime
+  onnx_bridge/               Optional ONNX import/export (onnx extra)
+    api.py                   The only module importing onnx/onnxruntime
+    export.py                One-step topology export with spec metadata
+    import_onnx.py           Map ONNX ops to stage kinds, or name the op
+    roundtrip.py             Export + re-import fidelity check
+  cli/                       Headless commands
+    verify.py                export / validate + the shared subcommands
+    records_cli.py           records list / diff / manifest (snn-records)
+    backend_cli.py           rewrite / run backend commands
+    extract_cli.py           extract a torch module via nirtorch
+    onnx_cli.py              onnx-export / onnx-import / onnx-roundtrip
+    fixture.py               Offline spike fixtures shaped per topology
+  exporters/                 matplotlib/GIF/MP4 output -> build/
+    exporter.py              Exporter base + build/ output resolution
+    plot_utils.py            shared fig/GIF helpers
+    *_exporter.py            per-visual exporters
+  runtime/                   Compute environment
+    device.py                CPU/GPU selection + auto benchmark
+    execution_mode.py        Educational/Production execution flag
+    system_stats.py          CPU RAM / GPU VRAM snapshots
+snn_targets/                 Deployment targets, energy, event runtime
+                               (ARCH-0001 Phase 3; distribution snn-targets)
+  target_spec.py             TargetSpec: support, substitutions, constraints
+  catalog.py                 Built-in targets (reference + placeholders)
+  registry.py                name -> spec; live availability lookup
+  primitives.py              EMITTED_PRIMITIVES: the mapper's NIR vocabulary
+  probe.py                   The only module importing a backend SDK
+  capability_matrix.py       classify(...) -> per-node CapabilityMatrix
+  matrix_result.py           Buckets, counts, and deployable() semantics
+  node_view.py               Node name/kind view of a spec or graph
+  substitution.py            Substitution record
+  rewrite.py                 rewrite(graph, target) -> RewriteResult
+  rewrite_report.py          JSON-able applied/skipped/unfixable deltas
+  substitute_ops.py          One rewrite function per declared substitution
+  rewrite_drift.py           Post-rewrite drift check vs. the original
+  quantize.py                Apply a target's declared weight quantization
+  quantize_schemes.py        none / weight_int8 / weight_uint8 schemes
+  report.py                  deployment_report(...) -> JSON
+  summary.py                 Availability-annotated registry summaries
+  backends/                  Executable backends behind one isolated probe
+    __init__.py              compile_run(...) -> BackendResult (never raises)
+    reference_backend.py     In-process NIR interpreter (always available)
+    norse_backend.py         Norse PyTorch simulator (norse extra)
+    lava_backend.py          Lava / Loihi 2 path (lava extra)
+    compare.py               Backend result vs. reference comparison
   energy/                    Declared cost tables + energy accounting
     cost_table.py            Load/validate a target's declared costs
     target_costs.py          Bundled per-target cost-table lookup
@@ -1636,27 +1660,8 @@ snn_interpreter/
     counters.py              SynapticCounter: SOP / MAC / AC / timesteps
     sparse_runner.py         sparse_run(...) -> SparseResult
     dense_compare.py         Sparse-vs-dense readout parity check
-  onnx_bridge/               Optional ONNX import/export (onnx extra)
-    api.py                   The only module importing onnx/onnxruntime
-    export.py                One-step topology export with spec metadata
-    import_onnx.py           Map ONNX ops to stage kinds, or name the op
-    roundtrip.py             Export + re-import fidelity check
-  cli/                       Headless commands
-    verify.py                export / validate + the shared subcommands
-    records_cli.py           records list / diff / manifest (snn-records)
+  cli/
     target_cli.py            targets / deploy / roundtrip / ingest
-    backend_cli.py           rewrite / run backend commands
-    extract_cli.py           extract a torch module via nirtorch
-    onnx_cli.py              onnx-export / onnx-import / onnx-roundtrip
-    fixture.py               Offline spike fixtures shaped per topology
-  exporters/                 matplotlib/GIF/MP4 output -> build/
-    exporter.py              Exporter base + build/ output resolution
-    plot_utils.py            shared fig/GIF helpers
-    *_exporter.py            per-visual exporters
-  runtime/                   Compute environment
-    device.py                CPU/GPU selection + auto benchmark
-    execution_mode.py        Educational/Production execution flag
-    system_stats.py          CPU RAM / GPU VRAM snapshots
 server/
   app.py                     FastAPI app + WebSocket endpoint
   handlers.py                Inbound message routing (encode + train)

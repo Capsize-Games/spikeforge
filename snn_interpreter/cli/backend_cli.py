@@ -20,15 +20,15 @@ import torch
 
 from snn_interpreter.cli import fixture
 from snn_interpreter.nir_bridge.exporter import to_nir
-from snn_interpreter.targets.backends import STATUS_OK, compile_run
-from snn_interpreter.targets.backends.result import BackendResult
-from snn_interpreter.targets.rewrite import rewrite
-from snn_interpreter.targets.rewrite_drift import (
+from snn_targets.backends import STATUS_OK, compile_run
+from snn_targets.backends.result import BackendResult
+from snn_targets.rewrite import rewrite
+from snn_targets.rewrite_drift import (
     READOUT_MAX_ABS,
     SPIKE_AGREEMENT,
     SPIKE_MAX_ABS,
 )
-from snn_interpreter.targets.rewrite_result import RewriteResult
+from snn_targets.rewrite_result import RewriteResult
 
 #: Target used when the caller names none.
 DEFAULT_TARGET = "reference"

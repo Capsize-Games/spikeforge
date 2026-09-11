@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from snn_interpreter.energy import cli
+from snn_targets.energy import cli
 
 _SMALL = ["--topology", "fc_small", "--steps", "2", "--batch-size", "1"]
 

@@ -9,14 +9,14 @@ import torch
 
 from snn_interpreter.nir_bridge.exporter import to_nir
 from snn_interpreter.nir_bridge.interpreter import NirInterpreter
-from snn_interpreter.targets.backends import compile_run
-from snn_interpreter.targets.backends.compare import compare_results
-from snn_interpreter.targets.backends.reference_backend import (
-    ReferenceBackend,
-)
 from snn_interpreter.topology.builder import build_module
 from snn_interpreter.topology.spec import chain
 from snn_interpreter.topology.stage import Stage
+from snn_targets.backends import compile_run
+from snn_targets.backends.compare import compare_results
+from snn_targets.backends.reference_backend import (
+    ReferenceBackend,
+)
 
 pytest.importorskip("nir")
 

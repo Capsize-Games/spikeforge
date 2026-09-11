@@ -1,7 +1,7 @@
 """JSON-able payloads for the deployment-target WebSocket actions.
 
 Mirrors :mod:`server.payloads`: the report reuses
-:func:`snn_interpreter.targets.report.deployment_report` and the list reuses
+:func:`snn_targets.report.deployment_report` and the list reuses
 the availability-annotated registry summary, so the socket surface matches the
 ``verify`` CLI exactly. Validation is attached only when a shaped spike input
 is supplied; the drift check is meaningfully different from the capability
@@ -13,9 +13,9 @@ from typing import Any, Dict, Optional
 import torch
 
 from snn_interpreter.simulator import input_shape
-from snn_interpreter.targets.report import deployment_report
-from snn_interpreter.targets.summary import target_summaries
 from snn_interpreter.topology.spec import TopologySpec
+from snn_targets.report import deployment_report
+from snn_targets.summary import target_summaries
 
 
 def target_list_payload() -> Dict[str, Any]:
