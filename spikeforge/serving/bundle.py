@@ -11,6 +11,14 @@ from typing import Any, Dict, Mapping, Optional, Tuple, Union
 
 import torch
 
+from spikeforge.compression import (
+    SCHEME_NONE,
+    CompressionError,
+    CompressionReport,
+    compress_state_dict,
+    dequantize_state_dict,
+    prune,
+)
 from spikeforge.network import model_store
 from spikeforge.serving import bundle_manifest as bm
 from spikeforge.serving.encode_spec import (
@@ -215,6 +223,9 @@ class DeploymentBundle:
     It carries the resolved :class:`TopologySpec`, the trained weights, the
     frozen encode and preprocessing configs, and an optional NIR graph, with a
     manifest recording the library versions and the checkpoint's provenance.
+    When ``weights_encoding`` is set the ``weights`` mapping holds integer
+    codes rather than floats, and :meth:`resolved_weights` dequantizes them;
+    a bundle without it is byte-for-byte a raw float bundle.
     """
 
     manifest: Mapping[str, Any]
@@ -223,6 +234,7 @@ class DeploymentBundle:
     preprocessing: Mapping[str, Any] = field(default_factory=dict)
     graph: Optional[Mapping[str, Any]] = None
     path: Optional[str] = None
+    weights_encoding: Optional[Mapping[str, Any]] = None
 
     @property
     def spec(self) -> TopologySpec:
@@ -252,13 +264,44 @@ class DeploymentBundle:
         """
         return self.encode_spec()
 
+    def resolved_weights(self) -> Dict[str, torch.Tensor]:
+        """Return the float state dict, dequantizing a compressed payload.
+
+        A bundle with no ``weights_encoding`` returns its weights verbatim; a
+        compressed bundle expands every recorded tensor through the codec's
+        documented ``(code - zero_point) * scale`` rule. A malformed encoding
+        is refused with :class:`CompressionError` rather than loaded as-is.
+        """
+        if not self.weights_encoding:
+            return dict(self.weights)
+        try:
+            return dequantize_state_dict(self.weights, self.weights_encoding)
+        except (KeyError, TypeError, ValueError) as error:
+            raise CompressionError(
+                f"weights_encoding is unreadable: {error}"
+            ) from None
+
+    def compression_report(self) -> Optional[CompressionReport]:
+        """Return the compression report, or ``None`` for a raw bundle.
+
+        A pruning block recorded alongside the encoding is folded in, so one
+        report carries both the sparsity gained and the compressed ratio.
+        """
+        if not self.weights_encoding:
+            return None
+        report = CompressionReport.from_encoding(self.weights_encoding)
+        pruning = self.manifest.get("pruning")
+        if pruning is None:
+            return report
+        return replace(report, pruning=dict(pruning))
+
     def build_module(
         self, device: Union[str, torch.device] = "cpu"
     ) -> Any:
         """Return the module described by the manifest, weights loaded."""
         module = build_module(self.spec)
         try:
-            module.load_state_dict(dict(self.weights), strict=True)
+            module.load_state_dict(self.resolved_weights(), strict=True)
         except RuntimeError as error:
             raise BundleFormatError(
                 self.path or _MEMORY,
@@ -324,6 +367,7 @@ class DeploymentBundle:
             ),
             graph=graph,
             path=path,
+            weights_encoding=manifest.get("weights_encoding"),
         )
 
 
@@ -363,6 +407,42 @@ def _frozen_encode(
     return resolved.to_dict()
 
 
+def _prepare_weights(
+    state_dict: Mapping[str, Any],
+    compress: Optional[str],
+    compress_bits: int,
+    prune_sparsity: Optional[float],
+    prune_strategy: str,
+) -> Tuple[
+    Dict[str, Any],
+    Optional[Dict[str, Any]],
+    Optional[Dict[str, Any]],
+    Dict[str, torch.Tensor],
+]:
+    """Return the stored payload, encoding, pruning block, and float weights.
+
+    Pruning runs first (when requested) and compression second, so the ratio
+    reflects the pruned tensor. The final element is the float state dict a
+    NIR graph should be exported from: for a compressed bundle it is the
+    dequantized payload, so the graph and the loaded module agree exactly.
+    """
+    resolved: Dict[str, Any] = dict(state_dict)
+    pruning: Optional[Dict[str, Any]] = None
+    if prune_sparsity is not None:
+        pruned = prune(resolved, prune_sparsity, strategy=prune_strategy)
+        resolved = dict(pruned.tensors)
+        pruning = pruned.report.to_dict()
+    if not compress or compress == SCHEME_NONE:
+        return resolved, None, pruning, {
+            name: value for name, value in resolved.items()
+            if torch.is_tensor(value)
+        }
+    compressed = compress_state_dict(resolved, compress, compress_bits)
+    encoding = dict(compressed.encoding)
+    stored = dict(compressed.tensors)
+    return stored, encoding, pruning, dequantize_state_dict(stored, encoding)
+
+
 def build(
     checkpoint: str,
     out: Optional[str] = None,
@@ -372,17 +452,27 @@ def build(
     expected_metrics: Optional[Mapping[str, Any]] = None,
     include_nir: bool = False,
     protocol_version: Optional[str] = None,
+    compress: Optional[str] = None,
+    compress_bits: int = 8,
+    prune_sparsity: Optional[float] = None,
+    prune_strategy: str = "unstructured",
 ) -> DeploymentBundle:
     """Build a :class:`DeploymentBundle` from a saved checkpoint.
 
     The topology spec, topology name, and resolved parameters are read from
     the checkpoint's own metadata, so the artifact is self-describing.
     ``out`` also writes the ``.spkf`` archive. ``include_nir`` adds the NIR
-    graph envelope and needs the ``nir`` extra.
+    graph envelope and needs the ``nir`` extra. ``compress`` names an 8-bit
+    weight scheme (``int8``/``uint8``) and ``prune_sparsity`` an optional
+    magnitude/structured pruning level; either records its report in the
+    manifest so the reduction and its cost are visible.
     """
     meta, spec, state_dict, provenance = _checkpoint_parts(checkpoint)
     encode = _frozen_encode(encode_config, meta)
     preprocess = dict(preprocessing or {})
+    stored, encoding, pruning, resolved = _prepare_weights(
+        state_dict, compress, compress_bits, prune_sparsity, prune_strategy
+    )
     manifest = bm.new_manifest(
         spec=spec,
         meta=meta,
@@ -394,17 +484,20 @@ def build(
         expected_metrics=dict(expected_metrics or {}),
         protocol_version=protocol_version,
         encode_spec_version=encode["spec_version"],
+        weights_encoding=encoding,
+        pruning=pruning,
     )
     graph = None
     if include_nir:
-        graph = _nir_envelope(spec, state_dict, checkpoint)
+        graph = _nir_envelope(spec, resolved, checkpoint)
     bundle = DeploymentBundle(
         manifest=manifest,
-        weights=dict(state_dict),
+        weights=stored,
         encode_config=encode,
         preprocessing=preprocess,
         graph=graph,
         path=out,
+        weights_encoding=encoding,
     )
     if out:
         bundle.save(out)

@@ -100,12 +100,17 @@ def new_manifest(
     protocol_version: Optional[str],
     encode_spec_version: Optional[int] = None,
     created_at: Optional[float] = None,
+    weights_encoding: Optional[Mapping[str, Any]] = None,
+    pruning: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assemble the self-describing manifest written into a bundle.
 
     ``encode_spec_version`` records which encode contract the ``encode_config``
     was frozen under; it defaults to the runtime's current version and is
-    additive to the entry set, so older readers ignore it.
+    additive to the entry set, so older readers ignore it. ``weights_encoding``
+    is the optional compression block (a versioned scheme plus per-tensor
+    grids); a manifest without it describes a raw float state dict, which keeps
+    every bundle built before compression loadable.
     """
     return {
         "format": BUNDLE_FORMAT,
@@ -131,4 +136,8 @@ def new_manifest(
         "encode_config": dict(encode_config),
         "preprocessing": dict(preprocessing),
         "provenance": dict(provenance),
+        "weights_encoding": (
+            None if weights_encoding is None else dict(weights_encoding)
+        ),
+        "pruning": None if pruning is None else dict(pruning),
     }
