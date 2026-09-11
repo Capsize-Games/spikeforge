@@ -10,6 +10,38 @@ describe the local source tree.
 
 ## [Unreleased]
 
+## [spikeforge-targets-v0.1.1] - 2026-09-11
+
+A `spikeforge-targets`-only follow-up release. Core stays `0.3.0` and every
+other distribution stays `0.1.0`; the wire protocol stays at `1.0`.
+
+### Added
+
+- **Vendor simulator backends (Speck, Xylo, SpiNNaker2).** The
+  simulator-backed test-deploy matrix gains an executable backend for every
+  registered target: Speck runs through Sinabs, Xylo through Rockpool, and
+  SpiNNaker2 through its host simulator. Each follows the existing backend
+  protocol — availability comes from the isolated SDK probe plus a minimal
+  capability check, the graph is lowered with the shared linear lowering, and
+  a missing SDK yields `available: false` with a named reason rather than a
+  failure.
+- A shared `VendorBackend` adapter
+  (`spikeforge_targets.backends.vendor_backend`) and the `linear_program`
+  dense/neuron lowering in `spikeforge_targets.backends.lowering`, reused by
+  the Norse, Lava, and vendor backends so one code path recovers the execution
+  order and sizes each layer.
+- A `test-deploy` CI job that runs the matrix for `fc_legacy`, asserts exactly
+  one cell per registered target, and checks the command exits zero when every
+  SDK-backed cell honestly reports `available: false`.
+
+### Changed
+
+- `BackendResult` and the matrix `DeployCell` now carry `estimate: true`: every
+  simulator or emulator run is labelled an estimate and only a real device
+  result can set it `false`, so a simulated trajectory is never read as a
+  measurement. A cell now reports availability from its wired backend
+  (`backend.available()`) instead of the registry probe.
+
 ## [0.3.0] - 2026-09-11
 
 The hardware-free production toolkit (workstreams PT-W1…PT-W8) and the
@@ -317,6 +349,7 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
   suite, JSON logging, packaged console scripts, and Docker CPU/GPU profiles.
 
 [Unreleased]: https://github.com/capsize-games/spikeforge/compare/spikeforge-v0.3.0...HEAD
+[spikeforge-targets-v0.1.1]: https://github.com/capsize-games/spikeforge/compare/spikeforge-v0.3.0...spikeforge-targets-v0.1.1
 [0.3.0]: https://github.com/capsize-games/spikeforge/compare/v0.2.0...spikeforge-v0.3.0
 [0.2.0]: https://github.com/capsize-games/spikeforge/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/capsize-games/spikeforge/releases/tag/v0.1.0
