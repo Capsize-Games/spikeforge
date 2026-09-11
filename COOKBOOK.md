@@ -48,23 +48,27 @@ beyond it is an opt-in extra with an isolated probe, so an absent package is
 
 ```bash
 # Core (torch, torchvision, snntorch, matplotlib, Pillow, numpy)
-pip install -e .
+pip install -e ./packages/snn-interpreter
 
-# The dashboard / WebSocket server
-pip install -e ".[web]"
+# The dashboard / WebSocket server (pulls core + the FastAPI stack)
+pip install -e ./packages/snn-interpreter-server
 
 # A representative "everything" install
-pip install -e ".[web,events,onnx,hub,norse,tracking,docs]"
+pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,hub,norse,tracking,docs]"
+pip install -e ./packages/snn-interpreter-server
 
-# Development (pytest, pytest-cov, ruff)
-pip install -e ".[dev]"
+# Development (pytest, pytest-cov, ruff, jsonschema)
+pip install -e "./packages/snn-interpreter[dev]"
 ```
 
-**Extras matrix** (declared in [`setup.py`](setup.py:46)):
+**Extras matrix** (declared in
+[`packages/snn-interpreter/pyproject.toml`](packages/snn-interpreter/pyproject.toml)):
+
+The dashboard/WebSocket server is not a core extra; it is the
+`packages/snn-interpreter-server` distribution.
 
 | Extra | Packages | Enables | If absent |
 |---|---|---|---|
-| `web` | `fastapi`, `uvicorn[standard]`, `websockets`, `pydantic` | dashboard / WebSocket server | server unavailable |
 | `nir` | `nir`, `nirtorch` | NIR export, interpretation, `nirtorch` extraction | typed unavailable error |
 | `events` | `tonic` | Tonic event datasets (N-MNIST, DVS128 Gesture, CIFAR10-DVS, SSC) + event training | datasets reported unavailable; `EventsExtraMissingError` |
 | `onnx` | `onnx`, `onnxruntime` | ONNX export/import bridge | typed unavailable error |
@@ -76,10 +80,9 @@ pip install -e ".[dev]"
 | `docs` | `mkdocs-material` | the generated docs site | `build_docs.sh` reports the gap |
 
 > **Not executed here.** The installs above need network access and are shown
-> for reference; `nir`, `events`, `onnx`, `web`, and `docs` were already
-> present in this environment, while `hub`, `norse`, `lava`, and `tracking`
-> were intentionally absent so the recipes below can show the honest
-> degradation.
+> for reference; `nir`, `events`, `onnx`, and `docs` were already present in
+> this environment, while `hub`, `norse`, `lava`, and `tracking` were
+> intentionally absent so the recipes below can show the honest degradation.
 
 ### 1.2 Check what is actually available
 
@@ -234,7 +237,8 @@ loss=2.3026 test_acc=12.5
   classes); it is a wiring demo, not a benchmark.
 - Without `synthetic_only=True`, a missing Tonic raises the typed
   `EventsExtraMissingError` instead of passing a synthetic stream off as a
-  recording. Install the extra with `pip install -e ".[events]"`.
+  recording. Install the extra with
+  `pip install -e "./packages/snn-interpreter[events]"`.
 - `conv_net` needs a square single/dual-channel sensor matching its declared
   side; a feature-input topology (`fc_legacy`, `fc_small`, `recurrent_net`)
   accepts the flattened sensor. A mismatch raises `EventGeometryError` naming

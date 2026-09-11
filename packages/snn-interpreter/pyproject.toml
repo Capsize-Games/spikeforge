@@ -1,0 +1,132 @@
+# PEP 621 packaging authority for the core distribution (ARCH-0001 Phase 1b).
+#
+# The core distribution owns the ``snn_interpreter`` import root plus the two
+# top-level ``main`` modules. It deliberately excludes ``server/`` so a
+# headless ``pip install snn-interpreter`` cannot ship the FastAPI server.
+#
+# Phase 1 moves no source: the import root stays at ``snn_interpreter/`` and is
+# exposed to the build via the ``snn_interpreter`` symlink next to this file
+# (see the ``packages.find`` table below for why). The server distribution is
+# defined in ``packages/snn-interpreter-server/pyproject.toml``.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snn-interpreter"
+version = "0.3.0"
+description = "Spiking neural network trainer/experiments for MNIST built with snnTorch and PyTorch."
+# ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
+# files: the distribution metadata points at the root documents while
+# setuptools' sandbox only reads files inside the project directory.
+readme = "README.md"
+requires-python = ">=3.10"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+    { name = "w4ffl35", email = "contact@capsizegames.com" },
+]
+keywords = [
+    "spiking neural networks",
+    "snn",
+    "snntorch",
+    "pytorch",
+    "mnist",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "torch>=2.5",
+    "torchvision>=0.20",
+    "snntorch>=1.0",
+    "matplotlib>=3.8",
+    "Pillow>=10.0",
+    "numpy>=1.26",
+    "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.0.280",
+    "jsonschema>=4",
+    # stdlib ``tomllib`` only lands in 3.11; the packaging-profile tests read
+    # the PEP 621 files, so 3.10 development and CI pull in the backport.
+    'tomli; python_version < "3.11"',
+]
+nir = [
+    "nir>=1.0",
+    "nirtorch>=1.0",
+]
+events = [
+    "tonic>=1.4",
+]
+onnx = [
+    "onnx>=1.14",
+    "onnxruntime>=1.16",
+]
+hub = [
+    "huggingface_hub>=0.20",
+]
+tracking = [
+    "tensorboard>=2.0",
+]
+tracking-wandb = [
+    "wandb",
+]
+docs = [
+    "mkdocs-material>=9.0",
+]
+norse = [
+    "norse",
+]
+lava = [
+    "lava-nc",
+]
+
+[project.scripts]
+snn-interpreter = "main:main"
+snn-interpreter-encodings = "main_encodings:main"
+snn-verify = "snn_interpreter.cli.verify:main"
+snn-records = "snn_interpreter.cli.records_cli:main"
+snn-targets = "snn_interpreter.cli.target_cli:main"
+snn-hub = "snn_interpreter.hub.cli:main"
+snn-energy = "snn_interpreter.energy.cli:main"
+snn-benchmark = "snn_interpreter.benchmark.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/w4ffl35/snn_interpreter"
+Repository = "https://github.com/w4ffl35/snn_interpreter"
+
+[tool.setuptools]
+py-modules = ["main", "main_encodings"]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+# The design document specifies `where = ["../.."]`. Setuptools >= 68
+# sandboxes a build to the project directory (which is also why README.md and
+# LICENSE are committed symlinks here), and its default `python -m build`
+# builds the wheel from the *extracted sdist*, which cannot carry sources that
+# live outside the project root. The import root is therefore exposed next to
+# this file as a symlink to `../../snn_interpreter`, keeping the one source of
+# truth at its current repository path while making both `pip install` and
+# `python -m build` produce a complete wheel. `include`/`exclude` are exactly
+# the design document's, so `server/` can never leak into this distribution.
+where = ["."]
+include = ["snn_interpreter*"]
+exclude = ["server*", "tests*", "snn_targets*", "snn_hub*"]
+
+[tool.setuptools.package-data]
+snn_interpreter = ["py.typed"]

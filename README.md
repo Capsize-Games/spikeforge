@@ -23,14 +23,16 @@ Install a minimal set — the core package plus the extras the examples use —
 then run one headless example and launch the dashboard:
 
 ```bash
-# 1. Install core plus the extras (web dashboard, event datasets, ONNX, hub,
-#    Norse backend, tracking sinks, docs).
-pip install -e ".[web,events,onnx,hub,norse,tracking,docs]"
+# 1. Install the core distribution plus the extras the examples use.
+pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,hub,norse,tracking]"
 
-# 2. Run one headless example (no browser needed).
+# 2. Install the server distribution (pulls core + the FastAPI stack).
+pip install -e ./packages/snn-interpreter-server
+
+# 3. Run one headless example (no browser needed).
 python examples/04_nir_export_validate.py
 
-# 3. Launch the dashboard (FastAPI + WebSocket on :8877).
+# 4. Launch the dashboard (FastAPI + WebSocket on :8877).
 python -m server
 ```
 
@@ -333,7 +335,8 @@ existing WebSocket protocol, so nothing needs a page reload.
 > - **Hub panel** — entry cards, a compat badge, and an import verdict.
 > - **Demo GIF** — apply-and-run streaming spike frames into the raster.
 >
-> To reproduce: `pip install -e ".[web]"`, then `python -m server` (port
+> To reproduce: `pip install -e ./packages/snn-interpreter-server`, then
+> `python -m server` (port
 > 8877) and `cd client && npm install && npm run dev`; open
 > <http://localhost:5173>. Commit the captures under a top-level `assets/`
 > directory (the gitignored `build/` and `docs/` trees are not suitable) and
@@ -458,7 +461,7 @@ encoded images.
 Event loading is opt-in so the default install stays lean:
 
 ```bash
-pip install -e ".[events]"
+pip install -e "./packages/snn-interpreter[events]"
 ```
 
 `tonic` is deliberately kept out of `requirements.txt`; without it the
@@ -1279,10 +1282,14 @@ consequence.
 - Node.js 18+ and npm (for the `client/` dashboard)
 - `ffmpeg` (only when exporting MP4s)
 
-Install the package (with web extras for the dashboard):
+Install the core distribution, and the server distribution for the dashboard:
 
 ```bash
-pip install -e ".[web]"
+# Core library only (headless).
+pip install -e ./packages/snn-interpreter
+
+# The FastAPI dashboard/WebSocket server (installs core as a dependency).
+pip install -e ./packages/snn-interpreter-server
 ```
 
 ### Optional event datasets (Tonic)
@@ -1292,7 +1299,7 @@ Speech Commands) are powered by [Tonic](https://tonic.readthedocs.io/) and
 gated behind the optional `events` extra so the default image stays lean:
 
 ```bash
-pip install -e ".[events]"
+pip install -e "./packages/snn-interpreter[events]"
 ```
 
 `tonic` is deliberately kept out of `requirements.txt`; the event loader and
@@ -1303,11 +1310,12 @@ until it is installed.
 ### Optional extras
 
 Every capability beyond the core is an opt-in extra; each has an isolated
-probe, so a missing package is *reported* rather than raising at import.
+probe, so a missing package is *reported* rather than raising at import. The
+dashboard/WebSocket server is **not** a core extra: it ships as its own
+distribution, `packages/snn-interpreter-server`.
 
 | Extra | Enables | Absent behavior |
 |---|---|---|
-| `web` | FastAPI dashboard/WebSocket server | server unavailable |
 | `nir` | NIR export, interpretation, `nirtorch` extraction | typed unavailable error |
 | `events` | Tonic event datasets (+ event training) | datasets reported unavailable |
 | `onnx` | ONNX export/import bridge | typed unavailable error |
@@ -1320,7 +1328,8 @@ probe, so a missing package is *reported* rather than raising at import.
 | `dev` | `pytest`, `pytest-cov`, `ruff` | — |
 
 ```bash
-pip install -e ".[web,events,onnx,hub,norse,tracking,docs]"
+pip install -e "./packages/snn-interpreter[dev,nir,events,onnx,hub,norse,tracking,docs]"
+pip install -e ./packages/snn-interpreter-server
 ```
 
 ## Usage
@@ -1444,7 +1453,8 @@ scripts/dev.sh docker-reset  # rebuild the Docker volume from scratch
 ```
 main.py                      Thin entry point: rate pipeline -> exporters
 main_encodings.py            Extra tutorial-1 encodings (latency/delta/random)
-setup.py                     Packaging metadata: extras + console scripts
+packages/snn-interpreter/    Core distribution (pyproject.toml authority)
+packages/snn-interpreter-server/  Server distribution (pulls core)
 examples/                    Small runnable scripts (see examples/README.md)
 snn_interpreter/
   config.py                  Paths/settings resolved from the environment

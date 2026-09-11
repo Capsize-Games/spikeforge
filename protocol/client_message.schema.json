@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://snn-interpreter.dev/protocol/1.0/client_message.schema.json",
+  "title": "ClientMessage",
+  "description": "Inbound (browser to server) envelope. Additive-by-default: unknown fields are ignored.",
+  "type": "object",
+  "required": ["protocol_version", "type"],
+  "properties": {
+    "protocol_version": { "type": "string", "const": "1.0" },
+    "type": {
+      "type": "string",
+      "enum": [
+        "configure", "run", "stop", "train", "stop_train", "predict",
+        "select_sample", "infer", "save_model", "list_models",
+        "load_model", "delete_model", "new_model", "stats",
+        "cancel_download", "nir_export", "nir_validate",
+        "trajectory", "metrics", "encoding_report",
+        "surrogates", "surrogate_curve", "benchmark",
+        "targets", "deployment_report", "deploy_run", "energy_report",
+        "model_search", "model_diff",
+        "hub_list", "hub_search", "hub_download", "hub_cancel",
+        "hub_inspect", "hub_import"
+      ]
+    },
+    "config": { "$ref": "payloads/encode_config.schema.json" },
+    "train": { "$ref": "payloads/train_config.schema.json" },
+    "query": { "$ref": "payloads/model_query.schema.json" },
+    "hub": { "$ref": "payloads/hub_query.schema.json" },
+    "name": { "type": ["string", "null"] },
+    "sparse": { "type": "boolean", "default": true }
+  },
+  "additionalProperties": true
+}

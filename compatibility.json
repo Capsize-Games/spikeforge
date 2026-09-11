@@ -1,0 +1,7 @@
+{
+  "protocol_version": "1.0",
+  "releases": [
+    { "snn-interpreter": "0.3.0", "snn-interpreter-server": "0.1.0",
+      "snn-targets": null, "snn-hub": null, "dashboard": "0.1.0" }
+  ]
+}

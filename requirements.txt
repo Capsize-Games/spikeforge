@@ -1,15 +1,17 @@
-# PyTorch is installed by the Dockerfile from the TORCH_INDEX_URL build arg so
-# the build (CPU vs CUDA) can be chosen; these pins keep dev installs working.
+# Core runtime pins usable for a plain `pip install -r requirements.txt` dev
+# setup. PyTorch is installed by the Dockerfile from the TORCH_INDEX_URL build
+# arg so the build (CPU vs CUDA) can be chosen; these pins keep dev installs
+# working.
+#
+# The FastAPI server stack (fastapi/uvicorn/websockets/pydantic) is intentionally
+# absent: it is now the base dependency set of the `snn-interpreter-server`
+# distribution, so core stays headless.
 torch>=2.5
 torchvision>=0.20
 snntorch>=1.0
 matplotlib>=3.8
 Pillow>=10.0
 numpy>=1.26
-fastapi>=0.110
-uvicorn[standard]>=0.27
-websockets>=12.0
-pydantic>=2.5
 psutil>=5.9
 
 # NIR interop: the official Neuromorphic Intermediate Representation packages.

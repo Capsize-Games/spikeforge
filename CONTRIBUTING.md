@@ -22,14 +22,15 @@ the TypeScript client.
 
 ```bash
 # From the repository root. scripts/dev.sh prefers ./venv when present.
-scripts/dev.sh setup          # pip install -e ".[dev,web]" + client npm install
+scripts/dev.sh setup          # core dev extra + server distribution + npm install
 ```
 
 Or, by hand:
 
 ```bash
 python -m venv venv
-venv/bin/pip install -e ".[dev,web]"
+venv/bin/pip install -e "./packages/snn-interpreter[dev]"
+venv/bin/pip install -e ./packages/snn-interpreter-server
 (cd client && npm install)
 ```
 

@@ -4,6 +4,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from server.protocol_version import PROTOCOL_VERSION
 from server.schemas.encode_config import EncodeConfig
 from server.schemas.hub_query import HubQuery
 from server.schemas.model_query import ModelQuery
@@ -13,6 +14,7 @@ from server.schemas.train_config import TrainConfig
 class ClientMessage(BaseModel):
     """A message sent from the browser to the server."""
 
+    protocol_version: str = PROTOCOL_VERSION
     type: Literal[
         "configure", "run", "stop", "train", "stop_train", "predict",
         "select_sample", "infer", "save_model", "list_models",

@@ -52,8 +52,9 @@ require_client_deps() {
 # --- setup -------------------------------------------------------------------
 
 cmd_setup() {
-  info "Installing Python package with dev + web extras"
-  py -m pip install -e ".[dev,web]"
+  info "Installing the core dev extra and the server distribution"
+  py -m pip install -e "./packages/snn-interpreter[dev]"
+  py -m pip install -e ./packages/snn-interpreter-server
   info "Installing client dependencies"
   (cd "$CLIENT" && npm install)
 }

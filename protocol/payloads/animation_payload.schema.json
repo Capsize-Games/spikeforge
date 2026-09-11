@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/animation_payload.schema.json",
+  "title": "AnimationStatePayload",
+  "description": "Payload of the animation_state outbound message, guarded by tests/test_client_animation_payload.py. When available is false, reason names why; source is always 'hidden'.",
+  "type": "object",
+  "required": ["available", "reason"],
+  "properties": {
+    "available": { "type": "boolean" },
+    "reason": { "type": "string" },
+    "source": { "type": "string", "enum": ["hidden"], "default": "hidden" }
+  },
+  "additionalProperties": true
+}

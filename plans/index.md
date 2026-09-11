@@ -25,6 +25,32 @@ install, extras, CLI, and the honest limitations — start with the README.
   when) to split the client, server, and interpreter/deploy layers into
   separate repositories.
 
+### ARCH-0001 — phased repo split
+
+The accepted architecture for one repository with multiple distributions. These
+documents are the design of record for the split; the implementation phase
+follows them.
+
+- [ADR: repository topology](plans/arch-0001-adr-repo-topology.md) — the
+  accepted Option 0 decision, the comparison against Options 1–3, and the named
+  extraction triggers.
+- [Target topology](plans/arch-0001-target-topology.md) — the distribution
+  names, import roots, GitHub repository names, and dependency direction.
+- [Core boundary](plans/arch-0001-core-boundary.md) — the forbidden-import list
+  and the CI checks that enforce a headless core install.
+- [Protocol contract](plans/arch-0001-protocol-contract.md) — the JSON Schema
+  source of truth, the `protocol_version` field and compatibility policy, and TS
+  type generation/validation.
+- [Packaging and versioning](plans/arch-0001-packaging-versioning.md) — the
+  extras-to-package mapping, console-script ownership, pinning, and release
+  automation.
+- [Migration plan](plans/arch-0001-migration-plan.md) — the reversible Phases
+  1–4, test/fixture relocation, and the deprecation/shim policy.
+- [Risk register](plans/arch-0001-risk-register.md) — every split cost with a
+  mitigation and an owner.
+- [Decision metrics](plans/arch-0001-decision-metrics.md) — the numeric
+  thresholds that gate the next extraction.
+
 ## Focused workstream designs
 
 - [Interpreter spine](plans/interpreter_spine_plan.md) — the `TopologySpec`

@@ -1,7 +1,8 @@
 """FastAPI application exposing the encoding engine over WebSocket."""
 
 import asyncio
-from typing import Dict
+import logging
+from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
@@ -9,6 +10,7 @@ from server.downloads import manager
 from server.handlers import dispatch
 from server.hub_downloads import manager as hub_manager
 from server.messages import send_locked
+from server.protocol_version import PROTOCOL_MAJOR, PROTOCOL_VERSION
 from server.schemas import ClientMessage
 from server.session import Session
 from server.web import mount_client
@@ -24,6 +26,38 @@ mount_client(app)
 
 # One session per connected client.
 _sessions: Dict[int, Session] = {}
+
+logger = logging.getLogger(__name__)
+
+#: Payload code returned when an inbound MAJOR version does not match ours.
+VERSION_MISMATCH = "protocol_version_mismatch"
+
+
+def _version_error(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Return a mismatch payload, or None when the inbound version fits.
+
+    A missing ``protocol_version`` is the Phase 1 legacy signal (``0.x``):
+    it is accepted with a one-line deprecation log. From Phase 2 onward a
+    missing version becomes a mismatch instead.
+    """
+    incoming = raw.get("protocol_version")
+    if incoming is None:
+        logger.warning(
+            "legacy client message without protocol_version; assuming 0.x"
+        )
+        return None
+    major = str(incoming).split(".", 1)[0]
+    if major == PROTOCOL_MAJOR:
+        return None
+    return {
+        "code": VERSION_MISMATCH,
+        "message": (
+            f"client protocol {incoming!r} is incompatible with server "
+            f"protocol {PROTOCOL_VERSION}"
+        ),
+        "client": incoming,
+        "server": PROTOCOL_VERSION,
+    }
 
 
 async def _drain_training(ws: WebSocket, session: Session) -> None:
@@ -63,6 +97,12 @@ async def _serve(ws: WebSocket, session: Session) -> None:
     """Read client messages, giving downloads their own cancel path."""
     while True:
         raw = await ws.receive_json()
+        version_error = _version_error(raw)
+        if version_error is not None:
+            await send_locked(ws, session, {
+                "type": "error", "payload": version_error,
+            })
+            continue
         try:
             message = ClientMessage.model_validate(raw)
         except Exception as exc:  # keep the connection alive on bad input

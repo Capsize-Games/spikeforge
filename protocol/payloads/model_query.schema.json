@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/model_query.schema.json",
+  "title": "ModelQuery",
+  "description": "Mirrors server/schemas/model_query.py::ModelQuery; unknown keys are ignored.",
+  "type": "object",
+  "properties": {
+    "dataset": { "type": ["string", "null"], "default": null },
+    "topology": { "type": ["string", "null"], "default": null },
+    "coding": { "type": ["string", "null"], "default": null },
+    "device": { "type": ["string", "null"], "default": null },
+    "min_accuracy": { "type": ["number", "null"], "default": null },
+    "name": { "type": ["string", "null"], "default": null },
+    "names": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    }
+  },
+  "additionalProperties": true
+}

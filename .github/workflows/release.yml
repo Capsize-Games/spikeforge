@@ -1,0 +1,110 @@
+name: Release
+
+# Tags are the only release trigger. The tag scheme is
+# `<distribution>-v<version>` (for example `snn-interpreter-v0.3.0` or
+# `snn-interpreter-server-v0.1.0`); the prefix selects `packages/<distribution>`.
+on:
+  push:
+    tags:
+      - "*-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Publish ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    # `id-token: write` mints the short-lived OIDC token the publish action
+    # exchanges for an upload credential; no long-lived API token is stored.
+    # A PyPI trusted publisher may additionally bind to a named environment in
+    # the PyPI project settings.
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Parse the release tag
+        id: parse
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          case "$tag" in
+            *-v*) ;;
+            *) echo "tag '$tag' is not <distribution>-v<version>"; exit 1 ;;
+          esac
+          distribution="${tag%-v*}"
+          version="${tag##*-v}"
+          package_dir="packages/${distribution}"
+          if [ ! -f "${package_dir}/pyproject.toml" ]; then
+            echo "no distribution at ${package_dir}"; exit 1
+          fi
+          echo "distribution=${distribution}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "package_dir=${package_dir}" >> "$GITHUB_OUTPUT"
+          echo "Releasing ${distribution} ${version} from ${package_dir}"
+
+      - name: Verify the tag against pyproject and compatibility.json
+        env:
+          DISTRIBUTION: ${{ steps.parse.outputs.distribution }}
+          VERSION: ${{ steps.parse.outputs.version }}
+          PACKAGE_DIR: ${{ steps.parse.outputs.package_dir }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          import tomllib
+          from pathlib import Path
+
+          distribution = os.environ["DISTRIBUTION"]
+          version = os.environ["VERSION"]
+          package_dir = Path(os.environ["PACKAGE_DIR"])
+
+          text = (package_dir / "pyproject.toml").read_text(encoding="utf-8")
+          project = tomllib.loads(text)["project"]
+          if project["version"] != version:
+              sys.exit(
+                  f"tag {distribution}-v{version} != pyproject "
+                  f"{project['version']}"
+              )
+
+          matrix = json.loads(
+              Path("compatibility.json").read_text(encoding="utf-8")
+          )
+          release = matrix["releases"][-1]
+          if release.get(distribution) != version:
+              sys.exit(
+                  f"compatibility.json has no {distribution} {version}"
+              )
+
+          core = "snn-interpreter"
+          if distribution != core:
+              expected = f"{core}~={release.get(core)}"
+              pins = [
+                  dep
+                  for dep in project.get("dependencies", [])
+                  if dep.startswith(core)
+              ]
+              if pins != [expected]:
+                  sys.exit(
+                      f"refusing to publish {distribution}: core pin "
+                      f"{pins} is not the matrix pin {expected!r}"
+                  )
+          print(f"{distribution} {version}: tag, pyproject, matrix agree")
+          PY
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build "${{ steps.parse.outputs.package_dir }}"
+
+      - name: Publish to PyPI (OIDC trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ${{ steps.parse.outputs.package_dir }}/dist

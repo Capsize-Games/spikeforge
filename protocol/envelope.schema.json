@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://snn-interpreter.dev/protocol/1.0/envelope.schema.json",
+  "title": "Envelope",
+  "description": "Shared $defs used by both the inbound and outbound envelopes. This file is the common vocabulary; each direction's envelope inlines the concrete properties so the two are independently readable.",
+  "$defs": {
+    "protocol_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "The protocol version stamped on every envelope."
+    },
+    "message_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The closed discriminator; each envelope narrows it to an enum."
+    },
+    "source": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Which layer produced a raster or spike frame."
+    },
+    "kind": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Undeclared-on-the-wire subtype detail (for example 'event_frame')."
+    }
+  }
+}

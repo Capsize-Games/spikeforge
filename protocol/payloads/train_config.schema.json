@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/train_config.schema.json",
+  "title": "TrainConfig",
+  "description": "Mirrors server/schemas/train_config.py::TrainConfig; defaults are documented and unknown keys are ignored.",
+  "type": "object",
+  "properties": {
+    "dataset": { "type": "string", "default": "mnist" },
+    "hidden": { "type": "integer", "default": 256 },
+    "beta": { "type": "number", "default": 0.9 },
+    "lr": { "type": "number", "default": 0.005 },
+    "epochs": { "type": "integer", "default": 3 },
+    "num_steps": { "type": "integer", "default": 25 },
+    "subset": { "type": "integer", "default": 10 },
+    "batch_size": { "type": "integer", "default": 64 },
+    "checkpoint": { "type": ["string", "null"], "default": null },
+    "device": {
+      "type": "string",
+      "enum": ["auto", "cpu", "gpu"],
+      "default": "auto"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["educational", "production"],
+      "default": "production"
+    },
+    "topology": { "type": "string", "default": "fc_legacy" },
+    "topology_params": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {}
+    },
+    "stage_neurons": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "stage_params": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "default": {}
+    },
+    "amp": { "type": "boolean", "default": false },
+    "grad_checkpoint": { "type": "boolean", "default": false },
+    "bptt_steps": { "type": ["integer", "null"], "default": null },
+    "multi_gpu": { "type": "boolean", "default": false },
+    "tracking": {
+      "type": ["string", "null"],
+      "enum": ["tensorboard", "wandb", null],
+      "default": null
+    },
+    "deterministic": { "type": "boolean", "default": false },
+    "encode": { "$ref": "encode_config.schema.json" }
+  },
+  "additionalProperties": true
+}

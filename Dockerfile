@@ -22,18 +22,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install Python deps first (better layer caching).
-COPY requirements.txt ./
+# Copy the repository so the two distributions can be installed from their
+# `packages/` pyproject.toml files. Both resolve their import roots
+# (`snn_interpreter/`, `server/`, `main*.py`) from the repo root.
+COPY . .
+
+# Install the shared core runtime pins first (better layer caching).
 # PyTorch build selector: default CUDA so the GPU device option works.
 # For a smaller CPU-only image:
 #   docker compose build --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu132
 RUN pip install --upgrade pip \
     && pip install --index-url ${TORCH_INDEX_URL} torch torchvision \
-    && pip install -r requirements.txt
+    && pip install -r requirements.txt \
+    && pip install ./packages/snn-interpreter \
+        ./packages/snn-interpreter-server
 
-# Copy app source + built client.
-COPY . .
+# Built client bundle (the Dockerfile's own copy overrides client/dist).
 COPY --from=client-build /build/dist /app/client/dist
 
 # The exporter output and dataset cache live in /data (mounted in compose).

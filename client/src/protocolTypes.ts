@@ -147,3 +147,13 @@ export interface MetricsSnapshot {
   gauges: Record<string, number>;
   timers: Record<string, Record<string, number>>;
 }
+
+/**
+ * The generated protocol envelopes, re-exported so the dashboard consumes the
+ * JSON-Schema-derived types instead of hand-mirroring the wire contract.
+ * Regenerate with `cd client && npm run gen:protocol`.
+ */
+export type {
+  ClientMessage as ProtocolClientMessage,
+  ServerMessage as ProtocolServerMessage,
+} from "./protocol/generated";

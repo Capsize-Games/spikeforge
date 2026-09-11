@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 from fastapi import WebSocket
 
+from server.protocol_version import PROTOCOL_VERSION
 from server.schemas import EncodeConfig
 from server.session import Session
 
@@ -11,7 +12,12 @@ from server.session import Session
 async def send_locked(
     ws: WebSocket, session: Session, message: Dict[str, Any]
 ) -> None:
-    """Serialize sends so the stream task and loop never interleave."""
+    """Serialize sends so the stream task and loop never interleave.
+
+    Stamps the protocol version here, at the single funnel every outbound
+    message passes through, so no helper can forget it.
+    """
+    message.setdefault("protocol_version", PROTOCOL_VERSION)
     async with session.lock:
         await ws.send_json(message)
 

@@ -50,6 +50,15 @@ nav:
       - Ecosystem roadmap: ecosystem_roadmap.md
   - Architecture:
       - Repo topology and split: repo_topology_plan.md
+      - ARCH-0001 phased repo split:
+          - "ADR repository topology": arch-0001-adr-repo-topology.md
+          - Target topology: arch-0001-target-topology.md
+          - Core boundary: arch-0001-core-boundary.md
+          - Protocol contract: arch-0001-protocol-contract.md
+          - Packaging and versioning: arch-0001-packaging-versioning.md
+          - Migration plan: arch-0001-migration-plan.md
+          - Risk register: arch-0001-risk-register.md
+          - Decision metrics: arch-0001-decision-metrics.md
   - Workstreams:
       - Interpreter spine: interpreter_spine_plan.md
       - Model hub: model_hub_plan.md

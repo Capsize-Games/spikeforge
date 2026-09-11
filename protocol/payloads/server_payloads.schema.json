@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/server_payloads.schema.json",
+  "title": "ServerPayload",
+  "description": "Free-form outbound payloads discriminated by the envelope's 'type'. The wire shape is additive-by-default (unknown keys are allowed at every level), so this container must accept any JSON value. The $defs name the shapes the server emits today and are documentation, not constraints: the envelopes carry 'payload: true'.",
+  "$defs": {
+    "status": {
+      "type": "object",
+      "properties": {
+        "coding": { "type": "string" },
+        "num_steps": { "type": "integer" },
+        "target": { "type": ["integer", "null"] },
+        "dataset": { "type": "string" },
+        "sample_index": { "type": "integer" },
+        "true_label": { "type": ["integer", "null"] },
+        "modality": { "type": "string", "enum": ["image", "event"] }
+      },
+      "additionalProperties": true
+    },
+    "run_state": {
+      "type": "object",
+      "required": ["running", "reason"],
+      "properties": {
+        "running": { "type": "boolean" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "train_state": {
+      "type": "object",
+      "required": ["running", "reason"],
+      "properties": {
+        "running": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "mode": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "download_state": {
+      "type": "object",
+      "properties": {
+        "dataset": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["idle", "downloading", "done", "cancelled", "error"]
+        },
+        "bytes": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    "error": {
+      "type": ["string", "object"],
+      "description": "A plain reason string, or an object carrying a machine-readable 'code' (for example protocol_version_mismatch)."
+    },
+    "animation_state": { "$ref": "animation_payload.schema.json" }
+  },
+  "type": ["object", "array", "string", "number", "boolean", "null"]
+}

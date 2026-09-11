@@ -1,6 +1,8 @@
 services:
-  # Default service: unchanged. `docker compose up --build` still builds the
-  # CUDA-capable image and serves the dashboard on port 8877. Services below
+  # Default service: `docker compose up --build` still builds the CUDA-capable
+  # image and serves the dashboard on port 8877. The image (see Dockerfile)
+  # installs the `packages/snn-interpreter-server` distribution, which pulls
+  # core, so the removed core `web` extra is no longer involved. Services below
   # are opt-in alternatives selected with `--profile cpu` / `--profile gpu`.
   snn-interpreter:
     build: .

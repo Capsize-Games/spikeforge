@@ -4,10 +4,13 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel
 
+from server.protocol_version import PROTOCOL_VERSION
+
 
 class ServerMessage(BaseModel):
     """A message sent from the server to the browser."""
 
+    protocol_version: str = PROTOCOL_VERSION
     type: Literal[
         "status", "image", "raster", "spike_frame",
         "curve", "error", "config_ack", "run_state",
@@ -24,3 +27,5 @@ class ServerMessage(BaseModel):
     ]
     payload: Any = None
     source: Optional[str] = None
+    # Undeclared on the wire today; made explicit so the schema can see it.
+    kind: Optional[str] = None

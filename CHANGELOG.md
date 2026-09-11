@@ -21,17 +21,46 @@ describe the local source tree.
   entries must name a real repository/reference plus a verified license (and a
   checksum where available), and unverified candidates must be marked
   `unverified-candidate` and reported `available: false`.
+- A versioned protocol contract under [`protocol/`](protocol/README.md): the
+  JSON Schema envelope and the pydantic models carry `protocol_version`,
+  currently `"1.0"`, with a TypeScript codegen/validation step
+  (`client/src/protocol/generated.ts`) and
+  [`tests/test_protocol_schema_parity.py`](tests/test_protocol_schema_parity.py)
+  keeping both sides in agreement.
+- A `packages/` workspace defining two PEP 621 distributions **without moving a
+  source file**: `snn-interpreter` `0.3.0` (core, import root `snn_interpreter`)
+  and `snn-interpreter-server` `0.1.0` (import root `server`, which depends on
+  core). `packages/*/pyproject.toml` is now the packaging authority.
+- [`compatibility.json`](compatibility.json) at the repository root, recording
+  the `protocol_version` (`"1.0"`), the released distribution versions, and the
+  pinned dashboard bundle version.
 
 ### Changed
 
 - The maintainer contact address is now `contact@capsizegames.com` in
   [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md), and
-  [`setup.py`](setup.py); the `<maintainer@example.com>` placeholder is gone.
+  the `packages/` packaging metadata; the `<maintainer@example.com>` placeholder
+  is gone.
 - The catalog schema rejects free-text licenses: an entry's `license` must be a
   concrete SPDX-style id or the explicit `unverified-candidate` marker.
+- Core is now version `0.3.0` and no longer packages `server/`: a headless
+  `pip install snn-interpreter` ships only `snn_interpreter/`, `main.py`, and
+  `main_encodings.py`. The core distribution excludes the server root in its
+  package discovery, and the server's FastAPI stack is no longer a core extra.
+- The core `web` extra is removed; its `fastapi`, `uvicorn[standard]`,
+  `websockets`, and `pydantic` dependencies become the base dependencies of
+  `snn-interpreter-server`.
+- [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml)
+  install the `packages/snn-interpreter-server` distribution instead of the
+  removed `web` extra, keeping the `TORCH_INDEX_URL` build arg and the `:8877`
+  port mapping.
+- [`requirements.txt`](requirements.txt) no longer lists the FastAPI server
+  stack, so a core dev install stays headless.
 
 ### Removed
 
+- `setup.py`: retired in favour of the per-distribution
+  `packages/*/pyproject.toml` files (the design-doc Phase 1b packaging split).
 - Four invented hub catalog entries under a fictional `snn-community/*`
   namespace (`hf/snn-fc-mnist`, `hf/snn-conv-mnist`,
   `hf/snn-recurrent-mnist`, `snntorch/fc_mnist_weights`). They declared

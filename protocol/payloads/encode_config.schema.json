@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://snn-interpreter.dev/protocol/1.0/payloads/encode_config.schema.json",
+  "title": "EncodeConfig",
+  "description": "Mirrors server/schemas/encode_config.py::EncodeConfig; defaults are documented and unknown keys are ignored.",
+  "type": "object",
+  "properties": {
+    "coding": {
+      "type": "string",
+      "enum": ["rate", "latency", "delta", "random"],
+      "default": "rate"
+    },
+    "dataset": { "type": "string", "default": "mnist" },
+    "subset": { "type": "integer", "default": 10 },
+    "batch_size": { "type": "integer", "default": 128 },
+    "num_steps": { "type": "integer", "default": 100 },
+    "sample_index": { "type": "integer", "default": 0 },
+    "gain": { "type": "number", "default": 0.25 },
+    "vector_value": { "type": "number", "default": 0.5 },
+    "tau": { "type": "number", "default": 5.0 },
+    "threshold": { "type": "number", "default": 0.01 },
+    "clip": { "type": "boolean", "default": false },
+    "normalize": { "type": "boolean", "default": true },
+    "linear": { "type": "boolean", "default": true },
+    "off_spike": { "type": "boolean", "default": false },
+    "delta_threshold": { "type": "number", "default": 4.0 },
+    "random_scale": { "type": "number", "default": 0.5 },
+    "random_seed": {
+      "type": ["integer", "null"],
+      "default": null
+    },
+    "interval_ms": { "type": "integer", "default": 100 },
+    "input_size": {
+      "type": ["array", "null"],
+      "items": { "type": "integer" },
+      "minItems": 2,
+      "maxItems": 2,
+      "default": null
+    },
+    "animate_hidden": { "type": "boolean", "default": false }
+  },
+  "additionalProperties": true
+}
