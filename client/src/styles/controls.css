@@ -167,3 +167,18 @@
   margin-left: 4px;
 }
 
+/* Data+Encoding beside Model, instead of one long column — each column
+   takes only the height its own fields need (align-items: start), so the
+   Model & Data tab reflects its real content height exactly rather than a
+   browser column-balance estimate that can overshoot the available space. */
+.controls-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  align-items: start;
+}
+
+.controls-col {
+  min-width: 0;
+}
+

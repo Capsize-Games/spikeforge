@@ -68,15 +68,24 @@ export function RasterCanvas({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [plotWidth, setPlotWidth] = useState(width);
+  // Seeded from the `height` prop so the first paint isn't zero-height;
+  // once mounted, the wrap's own flex-allocated size takes over (see
+  // .raster-row/.raster-plot/.raster-body in viewer.css) so the chart fills
+  // whatever room the tab actually has instead of a guessed pixel constant.
+  const [measuredHeight, setMeasuredHeight] = useState(height);
 
-  // Track the panel width so canvas pixels map 1:1 to display pixels,
-  // which keeps the time axis aligned with the Time cursor slider.
+  // Track the panel's real size so canvas pixels map 1:1 to display pixels
+  // on both axes — width keeps the time axis aligned with the Time cursor
+  // slider, height lets the chart grow/shrink with the available viewport.
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
-      const cw = Math.floor(entries[0].contentRect.width);
+      const rect = entries[0].contentRect;
+      const cw = Math.floor(rect.width);
+      const ch = Math.floor(rect.height);
       if (cw > 0) setPlotWidth(cw);
+      if (ch > 0) setMeasuredHeight(ch);
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -164,6 +173,12 @@ export function RasterCanvas({
     ctx.fillText(String(steps), plotW - 20, canvas.height - 6);
   }, [
     raster,
+    // plotWidth/measuredHeight are the canvas' real pixel size: React
+    // rewrites the width/height attributes when they change, which clears
+    // the bitmap — so the redraw has to be triggered by them, not only by
+    // the (fixed) default width/height props.
+    plotWidth,
+    measuredHeight,
     width,
     height,
     highlightStep,
@@ -176,14 +191,14 @@ export function RasterCanvas({
 
   // Rail labels mirror the canvas row geometry so they line up with dots.
   const rowTop = 8;
-  const plotHeight = Math.max(1, height - 22 - 14);
+  const plotAreaHeight = Math.max(1, measuredHeight - 22 - 14);
   const rowCount = raster ? max1(raster.num_neurons) : 0;
   const railLabels =
     raster && yLabels && yLabels.length === rowCount && rowCount <= 16
       ? rowOrder(raster, sortByRate).map((neuron, pos) => ({
           key: neuron,
           text: yLabels[neuron] ?? "",
-          top: rowTop + plotHeight - (pos / rowCount) * plotHeight - 6,
+          top: rowTop + plotAreaHeight - (pos / rowCount) * plotAreaHeight - 6,
         }))
       : [];
 
@@ -192,7 +207,7 @@ export function RasterCanvas({
   const body = (
     <div className="raster-plot">
       {railLabels.length > 0 && (
-        <div className="raster-rail" style={{ height }}>
+        <div className="raster-rail" style={{ height: measuredHeight }}>
           {railLabels.map(({ key, text, top }) => (
             <span key={key} className="rail-label" style={{ top }}>
               {text}
@@ -202,7 +217,7 @@ export function RasterCanvas({
       )}
       <div className="raster-body">
         <div className="raster-wrap" ref={wrapRef}>
-          <canvas ref={canvasRef} width={plotWidth} height={height} />
+          <canvas ref={canvasRef} width={plotWidth} height={measuredHeight} />
         </div>
       </div>
     </div>
