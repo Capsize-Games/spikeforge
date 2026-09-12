@@ -244,3 +244,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# headlesscode session artifacts (events, reports, usage, scratch, memory)
+/.headlesscode/
