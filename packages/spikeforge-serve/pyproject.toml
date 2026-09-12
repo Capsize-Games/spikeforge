@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-serve"
-version = "0.1.0"
+version = "0.2.0"
 description = "Headless REST/WebSocket inference service for a spikeforge deployment bundle."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core and server distributions' metadata approach.

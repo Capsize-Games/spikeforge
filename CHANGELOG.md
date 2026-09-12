@@ -11,25 +11,55 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+## [spikeforge-serve-v0.2.0] - 2026-09-12
+
 ### Added
 
-- **Pipeline tab: chain checkpoints into a DAG and run it as one program.**
-  A new dashboard tab (React Flow-based node editor) lets a user wire
-  several saved checkpoints together — each node a model, each edge one
-  of three fixed ways (`mean_logits`, `predicted_class`, `one_hot`) to
-  shape a source node's output into the target's next input. Not a state
-  machine: no cycles, no conditional branching, no fan-in (v1 scope cuts,
-  documented in `documentation/model-deployment.md`). Runs go through a
-  background worker (`server/pipeline_service.py`, mirroring
-  `TrainingService`) that streams per-node status back over the existing
-  WebSocket, reusing `ServingService` to build and run each node's
-  checkpoint on demand — no bundle file ever touches disk. New
-  `spikeforge_serve.pipeline`/`pipeline_runner`/`pipeline_store` modules,
-  six new WebSocket actions (`list_pipelines`, `save_pipeline`,
-  `load_pipeline`, `delete_pipeline`, `run_pipeline`, `stop_pipeline`),
-  and a `protocol/payloads/pipeline_graph.schema.json` addition to the
-  wire contract. `spikeforge-server` gains `spikeforge-serve` as a
-  dependency to reuse its serving core.
+- **`spikeforge-serve` CLI restructured into subcommands.** `serve` is the
+  original HTTP/WebSocket service, now explicit rather than the bare
+  `--bundle` flag. New: `run <name-or-path>` (one-shot inference — a JSON
+  request on stdin or `--file`, a JSON response on stdout, no server, so a
+  module behaves identically served or run standalone); `install
+  <bundle.spkf> --name <name>` (registers a bundle under
+  `~/.local/share/spikeforge/modules/<name>/` and writes an executable
+  `<name>` wrapper to `~/.local/bin/`, so a trained model becomes its own
+  command); `uninstall`/`list`. Installed modules chain over Unix pipes —
+  `digit-classifier | jq ... | risk-scorer` — since each reads one JSON
+  object on stdin and writes one on stdout. New `spikeforge_serve.modules`
+  and `module_runner` modules.
+- **Pipeline execution: chain checkpoints into a DAG and run it as one
+  program.** New `spikeforge_serve.pipeline` (the DAG data model —
+  `PipelineGraph`/`Node`/`Edge`, topological order via Kahn's algorithm,
+  raising on a cycle, an unknown node reference, or fan-in),
+  `pipeline_runner` (executes a graph through `ServingService`, one node
+  at a time, shaping each edge's source output into the target's next
+  input via a fixed `extract` mode: `mean_logits`, `predicted_class`, or
+  `one_hot`), and `pipeline_store` (save/load/list/delete, mirroring
+  `spikeforge.network.model_store`). Deliberately a DAG, not a state
+  machine — no cycles, no conditional branching, no fan-in — see
+  `documentation/model-deployment.md`.
+
+## [spikeforge-server-v0.2.0] - 2026-09-12
+
+### Added
+
+- **`GET /api/bundle/<name>`.** Downloads a saved checkpoint as a `.spkf`
+  deployment bundle, built on demand via `spikeforge.serving.bundle.build`
+  into a temp file that's cleaned up after the response. 404s an unknown
+  checkpoint name. The dashboard's Model panel gained a matching "Bundle"
+  tab.
+- **Six new WebSocket actions for the dashboard's Pipeline tab:**
+  `list_pipelines`, `save_pipeline`, `load_pipeline`, `delete_pipeline`,
+  `run_pipeline`, `stop_pipeline`. A run spawns a background worker
+  (`server/pipeline_service.py`, structurally identical to
+  `TrainingService`) that streams `pipeline_node_result`/
+  `pipeline_run_state` messages without blocking the WebSocket read loop.
+  `spikeforge-server` gains `spikeforge-serve` as a dependency to reuse
+  `ServingService` directly — a pipeline node's bundle is built in memory
+  from its checkpoint at run time, never written to disk.
+- New `protocol/payloads/pipeline_graph.schema.json` and matching
+  `client_message`/`server_message` schema and Pydantic additions, kept
+  in lockstep by `tests/test_protocol_schema_parity.py`.
 
 ## [spikeforge-v0.3.1] - 2026-09-12
 
