@@ -1,0 +1,87 @@
+name: Deploy dashboard to Hetzner
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "client/**"
+      - "server/**"
+      - "spikeforge/**"
+      - "packages/**"
+      - "Dockerfile"
+      - "docker-compose.hetzner.yml"
+      - ".github/workflows/deploy-hetzner.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install rsync
+        run: sudo apt-get update && sudo apt-get install -y rsync
+
+      - name: Sync source to Hetzner
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+          HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$HETZNER_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HETZNER_HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            'mkdir -p /opt/spikeforge'
+          rsync -rl --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='venv' \
+            --exclude='client/node_modules' \
+            --exclude='client/dist' \
+            --exclude='**/__pycache__' \
+            --exclude='*.egg-info' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            ./ "$HETZNER_USER@$HETZNER_HOST:/opt/spikeforge/"
+
+      - name: Write production environment
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+          HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          ENV_CONTENT: ${{ secrets.SPIKEFORGE_ENV_FILE }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ENV_CONTENT" | ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes "$HETZNER_USER@$HETZNER_HOST" \
+            'cat > /opt/spikeforge/.env && chmod 600 /opt/spikeforge/.env'
+
+      - name: Build and restart dashboard
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            'cd /opt/spikeforge && docker compose -p spikeforge --env-file .env -f docker-compose.hetzner.yml up -d --build --remove-orphans'
+
+      - name: Verify dashboard health
+        if: always()
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            'docker compose -p spikeforge --env-file /opt/spikeforge/.env -f /opt/spikeforge/docker-compose.hetzner.yml ps; docker inspect --format "{{.State.Health.Status}}" spikeforge-dashboard'
+
+      - name: Clean up SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

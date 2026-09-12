@@ -1,0 +1,30 @@
+# Production dashboard service for the shared Hetzner/Caddy network.
+# Caddy runs in airunnerweb's uwu_shared network and terminates TLS for the
+# public hostname; this service intentionally publishes no host port.
+services:
+  spikeforge-dashboard:
+    build: .
+    container_name: spikeforge-dashboard
+    environment:
+      SPIKEFORGE_DATA_DIR: ${SPIKEFORGE_DATA_DIR:-/data}
+      SPIKEFORGE_DASHBOARD_TOKEN: ${SPIKEFORGE_DASHBOARD_TOKEN:-}
+      SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS: ${SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS:-2}
+    volumes:
+      - spikeforge-data:/data
+    networks:
+      - uwu_shared
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8877/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+networks:
+  uwu_shared:
+    external: true
+    name: uwu_shared
+
+volumes:
+  spikeforge-data:
