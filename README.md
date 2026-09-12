@@ -164,6 +164,12 @@ Tests run with `pytest`; lint with `ruff check .`. See
 [CONTRIBUTING.md](https://github.com/capsize-games/spikeforge/blob/main/CONTRIBUTING.md)
 and [rules.md](rules.md) before opening a pull request.
 
+## Citing
+
+If spikeforge is useful in your research, please cite it — see
+[CITATION.cff](CITATION.cff) (GitHub renders a "Cite this repository"
+button from it automatically).
+
 ## License
 
 Released under the **BSD 3-Clause License** — see [LICENSE](LICENSE) and
