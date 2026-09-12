@@ -129,3 +129,31 @@ stream spike frames into the raster and image panels in real time. The Vite
 dev server proxies `/ws` to the FastAPI server on port 8877 (see
 [`client/vite.config.ts`](../client/vite.config.ts) and
 [`server/__main__.py`](../server/__main__.py)).
+
+### Deploy the dashboard to Hetzner
+
+The `Deploy dashboard to Hetzner` workflow builds the dashboard image on the
+Hetzner host and attaches it to the shared `uwu_shared` Docker network. The
+airunnerweb Caddy instance terminates TLS and proxies
+`dash.spikeforge.net` (including WebSocket upgrades) to that private service.
+The workflow deploys on pushes to `main` or from the Actions tab.
+
+Configure these repository secrets in the `capsize-games/spikeforge` GitHub
+repository before running it:
+
+- `HETZNER_HOST`: `188.245.220.130` (the existing shared secret may be reused)
+- `HETZNER_USER`: `root` (the existing shared secret may be reused)
+- `HETZNER_SSH_KEY`: the private key whose public half is authorized for root
+  on the Hetzner host (the existing shared secret may be reused)
+- `SPIKEFORGE_ENV_FILE`: a multiline environment file containing
+  `SPIKEFORGE_DATA_DIR=/data`,
+  `SPIKEFORGE_DASHBOARD_TOKEN=<long-random-secret>`, and
+  `SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS=2`.
+
+The `airunnerweb` repository's `UWUCHAT_ENV_FILE` secret must also contain
+`SPIKEFORGE_DOMAIN=dash.spikeforge.net`; this supplies the Caddy hostname.
+Finally, create a Namecheap A record for `dash` pointing to
+`188.245.220.130`. After DNS resolves, run the airunnerweb deploy workflow
+once to load the Caddy site block, then run the SpikeForge deploy workflow.
+Open the dashboard with `?token=<long-random-secret>` so its WebSocket and
+bundle downloads can authenticate.
