@@ -28,9 +28,10 @@ export function ModelPanel({
   onLoad,
   onSave,
 }: Props) {
-  const [tab, setTab] = useState<"load" | "save">("load");
+  const [tab, setTab] = useState<"load" | "save" | "bundle">("load");
   const [selected, setSelected] = useState("");
   const [name, setName] = useState("my_model");
+  const [bundleTarget, setBundleTarget] = useState("");
   const disabled = !connected || busy || loading;
 
   return (
@@ -83,9 +84,18 @@ export function ModelPanel({
         >
           Save as
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "bundle"}
+          className={`tab ${tab === "bundle" ? "active" : ""}`}
+          onClick={() => setTab("bundle")}
+        >
+          Bundle
+        </button>
       </div>
 
-      {tab === "load" ? (
+      {tab === "load" && (
         <div className="model-block">
           <div className="control-row">
             <select
@@ -113,7 +123,9 @@ export function ModelPanel({
             </button>
           </div>
         </div>
-      ) : (
+      )}
+
+      {tab === "save" && (
         <div className="model-block">
           <div className="control-row">
             <input
@@ -131,6 +143,51 @@ export function ModelPanel({
               Save
             </button>
           </div>
+        </div>
+      )}
+
+      {tab === "bundle" && (
+        <div className="model-block">
+          <div className="control-row">
+            <select
+              className="text-input"
+              value={bundleTarget}
+              onChange={(e) => setBundleTarget(e.target.value)}
+              disabled={models.length === 0}
+              aria-label="Model to bundle"
+            >
+              <option value="">
+                {models.length ? "choose a saved model…" : "no saved models"}
+              </option>
+              {models.map((m) => (
+                <option key={m.name} value={m.name}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <a
+              className={`apply small ${bundleTarget ? "" : "disabled"}`}
+              href={
+                bundleTarget
+                  ? `/api/bundle/${encodeURIComponent(bundleTarget)}`
+                  : undefined
+              }
+              aria-disabled={!bundleTarget}
+              onClick={(e) => {
+                if (!bundleTarget) e.preventDefault();
+              }}
+              download
+            >
+              Download .spkf
+            </a>
+          </div>
+          <p className="arch-note">
+            A portable deployment bundle — everything a runtime needs to load
+            and run this model, with no training code attached. Install it as
+            a standalone command with{" "}
+            <code>spikeforge-serve install &lt;file&gt;.spkf</code>, or serve
+            it with <code>spikeforge-serve serve --bundle &lt;file&gt;.spkf</code>.
+          </p>
         </div>
       )}
     </section>

@@ -28,6 +28,10 @@ it is absent (see the last section).
 | 9 | [`09_onnx_roundtrip.py`](09_onnx_roundtrip.py) | ONNX round-trip |
 | 10 | [`10_reproducibility_benchmark.py`](10_reproducibility_benchmark.py) | Reproducibility manifest + benchmark save/compare |
 | 11 | [`11_streaming_timeseries.py`](11_streaming_timeseries.py) | UC-1 streaming time-series train/eval + bundle serving parity |
+| 11 | [`11_held_out_digit_memory.py`](11_held_out_digit_memory.py) | One-shot, no-forgetting memory: teach a held-out digit live |
+| 12 | [`12_few_shot_character_generalization.py`](12_few_shot_character_generalization.py) | Episodic embedder + one-shot memory on unseen characters |
+| 13 | [`13_relational_reversal_task.py`](13_relational_reversal_task.py) | Falsification-first reversal-learning test of a frozen predictor |
+| 14 | [`14_stdp_learning_window.py`](14_stdp_learning_window.py) | Trace the STDP learning-window curve from real spike pairs |
 
 ---
 

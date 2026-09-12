@@ -67,6 +67,7 @@ nav:
       - Event runtime and energy: event-runtime-and-energy.md
       - Operational maturity: operational-maturity.md
       - Interop fold-ins: interop-foldins.md
+      - Model deployment: model-deployment.md
       - Implications and boundaries: implications-and-boundaries.md
       - Notes: notes.md
   - Roadmap:

@@ -436,17 +436,27 @@ def test_predict_rejects_a_bad_body(bundle_path: str) -> None:
 
 
 def test_cli_parses_bundle_and_bind_arguments() -> None:
-    """The CLI accepts the bundle path and the bind overrides."""
+    """The ``serve`` subcommand accepts the bundle path and bind overrides."""
     args = _parse_args(
-        ["--bundle", "model.spkf", "--host", "1.2.3.4", "--port", "9000"]
+        [
+            "serve", "--bundle", "model.spkf",
+            "--host", "1.2.3.4", "--port", "9000",
+        ]
     )
+    assert args.command == "serve"
     assert args.bundle == "model.spkf"
     assert args.host == "1.2.3.4"
     assert args.port == 9000
     assert args.device == "cpu"
 
 
-def test_cli_requires_a_bundle() -> None:
-    """Omitting ``--bundle`` is a usage error."""
+def test_cli_serve_requires_a_bundle() -> None:
+    """Omitting ``--bundle`` from ``serve`` is a usage error."""
+    with pytest.raises(SystemExit):
+        _parse_args(["serve"])
+
+
+def test_cli_requires_a_command() -> None:
+    """Omitting the subcommand entirely is a usage error."""
     with pytest.raises(SystemExit):
         _parse_args([])

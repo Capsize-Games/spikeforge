@@ -157,6 +157,20 @@
   padding: 0 14px;
 }
 
+/* An <a> styled as .apply needs what a <button> gets for free. */
+a.apply {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+a.apply.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* --- compact loaded-model summary row --- */
 /* Sits under the tab strip, in the fixed header, so it stays visible on
    every tab instead of only the one that happened to render it. */
