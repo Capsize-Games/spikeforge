@@ -3,7 +3,10 @@
 # public hostname; this service intentionally publishes no host port.
 services:
   spikeforge-dashboard:
-    build: .
+    build:
+      context: .
+      args:
+        TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
     container_name: spikeforge-dashboard
     environment:
       SPIKEFORGE_DATA_DIR: ${SPIKEFORGE_DATA_DIR:-/data}
