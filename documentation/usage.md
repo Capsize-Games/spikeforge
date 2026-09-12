@@ -31,6 +31,40 @@ restarts.
 > commonly used by other dev servers). To change it, edit the
 > `ports:` mapping in [`docker-compose.yml`](../docker-compose.yml).
 
+### Access control & rate limiting
+
+By default the dashboard's WebSocket (`/ws`) and bundle download
+(`GET /api/bundle/<name>`) are open to anyone who can reach the server --
+fine for `docker compose up` on localhost, not fine once a deployment (e.g.
+a demo box) is reachable beyond that.
+
+Set `SPIKEFORGE_DASHBOARD_TOKEN` to require a shared secret on both routes:
+
+```yaml
+# docker-compose.yml
+services:
+  spikeforge:
+    environment:
+      - SPIKEFORGE_DATA_DIR=/data
+      - SPIKEFORGE_DASHBOARD_TOKEN=some-long-random-secret
+```
+
+Share the dashboard as `https://host:port/?token=some-long-random-secret` --
+the client reads `token` off its own URL and attaches it to the WebSocket
+connection (`?token=...`, since browsers can't set a custom header on a
+WebSocket handshake) and to the bundle download link (same reason: it's a
+plain `<a download>`, not a `fetch`). A connection or download without a
+valid token gets a `401`/handshake rejection instead of the model
+weights or spike stream; leaving the variable unset disables the gate
+entirely, so a plain `docker compose up` on localhost is unaffected.
+
+`SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS` caps how many training-or-pipeline
+jobs may run at once, server-wide (default `2`). `TrainingService` and
+`PipelineService` already refuse a second run *within one session*; this
+caps it *across* sessions too, so many WebSocket connections can't each
+kick off their own run and hang the shared server. A request past the cap
+gets a clear `server busy` error instead of silently queuing or hanging.
+
 ### Compute device & resources
 
 The training panel has a **Device** dropdown (CPU / GPU) that defaults to

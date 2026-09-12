@@ -1,0 +1,43 @@
+/* --- destructive-action confirmation modal --- */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+}
+
+.confirm-card {
+  width: 320px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.confirm-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.confirm-message {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.confirm-actions .apply {
+  flex: 1;
+  margin-top: 0;
+}

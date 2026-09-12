@@ -1,3 +1,6 @@
+import { useState } from "react";
+
+import { ConfirmDialog } from "./ConfirmDialog";
 import type { HubDownloadState } from "../hubTypes";
 
 interface Props {
@@ -11,6 +14,7 @@ function megabytes(bytes: number): string {
 
 /** Hub download progress with cancel and an honest verified state. */
 export function HubDownloadProgress({ download, onCancel }: Props) {
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const total = download.total_bytes;
   const progress =
     total !== null && total > 0
@@ -33,11 +37,30 @@ export function HubDownloadProgress({ download, onCancel }: Props) {
           {download.verified ? "verified" : "unverified"}
         </span>
         {download.status === "downloading" && (
-          <button type="button" className="link danger" onClick={onCancel}>
+          <button
+            type="button"
+            className="link danger"
+            onClick={() => setConfirmCancel(true)}
+          >
             Cancel
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Cancel this download?"
+        message={`Progress on ${
+          download.id || "this model"
+        } will be lost and it will need to restart from scratch.`}
+        confirmLabel="Cancel download"
+        cancelLabel="Keep downloading"
+        onConfirm={() => {
+          onCancel();
+          setConfirmCancel(false);
+        }}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ the same background-thread pattern :mod:`server.training` uses.
 
 from fastapi import WebSocket
 
+from server.concurrency import SERVER_BUSY_MESSAGE
 from server.messages import send_locked
 from server.schemas import ClientMessage
 from server.session import Session
@@ -95,7 +96,10 @@ async def handle_run_pipeline(
     """Start the pipeline worker unless one is already running."""
     if session.pipeline.is_running:
         return
-    session.pipeline.start(message.pipeline, message.pipeline_input)
+    if not session.pipeline.start(message.pipeline, message.pipeline_input):
+        await send_locked(ws, session, {
+            "type": "error", "payload": SERVER_BUSY_MESSAGE,
+        })
 
 
 async def handle_stop_pipeline(

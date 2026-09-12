@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import WebSocket
 
 from server import animation
+from server.concurrency import SERVER_BUSY_MESSAGE
 from server.engine_factory import build_encoder, ensure_dataset
 from server.messages import (
     emit_frame,
@@ -128,7 +129,11 @@ async def handle_train(
     dataset = encode.dataset if encode is not None else cfg.dataset
     if not await ensure_dataset(ws, session, dataset):
         return
-    session.training.start(cfg, encode)
+    if not session.training.start(cfg, encode):
+        await send_locked(ws, session, {
+            "type": "error", "payload": SERVER_BUSY_MESSAGE,
+        })
+        return
     await send_train_state(ws, session, running=True, mode=cfg.mode)
 
 

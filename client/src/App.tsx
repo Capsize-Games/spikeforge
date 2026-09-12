@@ -335,6 +335,7 @@ export default function App() {
         stats={viewer.stats}
         requested={training.state.config.device}
         connected={ws.connected}
+        unauthorized={ws.unauthorized}
       />
 
       {downloading && (

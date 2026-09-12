@@ -1,6 +1,15 @@
 import { useState } from "react";
 
+import { accessToken } from "../accessToken";
+import { ConfirmDialog } from "./ConfirmDialog";
 import type { SavedModel } from "../types";
+
+/** `/api/bundle/<name>`, carrying the access token when the page has one. */
+function bundleHref(name: string): string {
+  const token = accessToken();
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  return `/api/bundle/${encodeURIComponent(name)}${query}`;
+}
 
 interface Props {
   models: SavedModel[];
@@ -32,6 +41,7 @@ export function ModelPanel({
   const [selected, setSelected] = useState("");
   const [name, setName] = useState("my_model");
   const [bundleTarget, setBundleTarget] = useState("");
+  const [confirmUnload, setConfirmUnload] = useState(false);
   const disabled = !connected || busy || loading;
 
   return (
@@ -52,7 +62,7 @@ export function ModelPanel({
                 <button
                   type="button"
                   className="model-chip-x"
-                  onClick={onNew}
+                  onClick={() => setConfirmUnload(true)}
                   disabled={!connected || loading}
                   title="Unload model"
                   aria-label="Unload model"
@@ -167,11 +177,7 @@ export function ModelPanel({
             </select>
             <a
               className={`apply small ${bundleTarget ? "" : "disabled"}`}
-              href={
-                bundleTarget
-                  ? `/api/bundle/${encodeURIComponent(bundleTarget)}`
-                  : undefined
-              }
+              href={bundleTarget ? bundleHref(bundleTarget) : undefined}
               aria-disabled={!bundleTarget}
               onClick={(e) => {
                 if (!bundleTarget) e.preventDefault();
@@ -190,6 +196,18 @@ export function ModelPanel({
           </p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmUnload}
+        title="Unload the current model?"
+        message="Any training since it was last saved will be lost. Save it first if you want to keep it."
+        confirmLabel="Unload"
+        onConfirm={() => {
+          onNew();
+          setConfirmUnload(false);
+        }}
+        onCancel={() => setConfirmUnload(false)}
+      />
     </section>
   );
 }

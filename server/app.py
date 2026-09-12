@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from server.auth import authorized
 from server.bundle_routes import router as bundle_router
 from server.downloads import manager
 from server.handlers import dispatch
@@ -142,7 +143,18 @@ async def _serve(ws: WebSocket, session: Session) -> None:
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
-    """Accept a client, run its session, and always clean up."""
+    """Accept a client, run its session, and always clean up.
+
+    When ``SPIKEFORGE_DASHBOARD_TOKEN`` is set, a connection must present it
+    as a ``token`` query param or an ``Authorization: Bearer`` header before
+    the handshake completes; rejecting before ``accept()`` fails the
+    handshake outright rather than opening and then closing the socket.
+    """
+    if not authorized(
+        ws.query_params.get("token"), ws.headers.get("authorization")
+    ):
+        await ws.close(code=1008)
+        return
     await ws.accept()
     session_id = id(ws)
     session = Session(asyncio.get_running_loop())

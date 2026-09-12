@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { accessToken } from "./accessToken";
 import type { HubQueryInput } from "./hubTypes";
 import type { PipelineGraph, PipelineRunInput } from "./pipelineTypes";
 import { PROTOCOL_VERSION } from "./protocol/generated";
@@ -16,6 +17,7 @@ export function useWebSocket({ onMessage }: Options) {
   const onMessageRef = useRef(onMessage);
   const closedRef = useRef(false);
   const [connected, setConnected] = useState(false);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   // Keep the newest handler without re-opening the socket.
   useEffect(() => {
@@ -26,14 +28,28 @@ export function useWebSocket({ onMessage }: Options) {
     let timer: number | undefined;
     const connect = () => {
       const protocol = location.protocol === "https:" ? "wss" : "ws";
-      const ws = new WebSocket(`${protocol}://${location.host}/ws`);
+      const token = accessToken();
+      const query = token ? `?token=${encodeURIComponent(token)}` : "";
+      const ws = new WebSocket(
+        `${protocol}://${location.host}/ws${query}`,
+      );
       wsRef.current = ws;
-      ws.onopen = () => setConnected(true);
+      ws.onopen = () => {
+        setConnected(true);
+        setUnauthorized(false);
+      };
       ws.onmessage = (event) =>
         onMessageRef.current(JSON.parse(event.data as string) as ServerMsg);
       ws.onerror = () => ws.close();
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         setConnected(false);
+        // 1008 (policy violation) is what the server closes with when
+        // SPIKEFORGE_DASHBOARD_TOKEN is set and the token is missing or
+        // wrong -- retrying with the same bad token would just spin.
+        if (event.code === 1008) {
+          setUnauthorized(true);
+          return;
+        }
         if (!closedRef.current) {
           timer = window.setTimeout(connect, RETRY_MS);
         }
@@ -146,6 +162,7 @@ export function useWebSocket({ onMessage }: Options) {
 
   return {
     connected,
+    unauthorized,
     send,
     sendTrain,
     sendNamed,
