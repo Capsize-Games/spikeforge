@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spikeforge.dev/protocol/1.0/payloads/pipeline_graph.schema.json",
+  "title": "PipelineGraph",
+  "description": "Mirrors server/schemas/pipeline_graph.py::PipelineGraphConfig and spikeforge_serve.pipeline.PipelineGraph. A DAG of saved checkpoints: nodes run once each, in topological order, and a node's input is entirely determined by its incoming edge's `extract` of the upstream node's output. Semantic checks (cycles, unknown node references, fan-in) are not expressed here -- they're enforced by PipelineGraph.from_dict/validate, not this shape-only schema.",
+  "type": "object",
+  "properties": {
+    "version": { "type": "integer", "default": 1 },
+    "name": { "type": "string", "default": "" },
+    "nodes": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["id", "checkpoint"],
+        "properties": {
+          "id": { "type": "string" },
+          "checkpoint": { "type": "string" },
+          "position": {
+            "type": "object",
+            "default": { "x": 0.0, "y": 0.0 },
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["id", "source", "target"],
+        "properties": {
+          "id": { "type": "string" },
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "extract": {
+            "type": "string",
+            "enum": ["mean_logits", "predicted_class", "one_hot"],
+            "default": "mean_logits"
+          }
+        }
+      }
+    }
+  }
+}

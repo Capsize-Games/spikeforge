@@ -1,0 +1,132 @@
+/* --- the Pipeline tab: toolbar, React Flow canvas, and the side panel --- */
+
+.pipeline-panel {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 520px;
+}
+
+@media (max-width: 900px) {
+  .pipeline-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pipeline-canvas {
+    min-height: 320px;
+  }
+}
+
+.pipeline-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pipeline-canvas {
+  min-width: 0;
+  min-height: 400px;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+}
+
+/* React Flow's own theme vars, mapped onto the app's tokens so the canvas
+   doesn't look like a foreign widget dropped into the dashboard. */
+.pipeline-canvas .react-flow {
+  --xy-background-color: var(--panel-alt);
+  --xy-node-background-color: var(--panel);
+  --xy-node-border-default: 1px solid var(--border);
+  --xy-node-color-default: var(--text);
+  --xy-edge-stroke-default: var(--muted);
+  --xy-edge-stroke-selected-default: var(--accent);
+  --xy-minimap-background-color: var(--panel);
+  --xy-controls-button-background-color: var(--panel);
+  --xy-controls-button-color: var(--text);
+  --xy-controls-button-border-color: var(--border);
+}
+
+.pipeline-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.pipeline-input {
+  width: 100%;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.pipeline-edge-inspector {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- one node in the canvas --- */
+
+.pipeline-node {
+  min-width: 150px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.pipeline-node.selected {
+  border-color: var(--accent);
+}
+
+.pipeline-node-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.pipeline-node-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pipeline-node-predicted {
+  color: var(--text);
+}
+
+.pipeline-node-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: 0 0 auto;
+}
+
+.pipeline-node-dot.status-running {
+  background: var(--accent);
+  animation: pipeline-node-pulse 1.2s ease-in-out infinite;
+}
+
+.pipeline-node-dot.status-done {
+  background: var(--ok);
+}
+
+.pipeline-node-dot.status-error {
+  background: var(--bad);
+}
+
+@keyframes pipeline-node-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-node-dot.status-running {
+    animation: none;
+  }
+}

@@ -254,6 +254,9 @@ jobs:
             --ignore=tests/test_event_server.py \
             --ignore=tests/test_event_training.py \
             --ignore=tests/test_geometry.py \
+            --ignore=tests/test_pipeline_graph.py \
+            --ignore=tests/test_pipeline_runner.py \
+            --ignore=tests/test_pipeline_store.py \
             --ignore=tests/test_protocol_negotiation.py \
             --ignore=tests/test_protocol_schema_parity.py \
             --ignore=tests/test_server_backend_actions.py \
@@ -264,6 +267,7 @@ jobs:
             --ignore=tests/test_server_mode_actions.py \
             --ignore=tests/test_server_model_actions.py \
             --ignore=tests/test_server_nir_actions.py \
+            --ignore=tests/test_server_pipeline_actions.py \
             --ignore=tests/test_server_target_actions.py \
             --ignore=tests/test_serve_app.py \
             --ignore=tests/test_serve_metrics.py \

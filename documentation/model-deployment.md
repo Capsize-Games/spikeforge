@@ -80,6 +80,33 @@ cat frame.json \
 Neither module needs to know the other exists; the contract is just the JSON
 shape on the pipe.
 
+## Chaining checkpoints visually: the Pipeline tab
+
+The shell-pipe chaining above works from a terminal; the dashboard's
+**Pipeline** tab is the same idea as a visual, in-app DAG editor. Each node
+is a saved checkpoint (the same list the Load/Bundle tabs show); each edge
+picks one of three fixed ways to shape the source node's output into the
+target's next input — `mean_logits` (the full readout vector, the common
+case), `predicted_class` (a single scalar), or `one_hot` (sized to the
+target's own `num_classes`). There's no custom mapping expression and no
+fan-in (a node with two incoming edges is refused) — see
+[`spikeforge_serve/pipeline.py`](../spikeforge_serve/pipeline.py) for the
+exact rules.
+
+A pipeline is a DAG, not a state machine: nodes run once each, in
+topological order, with no conditional branching and no loops. Running one
+spawns a background worker (mirroring how training runs — see
+[`server/pipeline_service.py`](../server/pipeline_service.py)) that streams
+a `pipeline_node_result` message as each node finishes, so the canvas shows
+live idle → running → done/error status per node. Under the hood it's the
+same [`ServingService`](../spikeforge_serve/service.py) every other
+serving path uses, built on demand from each node's checkpoint via
+`spikeforge.serving.bundle.build` — no install step, no bundle file ever
+touches disk.
+
+Saved pipelines live server-side (`SPIKEFORGE_DATA_DIR/pipelines/`,
+overridable via `SPIKEFORGE_PIPELINES_DIR`), alongside saved checkpoints.
+
 ## What a module does and does not give you
 
 - **No physical install** in the sense of a compiled binary — a module is a

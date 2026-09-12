@@ -24,6 +24,8 @@ class ServerMessage(BaseModel):
         "energy_report", "animation_state",
         "hub_list", "hub_search", "hub_download_state",
         "hub_inspect", "hub_import",
+        "pipeline_list", "pipeline_saved", "pipeline_loaded",
+        "pipeline_deleted", "pipeline_node_result", "pipeline_run_state",
     ]
     payload: Any = None
     source: Optional[str] = None

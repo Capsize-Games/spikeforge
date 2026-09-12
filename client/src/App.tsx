@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { lazy, Suspense, useCallback, useRef } from "react";
 
 import { AnalysisPanels } from "./components/AnalysisPanels";
 import { Controls } from "./components/Controls";
@@ -25,12 +25,22 @@ import { useServerBootstrap } from "./hooks/useServerBootstrap";
 import { useTabs } from "./hooks/useTabs";
 import { useTour } from "./hooks/useTour";
 import { useViewer } from "./hooks/useViewer";
+import { usePipeline } from "./usePipeline";
 import { TABS } from "./tabs";
 import { LESSONS } from "./tour/lessons";
 import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
 import type { TabId } from "./tabs";
 import type { Modality, ServerMsg } from "./types";
+
+// React Flow is a real bundle addition (~100kb), so the Pipeline tab is the
+// app's first code-split boundary -- everyone else's initial load stays
+// exactly as it was.
+const PipelinePanel = lazy(() =>
+  import("./components/PipelinePanel").then((m) => ({
+    default: m.PipelinePanel,
+  })),
+);
 
 export default function App() {
   const { config, configRef, patchConfig, replaceConfig } = useEncodeConfig();
@@ -57,10 +67,12 @@ export default function App() {
   });
   const hub = useHub({ ws, connected: ws.connected });
   const energy = useEnergy({ ws, connected: ws.connected });
+  const pipeline = usePipeline();
   handlerRef.current = (msg) => {
     viewer.onMessage(msg);
     hub.onMessage(msg);
     energy.onMessage(msg);
+    pipeline.handleMessage(msg);
   };
 
   const actions = useModelActions({
@@ -95,6 +107,7 @@ export default function App() {
   const busy: Partial<Record<TabId, boolean>> = {
     training: training.state.running,
     hub: downloading !== null,
+    pipeline: pipeline.state.running,
   };
 
   // The configured surrogate drives the curve panel's initial selection.
@@ -277,6 +290,40 @@ export default function App() {
               />
             </div>
           </div>
+        </TabPanel>
+
+        <TabPanel id="pipeline" active={tabs.active}>
+          <Suspense fallback={<div className="muted">Loading pipeline editor…</div>}>
+            <PipelinePanel
+              models={training.state.models}
+              connected={ws.connected}
+              graph={pipeline.state.graph}
+              pipelines={pipeline.state.pipelines}
+              running={pipeline.state.running}
+              nodeStatus={pipeline.state.nodeStatus}
+              nodeResult={pipeline.state.nodeResult}
+              status={pipeline.state.status}
+              onListPipelines={() => ws.sendAction("list_pipelines")}
+              onSavePipeline={(name) =>
+                ws.sendSavePipeline(name, pipeline.state.graph)
+              }
+              onLoadPipeline={(name) => ws.sendPipelineName("load_pipeline", name)}
+              onDeletePipeline={(name) =>
+                ws.sendPipelineName("delete_pipeline", name)
+              }
+              onRunPipeline={(input) =>
+                ws.sendRunPipeline(pipeline.state.graph, input)
+              }
+              onStopPipeline={() => ws.sendAction("stop_pipeline")}
+              onSetGraph={pipeline.setGraph}
+              onAddNode={pipeline.addNode}
+              onMoveNode={pipeline.moveNode}
+              onRemoveNode={pipeline.removeNode}
+              onAddEdge={pipeline.addEdge}
+              onRemoveEdge={pipeline.removeEdge}
+              onSetEdgeExtract={pipeline.setEdgeExtract}
+            />
+          </Suspense>
         </TabPanel>
 
         {viewer.state.error && (

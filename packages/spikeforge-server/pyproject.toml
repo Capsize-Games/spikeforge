@@ -57,6 +57,7 @@ dependencies = [
     "spikeforge~=0.3.1",
     "spikeforge-targets~=0.1.0",
     "spikeforge-hub~=0.1.0",
+    "spikeforge-serve~=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -83,4 +84,7 @@ zip-safe = false
 # top-level package, never on core.
 where = ["."]
 include = ["server*"]
-exclude = ["spikeforge*", "spikeforge_targets*", "spikeforge_hub*", "tests*"]
+exclude = [
+    "spikeforge*", "spikeforge_targets*", "spikeforge_hub*",
+    "spikeforge_serve*", "tests*",
+]
