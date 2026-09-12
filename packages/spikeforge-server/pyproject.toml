@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-server"
-version = "0.1.0"
+version = "0.2.0"
 description = "FastAPI + WebSocket server adapter for the spikeforge dashboard."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core distribution's metadata approach.
@@ -57,7 +57,7 @@ dependencies = [
     "spikeforge~=0.3.1",
     "spikeforge-targets~=0.1.0",
     "spikeforge-hub~=0.1.0",
-    "spikeforge-serve~=0.1.0",
+    "spikeforge-serve~=0.2.0",
 ]
 
 [project.optional-dependencies]
