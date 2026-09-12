@@ -1,6 +1,6 @@
 """Inbound WebSocket message schema."""
 
-from typing import Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -8,6 +8,7 @@ from server.protocol_version import PROTOCOL_VERSION
 from server.schemas.encode_config import EncodeConfig
 from server.schemas.hub_query import HubQuery
 from server.schemas.model_query import ModelQuery
+from server.schemas.pipeline_graph import PipelineGraphConfig
 from server.schemas.train_config import TrainConfig
 
 
@@ -26,6 +27,8 @@ class ClientMessage(BaseModel):
         "model_search", "model_diff",
         "hub_list", "hub_search", "hub_download", "hub_cancel",
         "hub_inspect", "hub_import",
+        "list_pipelines", "save_pipeline", "load_pipeline",
+        "delete_pipeline", "run_pipeline", "stop_pipeline",
     ] = "configure"
     config: EncodeConfig = Field(default_factory=EncodeConfig)
     train: TrainConfig = Field(default_factory=TrainConfig)
@@ -35,3 +38,8 @@ class ClientMessage(BaseModel):
     # Additive opt-in for the energy_report action: report the event-driven
     # sparse path (default) rather than the dense baseline.
     sparse: bool = True
+    pipeline: PipelineGraphConfig = Field(default_factory=PipelineGraphConfig)
+    # The raw {"frames": [...], "encoded": ...} request feeding a pipeline's
+    # source node(s) -- separate from `pipeline` itself so a saved graph's
+    # JSON never carries one run's throwaway input.
+    pipeline_input: Dict[str, Any] = Field(default_factory=dict)

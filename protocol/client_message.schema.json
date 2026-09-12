@@ -19,7 +19,9 @@
         "targets", "deployment_report", "deploy_run", "energy_report",
         "model_search", "model_diff",
         "hub_list", "hub_search", "hub_download", "hub_cancel",
-        "hub_inspect", "hub_import"
+        "hub_inspect", "hub_import",
+        "list_pipelines", "save_pipeline", "load_pipeline",
+        "delete_pipeline", "run_pipeline", "stop_pipeline"
       ]
     },
     "config": { "$ref": "payloads/encode_config.schema.json" },
@@ -27,7 +29,16 @@
     "query": { "$ref": "payloads/model_query.schema.json" },
     "hub": { "$ref": "payloads/hub_query.schema.json" },
     "name": { "type": ["string", "null"] },
-    "sparse": { "type": "boolean", "default": true }
+    "sparse": { "type": "boolean", "default": true },
+    "pipeline": { "$ref": "payloads/pipeline_graph.schema.json" },
+    "pipeline_input": {
+      "type": "object",
+      "description": "Feeds run_pipeline's source node(s): one frame per entry, raw or already-encoded per `encoded`.",
+      "properties": {
+        "frames": { "type": "array", "items": {} },
+        "encoded": { "type": "boolean", "default": false }
+      }
+    }
   },
   "additionalProperties": true
 }

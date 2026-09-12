@@ -14,12 +14,13 @@ from server.hub_handlers import dispatch_hub
 from server.introspection_handlers import dispatch_introspection
 from server.model_handlers import dispatch_registry
 from server.nir_handlers import dispatch_nir
+from server.pipeline_handlers import PIPELINE_ACTIONS, dispatch_pipeline
 from server.schemas import ClientMessage
 from server.session import Session
 from server.target_handlers import dispatch_targets
 
-#: Actions handled by the NIR, introspection, target, registry, and hub
-#: modules.
+#: Actions handled by the NIR, introspection, target, registry, hub, and
+#: pipeline modules.
 PROTOCOL_ACTIONS = frozenset({
     "nir_export", "nir_validate",
     "trajectory", "metrics", "encoding_report",
@@ -28,13 +29,13 @@ PROTOCOL_ACTIONS = frozenset({
     "model_search", "model_diff",
     "hub_list", "hub_search", "hub_download", "hub_cancel",
     "hub_inspect", "hub_import",
-})
+}) | PIPELINE_ACTIONS
 
 
 async def dispatch_protocol(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
-    """Route a NIR, introspection, target, registry, or hub action."""
+    """Route a NIR, target, registry, hub, or pipeline action."""
     if message.type.startswith("hub_"):
         await dispatch_hub(ws, session, message)
     elif message.type in ("nir_export", "nir_validate"):
@@ -47,5 +48,7 @@ async def dispatch_protocol(
         await dispatch_energy(ws, session, message)
     elif message.type in ("model_search", "model_diff"):
         await dispatch_registry(ws, session, message)
+    elif message.type in PIPELINE_ACTIONS:
+        await dispatch_pipeline(ws, session, message)
     else:
         await dispatch_introspection(ws, session, message)

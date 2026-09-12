@@ -30,6 +30,11 @@ const TAB_DEFS = [
     label: "Energy & Deployment",
     hint: "Deployment targets, capability report, and energy estimate",
   },
+  {
+    id: "pipeline",
+    label: "Pipeline",
+    hint: "Chain saved checkpoints into a DAG and run it as one program",
+  },
 ] as const;
 
 /** Identifier of a tab the shell knows how to render. */

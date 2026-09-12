@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 from typing import Any, Coroutine, Optional
 
+from server.pipeline_service import PipelineService
 from server.schemas import EncodeConfig
 from server.training import TrainingService
 
@@ -18,6 +19,7 @@ class Session:
         self._task: Optional[asyncio.Task] = None
         self._drain_task: Optional[asyncio.Task] = None
         self.training = TrainingService(loop)
+        self.pipeline = PipelineService(loop)
         self.inbox: asyncio.Queue = asyncio.Queue()
         self.lock = asyncio.Lock()
 

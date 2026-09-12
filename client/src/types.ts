@@ -2,6 +2,7 @@ import type { EnergyServerMsg } from "./energyTypes";
 import type { HubServerMsg } from "./hubTypes";
 import type { IntrospectionServerMsg } from "./introspectionTypes";
 import type { NirGraphPayload, NirValidationPayload } from "./nirTypes";
+import type { PipelineServerMsg } from "./pipelineTypes";
 import type {
   ExecutionMode,
   MetricsSnapshot,
@@ -281,4 +282,5 @@ export type ServerMsg =
   | ModelRegistryServerMsg
   | HubServerMsg
   | EnergyServerMsg
+  | PipelineServerMsg
   | { type: "error"; payload: string };

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { HubQueryInput } from "./hubTypes";
+import type { PipelineGraph, PipelineRunInput } from "./pipelineTypes";
 import { PROTOCOL_VERSION } from "./protocol/generated";
 import type { EncodeConfig, ServerMsg, TrainConfig } from "./types";
 
@@ -115,6 +116,34 @@ export function useWebSocket({ onMessage }: Options) {
     [sendJson],
   );
 
+  /** list_pipelines / load_pipeline / delete_pipeline: act on a saved name. */
+  const sendPipelineName = useCallback(
+    (type: string, name?: string) => {
+      sendJson({ type, name });
+    },
+    [sendJson],
+  );
+
+  /** save_pipeline: persist the current graph under `name`. */
+  const sendSavePipeline = useCallback(
+    (name: string, pipeline: PipelineGraph) => {
+      sendJson({ type: "save_pipeline", name, pipeline });
+    },
+    [sendJson],
+  );
+
+  /** run_pipeline: run the current graph against a raw input request. */
+  const sendRunPipeline = useCallback(
+    (pipeline: PipelineGraph, pipelineInput: PipelineRunInput) => {
+      sendJson({
+        type: "run_pipeline",
+        pipeline,
+        pipeline_input: pipelineInput,
+      });
+    },
+    [sendJson],
+  );
+
   return {
     connected,
     send,
@@ -126,5 +155,8 @@ export function useWebSocket({ onMessage }: Options) {
     sendStats,
     sendCancelDownload,
     sendHub,
+    sendPipelineName,
+    sendSavePipeline,
+    sendRunPipeline,
   };
 }

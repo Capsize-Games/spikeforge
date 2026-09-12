@@ -11,6 +11,26 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Added
+
+- **Pipeline tab: chain checkpoints into a DAG and run it as one program.**
+  A new dashboard tab (React Flow-based node editor) lets a user wire
+  several saved checkpoints together — each node a model, each edge one
+  of three fixed ways (`mean_logits`, `predicted_class`, `one_hot`) to
+  shape a source node's output into the target's next input. Not a state
+  machine: no cycles, no conditional branching, no fan-in (v1 scope cuts,
+  documented in `documentation/model-deployment.md`). Runs go through a
+  background worker (`server/pipeline_service.py`, mirroring
+  `TrainingService`) that streams per-node status back over the existing
+  WebSocket, reusing `ServingService` to build and run each node's
+  checkpoint on demand — no bundle file ever touches disk. New
+  `spikeforge_serve.pipeline`/`pipeline_runner`/`pipeline_store` modules,
+  six new WebSocket actions (`list_pipelines`, `save_pipeline`,
+  `load_pipeline`, `delete_pipeline`, `run_pipeline`, `stop_pipeline`),
+  and a `protocol/payloads/pipeline_graph.schema.json` addition to the
+  wire contract. `spikeforge-server` gains `spikeforge-serve` as a
+  dependency to reuse its serving core.
+
 ## [spikeforge-v0.3.1] - 2026-09-12
 
 ### Added
