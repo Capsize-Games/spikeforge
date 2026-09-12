@@ -257,6 +257,7 @@ jobs:
             --ignore=tests/test_protocol_negotiation.py \
             --ignore=tests/test_protocol_schema_parity.py \
             --ignore=tests/test_server_backend_actions.py \
+            --ignore=tests/test_server_bundle_route.py \
             --ignore=tests/test_server_energy_action.py \
             --ignore=tests/test_server_hub_actions.py \
             --ignore=tests/test_server_introspection_actions.py \
@@ -266,6 +267,7 @@ jobs:
             --ignore=tests/test_server_target_actions.py \
             --ignore=tests/test_serve_app.py \
             --ignore=tests/test_serve_metrics.py \
+            --ignore=tests/test_serve_modules.py \
             --ignore=tests/test_serving_encode_contract.py \
             --ignore=tests/test_train_config_stage_overrides.py \
             --ignore=tests/test_train_config_topology.py \
