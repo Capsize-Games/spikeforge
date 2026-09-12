@@ -177,6 +177,24 @@ function applyStatus(
   return { ...state, status: payload };
 }
 
+/**
+ * Extract a display string from an error payload. The wire schema allows
+ * either a plain reason string or a structured object (for example a
+ * `protocol_version_mismatch`, which carries `code`/`client`/`server`
+ * alongside `message`) -- rendering the object directly crashes React.
+ */
+function errorMessage(payload: unknown): string {
+  if (typeof payload === "string") return payload;
+  if (
+    payload !== null &&
+    typeof payload === "object" &&
+    typeof (payload as { message?: unknown }).message === "string"
+  ) {
+    return (payload as { message: string }).message;
+  }
+  return "Unknown error";
+}
+
 function applyMessage(state: ViewerState, msg: ServerMsg): ViewerState {
   switch (msg.type) {
     case "config_ack":
@@ -216,7 +234,7 @@ function applyMessage(state: ViewerState, msg: ServerMsg): ViewerState {
     case "backend_run":
       return { ...state, backendRun: msg.payload };
     case "error":
-      return { ...state, error: msg.payload, running: false };
+      return { ...state, error: errorMessage(msg.payload), running: false };
     default:
       return state;
   }

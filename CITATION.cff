@@ -11,7 +11,7 @@ abstract: >-
   Norse, Lava) and a live browser dashboard.
 type: software
 authors:
-  - name: "Capsize Games"
+  - name: "Capsize LLC"
     email: contact@capsizegames.com
 repository-code: "https://github.com/capsize-games/spikeforge"
 url: "https://spikeforge.net"
