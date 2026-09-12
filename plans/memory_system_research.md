@@ -183,13 +183,36 @@ evidence that spiking metric learning cannot generalize in principle.
 Per the original scoping note, a positive result here would count as
 evidence *against* the Consciousness Gradient paper's A3 axiom (issue
 #26), not for it — this negative result does not bear on that question
-either way. Unexplored, cheaper-than-scaling-up levers before concluding
-anything stronger: matching eval shot count to training shot count
-(training used 5-shot, evaluation used 1-shot only), a larger
-`hidden`/`embed_dim`, and more training episodes per unit of eval
-diversity rather than raw episode count.
+either way.
 
-**Reproduce:** [`examples/12_few_shot_character_generalization.py`](examples/12_few_shot_character_generalization.py:1).
+**Ablations (real runs): neither of the two cheapest confounds explains
+it.** Two candidate explanations were floated and both ruled out:
+
+| Configuration | One-shot 5-way accuracy | Chance |
+|---|---|---|
+| Baseline (`hidden=64`, `embed_dim=32`, train 5-shot, eval 1-shot) | 21.0% | 20% |
+| Shot-matched (train 1-shot, eval 1-shot) | 20.4% | 20% |
+| Bigger capacity (`hidden=128`, `embed_dim=64`, train 5-shot) | 21.0% | 20% |
+| Shot-matched + bigger capacity | 20.1% | 20% |
+
+Every configuration lands within noise of chance — matching the
+training/eval shot count and doubling both `hidden` and `embed_dim` each
+had, individually and combined, no effect. This is a *cleaner* negative
+result than the baseline alone: it rules out the two most likely
+"just a hyperparameter mismatch" explanations, so the honest reading
+shifts from "didn't work at this specific budget" toward "didn't work
+for a more structural reason" — most plausibly that 300-1000 rate-coded
+episodes on `fc_small`'s prototypical-loss objective isn't enough signal
+to learn a genuinely transferable spike-pattern metric, independent of
+capacity or shot count. Not yet tried: a fundamentally different
+training signal (e.g. more episodes per unit of eval diversity rather
+than raw episode count, or a convolutional rather than fully-connected
+embedder given these are 2D character images).
+
+**Reproduce:** [`examples/12_few_shot_character_generalization.py`](examples/12_few_shot_character_generalization.py:1)
+for the baseline; the ablation table's other three rows pass
+`train_k_shot=1` and/or `hidden=128, embed_dim=64` to
+`run_few_shot_generalization_poc`.
 
 ## 5. Issue #26
 
