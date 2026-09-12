@@ -108,6 +108,10 @@
   dl.features dd{margin:0;color:var(--muted);font-size:14px;max-width:62ch;}
   @media (max-width:640px){ dl.features{grid-template-columns:1fr;row-gap:4px;} dl.features dd{margin-bottom:10px;} }
 
+  .shot{margin:24px 0 0;max-width:520px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px;}
+  .shot img{display:block;width:100%;height:auto;border-radius:4px;border:1px solid var(--border);}
+  .shot figcaption{font-size:12px;color:var(--muted);padding:9px 4px 2px;}
+
   table{width:100%;border-collapse:collapse;font-size:14px;}
   th{text-align:left;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);padding:0 10px 8px 0;border-bottom:1px solid var(--border);}
   td{padding:10px 10px 10px 0;border-bottom:1px solid var(--border);vertical-align:top;}
@@ -171,10 +175,7 @@
       </p>
 
       <div class="pre1">
-        <b>Pre-1.0 and unpublished.</b> <code class="mono">install.sh</code> is
-        the supported path today; the PyPI commands ship once the
-        distributions are published. Before trusting any number this
-        produces, read
+        <b>Pre-1.0.</b> Before trusting any number this produces, read
         <a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md">Implications and boundaries</a>.
       </div>
 
@@ -225,6 +226,11 @@
       <dt>Dashboard</dt>
       <dd>A React + TypeScript UI with training, introspection, analysis, targets, energy, and hub panels, and seven guided walkthroughs.</dd>
     </dl>
+
+    <figure class="shot">
+      <img src="dashboard.png" width="915" height="925" loading="lazy" alt="The spikeforge dashboard's Model &amp; Data tab: dataset, encoding, and topology controls next to a live training run.">
+      <figcaption>The bundled dashboard, running locally via <code>docker compose up --build</code>.</figcaption>
+    </figure>
   </section>
 
   <section id="status">

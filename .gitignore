@@ -7,6 +7,7 @@ docs/
 *.mp4
 *.png
 !images/*.png
+!landing/*.png
 
 # Frontend client
 client/node_modules/

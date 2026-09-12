@@ -58,6 +58,7 @@ jobs:
         run: |
           mkdir -p build/pages
           cp landing/index.html build/pages/index.html
+          cp landing/dashboard.png build/pages/dashboard.png
           cp -r build/docs build/pages/docs
 
       - uses: actions/upload-pages-artifact@v3
