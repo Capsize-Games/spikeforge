@@ -249,7 +249,10 @@ jobs:
             --ignore=tests/test_client_cli.py \
             --ignore=tests/test_client_python.py \
             --ignore=tests/test_client_serve_contract.py \
+            --ignore=tests/test_dashboard_auth.py \
             --ignore=tests/test_dashboard_bundle.py \
+            --ignore=tests/test_dashboard_concurrency.py \
+            --ignore=tests/test_dashboard_ws_auth.py \
             --ignore=tests/test_event_engine.py \
             --ignore=tests/test_event_server.py \
             --ignore=tests/test_event_training.py \

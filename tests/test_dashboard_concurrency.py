@@ -98,7 +98,13 @@ def test_release_never_goes_negative() -> None:
 def test_handle_train_reports_busy_when_the_cap_is_full(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A full job cap surfaces a clear error, not a silent no-op."""
+    """A full job cap surfaces a clear error, not a silent no-op.
+
+    ``ensure_dataset`` is stubbed out so this doesn't depend on ``mnist``
+    already being cached on disk (true locally, false on a clean CI
+    runner, where it would otherwise download for real before the busy
+    check is ever reached).
+    """
     cfg = TrainConfig(
         dataset="mnist", topology="fc_small",
         topology_params={"hidden": 4, "num_classes": 3}, num_steps=2,
@@ -106,6 +112,10 @@ def test_handle_train_reports_busy_when_the_cap_is_full(
 
     async def _run() -> List[Dict[str, Any]]:
         session = Session(asyncio.get_running_loop())
+        monkeypatch.setattr(
+            "server.handlers.ensure_dataset",
+            lambda *a, **k: _ready(),
+        )
         monkeypatch.setattr(
             session.training, "start", lambda *a, **k: False
         )
@@ -116,6 +126,11 @@ def test_handle_train_reports_busy_when_the_cap_is_full(
     sent = asyncio.run(_run())
     assert [m["type"] for m in sent] == ["error"]
     assert sent[0]["payload"] == SERVER_BUSY_MESSAGE
+
+
+async def _ready() -> bool:
+    """Stand in for ``ensure_dataset`` without touching disk or network."""
+    return True
 
 
 async def _drain_train_state(session: Session) -> None:
