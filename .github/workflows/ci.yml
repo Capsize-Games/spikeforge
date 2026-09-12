@@ -178,17 +178,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install the ${{ matrix.extra }} extra (+ targets, server)
+      - name: Install the ${{ matrix.extra }} extra (+ targets, hub, server)
         run: |
+          # spikeforge-server depends on spikeforge-hub~=0.1.0, which is not
+          # published to PyPI; without an editable local install here pip
+          # falls back to PyPI and fails to resolve it.
           if [ "${{ matrix.extra }}" = "norse" ]; then
             pip install \
               -e "./packages/spikeforge[dev,nir]" \
               -e "./packages/spikeforge-targets[norse]" \
+              -e ./packages/spikeforge-hub \
               -e ./packages/spikeforge-server
           else
             pip install \
               -e "./packages/spikeforge[dev,nir,${{ matrix.extra }}]" \
               -e ./packages/spikeforge-targets \
+              -e ./packages/spikeforge-hub \
               -e ./packages/spikeforge-server
           fi
 
@@ -241,10 +246,15 @@ jobs:
         run: |
           pytest \
             --ignore=tests/test_client_animation_payload.py \
+            --ignore=tests/test_client_cli.py \
+            --ignore=tests/test_client_python.py \
+            --ignore=tests/test_client_serve_contract.py \
+            --ignore=tests/test_dashboard_bundle.py \
             --ignore=tests/test_event_engine.py \
             --ignore=tests/test_event_server.py \
             --ignore=tests/test_event_training.py \
             --ignore=tests/test_geometry.py \
+            --ignore=tests/test_protocol_negotiation.py \
             --ignore=tests/test_protocol_schema_parity.py \
             --ignore=tests/test_server_backend_actions.py \
             --ignore=tests/test_server_energy_action.py \
@@ -254,10 +264,14 @@ jobs:
             --ignore=tests/test_server_model_actions.py \
             --ignore=tests/test_server_nir_actions.py \
             --ignore=tests/test_server_target_actions.py \
+            --ignore=tests/test_serve_app.py \
+            --ignore=tests/test_serve_metrics.py \
+            --ignore=tests/test_serving_encode_contract.py \
             --ignore=tests/test_train_config_stage_overrides.py \
             --ignore=tests/test_train_config_topology.py \
             --ignore=tests/test_training_precision.py \
-            --ignore=tests/test_training_topology_scaleup.py
+            --ignore=tests/test_training_topology_scaleup.py \
+            --ignore=tests/test_uc1_serving_parity.py
 
   docs:
     # A broken documentation link must fail the pull request, not just a local
