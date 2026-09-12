@@ -123,13 +123,24 @@ export function useTraining() {
         setState((s) => ({ ...s, prediction: msg.payload }));
         return true;
       case "model_list":
-        setState((s) => ({
-          ...s,
-          models: msg.payload.models,
-          datasets: msg.payload.datasets,
-          topologies: msg.payload.topologies,
-          neurons: msg.payload.neurons,
-        }));
+        setState((s) => {
+          // A checkpoint name can persist in localStorage across sessions
+          // (e.g. after the server's model directory was cleared or
+          // rebuilt); if it's no longer in the server's own list, drop it
+          // so the next plain "Train" doesn't try to resume a checkpoint
+          // that no longer exists.
+          const stale =
+            s.config.checkpoint !== null &&
+            !msg.payload.models.some((m) => m.name === s.config.checkpoint);
+          return {
+            ...s,
+            models: msg.payload.models,
+            datasets: msg.payload.datasets,
+            topologies: msg.payload.topologies,
+            neurons: msg.payload.neurons,
+            config: stale ? { ...s.config, checkpoint: null } : s.config,
+          };
+        });
         return true;
       case "surrogate_list":
         setState((s) => ({ ...s, surrogates: msg.payload }));

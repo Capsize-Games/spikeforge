@@ -8,15 +8,15 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/capsize-games/spikeforge/blob/main/CONTRIBUTING.md)
 [![Docs](https://img.shields.io/badge/docs-long--form%20reference-blue.svg)](documentation/README.md)
 
+![spikeforge dashboard](images/dashboard.png)
+
 A spiking-neural-network (SNN) toolkit built on
 [snnTorch](https://snntorch.readthedocs.io/) and PyTorch. Loads MNIST-style
 and neuromorphic event datasets, encodes them into rate, latency, delta, and
 random spikes, and trains, validates, exports, and deploys LIF networks —
 with a live browser dashboard served over WebSockets.
 
-> **Pre-1.0 and unpublished.** `install.sh` is the supported path today;
-> PyPI ships once the distributions are published. Before trusting any
-> number this produces, read
+> **Pre-1.0.** Before trusting any number this produces, read
 > [Implications and boundaries](documentation/implications-and-boundaries.md).
 
 ## Quickstart
