@@ -185,34 +185,50 @@ evidence *against* the Consciousness Gradient paper's A3 axiom (issue
 #26), not for it — this negative result does not bear on that question
 either way.
 
-**Ablations (real runs): neither of the two cheapest confounds explains
-it.** Two candidate explanations were floated and both ruled out:
+**Ablations (real runs): none of the three cheapest confounds explains
+it.** Three candidate explanations were floated and all three ruled
+out:
 
 | Configuration | One-shot 5-way accuracy | Chance |
 |---|---|---|
-| Baseline (`hidden=64`, `embed_dim=32`, train 5-shot, eval 1-shot) | 21.0% | 20% |
+| Baseline (`fc_small`, `hidden=64`, `embed_dim=32`, train 5-shot, eval 1-shot) | 21.0% | 20% |
 | Shot-matched (train 1-shot, eval 1-shot) | 20.4% | 20% |
 | Bigger capacity (`hidden=128`, `embed_dim=64`, train 5-shot) | 21.0% | 20% |
 | Shot-matched + bigger capacity | 20.1% | 20% |
+| `conv_net` embedder (`channels=8`, spatial, not flattened) | 20.7% | 20% |
+| `conv_net` embedder (`channels=16`) | 20.9% | 20% |
 
-Every configuration lands within noise of chance — matching the
-training/eval shot count and doubling both `hidden` and `embed_dim` each
-had, individually and combined, no effect. This is a *cleaner* negative
-result than the baseline alone: it rules out the two most likely
-"just a hyperparameter mismatch" explanations, so the honest reading
-shifts from "didn't work at this specific budget" toward "didn't work
-for a more structural reason" — most plausibly that 300-1000 rate-coded
-episodes on `fc_small`'s prototypical-loss objective isn't enough signal
-to learn a genuinely transferable spike-pattern metric, independent of
-capacity or shot count. Not yet tried: a fundamentally different
-training signal (e.g. more episodes per unit of eval diversity rather
-than raw episode count, or a convolutional rather than fully-connected
-embedder given these are 2D character images).
+Matching the training/eval shot count, doubling `hidden`/`embed_dim`,
+and swapping the flat `fc_small` embedder for a `conv_net` one that
+keeps the input's 2D structure instead of flattening it first — each
+had, individually, no effect. The `conv_net` runs were checked against
+the same training-curve sanity check as the training-episode-accuracy
+row in the table above: accuracy on the trained classes climbs to
+64-88% over 300 episodes, confirming the mechanism learns fine and the
+eval-side collapse to chance is real, not a broken/undertrained embedder
+([`spikeforge/memory/episodic_trainer.py`](spikeforge/memory/episodic_trainer.py:1)
+now takes a `topology` argument — `fc_small` or `conv_net` — for exactly
+this comparison;
+[`prototypical.embed`](spikeforge/memory/prototypical.py:12) and
+[`embedding_readout.output_spike_trace`](spikeforge/memory/embedding_readout.py:22)
+both reshape through the shared
+[`input_shape.to_input_shape`](spikeforge/simulator/input_shape.py:44)
+so the same call sites serve both topologies).
+
+Three independent, plausible "just a hyperparameter/architecture
+mismatch" explanations are now ruled out, individually. The honest
+reading has shifted from "didn't work at this specific budget" to
+"didn't work for a more structural reason" — most plausibly that
+300-1000 rate-coded prototypical-loss episodes, regardless of embedder
+shape or capacity, isn't enough signal to learn a genuinely
+transferable spike-pattern metric on this dataset pair. Not yet tried:
+a fundamentally different training signal (e.g. many more episodes, or
+per-episode curriculum rather than fully random sampling).
 
 **Reproduce:** [`examples/12_few_shot_character_generalization.py`](examples/12_few_shot_character_generalization.py:1)
-for the baseline; the ablation table's other three rows pass
-`train_k_shot=1` and/or `hidden=128, embed_dim=64` to
-`run_few_shot_generalization_poc`.
+now runs both `fc_small` and `conv_net` and prints both; the shot-count
+and capacity rows pass `train_k_shot=1` and/or `hidden=128,
+embed_dim=64` to `run_few_shot_generalization_poc`.
 
 ## 5. Issue #26
 

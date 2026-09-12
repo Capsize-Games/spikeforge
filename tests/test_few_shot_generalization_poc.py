@@ -21,3 +21,13 @@ def test_run_reports_accuracy_within_bounds() -> None:
     assert 0.0 <= result.accuracy <= 1.0
     assert result.chance == 1.0 / 3
     assert result.episodes == 3
+
+
+def test_conv_net_topology_reports_accuracy_within_bounds() -> None:
+    """The spatial (conv_net) embedder wires up the same as fc_small."""
+    result = run_few_shot_generalization_poc(
+        topology="conv_net", hidden=4, embed_dim=4, num_steps=3,
+        train_episodes=3, train_n_way=3, train_k_shot=2, train_n_query=2,
+        eval_episodes=3, eval_n_way=3, eval_n_query=2,
+    )
+    assert 0.0 <= result.accuracy <= 1.0

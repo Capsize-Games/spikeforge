@@ -1,7 +1,7 @@
 """Episodic (metric-learning) training loop for a spiking embedder."""
 
 import random
-from typing import Dict, List, Sequence
+from typing import Any, Dict, List, Sequence
 
 import torch
 from torch.utils.data import Dataset
@@ -14,6 +14,24 @@ from spikeforge.topology.stage_module import StageModule
 
 #: Learning rate for the embedder's Adam optimizer.
 LEARNING_RATE = 1e-3
+#: Default embedder topology: a flat MLP over rate-coded pixels.
+DEFAULT_TOPOLOGY = "fc_small"
+
+
+def _topology_params(
+    topology: str, width: int, embed_dim: int,
+) -> Dict[str, Any]:
+    """Return ``width``/``embed_dim`` translated into ``topology``'s params.
+
+    ``width`` means hidden units for ``fc_small`` and conv channels
+    for ``conv_net`` -- the two presets name their capacity knob
+    differently, so this is the one place that difference is handled.
+    """
+    if topology == "conv_net":
+        return {
+            "channels": width, "num_classes": embed_dim, "in_channels": 1,
+        }
+    return {"hidden": width, "num_classes": embed_dim}
 
 
 def build_episodic_embedder(
@@ -27,19 +45,23 @@ def build_episodic_embedder(
     k_shot: int,
     n_query: int,
     seed: int = 0,
+    topology: str = DEFAULT_TOPOLOGY,
 ) -> StageModule:
-    """Train ``fc_small`` as an embedder via prototypical-network episodes.
+    """Train an embedder via prototypical-network episodes.
 
-    Unlike ``fc_small``'s ordinary use as a fixed-class classifier,
-    the final layer here carries no softmax semantics: episodic
-    training only ever asks it to place same-class spike patterns
-    close together and different classes apart, which is what should
-    let it generalise -- to classes held out of every episode, and in
-    the fuller claim this issue tests, to a script never trained on
-    at all (see ``few_shot_generalization_poc.py``).
+    Unlike a preset's ordinary use as a fixed-class classifier, the
+    final layer here carries no softmax semantics: episodic training
+    only ever asks it to place same-class spike patterns close
+    together and different classes apart, which is what should let it
+    generalise -- to classes held out of every episode, and in the
+    fuller claim this issue tests, to a script never trained on at
+    all (see ``few_shot_generalization_poc.py``). ``topology`` selects
+    the embedder's architecture (``fc_small``, a flat MLP, or
+    ``conv_net``, which keeps the input's spatial structure instead of
+    flattening it first).
     """
     _, net = build_topology(
-        "fc_small", {"hidden": hidden, "num_classes": embed_dim},
+        topology, _topology_params(topology, hidden, embed_dim),
     )
     optimizer = torch.optim.Adam(net.parameters(), lr=LEARNING_RATE)
     rng = random.Random(seed)

@@ -30,7 +30,10 @@ from spikeforge.memory.embedding_readout import (
     teach_from_example,
 )
 from spikeforge.memory.episode_sampler import class_indices, sample_episode
-from spikeforge.memory.episodic_trainer import build_episodic_embedder
+from spikeforge.memory.episodic_trainer import (
+    DEFAULT_TOPOLOGY,
+    build_episodic_embedder,
+)
 from spikeforge.memory.one_shot_associative_memory import (
     OneShotAssociativeMemory,
 )
@@ -66,13 +69,14 @@ def run_few_shot_generalization_poc(
     eval_episodes: int = 50,
     eval_n_way: int = 5,
     eval_n_query: int = 5,
+    topology: str = DEFAULT_TOPOLOGY,
 ) -> FewShotResult:
     """Train on EMNIST letters, evaluate one-shot recall on KMNIST."""
     torch.manual_seed(seed)
     encoder = SpikeEncoder(coding="rate", num_steps=num_steps)
     net = _train_embedder(
         encoder, hidden, embed_dim, train_episodes,
-        train_n_way, train_k_shot, train_n_query, seed,
+        train_n_way, train_k_shot, train_n_query, seed, topology,
     )
     accuracy = _evaluate_cross_script(
         net, encoder, embed_dim, eval_episodes, eval_n_way,
@@ -90,12 +94,13 @@ def _train_embedder(
     k_shot: int,
     n_query: int,
     seed: int,
+    topology: str,
 ) -> StageModule:
     """Episodically train and freeze the embedder on EMNIST letters."""
     train_data = build_dataset(TRAIN_DATASET, train=True)
     net = build_episodic_embedder(
         train_data, TRAIN_CLASSES, encoder, embed_dim, hidden,
-        episodes, n_way, k_shot, n_query, seed,
+        episodes, n_way, k_shot, n_query, seed, topology,
     )
     net.requires_grad_(False)
     net.eval()

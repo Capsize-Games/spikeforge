@@ -5,6 +5,8 @@ from typing import Tuple
 import torch
 
 from spikeforge.encoding.spike_encoder import SpikeEncoder
+from spikeforge.simulator import input_shape
+from spikeforge.simulator.module_spec import spec_of
 from spikeforge.simulator.runner import run
 from spikeforge.topology.stage_module import StageModule
 
@@ -17,9 +19,15 @@ def embed(
     The embedding is the readout's per-neuron mean firing rate over
     time (``Trajectory.logits``) -- the same quantity a fixed
     classifier would softmax over, repurposed here as a spike-pattern
-    embedding rather than a class score.
+    embedding rather than a class score. Reshaping through
+    ``input_shape.to_input_shape`` is a no-op for a flat embedder
+    (``fc_small``) and restores the ``[T, B, C, H, W]`` geometry a
+    spatial one (``conv_net``) needs, so the same call site serves
+    both without branching here.
     """
-    return run(net, encoder.encode(images)).logits
+    spikes = encoder.encode(images)
+    shaped = input_shape.to_input_shape(spikes, spec_of(net))
+    return run(net, shaped).logits
 
 
 def prototypical_loss(

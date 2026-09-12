@@ -13,6 +13,7 @@ import torch
 from spikeforge.memory.one_shot_associative_memory import (
     OneShotAssociativeMemory,
 )
+from spikeforge.simulator import input_shape
 from spikeforge.simulator.module_spec import spec_of
 from spikeforge.simulator.runner import run
 from spikeforge.simulator.trajectory import Trajectory
@@ -22,9 +23,16 @@ from spikeforge.topology.stage_module import StageModule
 def output_spike_trace(
     net: StageModule, spikes: torch.Tensor,
 ) -> Tuple[torch.Tensor, Trajectory]:
-    """Return ``([T, B, D]`` output spikes, full trajectory)`` for ``net``."""
-    trajectory = run(net, spikes, track=True)
-    return trajectory.spikes[spec_of(net).output], trajectory
+    """Return ``([T, B, D]`` output spikes, full trajectory)`` for ``net``.
+
+    Reshaping through ``input_shape.to_input_shape`` is a no-op for a
+    flat embedder (``fc_small``) and restores the spatial geometry a
+    ``conv_net`` embedder needs.
+    """
+    spec = spec_of(net)
+    shaped = input_shape.to_input_shape(spikes, spec)
+    trajectory = run(net, shaped, track=True)
+    return trajectory.spikes[spec.output], trajectory
 
 
 def teach_from_example(
