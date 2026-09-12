@@ -277,17 +277,17 @@
         <tr>
           <td>On-chip / local learning rules</td>
           <td><span class="pill dev">in progress</span></td>
-          <td class="note">A one-shot Hebbian associative-memory module has shipped; STDP is not started.</td>
+          <td class="note">A one-shot Hebbian associative-memory module and a pair-based STDP synapse (real spike-timing, not a rate code) have shipped; reward-modulated and hardware-resident variants are not started.</td>
         </tr>
         <tr>
           <td><code>speck</code> / <code>xylo</code> / <code>spinnaker2</code></td>
-          <td><span class="pill none">declared only</span></td>
-          <td class="note">In the target matrix; isolated backend probes not yet built.</td>
+          <td><span class="pill dev">in progress</span></td>
+          <td class="note">Isolated backend probes are built and tested against each vendor SDK's own simulator; degrade honestly to "unavailable" when that SDK isn't installed. No probe has run against physical hardware.</td>
         </tr>
         <tr>
           <td>PyPI release</td>
-          <td><span class="pill none">not started</span></td>
-          <td class="note">Ships at 1.0. <code>./install.sh</code> is the path today.</td>
+          <td><span class="pill done">done</span></td>
+          <td class="note">All seven distributions are on PyPI; <code>./install.sh</code> still works too.</td>
         </tr>
       </tbody>
     </table>
