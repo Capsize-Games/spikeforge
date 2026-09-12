@@ -321,3 +321,6 @@ export interface ServerMessage {
   kind?: string | null;
   [k: string]: unknown;
 }
+
+/** The protocol version every outbound message must stamp. */
+export const PROTOCOL_VERSION = "1.0" as const;

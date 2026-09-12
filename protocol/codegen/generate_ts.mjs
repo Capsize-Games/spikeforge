@@ -27,6 +27,16 @@ const protocolDir = resolve(here, "..");
 const repoRoot = resolve(protocolDir, "..");
 const clientDir = join(repoRoot, "client");
 const outFile = join(clientDir, "src", "protocol", "generated.ts");
+const versionFile = join(protocolDir, "protocol_version.txt");
+
+/**
+ * Read the single source of the protocol version (also read by
+ * server/protocol_version.py), so the client can stamp the same value
+ * onto every outbound message instead of hardcoding it a second time.
+ */
+function readProtocolVersion() {
+  return readFileSync(versionFile, "utf8").trim();
+}
 
 const BANNER = [
   "/* eslint-disable */",
@@ -131,6 +141,13 @@ const ts = await compile(root, "ProtocolContract", {
   style: { singleQuote: false, tabWidth: 2, printWidth: 80 },
 });
 
+const versionConst =
+  "\n" +
+  "/** The protocol version every outbound message must stamp. */\n" +
+  `export const PROTOCOL_VERSION = ${JSON.stringify(
+    readProtocolVersion(),
+  )} as const;\n`;
+
 mkdirSync(dirname(outFile), { recursive: true });
-writeFileSync(outFile, ts, "utf8");
+writeFileSync(outFile, ts + versionConst, "utf8");
 process.stdout.write("wrote " + outFile + "\n");

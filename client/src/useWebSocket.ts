@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { HubQueryInput } from "./hubTypes";
+import { PROTOCOL_VERSION } from "./protocol/generated";
 import type { EncodeConfig, ServerMsg, TrainConfig } from "./types";
 
 interface Options {
@@ -45,48 +46,73 @@ export function useWebSocket({ onMessage }: Options) {
     };
   }, []);
 
-  const send = useCallback((type: string, config: EncodeConfig) => {
-    wsRef.current?.send(JSON.stringify({ type, config }));
+  /**
+   * Send one JSON message, stamping the protocol version every outbound
+   * message requires (server/app.py rejects anything missing it).
+   */
+  const sendJson = useCallback((message: Record<string, unknown>) => {
+    wsRef.current?.send(
+      JSON.stringify({ protocol_version: PROTOCOL_VERSION, ...message }),
+    );
   }, []);
+
+  const send = useCallback(
+    (type: string, config: EncodeConfig) => {
+      sendJson({ type, config });
+    },
+    [sendJson],
+  );
 
   const sendTrain = useCallback(
     (type: string, train: TrainConfig, name?: string) => {
-      wsRef.current?.send(JSON.stringify({ type, train, name }));
+      sendJson({ type, train, name });
     },
-    [],
+    [sendJson],
   );
 
-  const sendNamed = useCallback((type: string, name: string) => {
-    wsRef.current?.send(JSON.stringify({ type, name }));
-  }, []);
+  const sendNamed = useCallback(
+    (type: string, name: string) => {
+      sendJson({ type, name });
+    },
+    [sendJson],
+  );
 
   /** Send a parameterless action (e.g. "surrogates", "metrics"). */
-  const sendAction = useCallback((type: string) => {
-    wsRef.current?.send(JSON.stringify({ type }));
-  }, []);
+  const sendAction = useCallback(
+    (type: string) => {
+      sendJson({ type });
+    },
+    [sendJson],
+  );
 
-  const sendSelectSample = useCallback((config: EncodeConfig) => {
-    wsRef.current?.send(JSON.stringify({ type: "select_sample", config }));
-  }, []);
+  const sendSelectSample = useCallback(
+    (config: EncodeConfig) => {
+      sendJson({ type: "select_sample", config });
+    },
+    [sendJson],
+  );
 
-  const sendInfer = useCallback((config: EncodeConfig, train: TrainConfig) => {
-    wsRef.current?.send(JSON.stringify({ type: "infer", config, train }));
-  }, []);
+  const sendInfer = useCallback(
+    (config: EncodeConfig, train: TrainConfig) => {
+      sendJson({ type: "infer", config, train });
+    },
+    [sendJson],
+  );
 
   const sendStats = useCallback(() => {
-    wsRef.current?.send(JSON.stringify({ type: "stats" }));
-  }, []);
+    sendJson({ type: "stats" });
+  }, [sendJson]);
 
   const sendCancelDownload = useCallback(() => {
-    wsRef.current?.send(JSON.stringify({ type: "cancel_download" }));
-  }, []);
+    sendJson({ type: "cancel_download" });
+  }, [sendJson]);
 
   /** Send a hub action with its additive query fields and optional name. */
   const sendHub = useCallback(
     (type: string, hub: HubQueryInput, name?: string) => {
-      wsRef.current?.send(JSON.stringify({ type, hub, name }));
+      sendJson({ type, hub, name });
     },
-    [],
+    [sendJson],
   );
 
   return {
