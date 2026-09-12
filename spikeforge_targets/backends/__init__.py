@@ -24,6 +24,7 @@ from spikeforge_targets.backends.result import (
     STATUS_UNAVAILABLE,
     BackendResult,
 )
+from spikeforge_targets.backends.vendor_backend import vendor_backends
 from spikeforge_targets.quantize import quantize
 from spikeforge_targets.quantize_result import QuantizationResult
 from spikeforge_targets.registry import get_target
@@ -40,11 +41,14 @@ __all__ = [
     "compile_run",
 ]
 
-#: The registered backend for every executable target kind.
+#: The registered backend for every executable target kind. The vendor
+#: simulators (Speck, Xylo, SpiNNaker2) are folded in from their shared
+#: adapter so every catalog target has exactly one executable backend.
 BACKENDS: Dict[str, Backend] = {
     "reference": ReferenceBackend(),
     "norse": NorseBackend(),
     "lava_loihi2": LavaBackend(),
+    **vendor_backends(),
 }
 
 

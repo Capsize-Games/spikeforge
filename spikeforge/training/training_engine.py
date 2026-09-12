@@ -10,6 +10,7 @@ from spikeforge.encoding.spike_encoder import SpikeEncoder
 from spikeforge.network import inference
 from spikeforge.runtime import device as device_mod
 from spikeforge.runtime.execution_mode import ExecutionMode
+from spikeforge.serving.encode_spec import EncodeSpec
 from spikeforge.simulator.runner import run
 from spikeforge.simulator.trajectory import Trajectory
 from spikeforge.topology import registry
@@ -39,11 +40,13 @@ class TrainingEngine(
     """Run a cancellable training loop that emits metric dicts."""
 
     _encoder: Optional[SpikeEncoder]
+    _encode_spec: EncodeSpec
     _explicit_mode: Optional[str]
     _input_mode: str
     _mode: ExecutionMode
     _net: StageModule
     _optimizer: torch.optim.Adam
+    _weight_decay: float
     _seed: Optional[int]
     _test_batches: Optional[List[_Batch]]
     _scaleups: Dict[str, Any]
@@ -53,8 +56,8 @@ class TrainingEngine(
 
     def __init__(
         self, dataset: str = "mnist", hidden: int = 128, beta: float = 0.5,
-        lr: float = 1e-2, epochs: int = 1, num_steps: int = 10,
-        subset: int = 10, batch_size: int = 64,
+        lr: float = 1e-2, weight_decay: float = 0.0, epochs: int = 1,
+        num_steps: int = 10, subset: int = 10, batch_size: int = 64,
         checkpoint: Optional[str] = None, encode: Any = None,
         input_mode: Optional[str] = None, device: Optional[str] = None,
         topology: str = "fc_legacy",
@@ -66,7 +69,8 @@ class TrainingEngine(
     ) -> None:
         """Resolve inputs, build the topology, and optionally restore it."""
         self._store_settings(
-            dataset, hidden, beta, lr, epochs, num_steps, subset, batch_size
+            dataset, hidden, beta, lr, weight_decay, epochs, num_steps,
+            subset, batch_size,
         )
         self._mode = ExecutionMode(mode)
         self._seed = None if seed is None else int(seed)
@@ -84,7 +88,8 @@ class TrainingEngine(
 
     def _store_settings(
         self, dataset: str, hidden: int, beta: float, lr: float,
-        epochs: int, num_steps: int, subset: int, batch_size: int,
+        weight_decay: float, epochs: int, num_steps: int, subset: int,
+        batch_size: int,
     ) -> None:
         """Store the plain training settings on the instance."""
         self._dataset = dataset
@@ -92,6 +97,7 @@ class TrainingEngine(
         self._hidden = hidden
         self._beta = beta
         self._lr = lr
+        self._weight_decay = weight_decay
         self._epochs = epochs
         self._num_steps = num_steps
         self._subset = subset
@@ -106,6 +112,7 @@ class TrainingEngine(
             if encode is not None
             else None
         )
+        self._encode_spec = EncodeSpec.from_mapping(encode)
         self._explicit_mode = input_mode
         coding = encode.coding if encode is not None else "raw"
         self._input_mode = input_mode or coding
@@ -130,7 +137,9 @@ class TrainingEngine(
         )
         self._net.to(self._device)
         device_mod.warmup(self._net, self._dummy_spikes())
-        self._optimizer = torch.optim.Adam(self._net.parameters(), lr=lr)
+        self._optimizer = torch.optim.Adam(
+            self._net.parameters(), lr=lr, weight_decay=self._weight_decay
+        )
         self._test_batches = None
         self._configure_scaleups(**self._scaleups)
         if checkpoint:

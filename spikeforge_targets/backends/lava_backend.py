@@ -14,8 +14,7 @@ the supported surface. Anything else is refused with the offending node and
 kind named rather than silently approximated.
 """
 
-from math import exp
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import numpy as np
 import torch
@@ -27,8 +26,6 @@ from spikeforge_targets.backends.result import (
     BackendResult,
 )
 
-#: Node kinds the Lava lowering can express as Lava processes.
-LINEAR_KINDS = ("Affine", "Linear")
 #: Note for a run on the Lava Loihi 2 CPU emulator.
 EMULATOR_NOTE = (
     "ran on the Lava Loihi 2 CPU emulator; no physical device was probed"
@@ -37,50 +34,9 @@ EMULATOR_NOTE = (
 DEVICE_NOTE = "ran on the Loihi 2 device opted in via SPIKEFORGE_LAVA_DEVICE"
 
 
-def _linear_layer(node: Any) -> Dict[str, Any]:
-    """Return a Dense layer description from a linear node."""
-    weight = np.asarray(node.weight, dtype=np.float32)
-    return {"kind": "Linear", "params": {"weight": weight},
-            "size": int(weight.shape[0])}
-
-
-def _neuron_layer(
-    kind: str, node: Any, width: Optional[int]
-) -> Dict[str, Any]:
-    """Return a LIF/LI layer description at the tracked chain width."""
-    if width is None:
-        raise ValueError(f"lava lowering cannot size a leading {kind!r} node")
-    decay = exp(-1.0 / lowering.scalar(node.tau))
-    return {
-        "kind": kind,
-        "params": {
-            "decay": 1.0 - decay,
-            "v_threshold": lowering.scalar(node.v_threshold),
-        },
-        "size": width,
-    }
-
-
 def lower_program(graph: Any) -> Dict[str, Any]:
     """Lower a linear graph to a Lava layer program, or raise a reason."""
-    layers: List[Dict[str, Any]] = []
-    width: Optional[int] = None
-    for name, node in lowering.linear_chain(graph):
-        kind = type(node).__name__
-        if kind in ("Input", "Output"):
-            continue
-        if kind in LINEAR_KINDS:
-            layer = _linear_layer(node)
-            width = layer["size"]
-        elif kind in ("LIF", "LI"):
-            layer = _neuron_layer(kind, node, width)
-        else:
-            raise ValueError(
-                f"lava lowering does not support node {name!r} of kind "
-                f"{kind!r}"
-            )
-        layers.append(layer)
-    return {"layers": layers}
+    return lowering.linear_program(graph)
 
 
 class LavaBackend:

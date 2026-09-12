@@ -51,5 +51,5 @@ service. Reports we care most about include, but are not limited to:
 
 The deliberate boundaries — no authentication, no remote telemetry, estimated
 (not measured) energy, SDK-gated hardware backends — are documented in the
-[README's Implications and boundaries](README.md#implications-and-boundaries)
+[Implications and boundaries](documentation/implications-and-boundaries.md)
 and are **not** vulnerabilities in themselves.

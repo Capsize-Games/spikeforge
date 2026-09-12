@@ -28,6 +28,7 @@ from spikeforge.nir_bridge.errors import (
 )
 from spikeforge_targets.report import deployment_report
 from spikeforge_targets.summary import target_summaries
+from spikeforge_targets.test_deploy import matrix_by_name
 
 #: Target used for a deployment report when the caller names none.
 DEFAULT_TARGET = "reference"
@@ -102,6 +103,35 @@ def roundtrip_exit(report: Dict[str, Any]) -> int:
     return 0 if report["identical"] else 1
 
 
+def _parse_targets(value: Optional[str]) -> Optional[List[str]]:
+    """Split a comma-separated ``--targets`` filter, or return ``None``."""
+    if value is None:
+        return None
+    names = [name.strip() for name in value.split(",") if name.strip()]
+    return names or None
+
+
+def test_deploy_report(
+    topology: str, targets: Optional[str] = None
+) -> Dict[str, Any]:
+    """Return the simulator-backed test-deploy matrix for ``topology``.
+
+    The matrix runs every target whose simulator is available; an absent SDK
+    or a declared-only simulator reports ``unavailable`` with a named reason
+    rather than a failure, so the report is a capability view and not a gate
+    on the optional extras.
+    """
+    matrix = matrix_by_name(
+        topology, STEPS, BATCH, SEED, targets=_parse_targets(targets)
+    )
+    return matrix.to_dict()
+
+
+def test_deploy_exit(report: Dict[str, Any]) -> int:
+    """Return the process status for a test-deploy matrix."""
+    return 0 if report["ok"] else 1
+
+
 def _readout(result: Any) -> List[float]:
     """Return the interpreter's readout as a plain float list."""
     return [float(value) for value in result.readout.reshape(-1)]
@@ -147,6 +177,13 @@ def _run_roundtrip(args: argparse.Namespace) -> int:
     return roundtrip_exit(report)
 
 
+def _run_test_deploy(args: argparse.Namespace) -> int:
+    """Print the test-deploy matrix JSON and return its verdict status."""
+    report = test_deploy_report(args.topology, args.targets)
+    print(json.dumps(report, indent=2))
+    return test_deploy_exit(report)
+
+
 def _run_ingest(args: argparse.Namespace) -> int:
     """Print an ingest summary, or the typed graph error, plus a status."""
     try:
@@ -174,6 +211,18 @@ def add_subcommands(subs: Any) -> None:
     trip.add_argument("--topology", default="conv_net")
     trip.add_argument("--out", default=None)
     trip.set_defaults(handler=_run_roundtrip)
+
+    matrix = subs.add_parser(
+        "test-deploy",
+        help="test-deploy a topology across the available simulators",
+    )
+    matrix.add_argument("--topology", default="conv_net")
+    matrix.add_argument(
+        "--targets",
+        default=None,
+        help="comma-separated target names; default is every target",
+    )
+    matrix.set_defaults(handler=_run_test_deploy)
 
     ingest = subs.add_parser("ingest", help="run an external NIR graph")
     ingest.add_argument("--file", required=True)

@@ -154,6 +154,7 @@ def _conv_stages(
     neuron: str,
     surrogate: Optional[str],
     stage: NeuronStage,
+    dropout: float,
 ) -> List[Stage]:
     height, width = size
     features = channels * 2 * height * width
@@ -165,6 +166,7 @@ def _conv_stages(
         stage("lif2", neuron, 0.9, surrogate),
         Stage("pool2", "sumpool2d", {"kernel_size": 2}),
         Stage("flatten", "flatten", {}),
+        Stage("dropout", "dropout", {"p": dropout}),
         Stage("fc", "linear", _linear_params(features, num_classes)),
         stage("out", neuron, 0.9, surrogate),
     ]
@@ -179,17 +181,21 @@ def conv_net(
     surrogate: Optional[str] = None,
     neurons: NeuronMap = None,
     stage_params: ParamsMap = None,
+    dropout: float = 0.0,
 ) -> TopologySpec:
     """Conv/pool feature extractor with a linear LIF readout.
 
     ``input_size`` is the sensor geometry: an ``int`` square side (unchanged)
     or an explicit ``(H, W)`` pair. The two 2x2 pools leave ``H/4 * W/4``
     features per doubled channel, so each side must be at least 4.
+    ``dropout`` (default ``0.0``, the identity) sets the drop probability
+    of a stage applied to the flattened features, before the readout.
     """
     size = _pooled_size(input_size)
     stage = _stage_factory(neurons, stage_params)
     stages = _conv_stages(
-        in_channels, channels, num_classes, size, neuron, surrogate, stage
+        in_channels, channels, num_classes, size, neuron, surrogate, stage,
+        dropout,
     )
     return chain(stages)
 

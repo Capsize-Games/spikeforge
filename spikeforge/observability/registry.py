@@ -55,6 +55,19 @@ class MetricsRegistry:
         """Return a context manager that records into timer ``name``."""
         return Timer(self, name)
 
+    def timers(self) -> Dict[str, List[float]]:
+        """Return a copy of the raw timer samples, keyed by name.
+
+        The JSON snapshot only carries per-timer summaries, but a Prometheus
+        histogram needs the individual samples to place them in buckets, so
+        the exporter reads them through this accessor instead of the private
+        attribute.
+        """
+        with self._lock:
+            return {
+                name: list(samples) for name, samples in self._timers.items()
+            }
+
     def snapshot(self) -> Dict[str, Any]:
         """Return JSON-able counters, gauges, and summarised timers."""
         with self._lock:

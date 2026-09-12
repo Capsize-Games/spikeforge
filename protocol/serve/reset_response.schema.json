@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spikeforge.dev/protocol/1.0/serve/reset_response.schema.json",
+  "title": "ResetResponse",
+  "description": "The POST /v1/reset response: the cleared session id and its zeroed step count.",
+  "type": "object",
+  "properties": {
+    "session_id": { "type": "string" },
+    "steps": { "type": "integer" }
+  },
+  "required": ["session_id", "steps"],
+  "additionalProperties": true
+}

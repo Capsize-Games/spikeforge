@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spikeforge.dev/protocol/1.0/serve/predict_response.schema.json",
+  "title": "PredictResponse",
+  "description": "The POST /v1/predict response: the session id, the accumulated step count, and one prediction per frame.",
+  "type": "object",
+  "properties": {
+    "session_id": { "type": "string" },
+    "steps": { "type": "integer" },
+    "predictions": {
+      "type": "array",
+      "items": { "$ref": "serve_prediction.schema.json" }
+    }
+  },
+  "required": ["session_id", "steps", "predictions"],
+  "additionalProperties": true
+}

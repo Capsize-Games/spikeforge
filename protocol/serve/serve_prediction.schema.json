@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spikeforge.dev/protocol/1.0/serve/serve_prediction.schema.json",
+  "title": "ServePrediction",
+  "description": "Mirrors spikeforge_serve.payloads.prediction_json: one frame's readout plus the session's cumulative evidence.",
+  "type": "object",
+  "properties": {
+    "steps": { "type": "integer" },
+    "label": { "type": "integer" },
+    "predicted": { "type": "integer" },
+    "logits": { "$ref": "tensor_value.schema.json" },
+    "mean_logits": { "$ref": "tensor_value.schema.json" },
+    "class_totals": { "$ref": "tensor_value.schema.json" },
+    "spikes": {
+      "type": "object",
+      "additionalProperties": { "$ref": "tensor_value.schema.json" }
+    }
+  },
+  "required": [
+    "steps",
+    "label",
+    "predicted",
+    "logits",
+    "mean_logits",
+    "class_totals",
+    "spikes"
+  ],
+  "additionalProperties": true
+}

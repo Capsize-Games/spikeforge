@@ -13,7 +13,7 @@ that would change it.
 
 The reasoning behind the deliberate boundaries (estimated energy, single-step
 ONNX, simulation-only attention, and so on) is in the README's
-[Implications and boundaries](README.md#implications-and-boundaries) section.
+[Implications and boundaries](documentation/implications-and-boundaries.md) section.
 
 ---
 

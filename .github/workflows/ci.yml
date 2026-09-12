@@ -54,15 +54,71 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install core + targets + hub + server editable
+      - name: Install core + targets + hub + server + io editable
         run: |
           pip install -e "./packages/spikeforge[dev,nir]" \
                       -e ./packages/spikeforge-targets \
                       -e ./packages/spikeforge-hub \
-                      -e ./packages/spikeforge-server
+                      -e ./packages/spikeforge-server \
+                      -e ./packages/spikeforge-io
 
       - name: Test (pytest)
         run: pytest
+
+  test-deploy:
+    # The simulator-backed test-deploy matrix for the linear `fc_legacy`
+    # topology: exactly one cell per registered target, one JSON parity report,
+    # exit 0 when the matrix is `ok`. No vendor SDK is installed, so every
+    # SDK-backed cell must report `available: false` with a named reason — that
+    # is honest reporting, not a build failure. The job asserts the command
+    # exits 0 *and* that the JSON carries one cell per registered target.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install torch CPU wheels
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
+
+      - name: Install core + targets editable
+        run: |
+          pip install -e "./packages/spikeforge[dev,nir]" \
+                      -e ./packages/spikeforge-targets
+
+      - name: Run the test-deploy matrix and assert one cell per target
+        run: |
+          python -m spikeforge.cli.verify test-deploy \
+            --topology fc_legacy > "${RUNNER_TEMP}/test-deploy.json"
+          python - <<'PY'
+          import json
+          import os
+
+          from spikeforge_targets import registry
+
+          with open(
+              os.path.join(os.environ["RUNNER_TEMP"], "test-deploy.json"),
+              encoding="utf-8",
+          ) as handle:
+              payload = json.load(handle)
+          assert payload["ok"] is True, payload
+          targets = [cell["target"] for cell in payload["cells"]]
+          assert targets == registry.target_names(), (
+              targets,
+              registry.target_names(),
+          )
+          unavailable = [
+              cell["target"] for cell in payload["cells"]
+              if not cell["available"]
+          ]
+          print(f"test-deploy OK: {len(targets)} cells {targets}")
+          print(f"unavailable (honest, not a failure): {unavailable}")
+          PY
 
   hub:
     # The `hub` core extra is gone: the hub now ships as the `spikeforge-hub`
@@ -122,17 +178,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
 
-      - name: Install the ${{ matrix.extra }} extra (+ targets, server)
+      - name: Install the ${{ matrix.extra }} extra (+ targets, hub, server)
         run: |
+          # spikeforge-server depends on spikeforge-hub~=0.1.0, which is not
+          # published to PyPI; without an editable local install here pip
+          # falls back to PyPI and fails to resolve it.
           if [ "${{ matrix.extra }}" = "norse" ]; then
             pip install \
               -e "./packages/spikeforge[dev,nir]" \
               -e "./packages/spikeforge-targets[norse]" \
+              -e ./packages/spikeforge-hub \
               -e ./packages/spikeforge-server
           else
             pip install \
               -e "./packages/spikeforge[dev,nir,${{ matrix.extra }}]" \
               -e ./packages/spikeforge-targets \
+              -e ./packages/spikeforge-hub \
               -e ./packages/spikeforge-server
           fi
 
@@ -185,10 +246,15 @@ jobs:
         run: |
           pytest \
             --ignore=tests/test_client_animation_payload.py \
+            --ignore=tests/test_client_cli.py \
+            --ignore=tests/test_client_python.py \
+            --ignore=tests/test_client_serve_contract.py \
+            --ignore=tests/test_dashboard_bundle.py \
             --ignore=tests/test_event_engine.py \
             --ignore=tests/test_event_server.py \
             --ignore=tests/test_event_training.py \
             --ignore=tests/test_geometry.py \
+            --ignore=tests/test_protocol_negotiation.py \
             --ignore=tests/test_protocol_schema_parity.py \
             --ignore=tests/test_server_backend_actions.py \
             --ignore=tests/test_server_energy_action.py \
@@ -198,10 +264,14 @@ jobs:
             --ignore=tests/test_server_model_actions.py \
             --ignore=tests/test_server_nir_actions.py \
             --ignore=tests/test_server_target_actions.py \
+            --ignore=tests/test_serve_app.py \
+            --ignore=tests/test_serve_metrics.py \
+            --ignore=tests/test_serving_encode_contract.py \
             --ignore=tests/test_train_config_stage_overrides.py \
             --ignore=tests/test_train_config_topology.py \
             --ignore=tests/test_training_precision.py \
-            --ignore=tests/test_training_topology_scaleup.py
+            --ignore=tests/test_training_topology_scaleup.py \
+            --ignore=tests/test_uc1_serving_parity.py
 
   docs:
     # A broken documentation link must fail the pull request, not just a local
@@ -334,18 +404,24 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build all four wheels
+      - name: Build the distribution wheels
         run: |
           python -m pip install --upgrade pip build
           python -m build ./packages/spikeforge
           python -m build ./packages/spikeforge-server
+          python -m build ./packages/spikeforge-serve
+          python -m build ./packages/spikeforge-clients
           python -m build ./packages/spikeforge-targets
           python -m build ./packages/spikeforge-hub
+          python -m build ./packages/spikeforge-io
 
       - name: Run the packaging guards
         run: |
           python scripts/check_packaging_guards.py \
             --core-wheel packages/spikeforge/dist/spikeforge-*.whl \
             --server-wheel packages/spikeforge-server/dist/spikeforge_server-*.whl \
+            --serve-wheel packages/spikeforge-serve/dist/spikeforge_serve-*.whl \
+            --clients-wheel packages/spikeforge-clients/dist/spikeforge_clients-*.whl \
             --targets-wheel packages/spikeforge-targets/dist/spikeforge_targets-*.whl \
-            --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl
+            --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl \
+            --io-wheel packages/spikeforge-io/dist/spikeforge_io-*.whl

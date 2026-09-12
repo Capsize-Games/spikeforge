@@ -37,7 +37,7 @@ venv/bin/pip install -e ./packages/spikeforge-server
 Optional capabilities are extras (`nir`, `events`, `onnx`, `hub`, `norse`,
 `lava`, `tracking`, `tracking-wandb`, `docs`). Each has an isolated probe, so a
 missing package is *reported*, never raised at import. See the
-[README](README.md#optional-extras) for the full matrix.
+[requirements reference](documentation/requirements.md#optional-extras) for the full matrix.
 
 ## The style contract
 
