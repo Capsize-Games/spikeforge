@@ -66,7 +66,7 @@ export function NetworkActivity({
     : undefined;
 
   return (
-    <div className="panel">
+    <div className="panel activity-panel">
       <div className="panel-title">
         Network activity
         <HelpTip text={HELP.activity} />
@@ -74,7 +74,7 @@ export function NetworkActivity({
       <div className="raster-stack">
         <RasterCanvas
           bare
-          height={260}
+          height={185}
           raster={rasters.input}
           label={inputLabel}
           summary={summarize(rasters.input)}
@@ -92,7 +92,7 @@ export function NetworkActivity({
         )}
         <RasterCanvas
           bare
-          height={260}
+          height={130}
           raster={rasters.hidden}
           label="Hidden layer · neuron (sorted by rate)"
           summary={summarize(rasters.hidden)}
@@ -102,7 +102,7 @@ export function NetworkActivity({
         />
         <RasterCanvas
           bare
-          height={260}
+          height={130}
           raster={rasters.output}
           label="Output layer · class"
           yLabels={outputLabels}

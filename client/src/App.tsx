@@ -6,9 +6,14 @@ import { DownloadProgress } from "./components/DownloadProgress";
 import { EnergyPanel } from "./components/EnergyPanel";
 import { HubPanel } from "./components/HubPanel";
 import { ModelPanel } from "./components/ModelPanel";
+import { Section } from "./components/Stepper";
 import { StatusBar } from "./components/StatusBar";
+import { TabBar } from "./components/TabBar";
+import { TabPanel } from "./components/TabPanel";
+import { TargetsPanel } from "./components/TargetsPanel";
 import { TopBar } from "./components/TopBar";
 import { TourCard } from "./components/TourCard";
+import { TrainControls } from "./components/TrainControls";
 import { TrainingPanel } from "./components/TrainingPanel";
 import { ViewerPanels } from "./components/ViewerPanels";
 import { useEncodeConfig } from "./hooks/useEncodeConfig";
@@ -16,17 +21,23 @@ import { useEnergy } from "./hooks/useEnergy";
 import { useHub } from "./hooks/useHub";
 import { useModelActions } from "./hooks/useModelActions";
 import { useServerBootstrap } from "./hooks/useServerBootstrap";
+import { useTabs } from "./hooks/useTabs";
 import { useTour } from "./hooks/useTour";
 import { useViewer } from "./hooks/useViewer";
+import { TABS } from "./tabs";
 import { LESSONS } from "./tour/lessons";
 import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
+import type { TabId } from "./tabs";
 import type { Modality, ServerMsg } from "./types";
 
 export default function App() {
   const { config, configRef, patchConfig, replaceConfig } = useEncodeConfig();
   const training = useTraining();
   const tour = useTour(LESSONS);
+  // The open tour step also drives the tab switch, so a step can point at any
+  // panel without the lesson files knowing about tabs.
+  const tabs = useTabs(tour.step?.target ?? null);
 
   // useViewer needs the socket's send helpers, while the socket needs
   // useViewer's message handler — bridge the cycle with a ref.
@@ -79,6 +90,12 @@ export default function App() {
       ? viewer.state.download
       : null;
 
+  // Background work keeps running on an unfocused tab; mark it in the strip.
+  const busy: Partial<Record<TabId, boolean>> = {
+    training: training.state.running,
+    hub: downloading !== null,
+  };
+
   // The configured surrogate drives the curve panel's initial selection.
   const rawSurrogate = training.state.config.topology_params.surrogate;
   const currentSurrogate = typeof rawSurrogate === "string" ? rawSurrogate : "";
@@ -97,40 +114,64 @@ export default function App() {
           onToggleTours={tour.toggleMenu}
           onOpenTour={tour.openLesson}
         />
+
+        <TabBar
+          tabs={TABS}
+          active={tabs.active}
+          busy={busy}
+          onSelect={tabs.select}
+        />
       </header>
 
       <main className="app-main">
-        <div className="grid">
-          <div className="col-controls">
-            <ModelPanel
-              models={training.state.models}
-              current={training.state.loaded?.name ?? null}
-              connected={ws.connected}
-              busy={training.state.running}
-              loading={viewer.modelLoading}
-              onNew={actions.newModel}
-              onLoad={actions.loadModel}
-              onSave={actions.saveModel}
-            />
-            <Controls
-              config={config}
-              model={training.state.config}
-              datasets={training.state.datasets}
-              gpuAvailable={viewer.gpuAvailable}
-              connected={ws.connected}
-              trainRunning={training.state.running}
-              topologies={training.state.topologies}
-              neurons={training.state.neurons}
-              surrogates={training.state.surrogates}
-              locked={viewer.locked}
-              onChange={patchConfig}
-              onModelChange={training.patch}
-              onSelectSample={actions.selectSample}
-              onTrain={actions.train}
-              onStopTrain={actions.stopTrain}
-            />
-          </div>
+        <TabPanel id="model" active={tabs.active}>
+          <div className="tab-cols tab-cols-model">
+            <div className="tab-col">
+              <ModelPanel
+                models={training.state.models}
+                current={training.state.loaded?.name ?? null}
+                connected={ws.connected}
+                busy={training.state.running}
+                loading={viewer.modelLoading}
+                onNew={actions.newModel}
+                onLoad={actions.loadModel}
+                onSave={actions.saveModel}
+              />
 
+              <div className="panel">
+                <Section
+                  title="Train & inspect"
+                  hint="fit the network, manage checkpoints"
+                >
+                  <TrainControls
+                    running={training.state.running}
+                    connected={ws.connected}
+                    onTrain={actions.train}
+                    onStop={actions.stopTrain}
+                  />
+                </Section>
+              </div>
+            </div>
+
+            <div className="tab-col">
+              <Controls
+                config={config}
+                model={training.state.config}
+                datasets={training.state.datasets}
+                gpuAvailable={viewer.gpuAvailable}
+                topologies={training.state.topologies}
+                neurons={training.state.neurons}
+                surrogates={training.state.surrogates}
+                locked={viewer.locked}
+                onChange={patchConfig}
+                onModelChange={training.patch}
+                onSelectSample={actions.selectSample}
+              />
+            </div>
+          </div>
+        </TabPanel>
+
+        <TabPanel id="viewer" active={tabs.active}>
           <ViewerPanels
             sample={viewer.state.sample}
             eventFrame={viewer.state.eventFrame}
@@ -150,9 +191,6 @@ export default function App() {
             trajectory={viewer.state.trajectory}
             nirGraph={viewer.state.nirGraph}
             nirValidation={viewer.state.nirValidation}
-            targetList={viewer.state.targetList}
-            deploymentReport={viewer.state.deploymentReport}
-            backendRun={viewer.state.backendRun}
             playing={viewer.state.running}
             onPlay={actions.playPreview}
             onStop={actions.stopPreview}
@@ -163,57 +201,79 @@ export default function App() {
             onRefreshTrajectory={actions.requestTrajectory}
             onRefreshNirGraph={actions.requestNirExport}
             onRefreshNirValidation={actions.requestNirValidate}
-            onRefreshTargets={actions.requestTargets}
-            onSelectTarget={actions.requestDeploymentReport}
-            onRunBackend={actions.requestDeployRun}
             onSwitchToEducational={() =>
               training.patch({ mode: "educational" })
             }
           />
+        </TabPanel>
 
-          <div className="col-training">
-            <TrainingPanel
-              loss={training.state.loss}
-              trainAccuracy={training.state.trainAccuracy}
-              testAccuracy={training.state.testAccuracy}
-              last={training.state.last}
-              device={training.state.device}
-              inference={viewer.state.inference}
-              timeStep={viewer.timeStep}
-              loaded={training.state.loaded}
-              autoPredict={viewer.autoPredict}
-              canAutoPredict={viewer.canAutoPredict}
-              onToggleAutoPredict={toggleAutoPredict}
-            />
+        <TabPanel id="training" active={tabs.active}>
+          <div className="tab-cols">
+            <div className="tab-col">
+              <TrainingPanel
+                loss={training.state.loss}
+                trainAccuracy={training.state.trainAccuracy}
+                testAccuracy={training.state.testAccuracy}
+                last={training.state.last}
+                device={training.state.device}
+                inference={viewer.state.inference}
+                timeStep={viewer.timeStep}
+                loaded={training.state.loaded}
+                autoPredict={viewer.autoPredict}
+                canAutoPredict={viewer.canAutoPredict}
+                onToggleAutoPredict={toggleAutoPredict}
+              />
+            </div>
 
-            <AnalysisPanels
-              mode={training.state.config.mode}
-              metrics={viewer.state.metrics}
-              encodingReport={viewer.state.encodingReport}
-              surrogateCurve={viewer.state.surrogateCurve}
-              benchmark={training.state.benchmark}
-              benchmarkLoading={training.state.benchmarkLoading}
-              surrogates={training.state.surrogates}
-              currentSurrogate={currentSurrogate}
-              onRefreshMetrics={actions.requestMetrics}
-              onRefreshEncodingReport={actions.requestEncodingReport}
-              onRequestSurrogateCurve={actions.requestSurrogateCurve}
-              onRunBenchmark={actions.requestBenchmark}
-              onSwitchMode={() => training.patch({ mode: "educational" })}
-            />
-
-            <HubPanel hub={hub} />
-
-            <EnergyPanel
-              payload={energy.payload}
-              targets={viewer.state.targetList?.targets ?? []}
-              loading={energy.loading}
-              onRun={(target) =>
-                energy.run(training.state.config, target)
-              }
-            />
+            <div className="tab-col">
+              <AnalysisPanels
+                mode={training.state.config.mode}
+                metrics={viewer.state.metrics}
+                encodingReport={viewer.state.encodingReport}
+                surrogateCurve={viewer.state.surrogateCurve}
+                benchmark={training.state.benchmark}
+                benchmarkLoading={training.state.benchmarkLoading}
+                surrogates={training.state.surrogates}
+                currentSurrogate={currentSurrogate}
+                onRefreshMetrics={actions.requestMetrics}
+                onRefreshEncodingReport={actions.requestEncodingReport}
+                onRequestSurrogateCurve={actions.requestSurrogateCurve}
+                onRunBenchmark={actions.requestBenchmark}
+                onSwitchMode={() => training.patch({ mode: "educational" })}
+              />
+            </div>
           </div>
-        </div>
+        </TabPanel>
+
+        <TabPanel id="hub" active={tabs.active}>
+          <div className="tab-col narrow">
+            <HubPanel hub={hub} />
+          </div>
+        </TabPanel>
+
+        <TabPanel id="deploy" active={tabs.active}>
+          <div className="tab-cols">
+            <div className="tab-col">
+              <TargetsPanel
+                list={viewer.state.targetList}
+                report={viewer.state.deploymentReport}
+                backendRun={viewer.state.backendRun}
+                onRefresh={actions.requestTargets}
+                onSelectTarget={actions.requestDeploymentReport}
+                onRunBackend={actions.requestDeployRun}
+              />
+            </div>
+
+            <div className="tab-col">
+              <EnergyPanel
+                payload={energy.payload}
+                targets={viewer.state.targetList?.targets ?? []}
+                loading={energy.loading}
+                onRun={(target) => energy.run(training.state.config, target)}
+              />
+            </div>
+          </div>
+        </TabPanel>
 
         {viewer.state.error && (
           <div className="error">{viewer.state.error}</div>
