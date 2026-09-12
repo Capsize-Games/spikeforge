@@ -34,7 +34,7 @@ that and describe the local source tree only.
   anti-causal depress, effect decays with `|delta_t|`), unlike
   `HebbianSynapse`'s single-shot rate-coded write. Verified against
   the textbook STDP learning-window shape in
-  `tests/test_stdp_synapse.py`; `examples/12_stdp_learning_window.py`
+  `tests/test_stdp_synapse.py`; `examples/14_stdp_learning_window.py`
   reproduces the curve.
 
 ### Fixed
