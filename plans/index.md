@@ -96,6 +96,15 @@ and a ready-to-file GitHub issue payload).
 Recommended implementation order: UC-1 → UC-2/UC-5 → UC-3/UC-4 → UC-6/UC-7 →
 UC-8/UC-9/UC-10.
 
+## Memory-system research (issues #22-#26)
+
+A research track, distinct from PC-0: one-shot, non-forgetting spiking
+memory, not a scoped production feature.
+
+- [Memory-system research](plans/memory_system_research.md) — the
+  held-out-digit POC (#22, shipped) and the camera-fed room memory
+  pipeline design (#23, design only).
+
 ## Guides
 
 - [Cookbook](COOKBOOK.md) — practical, runnable recipes for every shipped
