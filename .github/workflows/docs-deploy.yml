@@ -1,15 +1,17 @@
 name: Deploy docs
 
-# Publishes the mkdocs site (scripts/build_docs.sh) to GitHub Pages, for
-# spikeforge.net's docs subdomain to point at. Requires a one-time manual
-# step in the repo's Settings -> Pages: set the source to "GitHub Actions".
-# Private repos need GitHub Pro/Team/Enterprise for Pages; this workflow is
-# a no-op error until either that's enabled or the repo goes public.
+# Publishes spikeforge.net to GitHub Pages: landing/index.html at the site
+# root, the mkdocs build (scripts/build_docs.sh) nested under /docs/.
+# Requires a one-time manual step in the repo's Settings -> Pages: set the
+# source to "GitHub Actions". Private repos need GitHub Pro/Team/Enterprise
+# for Pages; this workflow is a no-op error until either that's enabled or
+# the repo goes public.
 
 on:
   push:
     branches: [main, arch-0001/phase-1]
     paths:
+      - "landing/**"
       - "plans/**"
       - "documentation/**"
       - "examples/README.md"
@@ -52,9 +54,15 @@ jobs:
       - name: Build the docs site (fails on a broken link)
         run: bash scripts/build_docs.sh --check
 
+      - name: Assemble the Pages root (landing page + /docs/)
+        run: |
+          mkdir -p build/pages
+          cp landing/index.html build/pages/index.html
+          cp -r build/docs build/pages/docs
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/docs
+          path: build/pages
 
   deploy:
     needs: build
