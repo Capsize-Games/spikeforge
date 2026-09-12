@@ -127,10 +127,72 @@ remembering them itself.
 issue tracker; this section is the durable record of the pipeline shape
 so implementation does not re-derive it from scratch.
 
-## 4. Issues #24 and #26
+## 4. Issue #24 — few-shot generalization to an untrained script (shipped)
 
-Tracked in their own sections once landed — #24 changes the base
-network's training objective (episodic/metric learning) rather than
-reusing `fc_small` as-is, and #26 is a falsification test of an unrelated
-philosophical claim, not a memory-system feature. See the issues
-themselves for current status.
+**Different claim from #22.** #22 recalls a class it was explicitly
+taught; #24 asks whether a spiking embedder's *notion of similarity*
+transfers to characters it never saw any example of, in any class.
+That requires changing the training objective from a fixed N-way
+classifier to episodic metric learning
+([`prototypical_loss`](spikeforge/memory/prototypical.py:26), Snell et
+al.'s Prototypical Networks, adapted to spiking readouts): `fc_small`'s
+final layer is repurposed as an embedding
+([`episodic_trainer.py`](spikeforge/memory/episodic_trainer.py:17)),
+trained so same-class rate-coded spike patterns land close together and
+different classes land apart, over randomly sampled N-way K-shot
+episodes
+([`episode_sampler.py`](spikeforge/memory/episode_sampler.py:1)). The
+frozen embedder's output spikes then feed #22's unchanged
+`OneShotAssociativeMemory` via
+[`embedding_readout.py`](spikeforge/memory/embedding_readout.py:1) —
+one memory neuron per class in a held-out evaluation episode, taught
+from a single example.
+
+**Setup:** trained on EMNIST letters (English script, 26 classes,
+`hidden=64`, `embed_dim=32`, 300 episodes of 5-way 5-shot); evaluated
+one-shot 5-way accuracy on two held-out sets never included in a
+training episode — (a) six EMNIST letters classes held out of training
+(same script) and (b) KMNIST (Japanese Kuzushiji, a script the embedder
+never saw in any form).
+
+**Result (real runs, not cherry-picked):**
+
+| Evaluation | One-shot 5-way accuracy | Chance |
+|---|---|---|
+| Training-episode accuracy (seen classes, 5-shot) | 60-96%, climbing over training | — |
+| Held-out EMNIST letters (same script, unseen classes, 300 vs. 1000 episodes) | 23.6% / 21.4% | 20% |
+| KMNIST (unseen script) | 21.0% | 20% |
+
+The training curve confirms the mechanism itself works — the network
+readily learns to discriminate the *trained* classes' spike patterns
+within episodes. But that success does not transfer: one-shot
+discrimination of classes excluded from every training episode is
+statistically indistinguishable from chance, whether those classes
+are same-script letters or a different script entirely. More training
+(1000 vs. 300 episodes) did not close the gap and if anything made it
+slightly worse, which argues against "just undertrained" as the
+explanation.
+
+**Honest reading, per the falsification-first stance this track takes
+(no motivated reasoning toward a positive result):** at this scale
+(`hidden=64`, `embed_dim=32`, rate coding, 15 timesteps), the embedder
+appears to be learning features specific to the 20 trained letter
+shapes rather than a transferable notion of character similarity — the
+overfitting failure mode common to small-budget few-shot learning, not
+evidence that spiking metric learning cannot generalize in principle.
+Per the original scoping note, a positive result here would count as
+evidence *against* the Consciousness Gradient paper's A3 axiom (issue
+#26), not for it — this negative result does not bear on that question
+either way. Unexplored, cheaper-than-scaling-up levers before concluding
+anything stronger: matching eval shot count to training shot count
+(training used 5-shot, evaluation used 1-shot only), a larger
+`hidden`/`embed_dim`, and more training episodes per unit of eval
+diversity rather than raw episode count.
+
+**Reproduce:** [`examples/12_few_shot_character_generalization.py`](examples/12_few_shot_character_generalization.py:1).
+
+## 5. Issue #26
+
+Tracked separately — a falsification test of an unrelated philosophical
+claim (the Consciousness Gradient paper's A3 axiom), not a memory-system
+feature. Depends on #24's architecture; see the issue for current status.
