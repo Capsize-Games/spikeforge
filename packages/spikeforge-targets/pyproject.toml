@@ -51,7 +51,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "spikeforge~=0.3.0",
+    "spikeforge~=0.3.1",
     "numpy>=1.26",
     "torch>=2.5",
 ]

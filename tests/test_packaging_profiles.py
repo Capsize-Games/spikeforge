@@ -183,7 +183,7 @@ def test_targets_distribution_owns_the_moved_surface() -> None:
     assert set(project["scripts"]) == _EXPECTED_TARGETS_SCRIPTS
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_TARGETS_DEPS
-    assert "spikeforge~=0.3.0" in deps
+    assert "spikeforge~=0.3.1" in deps
 
 
 def test_targets_console_script_targets_resolve_to_the_new_root() -> None:
@@ -210,7 +210,7 @@ def test_hub_distribution_owns_the_moved_surface() -> None:
     assert set(project["scripts"]) == _EXPECTED_HUB_SCRIPTS
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_HUB_DEPS
-    assert "spikeforge~=0.3.0" in deps
+    assert "spikeforge~=0.3.1" in deps
 
 
 def test_hub_console_script_targets_resolve_to_the_new_root() -> None:
@@ -236,7 +236,7 @@ def test_clients_distribution_owns_the_client_surface() -> None:
     assert set(project["scripts"]) == _EXPECTED_CLIENTS_SCRIPTS
     # A client install must never pull the torch-backed core.
     assert project["dependencies"] == []
-    assert "spikeforge~=0.3.0" not in set(project["dependencies"])
+    assert "spikeforge~=0.3.1" not in set(project["dependencies"])
 
 
 def test_clients_console_script_resolves_to_the_new_root() -> None:
@@ -267,7 +267,7 @@ def test_io_distribution_owns_the_io_surface() -> None:
     assert set(project["scripts"]) == _EXPECTED_IO_SCRIPTS
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_IO_DEPS
-    assert "spikeforge~=0.3.0" in deps
+    assert "spikeforge~=0.3.1" in deps
     assert project["version"] == "0.1.0"
 
 

@@ -5,10 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-This project has **not** been published to any package index; the versions below
-describe the local source tree.
+Version tags shaped `<distribution>-vX.Y.Z` (e.g. `spikeforge-v0.3.1`) mark
+what was actually published to PyPI; the bare `[X.Y.Z]` headers below predate
+that and describe the local source tree only.
 
 ## [Unreleased]
+
+## [spikeforge-v0.3.1] - 2026-09-12
 
 ### Added
 
@@ -24,6 +27,15 @@ describe the local source tree.
   system's existing generic `dropout` kind (already NIR-export-safe
   as a passthrough at inference). Reaches training the same way
   every other `conv_net` param does, via `topology_params`.
+- **`spikeforge.memory.stdp_synapse.STDPSynapse`.** A feedforward
+  synapse written by pair-based spike-timing-dependent plasticity:
+  exponentially-decaying pre/post eligibility traces update every
+  weight from genuine spike order (causal pairs potentiate,
+  anti-causal depress, effect decays with `|delta_t|`), unlike
+  `HebbianSynapse`'s single-shot rate-coded write. Verified against
+  the textbook STDP learning-window shape in
+  `tests/test_stdp_synapse.py`; `examples/12_stdp_learning_window.py`
+  reproduces the curve.
 
 ### Fixed
 
@@ -41,6 +53,25 @@ describe the local source tree.
   default. Invisible on CPU (`device.warmup()` no-ops there), but a
   real CUDA run's warmup pass forwarded a wrongly-shaped dummy tensor
   and crashed. Now checks `features` before that fallback.
+- **Training with a stale checkpoint reference crashed with a raw
+  `FileNotFoundError`.** A checkpoint name set by loading a model
+  persists in the dashboard's local storage across sessions; if the
+  server's model directory was since cleared or rebuilt, a plain
+  "Train" click resent that now-missing name and
+  `model_store.load()` let the bare OS path leak to the client.
+  `load()` now raises a named "checkpoint not found" error, and the
+  dashboard drops a checkpoint reference once the server's own model
+  list shows it no longer exists.
+
+### Dashboard
+
+- **Prediction moved to the Viewer tab.** "Prediction (displayed
+  sample)" lived in Training & Analysis, away from the sample it
+  scores; it's now in the Viewer tab's right column.
+- **Loaded-model summary moved under the tab strip.** The chip
+  naming the active checkpoint only showed in the Viewer tab's side
+  column; it's now in the fixed header under the tabs, visible
+  regardless of which tab is open.
 
 ## [spikeforge-targets-v0.1.1] - 2026-09-11
 
