@@ -104,6 +104,7 @@ nav:
       - Spiking transformers: use_case_spiking_transformers.md
       - Edge power budgets: use_case_edge_power_budgets.md
       - Computational neuroscience: use_case_computational_neuroscience.md
+  - Memory-system research: memory_system_research.md
   - Reference:
       - Project rules: rules.md
       - Integration plan: INTEGRATION_PLAN.md
