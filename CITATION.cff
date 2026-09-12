@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: >-
+  If you use spikeforge in your research, please cite it using the
+  metadata below.
+title: spikeforge
+abstract: >-
+  A spiking-neural-network (SNN) toolkit built on snnTorch and PyTorch.
+  Encodes datasets into rate, latency, delta, and random spikes; trains,
+  validates, exports, and deploys LIF networks across a NIR-described
+  interpreter spine with cross-framework interoperability (snnTorch,
+  Norse, Lava) and a live browser dashboard.
+type: software
+authors:
+  - name: "Capsize Games"
+    email: contact@capsizegames.com
+repository-code: "https://github.com/capsize-games/spikeforge"
+url: "https://spikeforge.net"
+license: BSD-3-Clause
+keywords:
+  - spiking neural networks
+  - neuromorphic computing
+  - snnTorch
+  - PyTorch
+  - NIR
+  - leaky integrate-and-fire
