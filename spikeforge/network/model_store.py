@@ -55,8 +55,18 @@ def save(
 
 
 def load(name: Optional[str]) -> Dict[str, Any]:
-    """Load a checkpoint dict by name."""
-    return torch.load(path_for(name), map_location="cpu", weights_only=False)
+    """Load a checkpoint dict by name.
+
+    Raises a plain ``FileNotFoundError`` with the checkpoint name (not the
+    raw disk path) so a client that surfaces ``str(exc)`` verbatim shows
+    something a user can act on instead of a server filesystem path.
+    """
+    filepath = path_for(name)
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(
+            f"checkpoint {name!r} not found (it may have been deleted)"
+        )
+    return torch.load(filepath, map_location="cpu", weights_only=False)
 
 
 def manifest(name: Optional[str]) -> Dict[str, Any]:

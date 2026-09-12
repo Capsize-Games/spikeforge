@@ -6,6 +6,7 @@ docs/
 *.gif
 *.mp4
 *.png
+!images/*.png
 
 # Frontend client
 client/node_modules/
