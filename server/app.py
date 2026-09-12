@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from server.bundle_routes import router as bundle_router
 from server.downloads import manager
 from server.handlers import dispatch
 from server.hub_downloads import manager as hub_manager
@@ -19,6 +20,8 @@ app = FastAPI(title="spikeforge server")
 
 # Warm the CUDA context once at startup so training/benchmarks don't stall.
 device_mod.prime()
+
+app.include_router(bundle_router)
 
 # Serve the built React app (no-op when client/dist is absent).
 mount_client(app)

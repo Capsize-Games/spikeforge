@@ -35,6 +35,7 @@ Start with the [architecture](architecture.md) and
 - [Event runtime and energy (WS-D)](event-runtime-and-energy.md) — sparse runner and SOP/MAC/AC accounting.
 - [Operational maturity (WS-E)](operational-maturity.md) — persisted metrics, tracking sinks, determinism, docs site.
 - [Interop fold-ins (WS-F)](interop-foldins.md) — event training, ONNX bridge, `nirtorch` extraction, quantization.
+- [Model deployment: bundles and modules](model-deployment.md) — bundling a checkpoint, running it headless, and installing it as a standalone command.
 
 ## Honesty and limits
 
@@ -47,7 +48,7 @@ Read these before trusting a number:
 
 - [Project rules](../rules.md) — code style, hard limits, and design invariants.
 - [Cookbook](../COOKBOOK.md) — copy-pasteable recipes.
-- [Examples](../examples/README.md) — eleven runnable end-to-end scripts.
+- [Examples](../examples/README.md) — fifteen runnable end-to-end scripts.
 - [Protocol contract](../protocol/) — the WebSocket JSON Schema source of truth.
 - [Open-source checklist](../OPEN_SOURCE_CHECKLIST.md) — pre-release readiness.
 - `plans/` — the ARCH-0001 repository-split design, roadmaps, and workstream plans; use that folder's `index.md` as its table of contents.
