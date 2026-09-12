@@ -1,86 +1,106 @@
 <title>Spikeforge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800;900&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  /* Midnight + purple: a single committed look, not a light/dark pair. */
+  /* Same tokens as the dashboard app (client/src/styles/base.css) --
+     the landing page is themed identically, not independently. */
   :root{
-    --bg:#0A0A14;
-    --surface:#131226;
-    --surface-2:#1B1A33;
-    --ink:#EDEBF7;
-    --muted:#8D89A8;
-    --accent:#A78BFA;
-    --accent-ink:#C4B5FD;
-    --line:#26234A;
-    --ok:#4ADE80;
-    --dev:#FBBF24;
-    --none:#6E6A8C;
+    --bg:#0d1117;
+    --panel:#161b22;
+    --panel-alt:#12171e;
+    --panel-head:#0b0f14;
+    --border:#30363d;
+    --text:#c9d1d9;
+    --muted:#8b949e;
+    --accent:#58a6ff;
+    --on-accent:#0d1117;
+    --ok:#3fb950;
+    --bad:#f85149;
+    --warn:#e3b341;
+    color-scheme: dark;
+  }
+  [data-theme="light"]{
+    --bg:#f6f8fa;
+    --panel:#ffffff;
+    --panel-alt:#ffffff;
+    --panel-head:#f6f8fa;
+    --border:#d0d7de;
+    --text:#1f2328;
+    --muted:#59636e;
+    --accent:#0969da;
+    --on-accent:#ffffff;
+    --ok:#1a7f37;
+    --bad:#cf222e;
+    --warn:#9a6700;
+    color-scheme: light;
   }
 
   *{box-sizing:border-box;}
+  html,body{height:100%;}
   body{
     margin:0;
     background:var(--bg);
-    color:var(--ink);
-    font-family:"Manrope", ui-sans-serif, system-ui, sans-serif;
-    padding-inline:20px;
+    color:var(--text);
+    font-family:"Inter", ui-sans-serif, system-ui, sans-serif;
     line-height:1.55;
     font-size:15.5px;
   }
-  .wrap{max-width:980px;margin-inline:auto;}
-  a{color:var(--accent-ink);}
+  .wrap{max-width:980px;margin-inline:auto;padding-inline:20px;}
+  a{color:var(--accent);}
   a:focus-visible, button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  code, .mono{font-family:"JetBrains Mono", ui-monospace, monospace; font-size:0.93em;}
+  code, .mono{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; font-size:0.92em;}
   p{max-width:68ch;}
-  p code{background:var(--surface-2);padding:0.05em 0.35em;border-radius:3px;}
+  p code{background:var(--panel-alt);padding:0.05em 0.35em;border-radius:4px;}
 
-  .display{
-    font-family:"Unbounded", ui-sans-serif, sans-serif;
-    font-weight:800;
-    text-wrap:balance;
-    line-height:1.05;
+  .display{font-weight:800;text-wrap:balance;line-height:1.15;letter-spacing:-0.01em;}
+
+  .icon{display:inline-block;vertical-align:-3px;color:var(--accent);}
+  .icon svg{display:block;}
+
+  header.site{
+    position:sticky;top:0;z-index:10;
+    background:var(--panel-head);border-bottom:1px solid var(--border);
   }
-  .hl{color:var(--accent);}
-
   .topbar{
     display:flex;align-items:center;justify-content:space-between;
-    padding-block:16px;border-bottom:1px solid var(--line);
-    flex-wrap:wrap;gap:10px;
+    padding-block:14px;flex-wrap:wrap;gap:10px;
   }
-  .brand{font-family:"Unbounded",sans-serif;font-weight:800;font-size:18px;}
+  .brand{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:17px;color:var(--text);text-decoration:none;}
   .topnav{display:flex;gap:20px;font-size:14px;flex-wrap:wrap;}
-  .topnav a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent;}
+  .topnav a{color:var(--text);text-decoration:none;border-bottom:1px solid transparent;}
   .topnav a:hover{border-color:var(--accent);}
 
   .hero{display:grid;grid-template-columns:1.1fr 0.9fr;gap:36px;padding-block:40px 34px;align-items:start;}
   @media (max-width:820px){ .hero{grid-template-columns:1fr;} }
-  .hero h1{font-size:clamp(30px,5vw,44px);margin:0 0 14px;}
-  .hero .lineage{font-size:13.5px;color:var(--muted);margin:10px 0 0;}
+  .hero h1{display:flex;align-items:center;gap:14px;font-size:clamp(28px,5vw,40px);margin:0 0 14px;}
+  .hero h1 .icon{width:1.1em;height:1.1em;}
+  .hero h1 .icon svg{width:100%;height:100%;}
   .pre1{
-    margin-top:18px;padding:12px 14px;border-left:2px solid var(--accent);
-    background:var(--surface);font-size:13.5px;color:var(--muted);
+    margin-top:18px;padding:12px 14px;border-left:3px solid var(--accent);
+    background:var(--panel);border-radius:0 6px 6px 0;font-size:13.5px;color:var(--muted);
   }
-  .pre1 b{color:var(--ink);}
+  .pre1 b{color:var(--text);}
 
-  .install{margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:13px 15px;max-width:60ch;}
+  .install{margin-top:20px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:13px 15px;max-width:60ch;}
   .install .cmd{font-size:13px;overflow-x:auto;}
-  .install .cmd .p{color:var(--accent-ink);}
+  .install .cmd .p{color:var(--accent);}
 
   .links{display:flex;gap:18px;margin-top:18px;font-size:14px;flex-wrap:wrap;}
   .links a{text-decoration:none;font-weight:500;}
 
-  .scope{background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:14px 14px 4px;}
-  .scope-head{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
-  canvas{display:block;width:100%;height:auto;border-radius:2px;background:var(--surface-2);}
-  .scope-legend{display:flex;gap:16px;margin:9px 0 12px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);flex-wrap:wrap;}
+  .scope{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 14px 4px;}
+  .scope-head{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+  canvas{display:block;width:100%;height:auto;border-radius:4px;background:var(--panel-alt);}
+  .scope-legend{display:flex;gap:16px;margin:9px 0 12px;font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);flex-wrap:wrap;}
   .scope-legend span{display:inline-flex;align-items:center;gap:5px;}
   .swatch{width:9px;height:9px;border-radius:2px;display:inline-block;}
   .scope-cite{font-size:11px;color:var(--muted);margin-top:8px;}
   .scope-cite code{background:none;padding:0;}
 
-  section{padding-block:34px;border-top:1px solid var(--line);}
-  section h2{font-family:"Unbounded",sans-serif;font-weight:800;text-transform:uppercase;font-size:24px;margin:0 0 6px;}
+  main{display:block;}
+  section{padding-block:34px;border-top:1px solid var(--border);}
+  section h2{font-weight:800;font-size:22px;margin:0 0 6px;}
   section > p.intro{color:var(--muted);font-size:14px;margin:0 0 22px;}
 
   dl.features{display:grid;grid-template-columns:140px 1fr;row-gap:14px;column-gap:18px;margin:0;}
@@ -89,19 +109,22 @@
   @media (max-width:640px){ dl.features{grid-template-columns:1fr;row-gap:4px;} dl.features dd{margin-bottom:10px;} }
 
   table{width:100%;border-collapse:collapse;font-size:14px;}
-  table caption{text-align:left;font-size:12px;color:var(--muted);margin-bottom:8px;}
-  th{text-align:left;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);padding:0 10px 8px 0;border-bottom:1px solid var(--line);}
-  td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{text-align:left;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);padding:0 10px 8px 0;border-bottom:1px solid var(--border);}
+  td{padding:10px 10px 10px 0;border-bottom:1px solid var(--border);vertical-align:top;}
   td.note{color:var(--muted);font-size:13px;}
   tr:last-child td{border-bottom:none;}
   .status-wrap{overflow-x:auto;}
 
-  .pill{font-family:"JetBrains Mono",monospace;font-size:11px;padding:2px 8px;border-radius:3px;white-space:nowrap;display:inline-block;}
-  .pill.done{color:var(--ok);background:color-mix(in srgb, var(--ok) 14%, transparent);}
-  .pill.dev{color:var(--dev);background:color-mix(in srgb, var(--dev) 16%, transparent);}
-  .pill.none{color:var(--none);background:color-mix(in srgb, var(--none) 16%, transparent);}
+  .pill{font-family:ui-monospace,monospace;font-size:11px;padding:2px 8px;border-radius:10px;white-space:nowrap;display:inline-block;}
+  .pill.done{color:var(--ok);background:color-mix(in srgb, var(--ok) 16%, transparent);}
+  .pill.dev{color:var(--warn);background:color-mix(in srgb, var(--warn) 18%, transparent);}
+  .pill.none{color:var(--muted);background:color-mix(in srgb, var(--muted) 18%, transparent);}
 
-  footer{padding-block:28px 44px;border-top:1px solid var(--line);}
+  footer.site{
+    position:sticky;bottom:0;z-index:10;
+    background:var(--panel-head);border-top:1px solid var(--border);
+    padding-block:14px;
+  }
   .foot-row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);}
   .foot-links{display:flex;gap:16px;flex-wrap:wrap;}
   .foot-links a{color:var(--muted);text-decoration:none;}
@@ -110,10 +133,14 @@
   @media (prefers-reduced-motion: reduce){ * { animation-duration: 0.001ms !important; } }
 </style>
 
-<div class="wrap">
-
-  <div class="topbar">
-    <div class="brand"><span class="hl">spike</span>forge</div>
+<header class="site">
+  <div class="wrap topbar">
+    <a class="brand" href="#top">
+      <span class="icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+      </span>
+      spikeforge
+    </a>
     <nav class="topnav">
       <a href="#features">Features</a>
       <a href="#status">Status</a>
@@ -121,10 +148,19 @@
       <a href="https://github.com/capsize-games/spikeforge">GitHub</a>
     </nav>
   </div>
+</header>
+
+<main>
+<div class="wrap" id="top">
 
   <div class="hero">
     <div>
-      <h1 class="display"><span class="hl">spike</span>forge</h1>
+      <h1 class="display">
+        <span class="icon" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+        </span>
+        spikeforge
+      </h1>
       <p>
         A spiking-neural-network (SNN) toolkit built on
         <a href="https://snntorch.readthedocs.io/">snnTorch</a> and PyTorch.
@@ -161,7 +197,7 @@
       <div class="scope-legend">
         <span><span class="swatch" style="background:var(--muted)"></span>I[t]</span>
         <span><span class="swatch" style="background:var(--accent)"></span>U[t]</span>
-        <span><span class="swatch" style="background:var(--accent)"></span>S[t]</span>
+        <span><span class="swatch" style="background:var(--text)"></span>S[t]</span>
       </div>
       <p class="scope-cite">Defaults from <code>spikeforge/neurons/contract.py</code> (<code>DEFAULT_BETA</code>, <code>DEFAULT_THRESHOLD</code>). Notation matches the dashboard's own <code>U[t]</code>/<code>I[t]</code>/<code>S[t]</code> introspection traces.</p>
     </div>
@@ -274,19 +310,20 @@
     </div>
   </section>
 
-  <footer>
-    <div class="foot-row">
-      <span>spikeforge &middot; BSD-3-Clause &middot; Capsize LLC</span>
-      <div class="foot-links">
-        <a href="https://github.com/capsize-games/spikeforge">GitHub</a>
-        <a href="https://github.com/capsize-games/spikeforge/blob/main/LICENSE">License</a>
-        <a href="https://github.com/capsize-games/spikeforge/blob/main/CONTRIBUTING.md">Contributing</a>
-        <a href="https://github.com/capsize-games/spikeforge/blob/main/CHANGELOG.md">Changelog</a>
-      </div>
-    </div>
-  </footer>
-
 </div>
+</main>
+
+<footer class="site">
+  <div class="wrap foot-row">
+    <span>spikeforge &middot; BSD-3-Clause &middot; Capsize LLC</span>
+    <div class="foot-links">
+      <a href="https://github.com/capsize-games/spikeforge">GitHub</a>
+      <a href="https://github.com/capsize-games/spikeforge/blob/main/LICENSE">License</a>
+      <a href="https://github.com/capsize-games/spikeforge/blob/main/CONTRIBUTING.md">Contributing</a>
+      <a href="https://github.com/capsize-games/spikeforge/blob/main/CHANGELOG.md">Changelog</a>
+    </div>
+  </div>
+</footer>
 
 <script>
 (function(){
@@ -324,11 +361,11 @@
   for (var i=0;i<N*2;i++){ step(); }
 
   function draw(){
-    var bg = readColor('--surface-2');
+    var bg = readColor('--panel-alt');
     var muted = readColor('--muted');
     var accent = readColor('--accent');
-    var accent2 = readColor('--accent-ink');
-    var line = readColor('--line');
+    var text = readColor('--text');
+    var line = readColor('--border');
 
     ctx.clearRect(0,0,W,H);
     ctx.fillStyle = bg;
@@ -361,7 +398,7 @@
       }
     }
 
-    ctx.strokeStyle = accent2;
+    ctx.strokeStyle = accent;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
     for (i=0;i<N;i++){
@@ -371,14 +408,14 @@
     }
     ctx.stroke();
 
-    ctx.fillStyle = accent;
+    ctx.fillStyle = text;
     for (i=0;i<N;i++){
       if (spikes[i] > 0){
         ctx.fillRect(padX + i*stepX, laneSpikeY, 1.8, laneSpikeH);
       }
     }
 
-    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.font = '10px ui-monospace, monospace';
     ctx.fillStyle = muted;
     ctx.fillText('I[t]', padX, laneInputY - 6);
     ctx.fillText('U[t]', padX, laneMemTop - 6);
