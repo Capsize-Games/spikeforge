@@ -11,6 +11,32 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+## [spikeforge-server-v0.3.0] - 2026-09-12
+
+### Added
+
+- **`SPIKEFORGE_DASHBOARD_TOKEN`: optional bearer/query-param gate on `/ws`
+  and `GET /api/bundle/<name>`.** New `server/auth.py`, mirroring
+  `spikeforge-serve`'s existing `/metrics` bearer-token pattern. A
+  WebSocket connection is rejected before `accept()` (close code 1008)
+  when the token is missing or wrong; the bundle route 401s the same way.
+  Both accept the token as a query param (`?token=...`) as well as an
+  `Authorization: Bearer` header, since a browser can attach neither a
+  custom header to a WebSocket handshake nor one to a plain `<a
+  download>` link. Unset (the default) leaves both routes exactly as
+  open as before — no change for `docker compose up` on localhost.
+- **`SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS`: a server-wide cap on
+  concurrent training/pipeline jobs.** New `server/concurrency.py`.
+  `TrainingService`/`PipelineService` already refused a second run
+  *within one session*; this caps it *across* sessions too (default 2),
+  so many WebSocket connections can't each start their own run and hang
+  the shared server. A request past the cap gets a clear `server busy`
+  `error` message instead of queuing silently.
+- **Dashboard: confirm-before-destroy.** A themed `ConfirmDialog`
+  now guards every one-click action that discarded state without
+  asking — the Pipeline tab's New/Delete, unloading the current model,
+  and cancelling a dataset or hub download.
+
 ## [spikeforge-serve-v0.2.0] - 2026-09-12
 
 ### Added
