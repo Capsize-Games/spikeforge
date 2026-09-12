@@ -53,11 +53,17 @@ canvas,
 
 .raster-plot {
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .raster-body {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Y-axis rail: absolutely placed to the left of the body so the canvas keeps
@@ -88,6 +94,18 @@ canvas,
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Each of the 3 layer rasters shares the stack's height equally, so the
+   whole "network activity" panel fills whatever room the tab has instead
+   of stacking to a fixed pixel height and forcing the tab to scroll. */
+.raster-row {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 70px;
 }
 
 .raster-row-head {
@@ -142,12 +160,13 @@ input[type="number"]::-webkit-inner-spin-button {
 .raster-wrap {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
 }
 
 .raster-wrap canvas {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
 }
 
 .sample-wrap.grow {
