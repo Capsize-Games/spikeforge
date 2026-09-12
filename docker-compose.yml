@@ -18,6 +18,13 @@ services:
       - spikeforge-data:/data
     environment:
       - SPIKEFORGE_DATA_DIR=/data
+      # Gate /ws and /api/bundle/<name> behind a shared secret once this
+      # deployment is reachable beyond localhost (see documentation/usage.md
+      # -- Access control & rate limiting). Unset by default: no auth, no
+      # change from today's behaviour.
+      # - SPIKEFORGE_DASHBOARD_TOKEN=some-long-random-secret
+      # Cap concurrent training/pipeline jobs server-wide (default 2).
+      # - SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS=2
     # Request the host GPU so the container can train on CUDA. Needs the
     # NVIDIA Container Toolkit; ignored when no GPU is present.
     deploy:

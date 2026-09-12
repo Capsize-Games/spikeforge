@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Type
 
 import torch
 
+from server import concurrency
 from server.schemas import EncodeConfig, TrainConfig
 from spikeforge.data.datasets import dataset_modality
 from spikeforge.network import model_store
@@ -121,30 +122,40 @@ class TrainingService:
 
     def start(
         self, config: TrainConfig, encode: Optional[EncodeConfig] = None
-    ) -> None:
-        """Spawn a worker that builds the engine, then trains."""
+    ) -> bool:
+        """Spawn a worker that builds the engine, then trains.
+
+        Returns False without starting anything when the server-wide
+        training/pipeline job cap (see ``server.concurrency``) is full.
+        """
+        if not concurrency.try_acquire():
+            return False
         self._stop.clear()
         self._history = []
         self._thread = threading.Thread(
             target=self._build_and_run, args=(config, encode), daemon=True
         )
         self._thread.start()
+        return True
 
     def _build_and_run(
         self, config: TrainConfig, encode: Optional[EncodeConfig]
     ) -> None:
         """Build the engine off the event loop, then stream metrics."""
         try:
-            engine = self._make_engine(config, encode, config.checkpoint)
-        except Exception as exc:  # surface build failures to the client
-            self._put({"type": "error", "payload": str(exc)})
-            self._put({"type": "train_state",
-                       "payload": {"running": False, "reason": "error",
-                                   "mode": config.mode}})
-            self._thread = None
-            return
-        self._engine = engine
-        self._run(engine)
+            try:
+                engine = self._make_engine(config, encode, config.checkpoint)
+            except Exception as exc:  # surface build failures to the client
+                self._put({"type": "error", "payload": str(exc)})
+                self._put({"type": "train_state",
+                           "payload": {"running": False, "reason": "error",
+                                       "mode": config.mode}})
+                self._thread = None
+                return
+            self._engine = engine
+            self._run(engine)
+        finally:
+            concurrency.release()
 
     def adopt(
         self,

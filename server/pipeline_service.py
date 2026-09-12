@@ -10,6 +10,7 @@ import asyncio
 import threading
 from typing import Any, Dict, Optional
 
+from server import concurrency
 from server.schemas import PipelineGraphConfig
 from spikeforge.serving import bundle as bundle_mod
 from spikeforge_serve.pipeline import PipelineGraph
@@ -33,17 +34,33 @@ class PipelineService:
 
     def start(
         self, graph_config: PipelineGraphConfig, request: Dict[str, Any]
-    ) -> None:
-        """Spawn a worker that runs the pipeline and streams node results."""
+    ) -> bool:
+        """Spawn a worker that runs the pipeline and streams node results.
+
+        Returns False without starting anything when the server-wide
+        training/pipeline job cap (see ``server.concurrency``) is full.
+        """
+        if not concurrency.try_acquire():
+            return False
         self._stop.clear()
         self._thread = threading.Thread(
-            target=self._run, args=(graph_config, request), daemon=True
+            target=self._run_job, args=(graph_config, request), daemon=True
         )
         self._thread.start()
+        return True
 
     def stop(self) -> None:
         """Signal the worker to stop after the current node."""
         self._stop.set()
+
+    def _run_job(
+        self, graph_config: PipelineGraphConfig, request: Dict[str, Any]
+    ) -> None:
+        """Run the pipeline, always freeing the job slot afterward."""
+        try:
+            self._run(graph_config, request)
+        finally:
+            concurrency.release()
 
     def _run(
         self, graph_config: PipelineGraphConfig, request: Dict[str, Any]

@@ -132,3 +132,14 @@ failures emit the existing `error` message rather than raising.
 
 The schema also still declares a legacy `predict` type, but the client no
 longer sends it and the server does not dispatch it.
+
+### Access control & rate limiting
+
+`/ws` and `GET /api/bundle/<name>` are open by default (unchanged from
+earlier phases). An operator exposing the dashboard beyond localhost can
+set `SPIKEFORGE_DASHBOARD_TOKEN` to gate both, and
+`SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS` to cap how many `train` /
+`run_pipeline` jobs run at once server-wide -- a request past that cap gets
+a `server busy` `error` message rather than queuing silently. See
+[Usage — Access control & rate limiting](usage.md#access-control--rate-limiting)
+for the docker-compose configuration.

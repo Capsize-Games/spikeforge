@@ -15,6 +15,7 @@ import type {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
+import { ConfirmDialog } from "./ConfirmDialog";
 import { HelpTip } from "./HelpTip";
 import {
   PipelineFlowNode,
@@ -107,6 +108,9 @@ export function PipelinePanel({
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [inputText, setInputText] = useState(DEFAULT_INPUT);
   const [inputError, setInputError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<
+    "new" | "delete" | null
+  >(null);
 
   const nodes: Node[] = useMemo(
     () =>
@@ -226,7 +230,11 @@ export function PipelinePanel({
           </button>
           <button
             className="apply small ghost"
-            onClick={() => onSetGraph({ version: 1, name: "", nodes: [], edges: [] })}
+            onClick={() => setConfirmAction("new")}
+            disabled={
+              (graph.nodes?.length ?? 0) === 0 &&
+              (graph.edges?.length ?? 0) === 0
+            }
           >
             New
           </button>
@@ -251,7 +259,7 @@ export function PipelinePanel({
           </select>
           <button
             className="apply small ghost"
-            onClick={() => graph.name && onDeletePipeline(graph.name)}
+            onClick={() => graph.name && setConfirmAction("delete")}
             disabled={!graph.name}
           >
             Delete
@@ -360,6 +368,29 @@ export function PipelinePanel({
         </div>
         {status && <div className="muted">{status}</div>}
       </div>
+
+      <ConfirmDialog
+        open={confirmAction === "new"}
+        title="Discard this pipeline?"
+        message="This clears the current graph. Save it first if you want to keep it."
+        confirmLabel="Discard"
+        onConfirm={() => {
+          onSetGraph({ version: 1, name: "", nodes: [], edges: [] });
+          setConfirmAction(null);
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
+      <ConfirmDialog
+        open={confirmAction === "delete"}
+        title={`Delete "${graph.name}"?`}
+        message="This permanently removes the saved pipeline. This can't be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (graph.name) onDeletePipeline(graph.name);
+          setConfirmAction(null);
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   );
 }
