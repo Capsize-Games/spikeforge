@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   train: "snn.trainConfig",
   theme: "snn.theme",
   autoPredict: "snn.autoPredict",
+  tab: "snn.tab",
 } as const;
 
 /** Read a persisted JSON object and shallow-merge it over the fallback. */
@@ -23,6 +24,24 @@ export function readJson<T extends object>(key: string, fallback: T): T {
 export function writeJson(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Read a persisted string, falling back when it is absent. */
+export function readString(key: string, fallback: string): string {
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Persist a plain string, ignoring quota or privacy-mode errors. */
+export function writeString(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
   } catch {
     /* ignore */
   }

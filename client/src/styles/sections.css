@@ -37,22 +37,58 @@
   padding: 2px 0 14px;
 }
 
-.col-controls,
-.col-viz,
-.col-training {
+.col-viz {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Viewer tab: live activity (wider) beside on-demand analysis panels, so
+   the stack that used to run the full tab height fits side by side instead.
+   Both columns stretch to the row's full height (grid's default alignment)
+   so the activity panel below can flex-fill whatever it doesn't need. */
+.viewer-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
   gap: 12px;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
-/* The middle column is the densest: pack it tighter than the sides. */
-.col-viz {
-  gap: 8px;
+@media (max-width: 1100px) {
+  /* Stacked single column: let content take its natural height and the
+     tab scroll again, rather than squeezing both halves to share one
+     screen's height. */
+  .viewer-grid {
+    grid-template-columns: minmax(0, 1fr);
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+
+  .viewer-grid .activity-panel {
+    flex: 0 1 auto;
+  }
+
+  .viewer-grid .raster-row {
+    flex: 0 1 auto;
+    min-height: 220px;
+  }
 }
 
 .col-viz .panel {
   padding: 10px;
+}
+
+/* Network activity absorbs whatever height TimeCursor/InputRow don't use,
+   instead of stacking its 3 rasters to a fixed pixel height and forcing
+   the tab to scroll (see RasterCanvas's measured-height resize). */
+.col-viz .activity-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .col-viz .panel-title {

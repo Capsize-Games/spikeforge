@@ -6,15 +6,12 @@ import { SelectField } from "./SelectField";
 import type { Option } from "./SelectField";
 import { SliderField } from "./SliderField";
 import { Section } from "./Stepper";
-import { TrainControls } from "./TrainControls";
 
 interface Props {
   config: EncodeConfig;
   model: TrainConfig;
   datasets: DatasetInfo[];
   gpuAvailable: boolean;
-  connected: boolean;
-  trainRunning: boolean;
   /** Registry names for the architecture pickers, empty until listed. */
   topologies: string[];
   neurons: string[];
@@ -24,8 +21,6 @@ interface Props {
   onChange: (patch: Partial<EncodeConfig>) => void;
   onModelChange: (patch: Partial<TrainConfig>) => void;
   onSelectSample: (patch: Partial<EncodeConfig>) => void;
-  onTrain: () => void;
-  onStopTrain: () => void;
 }
 
 /** Human label for a dataset option, including modality and availability. */
@@ -55,8 +50,6 @@ export function Controls(props: Props) {
     model,
     datasets,
     gpuAvailable,
-    connected,
-    trainRunning,
     topologies,
     neurons,
     surrogates,
@@ -64,8 +57,6 @@ export function Controls(props: Props) {
     onChange,
     onModelChange,
     onSelectSample,
-    onTrain,
-    onStopTrain,
   } = props;
 
   const selected = datasets.find((d) => d.name === config.dataset);
@@ -82,71 +73,65 @@ export function Controls(props: Props) {
         </div>
       )}
 
-      <Section
-        title="Data"
-        hint={
-          eventMode
-            ? "which event recording the network looks at"
-            : "which image the network looks at"
-        }
-      >
-        <SelectField
-          label="Dataset"
-          value={config.dataset}
-          help={HELP.dataset}
-          tour="dataset"
-          disabled={locked}
-          options={datasetOptions(datasets, config.dataset)}
-          onChange={(v) => onSelectSample({ dataset: v, sample_index: 0 })}
-        />
+      <div className="controls-cols">
+        <div className="controls-col">
+          <Section
+            title="Data"
+            hint={
+              eventMode
+                ? "which event recording the network looks at"
+                : "which image the network looks at"
+            }
+          >
+            <SelectField
+              label="Dataset"
+              value={config.dataset}
+              help={HELP.dataset}
+              tour="dataset"
+              disabled={locked}
+              options={datasetOptions(datasets, config.dataset)}
+              onChange={(v) => onSelectSample({ dataset: v, sample_index: 0 })}
+            />
 
-        {eventUnavailable && (
-          <p className="modality-note warn">{HELP.event_availability}</p>
-        )}
+            {eventUnavailable && (
+              <p className="modality-note warn">{HELP.event_availability}</p>
+            )}
 
-        {eventMode && !eventUnavailable && (
-          <p className="modality-note">{HELP.event_training}</p>
-        )}
+            {eventMode && !eventUnavailable && (
+              <p className="modality-note">{HELP.event_training}</p>
+            )}
 
-        <SliderField
-          label="subset" value={config.subset} min={1} max={50} step={1}
-          help={HELP.subset} onChange={(v) => onChange({ subset: v })}
-        />
-        <SliderField
-          label="batch_size" value={config.batch_size}
-          min={8} max={512} step={8}
-          help={HELP.batch_size} onChange={(v) => onChange({ batch_size: v })}
-        />
-      </Section>
+            <SliderField
+              label="subset" value={config.subset} min={1} max={50} step={1}
+              help={HELP.subset} onChange={(v) => onChange({ subset: v })}
+            />
+            <SliderField
+              label="batch_size" value={config.batch_size}
+              min={8} max={512} step={8}
+              help={HELP.batch_size} onChange={(v) => onChange({ batch_size: v })}
+            />
+          </Section>
 
-      <EncodingControls
-        config={config}
-        locked={locked}
-        eventMode={eventMode}
-        onChange={onChange}
-      />
+          <EncodingControls
+            config={config}
+            locked={locked}
+            eventMode={eventMode}
+            onChange={onChange}
+          />
+        </div>
 
-      <ModelSection
-        model={model}
-        gpuAvailable={gpuAvailable}
-        locked={locked}
-        topologies={topologies}
-        neurons={neurons}
-        surrogates={surrogates}
-        onChange={onModelChange}
-      />
-
-      <Section
-        title="Train & inspect"
-        hint="fit the network, manage checkpoints"
-      >
-        <TrainControls
-          running={trainRunning}
-          connected={connected}
-          onTrain={onTrain}
-          onStop={onStopTrain}
-        />
-      </Section>
+        <div className="controls-col">
+          <ModelSection
+            model={model}
+            gpuAvailable={gpuAvailable}
+            locked={locked}
+            topologies={topologies}
+            neurons={neurons}
+            surrogates={surrogates}
+            onChange={onModelChange}
+          />
+        </div>
+      </div>
     </div>
   );
 }
