@@ -1,10 +1,14 @@
 """Compare two benchmark records and flag regressions past a threshold.
 
 The comparator matches records on ``(topology, mode)`` and reports the
-relative change of the throughput and memory metrics. A candidate regresses
-when a throughput metric moves the wrong way by more than the threshold, or
-when its peak memory grows by more than it. The result is JSON-able, and
-:func:`exit_code` turns it into a CI gate.
+relative change of the throughput, latency, and memory metrics. A candidate
+regresses when a throughput metric moves the wrong way by more than the
+threshold, or when its peak memory or p99 latency grows by more than it. The
+result is JSON-able, and :func:`exit_code` turns it into a CI gate.
+
+Serving records (:mod:`spikeforge.benchmark.serving`) carry an extra
+``serving`` block; its ``p99_ms`` and ``throughput_per_second`` are compared
+here too, and are simply absent (and therefore skipped) on training records.
 """
 
 from typing import Any, Dict, List, Mapping, Optional, Tuple
@@ -16,8 +20,13 @@ DEFAULT_THRESHOLD = 0.10
 _METRICS: Tuple[Tuple[str, str], ...] = (
     ("ms_per_step", "lower"),
     ("steps_per_second", "higher"),
+    ("p99_ms", "lower"),
+    ("throughput_per_second", "higher"),
     ("memory_bytes", "lower"),
 )
+
+#: Serving metrics read from the record's ``serving`` block, not ``forward``.
+_SERVING_KEYS: Tuple[str, ...] = ("p99_ms", "throughput_per_second")
 
 #: Memory keys probed in order; the first non-zero one is compared.
 _MEMORY_KEYS = (
@@ -46,6 +55,9 @@ def _value(record: Mapping[str, Any], metric: str) -> Optional[float]:
     """Return the numeric value of ``metric`` for a record, or None."""
     if metric == "memory_bytes":
         return _memory(record)
+    if metric in _SERVING_KEYS:
+        value = (record.get("serving") or {}).get(metric)
+        return None if value is None else float(value)
     key = "mean_ms_per_step" if metric == "ms_per_step" else metric
     value = (record.get("forward") or {}).get(key)
     return None if value is None else float(value)

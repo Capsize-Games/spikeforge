@@ -1,0 +1,97 @@
+# PEP 621 packaging authority for the spikeforge-io distribution (PT-W7).
+#
+# The distribution owns the top-level ``spikeforge_io`` package: dependency-light
+# adapters that ingest recorded numeric streams (CSV/JSON/NPY/in-memory and the
+# dataset hook) into the core frozen window/normalize/encode contract, and
+# replay them into ``spikeforge-serve``'s ``/v1/stream``. It depends on core,
+# but core never depends on it -- the windowing implementation therefore stays
+# in ``spikeforge/streaming/`` and ``spikeforge_io.windowing`` re-exports it.
+#
+# ``spikeforge_io/`` stays at its repository-root path and is exposed to the
+# build via the ``spikeforge_io`` symlink next to this file (the same pattern
+# the core, serve, and clients distributions use).
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spikeforge-io"
+version = "0.1.0"
+description = "Recorded-stream I/O adapters and the windowing surface for spikeforge."
+# ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
+# files, mirroring the core and client distributions' metadata approach.
+readme = "README.md"
+requires-python = ">=3.10"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Capsize Games", email = "contact@capsizegames.com" },
+]
+maintainers = [
+    { name = "Capsize Games", email = "contact@capsizegames.com" },
+]
+keywords = [
+    "spiking neural networks",
+    "streaming",
+    "io",
+    "adapters",
+    "windowing",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# The core runtime supplies the frozen window/normalize/encode contract and
+# torch; numpy is already a core dependency and backs the `.npy` adapter. No
+# pandas/fastapi/network client is pulled in, so an I/O install stays light.
+dependencies = [
+    "spikeforge~=0.3.0",
+    "torch>=2.5",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.0.280",
+]
+
+[project.scripts]
+spikeforge-io = "spikeforge_io.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/capsize-games/spikeforge"
+Repository = "https://github.com/capsize-games/spikeforge"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+# The `spikeforge_io` import root is exposed next to this file as a symlink to
+# `../../spikeforge_io` so the default via-sdist `python -m build` produces a
+# complete wheel. Discovery depends only on this top-level package.
+where = ["."]
+include = ["spikeforge_io*"]
+exclude = [
+    "spikeforge",
+    "spikeforge.*",
+    "server*",
+    "tests*",
+    "spikeforge_targets*",
+    "spikeforge_hub*",
+    "spikeforge_serve*",
+    "spikeforge_clients*",
+]
+
+[tool.setuptools.package-data]
+spikeforge_io = ["py.typed"]

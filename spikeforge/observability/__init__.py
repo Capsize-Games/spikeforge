@@ -7,7 +7,7 @@ logging setup only acts when asked (via an environment variable or
 returns JSON-able data for the dashboard.
 """
 
-from spikeforge.observability import metrics, persistence
+from spikeforge.observability import metrics, persistence, prometheus
 from spikeforge.observability.logging_setup import (
     configure_logging,
     logging_enabled,
@@ -21,5 +21,6 @@ __all__ = [
     "logging_enabled",
     "metrics",
     "persistence",
+    "prometheus",
     "reset_logging",
 ]

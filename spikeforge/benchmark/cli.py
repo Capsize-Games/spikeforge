@@ -21,6 +21,11 @@ from spikeforge.benchmark.compare import (
 )
 from spikeforge.benchmark.config import BenchmarkConfig
 from spikeforge.benchmark.harness import run_benchmark
+from spikeforge.benchmark.serving import (
+    ServingBenchmarkConfig,
+    run_serving_benchmark,
+    run_serving_suite,
+)
 from spikeforge.benchmark.store import BenchmarkStore
 from spikeforge.benchmark.suite import with_metadata
 
@@ -42,6 +47,22 @@ def _add_fixture_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--out", default=None)
 
 
+def _add_serving_args(parser: argparse.ArgumentParser) -> None:
+    """Register the serving-mode arguments."""
+    parser.add_argument(
+        "--serving",
+        action="store_true",
+        help="benchmark an in-process serving bundle instead of a topology",
+    )
+    parser.add_argument(
+        "--bundle",
+        default=None,
+        help="path to the .spkf deployment bundle served",
+    )
+    parser.add_argument("--calls", type=int, default=8)
+    parser.add_argument("--concurrency", type=int, default=1)
+
+
 def _add_store_args(parser: argparse.ArgumentParser) -> None:
     """Register the store, listing, and comparison arguments."""
     parser.add_argument("--save", action="store_true")
@@ -61,6 +82,7 @@ def _parser() -> argparse.ArgumentParser:
         description="Benchmark interpreter execution modes.",
     )
     _add_fixture_args(parser)
+    _add_serving_args(parser)
     _add_store_args(parser)
     return parser
 
@@ -79,6 +101,20 @@ def _config(args: argparse.Namespace) -> BenchmarkConfig:
         backward=not args.no_backward,
         energy=args.energy,
         energy_target=args.energy_target,
+    )
+
+
+def _serving_config(args: argparse.Namespace) -> ServingBenchmarkConfig:
+    """Build a :class:`ServingBenchmarkConfig` from parsed arguments."""
+    if not args.bundle:
+        raise SystemExit("--serving requires --bundle PATH")
+    return ServingBenchmarkConfig(
+        bundle=args.bundle,
+        calls=args.calls,
+        concurrency=args.concurrency,
+        warmup=args.warmup,
+        seed=args.seed,
+        device=args.device,
     )
 
 
@@ -111,10 +147,24 @@ def _run_fixture(args: argparse.Namespace) -> int:
     return _emit(report, args.out)
 
 
+def _run_serving(args: argparse.Namespace) -> int:
+    """Run the serving fixture, optionally save it, and emit the report."""
+    config = _serving_config(args)
+    if args.save:
+        report = run_serving_suite(
+            config, store=_store(args), label=args.label or "serving"
+        )
+    else:
+        report = run_serving_benchmark(config)
+    return _emit(report, args.out)
+
+
 def _candidate(args: argparse.Namespace) -> Dict[str, Any]:
     """Return a stored run when ``--against`` is set, else a fresh run."""
     if args.against:
         return _store(args).load(args.against)
+    if args.serving:
+        return run_serving_benchmark(_serving_config(args))
     return run_benchmark(_config(args))
 
 
@@ -133,6 +183,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _run_list(args)
     if args.compare:
         return _run_compare(args)
+    if args.serving:
+        return _run_serving(args)
     return _run_fixture(args)
 
 

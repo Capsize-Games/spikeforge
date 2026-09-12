@@ -8,8 +8,13 @@ Three release-blocking health metrics from
   distributions (the PEP 420 / packaging-profile health metric);
 * **console-script ownership** - no console-script name may appear in two
   distributions;
-* **compatibility pin** - every satellite's ``spikeforge~=X.Y.0`` pin must
-  equal the core version recorded in ``compatibility.json``.
+* **compatibility pin** - every non-core distribution's ``spikeforge~=X.Y.0``
+  pin must equal the core version recorded in ``compatibility.json``. This
+  mirrors the ``release.yml`` verify step exactly: a distribution listed in
+  :data:`CORE_FREE_DISTRIBUTIONS` (currently ``spikeforge-clients``, which must
+  never pull the torch-backed core) is exempt from the pin but must declare no
+  ``spikeforge`` dependency at all, while every other satellite must declare
+  exactly the matrix pin.
 
 Import roots and scripts are read from each distribution's ``pyproject.toml``.
 When built wheels are passed with ``--core-wheel``, ``--server-wheel``,
@@ -21,8 +26,11 @@ Usage::
     python scripts/check_packaging_guards.py \
         --core-wheel dist/spikeforge-*.whl \
         --server-wheel dist/spikeforge_server-*.whl \
+        --serve-wheel dist/spikeforge_serve-*.whl \
+        --clients-wheel dist/spikeforge_clients-*.whl \
         --targets-wheel dist/spikeforge_targets-*.whl \
-        --hub-wheel dist/spikeforge_hub-*.whl
+        --hub-wheel dist/spikeforge_hub-*.whl \
+        --io-wheel dist/spikeforge_io-*.whl
 """
 
 import argparse
@@ -42,17 +50,34 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 CORE_DISTRIBUTION = "spikeforge"
 SERVER_DISTRIBUTION = "spikeforge-server"
+SERVE_DISTRIBUTION = "spikeforge-serve"
+CLIENTS_DISTRIBUTION = "spikeforge-clients"
 TARGETS_DISTRIBUTION = "spikeforge-targets"
 HUB_DISTRIBUTION = "spikeforge-hub"
+IO_DISTRIBUTION = "spikeforge-io"
 CORE_PYPROJECT = REPO_ROOT / "packages" / CORE_DISTRIBUTION / "pyproject.toml"
 SERVER_PYPROJECT = (
     REPO_ROOT / "packages" / SERVER_DISTRIBUTION / "pyproject.toml"
+)
+SERVE_PYPROJECT = (
+    REPO_ROOT / "packages" / SERVE_DISTRIBUTION / "pyproject.toml"
+)
+CLIENTS_PYPROJECT = (
+    REPO_ROOT / "packages" / CLIENTS_DISTRIBUTION / "pyproject.toml"
 )
 TARGETS_PYPROJECT = (
     REPO_ROOT / "packages" / TARGETS_DISTRIBUTION / "pyproject.toml"
 )
 HUB_PYPROJECT = REPO_ROOT / "packages" / HUB_DISTRIBUTION / "pyproject.toml"
+IO_PYPROJECT = REPO_ROOT / "packages" / IO_DISTRIBUTION / "pyproject.toml"
 COMPATIBILITY = REPO_ROOT / "compatibility.json"
+
+#: Distributions that deliberately declare no ``spikeforge`` core dependency.
+#: A client install must never pull the torch-backed core, so these are exempt
+#: from the core-pin rule; declaring a core dependency in one is itself an
+#: error. Keep this in sync with ``core_free_distributions`` in
+#: ``.github/workflows/release.yml``.
+CORE_FREE_DISTRIBUTIONS = frozenset({CLIENTS_DISTRIBUTION})
 
 
 def _read_toml(path: Path) -> Dict[str, object]:
@@ -173,6 +198,45 @@ def _requirement_name(requirement: object) -> str:
     return text
 
 
+def check_core_pin(
+    distribution: str,
+    dependencies: Sequence[object],
+    core_version: object,
+) -> Optional[str]:
+    """Return an error when a distribution's core pin breaks the rule.
+
+    The rule mirrors the ``release.yml`` verify step so local guards and CI
+    agree:
+
+    * the core distribution itself is exempt;
+    * a distribution in :data:`CORE_FREE_DISTRIBUTIONS` must declare no
+      ``spikeforge`` dependency at all;
+    * every other non-core distribution must declare exactly one
+      ``spikeforge`` dependency pinned ``spikeforge~=<core_version>``.
+    """
+    if distribution == CORE_DISTRIBUTION:
+        return None
+    expected_pin = f"{CORE_DISTRIBUTION}~={core_version}"
+    pins = [
+        dependency
+        for dependency in dependencies
+        if _requirement_name(dependency) == CORE_DISTRIBUTION
+    ]
+    if distribution in CORE_FREE_DISTRIBUTIONS:
+        if pins:
+            return (
+                f"{distribution} is declared core-free but declares core "
+                f"dependencies {pins}"
+            )
+        return None
+    if pins != [expected_pin]:
+        return (
+            f"{distribution} core pin {pins} is not the matrix pin "
+            f"{expected_pin!r}"
+        )
+    return None
+
+
 def check_matrix_pins(pyprojects: Dict[str, Path]) -> Optional[str]:
     """Return an error when a distribution disagrees with the matrix."""
     release = _latest_release()
@@ -188,18 +252,13 @@ def check_matrix_pins(pyprojects: Dict[str, Path]) -> Optional[str]:
             )
         if distribution == CORE_DISTRIBUTION:
             continue
-        expected_pin = (
-            f"{CORE_DISTRIBUTION}~={release.get(CORE_DISTRIBUTION)}"
+        problem = check_core_pin(
+            distribution,
+            project.get("dependencies", []),
+            release.get(CORE_DISTRIBUTION),
         )
-        for dependency in project.get("dependencies", []):
-            if (
-                _requirement_name(dependency) == CORE_DISTRIBUTION
-                and dependency != expected_pin
-            ):
-                problems.append(
-                    f"{distribution} pin {dependency!r} != "
-                    f"{expected_pin!r}"
-                )
+        if problem:
+            problems.append(problem)
     if problems:
         return "compatibility pin mismatch: " + "; ".join(problems)
     return None
@@ -212,8 +271,11 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     )
     parser.add_argument("--core-wheel", type=Path, default=None)
     parser.add_argument("--server-wheel", type=Path, default=None)
+    parser.add_argument("--serve-wheel", type=Path, default=None)
+    parser.add_argument("--clients-wheel", type=Path, default=None)
     parser.add_argument("--targets-wheel", type=Path, default=None)
     parser.add_argument("--hub-wheel", type=Path, default=None)
+    parser.add_argument("--io-wheel", type=Path, default=None)
     return parser.parse_args(argv)
 
 
@@ -223,14 +285,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     pyprojects = {
         CORE_DISTRIBUTION: CORE_PYPROJECT,
         SERVER_DISTRIBUTION: SERVER_PYPROJECT,
+        SERVE_DISTRIBUTION: SERVE_PYPROJECT,
+        CLIENTS_DISTRIBUTION: CLIENTS_PYPROJECT,
         TARGETS_DISTRIBUTION: TARGETS_PYPROJECT,
         HUB_DISTRIBUTION: HUB_PYPROJECT,
+        IO_DISTRIBUTION: IO_PYPROJECT,
     }
     wheels = {
         CORE_DISTRIBUTION: args.core_wheel,
         SERVER_DISTRIBUTION: args.server_wheel,
+        SERVE_DISTRIBUTION: args.serve_wheel,
+        CLIENTS_DISTRIBUTION: args.clients_wheel,
         TARGETS_DISTRIBUTION: args.targets_wheel,
         HUB_DISTRIBUTION: args.hub_wheel,
+        IO_DISTRIBUTION: args.io_wheel,
     }
     if all(wheels.values()):
         roots_by_distribution = {

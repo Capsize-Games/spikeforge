@@ -45,6 +45,30 @@ nav:
       - Cookbook: COOKBOOK.md
       - Examples: examples.md
       - Open-source checklist: OPEN_SOURCE_CHECKLIST.md
+  - Long-form reference:
+      - Overview: documentation.md
+      - Quickstart: quickstart.md
+      - Requirements: requirements.md
+      - Usage: usage.md
+      - Development: development.md
+      - Architecture: architecture.md
+      - Project layout: project-layout.md
+      - Features: features.md
+      - Interpreter spine: interpreter-spine.md
+      - Introspection: introspection.md
+      - Dashboard: dashboard.md
+      - Event datasets: event-datasets.md
+      - Targets and interoperability: targets-and-interop.md
+      - Production workflows: production-workflows.md
+      - Model hub: model-hub.md
+      - Backend execution: backend-execution.md
+      - Sequence primitives: sequence-primitives.md
+      - Streaming time series: streaming-timeseries.md
+      - Event runtime and energy: event-runtime-and-energy.md
+      - Operational maturity: operational-maturity.md
+      - Interop fold-ins: interop-foldins.md
+      - Implications and boundaries: implications-and-boundaries.md
+      - Notes: notes.md
   - Roadmap:
       - Professionalization roadmap: professional_roadmap.md
       - Ecosystem roadmap: ecosystem_roadmap.md
@@ -67,6 +91,20 @@ nav:
       - Event runtime: event_runtime_plan.md
       - Operations: operations_plan.md
       - Interop fold-ins: interop_foldins_plan.md
+  - Production toolkit:
+      - Overview: production_toolkit_plan.md
+      - Use cases: production_use_cases.md
+      - Streaming time series: use_case_streaming_timeseries.md
+      - "Audio / keyword spotting": use_case_audio_keyword_spotting.md
+      - Event-camera vision: use_case_event_camera_vision.md
+      - Low-latency sensor stream: use_case_low_latency_sensor_stream.md
+      - Intrusion / anomaly detection: use_case_intrusion_anomaly_detection.md
+      - Bio-signal / medical monitoring: use_case_biosignal_medical_monitoring.md
+      - RL for control and robotics: use_case_rl_control_robotics.md
+      - Spiking transformers: use_case_spiking_transformers.md
+      - Edge power budgets: use_case_edge_power_budgets.md
+      - Computational neuroscience: use_case_computational_neuroscience.md
+  - Memory-system research: memory_system_research.md
   - Reference:
       - Project rules: rules.md
       - Integration plan: INTEGRATION_PLAN.md

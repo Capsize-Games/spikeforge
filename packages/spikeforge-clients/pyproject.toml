@@ -1,0 +1,102 @@
+# PEP 621 packaging authority for the spikeforge-clients distribution (PT-W4).
+#
+# The clients distribution owns the top-level ``spikeforge_clients`` package:
+# small Python + TypeScript + CLI clients for ``spikeforge-serve``. It is a
+# thin, web-dependency-light client and deliberately does NOT depend on the
+# ``spikeforge`` core runtime -- the wire contract (validated against the
+# schemas under ``protocol/serve/``) is the only coupling, so installing a
+# client never pulls torch.
+#
+# ``spikeforge_clients/`` stays at its repository path and is exposed to the
+# build via the ``spikeforge_clients`` symlink next to this file (see the
+# ``packages.find`` table below), mirroring ``spikeforge-serve``.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spikeforge-clients"
+version = "0.1.0"
+description = "Python, TypeScript, and CLI clients for the spikeforge-serve inference service."
+# ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
+# files, mirroring the core and server distributions' metadata approach.
+readme = "README.md"
+requires-python = ">=3.10"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Capsize Games", email = "contact@capsizegames.com" },
+]
+maintainers = [
+    { name = "Capsize Games", email = "contact@capsizegames.com" },
+]
+keywords = [
+    "spiking neural networks",
+    "inference",
+    "serving",
+    "client",
+    "sdk",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# No runtime dependencies: requests use the standard library ``urllib`` and
+# streaming/npy support are opt-in extras. This keeps a client install cheap
+# and keeps the ``spikeforge`` core out of the dependency graph entirely.
+dependencies = []
+
+[project.optional-dependencies]
+# ``stream`` adds real-network WebSocket streaming; the in-process ASGI
+# transport needs nothing extra.
+stream = [
+    "websockets>=12.0",
+]
+# ``npy`` lets the CLI read frames from a ``.npy`` file.
+npy = [
+    "numpy>=1.26",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.0.280",
+    "websockets>=12.0",
+    "numpy>=1.26",
+]
+
+[project.scripts]
+spikeforge-clients = "spikeforge_clients.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/capsize-games/spikeforge"
+Repository = "https://github.com/capsize-games/spikeforge"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+# The `spikeforge_clients` import root is exposed next to this file as a
+# symlink to `../../spikeforge_clients` so the default via-sdist
+# `python -m build` produces a complete wheel. Discovery depends only on this
+# top-level package, never on core: the bare ``spikeforge``/``spikeforge.*``
+# patterns exclude the core root without catching ``spikeforge_clients``.
+where = ["."]
+include = ["spikeforge_clients*"]
+exclude = [
+    "spikeforge",
+    "spikeforge.*",
+    "server*",
+    "tests*",
+    "spikeforge_targets*",
+    "spikeforge_hub*",
+    "spikeforge_serve*",
+]

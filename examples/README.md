@@ -27,6 +27,7 @@ it is absent (see the last section).
 | 8 | [`08_sequence_experiments.py`](08_sequence_experiments.py) | Sequence experiments (exportable vs simulation-only) |
 | 9 | [`09_onnx_roundtrip.py`](09_onnx_roundtrip.py) | ONNX round-trip |
 | 10 | [`10_reproducibility_benchmark.py`](10_reproducibility_benchmark.py) | Reproducibility manifest + benchmark save/compare |
+| 11 | [`11_streaming_timeseries.py`](11_streaming_timeseries.py) | UC-1 streaming time-series train/eval + bundle serving parity |
 
 ---
 
@@ -209,6 +210,28 @@ compared cases: 2
 The manifest hash covers configuration only; it makes a run reproducible, not
 bit-exact. The benchmark writes into a temporary directory.
 
+## 11. UC-1 streaming time series
+
+`11_streaming_timeseries.py` is the end-to-end UC-1 MVP slice: it windows and
+z-scores a deterministic synthetic stream, trains a small `sequence_mlp` on
+delta-coded windows, reports class and anomaly metrics, freezes a `.spkf`
+bundle, and proves the streaming readout equals the closed-loop batch
+reference. Representative output:
+
+```text
+windows train/val/test: 95 95 95
+window shape: (95, 16, 4)
+trained: epochs=25 loss=0.7301 train_accuracy=0.842
+test: accuracy=0.884 macro_f1=0.884 balanced_accuracy=0.885
+anomaly: auroc=0.680 threshold=0.6240 precision=0.000 recall=0.000
+bundle: uc1.spkf coding=delta window_L=16
+parity: max_abs_diff=0.00e+00 within_tolerance=True
+```
+
+The synthetic task is small and the numbers move with the config; parity is
+exact by construction because training and streaming share one per-step body.
+Artifacts go to a temporary directory.
+
 ---
 
 ## Optional extras and honest degradation
@@ -219,6 +242,10 @@ bit-exact. The benchmark writes into a temporary directory.
 - **`onnx`** (`onnx`, `onnxruntime`) enables the bridge.
   `09_onnx_roundtrip.py` detects its absence and prints
   `the 'onnx' extra is not installed; skipping.`
+- **`spikeforge-serve`** is a separate distribution; without it,
+  `11_streaming_timeseries.py` still trains, evaluates, and proves
+  `InferenceSession` parity, and reports
+  `serve: spikeforge-serve not installed; skipped`.
 
 The other eight scripts use only the core install plus `nir`/`events` (or the
 cached datasets). The console-script equivalents for every journey are listed

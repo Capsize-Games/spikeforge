@@ -30,7 +30,7 @@ fi
 
 info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
-info "Generating docs/ from plans/ and README.md"
+info "Generating docs/ from plans/, documentation/ and README.md"
 rm -rf "$DOCS"
 mkdir -p "$DOCS"
 cp plans/*.md "$DOCS"/
@@ -40,14 +40,22 @@ cp README.md "$DOCS/readme.md"
 # user-facing cookbook, the examples index, and the readiness checklist.
 cp rules.md INTEGRATION_PLAN.md COOKBOOK.md OPEN_SOURCE_CHECKLIST.md "$DOCS"/
 cp examples/README.md "$DOCS/examples.md"
+# Long-form reference pages (see documentation/README.md). The documentation
+# index is copied as documentation.md so it cannot collide with the site home
+# (index.md) or the lowercased README alias (readme.md).
+cp documentation/*.md "$DOCS"/
+mv "$DOCS/README.md" "$DOCS/documentation.md"
 # Plan files reference one another as plans/<name>.md and other pages as
 # ../<file>, which is correct from the repo root; inside the flat docs/ tree
-# those prefixes are dropped, the examples index becomes a sibling page, and
-# README's self-references follow its lowercased file name.
+# those prefixes are dropped, the examples index becomes a sibling page, the
+# documentation index gets its non-colliding name, and README's self-references
+# follow its lowercased file name.
 sed -i \
   -e 's|](../examples/README.md)|](examples.md)|g' \
   -e 's|](examples/README.md)|](examples.md)|g' \
   -e 's|](examples/)|](examples.md)|g' \
+  -e 's|](documentation/README.md)|](documentation.md)|g' \
+  -e 's|](documentation/|](|g' \
   -e 's|](../|](|g' \
   -e 's|](plans/|](|g' \
   -e 's|](README.md|](readme.md|g' \

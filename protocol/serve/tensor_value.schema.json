@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spikeforge.dev/protocol/1.0/serve/tensor_value.schema.json",
+  "title": "TensorValue",
+  "description": "Mirrors spikeforge_serve.payloads.tensor_json: a torch tensor rendered as a dtype, a shape, and nested numeric values.",
+  "type": "object",
+  "properties": {
+    "dtype": { "type": "string" },
+    "shape": {
+      "type": "array",
+      "items": { "type": "integer" }
+    },
+    "values": { "type": "array" }
+  },
+  "required": ["dtype", "shape", "values"],
+  "additionalProperties": true
+}

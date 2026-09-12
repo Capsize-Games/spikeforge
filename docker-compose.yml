@@ -1,9 +1,10 @@
 services:
   # Default service: `docker compose up --build` still builds the CUDA-capable
   # image and serves the dashboard on port 8877. The image (see Dockerfile)
-  # installs the `packages/spikeforge-server` distribution, which pulls
-  # core, so the removed core `web` extra is no longer involved. Services below
-  # are opt-in alternatives selected with `--profile cpu` / `--profile gpu`.
+  # installs the full server-chain set -- core, targets, hub, and the
+  # `packages/spikeforge-server` distribution -- so the removed core `web`
+  # extra is no longer involved. Services below are opt-in alternatives
+  # selected with `--profile cpu` / `--profile gpu`.
   spikeforge:
     build: .
     container_name: spikeforge

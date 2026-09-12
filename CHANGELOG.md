@@ -12,6 +12,103 @@ describe the local source tree.
 
 ### Added
 
+- **`weight_decay` on `TrainingEngine`.** A new constructor parameter
+  (default `0.0`, matching prior behaviour) is forwarded straight into
+  the Adam optimizer and recorded in checkpoint metadata and the
+  reproducibility manifest's hyperparameter block, alongside `lr`.
+  Every subclass (`EventTrainingEngine` included) already forwards
+  unrecognised keyword arguments, so no subclass changes were needed.
+- **`dropout` on the `conv_net` topology preset.** A new `dropout`
+  parameter (default `0.0`, the identity) adds a `dropout`-kind stage
+  between the flattened features and the readout, using the stage
+  system's existing generic `dropout` kind (already NIR-export-safe
+  as a passthrough at inference). Reaches training the same way
+  every other `conv_net` param does, via `topology_params`.
+
+### Fixed
+
+- **`sequence_mlp` CUDA warmup crashed with a shape mismatch.**
+  `TopologyMixin._input_features()` only ever checked `input_size`
+  (the image-shaped presets' param name); `sequence_mlp` has no
+  `input_size` at all and names the same concept `features`, so it
+  silently fell through to the historical `28 * 28` MNIST-shaped
+  default. Invisible on CPU (`device.warmup()` no-ops there), but a
+  real CUDA run's warmup pass forwarded a wrongly-shaped dummy tensor
+  and crashed. Now checks `features` before that fallback.
+
+## [spikeforge-targets-v0.1.1] - 2026-09-11
+
+A `spikeforge-targets`-only follow-up release. Core stays `0.3.0` and every
+other distribution stays `0.1.0`; the wire protocol stays at `1.0`.
+
+### Added
+
+- **Vendor simulator backends (Speck, Xylo, SpiNNaker2).** The
+  simulator-backed test-deploy matrix gains an executable backend for every
+  registered target: Speck runs through Sinabs, Xylo through Rockpool, and
+  SpiNNaker2 through its host simulator. Each follows the existing backend
+  protocol — availability comes from the isolated SDK probe plus a minimal
+  capability check, the graph is lowered with the shared linear lowering, and
+  a missing SDK yields `available: false` with a named reason rather than a
+  failure.
+- A shared `VendorBackend` adapter
+  (`spikeforge_targets.backends.vendor_backend`) and the `linear_program`
+  dense/neuron lowering in `spikeforge_targets.backends.lowering`, reused by
+  the Norse, Lava, and vendor backends so one code path recovers the execution
+  order and sizes each layer.
+- A `test-deploy` CI job that runs the matrix for `fc_legacy`, asserts exactly
+  one cell per registered target, and checks the command exits zero when every
+  SDK-backed cell honestly reports `available: false`.
+
+### Changed
+
+- `BackendResult` and the matrix `DeployCell` now carry `estimate: true`: every
+  simulator or emulator run is labelled an estimate and only a real device
+  result can set it `false`, so a simulated trajectory is never read as a
+  measurement. A cell now reports availability from its wired backend
+  (`backend.available()`) instead of the registry probe.
+
+## [0.3.0] - 2026-09-11
+
+The hardware-free production toolkit (workstreams PT-W1…PT-W8) and the
+streaming time-series use case UC-1, on top of the ARCH-0001
+repository-topology work recorded below. Every capability below is additive:
+the wire protocol stays at `1.0`, the core import root stays `spikeforge`,
+and the existing WebSocket payload keys are preserved.
+
+### Added
+
+- **Serving runtime and the `.spkf` deployment bundle (PT-W1).** A stateful
+  inference runtime with a `StateTree` that carries per-layer neuron state
+  across steps, and the `.spkf` `DeploymentBundle` that packages a trained
+  model with its frozen encode configuration and target plan.
+- **Frozen encode-at-inference contract (PT-W2).** The window → normalize →
+  encode pipeline is serialized into the bundle and replayed byte-for-byte at
+  inference, so a served model encodes inputs exactly as it did in training.
+- **Headless `spikeforge-serve` (PT-W3).** A REST/WebSocket inference service
+  that loads a `.spkf` bundle and exposes `/v1/encode`, `/v1/predict`, and
+  `/v1/stream`, packaged as the `spikeforge-serve` distribution.
+- **Client SDKs (PT-W4).** Python, TypeScript, and CLI clients for
+  `spikeforge-serve` in the dependency-light `spikeforge-clients`
+  distribution, validated against the `protocol/serve/` schemas so an install
+  never pulls the torch-based core.
+- **Compression and quantization (PT-W5).** Delta/spike codecs plus activation
+  and membrane quantization of a deployed model, with reports that record the
+  scheme and the achieved size/accuracy trade-off.
+- **Observability and serving benchmarks (PT-W6).** Prometheus and JSON
+  exporters for the serving metrics and a benchmark harness that measures
+  encode, inference, and end-to-end latency for a bundle.
+- **Registry governance and I/O adapters (PT-W7).** Stage/approver/signature/
+  lineage governance for model promotion in `spikeforge-hub`, and the
+  `spikeforge-io` recorded-stream adapters (CSV/JSON/NPY/in-memory and the
+  dataset hook) that feed the frozen windowing contract and replay into
+  `/v1/stream`.
+- **Simulator-backed test-deploy matrix (PT-W8).** A matrix that lowers each
+  target through the reference/norse/lava simulators and records the per-target
+  deploy outcome before a bundle is promoted.
+- **Streaming time-series use case (UC-1).** An end-to-end
+  classification/anomaly-detection MVP that trains, bundles, serves, and
+  replays a sliding-window time-series signal.
 - **Project rename to `spikeforge`.** The project, its core distribution, its
   import root, and its console scripts all read `spikeforge`; the earlier
   bring-up name is gone from every package, repo, and document.
@@ -277,6 +374,8 @@ checkpoint keys, and the existing WebSocket payload keys are preserved.
   a searchable checkpoint registry, opt-in scale-ups, a stored benchmark
   suite, JSON logging, packaged console scripts, and Docker CPU/GPU profiles.
 
-[Unreleased]: https://github.com/capsize-games/spikeforge/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/capsize-games/spikeforge/compare/spikeforge-v0.3.0...HEAD
+[spikeforge-targets-v0.1.1]: https://github.com/capsize-games/spikeforge/compare/spikeforge-v0.3.0...spikeforge-targets-v0.1.1
+[0.3.0]: https://github.com/capsize-games/spikeforge/compare/v0.2.0...spikeforge-v0.3.0
 [0.2.0]: https://github.com/capsize-games/spikeforge/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/capsize-games/spikeforge/releases/tag/v0.1.0

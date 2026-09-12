@@ -22,9 +22,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy the repository so the two distributions can be installed from their
-# `packages/` pyproject.toml files. Both resolve their import roots
-# (`spikeforge/`, `server/`, `main*.py`) from the repo root.
+# Copy the repository so the server-chain distributions can be installed from
+# their `packages/` pyproject.toml files. The core, targets, hub, and server
+# packages all resolve their import roots (`spikeforge/`, `server/`,
+# `main*.py`) from the repo root.
 COPY . .
 
 # Install the shared core runtime pins first (better layer caching).
@@ -36,6 +37,8 @@ RUN pip install --upgrade pip \
     && pip install --index-url ${TORCH_INDEX_URL} torch torchvision \
     && pip install -r requirements.txt \
     && pip install ./packages/spikeforge \
+        ./packages/spikeforge-targets \
+        ./packages/spikeforge-hub \
         ./packages/spikeforge-server
 
 # Built client bundle (the Dockerfile's own copy overrides client/dist).

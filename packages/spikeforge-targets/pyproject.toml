@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-targets"
-version = "0.1.0"
+version = "0.1.1"
 description = "Deployment targets, event-driven energy accounting, and backend execution for spikeforge."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core and server distributions' metadata approach.
