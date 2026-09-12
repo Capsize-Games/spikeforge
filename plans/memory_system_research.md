@@ -191,8 +191,103 @@ diversity rather than raw episode count.
 
 **Reproduce:** [`examples/12_few_shot_character_generalization.py`](examples/12_few_shot_character_generalization.py:1).
 
-## 5. Issue #26
+## 5. Issue #26 — Relational Reversal Task falsification attempt (shipped)
 
-Tracked separately — a falsification test of an unrelated philosophical
-claim (the Consciousness Gradient paper's A3 axiom), not a memory-system
-feature. Depends on #24's architecture; see the issue for current status.
+Tracked separately from the architecture roadmap above — this tests a
+philosophical claim (the Consciousness Gradient paper's A3 axiom:
+intelligence is downstream of consciousness), not a memory-system
+feature, and lives in its own
+[`spikeforge/rrt/`](spikeforge/rrt/__init__.py:1) package rather than
+under `spikeforge.memory`, per the issue's own open question about
+where a generic architecture-comparison harness belongs.
+
+### 5.1 Task and candidate system
+
+A fresh, abstract 3-entity task, not tied to #22/#24's vision datasets:
+a transitive dominance hierarchy
+([`hierarchy_outcome`](spikeforge/rrt/relation.py:23)) reversed into the
+minimal non-transitive 3-cycle that flips only the top-vs-bottom edge
+([`cycle_outcome`](spikeforge/rrt/relation.py:29)). The falsification
+candidate
+([`build_frozen_predictor`](spikeforge/rrt/context_model.py:35)) is
+meta-trained once via backprop across many randomly permuted hierarchy
+sessions, then permanently frozen (`requires_grad_(False)`); its only
+test-time adaptation channel is
+[`trial_features`](spikeforge/rrt/trial_features.py:56) recomputing a
+slot-invariant win-count summary from the session's growing history — a
+legitimate instance of the paper's own named "strongest challenger"
+category (meta-learning / synthetic-data-loop architectures conditioning
+on context, no weight update, no local plasticity) rather than a weaker
+strawman.
+
+**A real implementation bug worth recording:** the first version of
+`trial_features` averaged the query pair's and outcome's one-hot
+encodings *separately* across history, which discards which entity won
+against which — pooling marginals this way makes "who beat whom"
+mathematically unrecoverable once more than one trial is in context.
+Training accuracy sat at chance (~45-50%) and never moved off it
+regardless of training episodes. Replacing it with the win-count matrix
+described above (keeping each trial's winner/loser association intact)
+took training accuracy to 80-94% within a few hundred episodes. Recorded
+here because it is exactly the kind of silent, plausible-looking bug
+that would have produced a false "no adaptation" reading if it had gone
+unnoticed — the fix was verified with a training-curve check
+([`examples/13_relational_reversal_task.py`](examples/13_relational_reversal_task.py:1)'s
+underlying module) before trusting any downstream RRT number.
+
+### 5.2 Results (real runs, 100 sessions each; both real, not cherry-picked)
+
+| Metric | 60 post-reversal trials | 150 post-reversal trials |
+|---|---|---|
+| Pre-reversal accuracy | 100% | 100% |
+| Post-reversal accuracy (asymptotic) | 59.7% | 65.1% |
+| Reversal gap | 40.3% | 34.9% |
+| Control (no reversal) post accuracy | 100% | 100% |
+| Control gap | 0.0% | 0.0% |
+| Sessions that recovered | 68% | 95% |
+| Mean trials-to-recovery (when recovered) | 26.1 | 38.4 |
+
+**Prediction (c) — validity check — passes cleanly.** The control
+session (identical protocol, no reversal) shows a 0.0% gap over an
+equally long session, versus a 34.9-40.3% gap when the relation actually
+reverses. The RRT is genuinely structurally out-of-distribution for this
+architecture, not just "a longer session" — the task design is sound.
+
+**Predictions (a)/(b) — the falsification bet itself — mixed, not a
+clean win either way.** The paper's prediction (b) says a system without
+experiential autonomy should fail to adapt "even with extensive
+exposure unless explicitly retrained." This system never received a
+gradient update, a retraining step, or an explicit signal that the
+relation changed — yet the large majority of sessions (68% at 60
+trials, rising to 95% at 150 trials) *did* recover to within 10% of
+pre-reversal accuracy through interaction alone, given enough trials.
+That is a real data point against a strict reading of prediction (b).
+At the same time, recovery was neither instant nor universal: a sharp
+immediate post-reversal accuracy drop, a nontrivial number of trials
+needed to recover (26-38 on average), and a persistent non-recovering
+minority (5-32%, shrinking but not vanishing as the window grows) are
+still costs a system with genuine online plasticity would plausibly not
+pay at all. Reported honestly, per the issue's own instruction to write
+up whichever way it lands: **this specific operationalization leans
+against a strict prediction (b), without being a clean, total
+falsification of it** — the paper's own recovery-speed and
+gap-magnitude predictions ((a) and the qualitative "does it recover at
+all" framing) are the parts a stricter reading could still claim
+partial support from.
+
+**Caveat on the candidate's fairness:** the win-count context summary is
+an explicit, hand-designed running statistic, not an emergent property
+of a learned recurrent or attention mechanism — closer to a "synthetic
+data loop" than a transformer's learned in-context inference. That is
+still within the paper's own named challenger category, but a
+`sequence_attn`-based candidate (attention over a token history, per the
+issue's open question about trying it) would be a fairer, harder test
+of the same claim and is the natural next step, not yet attempted.
+
+**Reproduce:** [`examples/13_relational_reversal_task.py`](examples/13_relational_reversal_task.py:1)
+(pass `post_trials=150` for the longer-window numbers above).
+
+### 5.3 Phase 2
+
+Not started, as scoped — depends on #22/#23/#25 maturing into an
+A1-leaning SNN comparison arm.
