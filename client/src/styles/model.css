@@ -158,6 +158,12 @@
 }
 
 /* --- compact loaded-model summary row --- */
+/* Sits under the tab strip, in the fixed header, so it stays visible on
+   every tab instead of only the one that happened to render it. */
+.loaded-model-bar {
+  margin-top: 10px;
+}
+
 .loaded-model {
   padding: 8px 10px;
 }

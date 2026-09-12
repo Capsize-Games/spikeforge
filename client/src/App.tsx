@@ -5,6 +5,7 @@ import { Controls } from "./components/Controls";
 import { DownloadProgress } from "./components/DownloadProgress";
 import { EnergyPanel } from "./components/EnergyPanel";
 import { HubPanel } from "./components/HubPanel";
+import { LoadedModelPanel } from "./components/LoadedModelPanel";
 import { ModelPanel } from "./components/ModelPanel";
 import { Section } from "./components/Stepper";
 import { StatusBar } from "./components/StatusBar";
@@ -121,6 +122,12 @@ export default function App() {
           busy={busy}
           onSelect={tabs.select}
         />
+
+        {training.state.loaded && (
+          <div className="loaded-model-bar">
+            <LoadedModelPanel loaded={training.state.loaded} />
+          </div>
+        )}
       </header>
 
       <main className="app-main">
@@ -191,6 +198,9 @@ export default function App() {
             trajectory={viewer.state.trajectory}
             nirGraph={viewer.state.nirGraph}
             nirValidation={viewer.state.nirValidation}
+            autoPredict={viewer.autoPredict}
+            canAutoPredict={viewer.canAutoPredict}
+            onToggleAutoPredict={toggleAutoPredict}
             playing={viewer.state.running}
             onPlay={actions.playPreview}
             onStop={actions.stopPreview}
@@ -216,12 +226,6 @@ export default function App() {
                 testAccuracy={training.state.testAccuracy}
                 last={training.state.last}
                 device={training.state.device}
-                inference={viewer.state.inference}
-                timeStep={viewer.timeStep}
-                loaded={training.state.loaded}
-                autoPredict={viewer.autoPredict}
-                canAutoPredict={viewer.canAutoPredict}
-                onToggleAutoPredict={toggleAutoPredict}
               />
             </div>
 

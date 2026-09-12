@@ -11,10 +11,10 @@ import type {
   RasterSource,
 } from "../types";
 import { InputRow } from "./InputRow";
-import { LoadedModelPanel } from "./LoadedModelPanel";
 import { NetworkActivity } from "./NetworkActivity";
 import { NirGraphPanel } from "./NirGraphPanel";
 import { NirValidationPanel } from "./NirValidationPanel";
+import { PredictionPanel } from "./PredictionPanel";
 import { TimeCursor } from "./TimeCursor";
 import { TrajectoryPanel } from "./TrajectoryPanel";
 
@@ -37,6 +37,11 @@ interface Props {
   trajectory: TrajectoryPayload | null;
   nirGraph: NirGraphPayload | null;
   nirValidation: NirValidationPayload | null;
+  /** Whether auto-prediction is switched on. */
+  autoPredict: boolean;
+  /** Whether a prediction can run at all (model + connection). */
+  canAutoPredict: boolean;
+  onToggleAutoPredict: () => void;
   playing: boolean;
   onPlay: () => void;
   onStop: () => void;
@@ -68,6 +73,9 @@ export function ViewerPanels({
   trajectory,
   nirGraph,
   nirValidation,
+  autoPredict,
+  canAutoPredict,
+  onToggleAutoPredict,
   playing,
   onPlay,
   onStop,
@@ -113,7 +121,14 @@ export function ViewerPanels({
       </div>
 
       <div className="col-viz viewer-col-side">
-        {loaded && <LoadedModelPanel loaded={loaded} />}
+        <PredictionPanel
+          inference={inference}
+          timeStep={timeStep}
+          loaded={loaded}
+          autoPredict={autoPredict}
+          canAutoPredict={canAutoPredict}
+          onToggleAutoPredict={onToggleAutoPredict}
+        />
 
         <TrajectoryPanel
           mode={mode}
