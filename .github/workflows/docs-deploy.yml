@@ -1,11 +1,9 @@
 name: Deploy docs
 
 # Publishes spikeforge.net to GitHub Pages: landing/index.html at the site
-# root, the mkdocs build (scripts/build_docs.sh) nested under /docs/.
-# Requires a one-time manual step in the repo's Settings -> Pages: set the
-# source to "GitHub Actions". Private repos need GitHub Pro/Team/Enterprise
-# for Pages; this workflow is a no-op error until either that's enabled or
-# the repo goes public.
+# root, the mkdocs build (scripts/build_docs.sh) nested under /docs/, and
+# landing/CNAME so Pages keeps serving the custom domain. Pages source is
+# set to "GitHub Actions" (repos/capsize-games/spikeforge/pages, one-time).
 
 on:
   push:
@@ -59,6 +57,7 @@ jobs:
           mkdir -p build/pages
           cp landing/index.html build/pages/index.html
           cp landing/dashboard.png build/pages/dashboard.png
+          cp landing/CNAME build/pages/CNAME
           cp -r build/docs build/pages/docs
 
       - uses: actions/upload-pages-artifact@v3
