@@ -39,7 +39,6 @@
 .shell-tab.active {
   color: var(--text);
   border-bottom-color: var(--accent);
-  font-weight: 600;
 }
 
 /* Marks a tab whose background work (training, download) is still running. */
