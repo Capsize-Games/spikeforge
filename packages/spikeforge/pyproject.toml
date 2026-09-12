@@ -25,10 +25,10 @@ requires-python = ">=3.10"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 authors = [
-    { name = "Capsize Games", email = "contact@capsizegames.com" },
+    { name = "Capsize LLC", email = "contact@capsizegames.com" },
 ]
 maintainers = [
-    { name = "Capsize Games", email = "contact@capsizegames.com" },
+    { name = "Capsize LLC", email = "contact@capsizegames.com" },
 ]
 keywords = [
     "spiking neural networks",

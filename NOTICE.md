@@ -3,7 +3,7 @@
 ## License
 
 `spikeforge` is distributed under the **BSD 3-Clause License**; see
-[`LICENSE`](LICENSE). The copyright is held by **Capsize Games
+[`LICENSE`](LICENSE). The copyright is held by **Capsize LLC
 <contact@capsizegames.com>**, the contributor listed in [`AUTHORS`](AUTHORS).
 
 ## Third-party models: metadata-only, fetched on demand

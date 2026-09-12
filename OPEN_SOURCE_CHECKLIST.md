@@ -19,7 +19,7 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
 - [x] **`LICENSE` present and coherent.** [`LICENSE`](LICENSE) is the standard
   BSD 3-Clause text; its copyright line points at the AUTHORS file.
 - [x] **`AUTHORS` present.** [`AUTHORS`](AUTHORS) lists one contributor
-  (`Capsize Games <contact@capsizegames.com>`), matching the
+  (`Capsize LLC <contact@capsizegames.com>`), matching the
   `LICENSE` copyright reference. This is the identity recorded in
   `git config user.name` / `user.email`.
 - [x] **License declared in packaging metadata.** [`setup.py`](setup.py:34)

@@ -27,6 +27,12 @@ describe the local source tree.
 
 ### Fixed
 
+- **Copyright holder corrected to `Capsize LLC`.** `LICENSE`, `AUTHORS`,
+  `NOTICE.md`, `CITATION.cff`, and every distribution's `pyproject.toml`
+  named `Capsize Games` as the copyright holder/author, which is not the
+  actual legal entity. Corrected across all of them; the entry below
+  (2f6e3ec) documented the wrong entity name at the time and is left as
+  the historical record rather than rewritten.
 - **`sequence_mlp` CUDA warmup crashed with a shape mismatch.**
   `TopologyMixin._input_features()` only ever checked `input_size`
   (the image-shaped presets' param name); `sequence_mlp` has no
