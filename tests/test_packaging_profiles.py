@@ -103,6 +103,12 @@ def _pyproject(path: Path) -> Dict[str, Any]:
         return tomllib.load(handle)
 
 
+def _core_pin() -> str:
+    """Return the current compatible-release pin for satellite tests."""
+    version = _pyproject(_CORE)["project"]["version"]
+    return f"spikeforge~={version}"
+
+
 def test_core_declares_expected_extras_and_scripts() -> None:
     """Every advertised core extra and console script is declared."""
     project = _pyproject(_CORE)["project"]
@@ -183,7 +189,7 @@ def test_targets_distribution_owns_the_moved_surface() -> None:
     assert set(project["scripts"]) == _EXPECTED_TARGETS_SCRIPTS
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_TARGETS_DEPS
-    assert "spikeforge~=0.3.1" in deps
+    assert _core_pin() in deps
 
 
 def test_targets_console_script_targets_resolve_to_the_new_root() -> None:
@@ -210,7 +216,7 @@ def test_hub_distribution_owns_the_moved_surface() -> None:
     assert set(project["scripts"]) == _EXPECTED_HUB_SCRIPTS
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_HUB_DEPS
-    assert "spikeforge~=0.3.1" in deps
+    assert _core_pin() in deps
 
 
 def test_hub_console_script_targets_resolve_to_the_new_root() -> None:
@@ -267,7 +273,7 @@ def test_io_distribution_owns_the_io_surface() -> None:
     assert set(project["scripts"]) == _EXPECTED_IO_SCRIPTS
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_IO_DEPS
-    assert "spikeforge~=0.3.1" in deps
+    assert _core_pin() in deps
     assert project["version"] == "0.1.0"
 
 
