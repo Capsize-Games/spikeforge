@@ -76,8 +76,23 @@ class OneShotAssociativeMemory:
         the new class's index, stable for the module's lifetime and
         mapped back to a real label by the caller.
         """
+        return self.teach_many(hidden_spike_train.unsqueeze(0), gain)
+
+    def teach_many(
+        self,
+        hidden_spike_trains: torch.Tensor,
+        gain: float = DEFAULT_TEACH_GAIN,
+    ) -> int:
+        """Bind a class from several examples with one averaged write.
+
+        ``hidden_spike_trains`` is ``[N, T, H]``. Averaging the examples'
+        spike-count traces keeps this a single Hebbian write while reducing
+        sensitivity to the particular exemplar used for teaching.
+        """
+        if hidden_spike_trains.ndim != 3:
+            raise ValueError("teaching examples must have shape [N, T, H]")
         index = self._synapse.grow()
-        trace = hidden_spike_train.sum(dim=0)
+        trace = hidden_spike_trains.sum(dim=1).mean(dim=0)
         self._synapse.write(trace, index, gain)
         self._mem = None
         return index
