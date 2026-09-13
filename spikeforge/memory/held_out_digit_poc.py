@@ -61,12 +61,15 @@ def run_held_out_digit_poc(
     batch_size: int = 64,
     eval_batch_size: int = 256,
     train_subset: int = 1,
+    teach_examples: int = 1,
 ) -> HeldOutDigitResult:
     """Run the full protocol once and return its two accuracy numbers.
 
     ``train_subset`` (see :func:`_train_base`) never touches the
     held-out digit or either evaluation set.
     """
+    if teach_examples < 1:
+        raise ValueError("teach_examples must be positive")
     torch.manual_seed(seed)
     encoder = SpikeEncoder(coding="rate", num_steps=num_steps)
     train_data = build_dataset("mnist", train=True)
@@ -75,7 +78,9 @@ def run_held_out_digit_poc(
     net = _train_base(
         train_data, encoder, hidden, epochs, batch_size, train_subset,
     )
-    memory = _teach_held_out_digit(net, train_data, encoder)
+    memory = _teach_held_out_digit(
+        net, train_data, encoder, teach_examples,
+    )
     return _evaluate_both(
         net, memory, test_data, encoder, eval_batch_size,
     )
@@ -125,13 +130,24 @@ def _train_base(
 
 
 def _teach_held_out_digit(
-    net: StageModule, train_data: Dataset, encoder: SpikeEncoder,
+    net: StageModule,
+    train_data: Dataset,
+    encoder: SpikeEncoder,
+    teach_examples: int,
 ) -> OneShotAssociativeMemory:
-    """Build a memory module and teach it one digit-9 example."""
+    """Build memory and teach it one or more digit-9 examples."""
     memory = OneShotAssociativeMemory(in_features=hidden_size(net))
-    teach_image, _ = digit_subset(train_data, (HELD_OUT_DIGIT,))[0]
-    hidden_spikes, _ = hidden_trace(net, encoder.encode_image(teach_image))
-    memory.teach(hidden_spikes[:, 0, :])
+    held_out = digit_subset(train_data, (HELD_OUT_DIGIT,))
+    if teach_examples > len(held_out):
+        raise ValueError("teach_examples exceeds available held-out samples")
+    traces = []
+    for index in range(teach_examples):
+        teach_image, _ = held_out[index]
+        hidden_spikes, _ = hidden_trace(
+            net, encoder.encode_image(teach_image),
+        )
+        traces.append(hidden_spikes[:, 0, :])
+    memory.teach_many(torch.stack(traces))
     return memory
 
 
