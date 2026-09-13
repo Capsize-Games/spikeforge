@@ -7,7 +7,6 @@ import argparse
 import re
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_GROUPS = (
     ("Guides", ROOT / "documentation"),
@@ -104,7 +103,8 @@ def write_sidebar(
             name = page_name(path)
             lines.append(f"- [{page_title(name)}]({name})")
         lines.append("")
-    (destination / "_Sidebar.md").write_text("\n".join(lines), encoding="utf-8")
+    sidebar = destination / "_Sidebar.md"
+    sidebar.write_text("\n".join(lines), encoding="utf-8")
 
 
 def build(destination: Path) -> None:
@@ -116,7 +116,8 @@ def build(destination: Path) -> None:
     links = markdown_link_map(pages)
     for _, source in pages:
         text = rewrite_links(source.read_text(encoding="utf-8"), source, links)
-        (destination / f"{page_name(source)}.md").write_text(text, encoding="utf-8")
+        target = destination / f"{page_name(source)}.md"
+        target.write_text(text, encoding="utf-8")
     write_header(destination)
     write_sidebar(destination, pages)
 
