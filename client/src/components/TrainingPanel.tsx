@@ -1,4 +1,5 @@
 import type { TrainMetrics } from "../types";
+import { useI18n } from "../i18n/I18nProvider";
 import { LineChart } from "./LineChart";
 import { CHART_COLORS } from "./chartColors";
 
@@ -17,14 +18,17 @@ export function TrainingPanel({
   last,
   device,
 }: Props) {
+  const { t } = useI18n();
   return (
     <div className="panel">
-      <div className="panel-title">Training</div>
+      <div className="panel-title">{t("training.title")}</div>
 
-      <div className="panel-title subsection">Status</div>
+      <div className="panel-title subsection">{t("training.status")}</div>
       {last ? (
         <div className="metrics" data-tour="training-live">
-          <div>step {last.step} / {last.total}</div>
+          <div>
+            step {last.step} / {last.total}
+          </div>
           <div>epoch {last.epoch + 1}</div>
           <div>loss {last.loss.toFixed(3)}</div>
           <div>
@@ -42,18 +46,16 @@ export function TrainingPanel({
           </div>
         </div>
       ) : (
-        <div className="muted">Not training</div>
+        <div className="muted">{t("training.idle")}</div>
       )}
 
-      <div className="panel-title subsection">Loss (training)</div>
+      <div className="panel-title subsection">{t("training.loss")}</div>
       <LineChart
         bare
-        series={[
-          { label: "loss", color: CHART_COLORS.loss, values: loss },
-        ]}
+        series={[{ label: "loss", color: CHART_COLORS.loss, values: loss }]}
       />
 
-      <div className="panel-title subsection">Accuracy (%)</div>
+      <div className="panel-title subsection">{t("training.accuracy")}</div>
       <LineChart
         bare
         series={[

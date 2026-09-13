@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { accessToken } from "../accessToken";
+import { useI18n } from "../i18n/I18nProvider";
 import { ConfirmDialog } from "./ConfirmDialog";
 import type { SavedModel } from "../types";
 
@@ -39,6 +40,7 @@ export function ModelPanel({
   onSave,
   readOnly = false,
 }: Props) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<"load" | "save" | "bundle">("load");
   const [selected, setSelected] = useState("");
   const [name, setName] = useState("my_model");
@@ -49,25 +51,27 @@ export function ModelPanel({
   return (
     <section className="model-panel">
       <header className="model-head">
-        <span className="model-title">Model</span>
+        <span className="model-title">{t("section.model")}</span>
         <span className="model-current">
-          <span className="model-current-label">Current:</span>
+          <span className="model-current-label">{t("model.current")}</span>
           {loading ? (
             <span className="model-loading">
               <span className="spinner" />
-              loading…
+              {t("model.loading")}
             </span>
           ) : (
             <span className={`model-chip ${current ? "on" : ""}`}>
-              <span className="model-chip-name">{current ?? "none"}</span>
+              <span className="model-chip-name">
+                {current ?? t("model.none")}
+              </span>
               {current && (
                 <button
                   type="button"
                   className="model-chip-x"
                   onClick={() => setConfirmUnload(true)}
                   disabled={!connected || loading || readOnly}
-                  title="Unload model"
-                  aria-label="Unload model"
+                  title={t("model.unload")}
+                  aria-label={t("model.unload")}
                 >
                   ✕
                 </button>
@@ -77,7 +81,7 @@ export function ModelPanel({
         </span>
       </header>
 
-      <div className="tabs" role="tablist" aria-label="Model actions">
+      <div className="tabs" role="tablist" aria-label={t("model.actions")}>
         <button
           type="button"
           role="tab"
@@ -86,7 +90,7 @@ export function ModelPanel({
           onClick={() => setTab("load")}
           disabled={readOnly}
         >
-          Load model
+          {t("model.load")}
         </button>
         <button
           type="button"
@@ -96,7 +100,7 @@ export function ModelPanel({
           onClick={() => setTab("save")}
           disabled={readOnly}
         >
-          Save as
+          {t("model.saveAs")}
         </button>
         <button
           type="button"
@@ -105,27 +109,23 @@ export function ModelPanel({
           className={`tab ${tab === "bundle" ? "active" : ""}`}
           onClick={() => setTab("bundle")}
         >
-          Bundle
+          {t("model.bundle")}
         </button>
       </div>
 
       {tab === "load" && (
         <div className="model-block">
-          {readOnly && (
-            <p className="arch-note">
-              Model loading is disabled on the public demo.
-            </p>
-          )}
+          {readOnly && <p className="arch-note">{t("model.demoDisabled")}</p>}
           <div className="control-row">
             <select
               className="text-input"
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
               disabled={disabled || models.length === 0}
-              aria-label="Saved models"
+              aria-label={t("model.saved")}
             >
               <option value="">
-                {models.length ? "choose a saved model…" : "no saved models"}
+                {models.length ? t("model.choose") : t("model.noSaved")}
               </option>
               {models.map((m) => (
                 <option key={m.name} value={m.name}>
@@ -138,7 +138,7 @@ export function ModelPanel({
               onClick={() => selected && onLoad(selected)}
               disabled={disabled || !selected}
             >
-              Load
+              {t("action.load")}
             </button>
           </div>
         </div>
@@ -151,15 +151,15 @@ export function ModelPanel({
               className="text-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="model name…"
-              aria-label="Model name"
+              placeholder={t("model.name")}
+              aria-label={t("model.name")}
             />
             <button
               className="apply small"
               onClick={() => onSave(name)}
               disabled={disabled || !name.trim()}
             >
-              Save
+              {t("action.save")}
             </button>
           </div>
         </div>
@@ -176,7 +176,7 @@ export function ModelPanel({
               aria-label="Model to bundle"
             >
               <option value="">
-                {models.length ? "choose a saved model…" : "no saved models"}
+                {models.length ? t("model.choose") : t("model.noSaved")}
               </option>
               {models.map((m) => (
                 <option key={m.name} value={m.name}>
@@ -193,24 +193,24 @@ export function ModelPanel({
               }}
               download
             >
-              Download .spkf
+              {t("model.download")}
             </a>
           </div>
           <p className="arch-note">
             A portable deployment bundle — everything a runtime needs to load
-            and run this model, with no training code attached. Install it as
-            a standalone command with{" "}
-            <code>spikeforge-serve install &lt;file&gt;.spkf</code>, or serve
-            it with <code>spikeforge-serve serve --bundle &lt;file&gt;.spkf</code>.
+            and run this model, with no training code attached. Install it as a
+            standalone command with{" "}
+            <code>spikeforge-serve install &lt;file&gt;.spkf</code>, or serve it
+            with <code>spikeforge-serve serve --bundle &lt;file&gt;.spkf</code>.
           </p>
         </div>
       )}
 
       <ConfirmDialog
         open={confirmUnload}
-        title="Unload the current model?"
-        message="Any training since it was last saved will be lost. Save it first if you want to keep it."
-        confirmLabel="Unload"
+        title={t("model.unloadTitle")}
+        message={t("model.unloadMessage")}
+        confirmLabel={t("action.unload")}
         onConfirm={() => {
           onNew();
           setConfirmUnload(false);

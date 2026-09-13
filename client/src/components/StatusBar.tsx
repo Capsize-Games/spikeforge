@@ -1,4 +1,5 @@
 import type { DeviceChoice, SystemStatsPayload } from "../types";
+import { useI18n } from "../i18n/I18nProvider";
 import { ResourceMonitor } from "./ResourceMonitor";
 
 interface Props {
@@ -15,11 +16,12 @@ export function StatusBar({
   connected,
   unauthorized,
 }: Props) {
+  const { t } = useI18n();
   const label = unauthorized
-    ? "unauthorized — missing or invalid access token"
+    ? t("status.unauthorized")
     : connected
-      ? "connected"
-      : "disconnected";
+      ? t("status.connected")
+      : t("status.disconnected");
   return (
     <footer className="app-footer">
       <ResourceMonitor stats={stats} requested={requested} />

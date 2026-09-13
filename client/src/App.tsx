@@ -30,6 +30,7 @@ import { TABS } from "./tabs";
 import { LESSONS } from "./tour/lessons";
 import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
+import { useI18n } from "./i18n/I18nProvider";
 import type { TabId } from "./tabs";
 import type { Modality, ServerMsg } from "./types";
 
@@ -43,6 +44,7 @@ const PipelinePanel = lazy(() =>
 );
 
 export default function App() {
+  const { t } = useI18n();
   const { config, configRef, patchConfig, replaceConfig } = useEncodeConfig();
   const training = useTraining();
   const tour = useTour(LESSONS);
@@ -162,8 +164,8 @@ export default function App() {
 
               <div className="panel">
                 <Section
-                  title="Train & inspect"
-                  hint="fit the network, manage checkpoints"
+                  title={t("section.train")}
+                  hint={t("section.train.hint")}
                 >
                   <TrainControls
                     running={training.state.running}
@@ -296,7 +298,9 @@ export default function App() {
         </TabPanel>
 
         <TabPanel id="pipeline" active={tabs.active}>
-          <Suspense fallback={<div className="muted">Loading pipeline editor…</div>}>
+          <Suspense
+            fallback={<div className="muted">{t("pipeline.loading")}</div>}
+          >
             <PipelinePanel
               models={training.state.models}
               connected={ws.connected}
@@ -310,7 +314,9 @@ export default function App() {
               onSavePipeline={(name) =>
                 ws.sendSavePipeline(name, pipeline.state.graph)
               }
-              onLoadPipeline={(name) => ws.sendPipelineName("load_pipeline", name)}
+              onLoadPipeline={(name) =>
+                ws.sendPipelineName("load_pipeline", name)
+              }
               onDeletePipeline={(name) =>
                 ws.sendPipelineName("delete_pipeline", name)
               }

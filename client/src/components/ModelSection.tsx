@@ -1,4 +1,5 @@
 import { TRAIN_HELP } from "../helpText";
+import { useI18n } from "../i18n/I18nProvider";
 import type { TopologyParams, TrainConfig } from "../types";
 import { SelectField } from "./SelectField";
 import { SliderField } from "./SliderField";
@@ -56,6 +57,7 @@ export function ModelSection({
   surrogates,
   onChange,
 }: Props) {
+  const { t } = useI18n();
   const set = (patch: Partial<TrainConfig>) => onChange(patch);
   const params = model.topology_params;
   const neuron = stringParam(params, "neuron") ?? DEFAULT_NEURON;
@@ -71,14 +73,14 @@ export function ModelSection({
     label: v,
   }));
   const surrogateOptions = [
-    { value: "", label: "Default (snnTorch)" },
+    { value: "", label: t("model.default") },
     ...names(surrogates, surrogate).map((v) => ({ value: v, label: v })),
   ];
 
   return (
-    <Section title="Model" hint="the network that learns these spikes">
+    <Section title={t("section.model")} hint={t("section.model.hint")}>
       <SelectField
-        label="Topology"
+        label={t("field.topology")}
         value={model.topology}
         help={TRAIN_HELP.topology}
         tour="topology"
@@ -87,7 +89,7 @@ export function ModelSection({
         onChange={(v) => set({ topology: v })}
       />
       <SelectField
-        label="Neuron"
+        label={t("field.neuron")}
         value={neuron}
         help={TRAIN_HELP.neuron}
         tour="neuron"
@@ -98,7 +100,7 @@ export function ModelSection({
         }
       />
       <SelectField
-        label="Surrogate"
+        label={t("field.surrogate")}
         value={surrogate}
         help={TRAIN_HELP.surrogate}
         tour="surrogate"
@@ -108,7 +110,7 @@ export function ModelSection({
           set({ topology_params: withParam(params, "surrogate", v || null) })
         }
       />
-      <p className="panel-note">Per-stage neuron overrides (optional)</p>
+      <p className="panel-note">{t("model.stageOverrides")}</p>
       <StageNeuronEditor
         value={model.stage_neurons}
         neurons={neurons}
@@ -117,33 +119,53 @@ export function ModelSection({
       />
 
       <SliderField
-        label="hidden" value={model.hidden} min={16} max={512} step={16}
-        help={TRAIN_HELP.hidden} disabled={locked}
+        label="hidden"
+        value={model.hidden}
+        min={16}
+        max={512}
+        step={16}
+        help={TRAIN_HELP.hidden}
+        disabled={locked}
         onChange={(v) => set({ hidden: v })}
       />
       <SliderField
-        label="beta" value={model.beta} min={0.1} max={0.95} step={0.05}
-        help={TRAIN_HELP.beta} disabled={locked}
+        label="beta"
+        value={model.beta}
+        min={0.1}
+        max={0.95}
+        step={0.05}
+        help={TRAIN_HELP.beta}
+        disabled={locked}
         onChange={(v) => set({ beta: v })}
       />
       <SliderField
-        label="lr" value={model.lr} min={0.001} max={0.05} step={0.001}
-        help={TRAIN_HELP.lr} onChange={(v) => set({ lr: v })}
+        label="lr"
+        value={model.lr}
+        min={0.001}
+        max={0.05}
+        step={0.001}
+        help={TRAIN_HELP.lr}
+        onChange={(v) => set({ lr: v })}
       />
       <SliderField
-        label="epochs" value={model.epochs} min={1} max={10} step={1}
-        help={TRAIN_HELP.epochs} onChange={(v) => set({ epochs: v })}
+        label="epochs"
+        value={model.epochs}
+        min={1}
+        max={10}
+        step={1}
+        help={TRAIN_HELP.epochs}
+        onChange={(v) => set({ epochs: v })}
       />
 
       <SelectField
-        label="Device"
+        label={t("field.device")}
         value={model.device}
         help={TRAIN_HELP.device}
         options={[
-          { value: "auto", label: "Auto (pick the faster)" },
+          { value: "auto", label: t("device.auto") },
           {
             value: "gpu",
-            label: gpuAvailable ? "GPU" : "GPU (unavailable)",
+            label: gpuAvailable ? "GPU" : t("device.unavailable"),
             disabled: !gpuAvailable,
           },
           { value: "cpu", label: "CPU" },
@@ -151,12 +173,7 @@ export function ModelSection({
         onChange={(v) => set({ device: v as TrainConfig["device"] })}
       />
 
-      {!locked && (
-        <p className="arch-note">
-          A run builds a fresh network from these settings, so topology,
-          neuron, and surrogate changes apply to the next training run.
-        </p>
-      )}
+      {!locked && <p className="arch-note">{t("model.runNote")}</p>}
     </Section>
   );
 }

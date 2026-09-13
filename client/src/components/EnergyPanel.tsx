@@ -1,4 +1,5 @@
 import type { EnergyPayload } from "../energyTypes";
+import { useI18n } from "../i18n/I18nProvider";
 import { HELP } from "../helpText";
 import { useTargetSelection } from "../hooks/useTargetSelection";
 import type { TargetSummary } from "../targetTypes";
@@ -94,6 +95,7 @@ function Report({ payload }: { payload: EnergyPayload }) {
 
 /** The event-driven energy/latency estimate with an explicit run button. */
 export function EnergyPanel({ payload, targets, loading, onRun }: Props) {
+  const { t } = useI18n();
   const names = targets.map((item) => item.name);
   const { target, setTarget } = useTargetSelection(names);
 
@@ -101,7 +103,7 @@ export function EnergyPanel({ payload, targets, loading, onRun }: Props) {
     <div className="panel energy-panel" data-tour="energy">
       <div className="panel-title row-title">
         <span>
-          Energy
+          {t("energy.title")}
           <HelpTip text={HELP.energy} />
         </span>
         <span className="panel-actions">
@@ -111,7 +113,7 @@ export function EnergyPanel({ payload, targets, loading, onRun }: Props) {
             onClick={() => onRun(target)}
             disabled={loading || names.length === 0}
           >
-            {loading ? "Estimating…" : "Estimate"}
+            {loading ? t("energy.estimating") : t("energy.estimate")}
           </button>
         </span>
       </div>
@@ -119,7 +121,7 @@ export function EnergyPanel({ payload, targets, loading, onRun }: Props) {
       <select
         className="energy-target"
         value={target}
-        aria-label="Energy target"
+        aria-label={t("energy.target")}
         onChange={(event) => setTarget(event.target.value)}
       >
         {names.map((name) => (
@@ -130,10 +132,7 @@ export function EnergyPanel({ payload, targets, loading, onRun }: Props) {
       </select>
 
       {payload === null ? (
-        <div className="panel-note">
-          No energy estimate yet. Press Estimate to account the configured
-          topology's event-driven operations for the selected target.
-        </div>
+        <div className="panel-note">{t("energy.empty")}</div>
       ) : (
         <Report payload={payload} />
       )}

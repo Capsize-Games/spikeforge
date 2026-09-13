@@ -54,7 +54,11 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
   background: var(--bg);
   color: var(--text);
 }
@@ -122,10 +126,40 @@ body {
 }
 
 .theme-toggle {
-  margin-left: auto;
   width: 30px;
   height: 24px;
   font-size: 13px;
+}
+
+.language-select {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+
+.language-select select {
+  width: 104px;
+  min-height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .logo {
@@ -152,4 +186,3 @@ body {
   color: var(--muted);
   font-size: 13px;
 }
-
