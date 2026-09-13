@@ -11,6 +11,11 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Added
+
+- SNN-native `AffectiveRegulator` with slow-decay broadcast state and spike
+  output for downstream module modulation.
+
 ## [spikeforge-v0.3.2] - 2026-09-13
 
 ### Added
