@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://spikeforge.net/sitemap.xml

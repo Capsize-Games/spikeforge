@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://dash.spikeforge.net/sitemap.xml
