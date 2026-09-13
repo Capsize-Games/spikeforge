@@ -1,4 +1,5 @@
 import { HELP } from "../helpText";
+import { useI18n } from "../i18n/I18nProvider";
 import { useTargetSelection } from "../hooks/useTargetSelection";
 import type {
   BackendRunPayload,
@@ -28,6 +29,7 @@ export function TargetsPanel({
   onSelectTarget,
   onRunBackend,
 }: Props) {
+  const { t } = useI18n();
   const names = list ? list.targets.map((item) => item.name) : [];
   const { target, setTarget } = useTargetSelection(names);
 
@@ -52,7 +54,7 @@ export function TargetsPanel({
     <div className="panel targets-panel" data-tour="targets">
       <div className="panel-title row-title">
         <span>
-          Deployment targets
+          {t("targets.title")}
           <HelpTip text={HELP.targets} />
         </span>
         <span className="panel-actions">
@@ -60,8 +62,8 @@ export function TargetsPanel({
             type="button"
             className="icon-btn"
             onClick={() => run(target)}
-            title="Compile and run the selected target"
-            aria-label="Compile and run the selected target"
+            title={t("targets.run")}
+            aria-label={t("targets.run")}
           >
             ▶
           </button>
@@ -69,8 +71,8 @@ export function TargetsPanel({
             type="button"
             className="icon-btn"
             onClick={onRefresh}
-            title="List deployment targets"
-            aria-label="List deployment targets"
+            title={t("targets.refresh")}
+            aria-label={t("targets.refresh")}
           >
             ↻
           </button>
@@ -79,8 +81,8 @@ export function TargetsPanel({
 
       {list === null ? (
         <div className="panel-note">
-          No target registry loaded yet. Press ↻ to list the deployment
-          targets and their availability.
+          No target registry loaded yet. Press ↻ to list the deployment targets
+          and their availability.
         </div>
       ) : (
         <>
@@ -89,9 +91,13 @@ export function TargetsPanel({
             selected={target}
             onSelect={select}
           />
-          <div className="panel-caption">Deployment report · {target}</div>
+          <div className="panel-caption">
+            {t("targets.report")} · {target}
+          </div>
           <DeploymentReportView report={shown} />
-          <div className="panel-caption">Backend run · {target}</div>
+          <div className="panel-caption">
+            {t("targets.backend")} · {target}
+          </div>
           <BackendRunPanel run={shownRun} />
         </>
       )}

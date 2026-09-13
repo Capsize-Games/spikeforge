@@ -3,6 +3,26 @@ import type { KeyboardEvent } from "react";
 
 import type { TabDef, TabId } from "../tabs";
 import { tabButtonId, tabPanelId } from "../tabs";
+import { useI18n } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/translations";
+
+const LABEL_KEYS: Record<TabId, TranslationKey> = {
+  model: "tab.model",
+  viewer: "tab.viewer",
+  training: "tab.training",
+  hub: "tab.hub",
+  deploy: "tab.deploy",
+  pipeline: "tab.pipeline",
+};
+
+const HINT_KEYS: Record<TabId, TranslationKey> = {
+  model: "tab.model.hint",
+  viewer: "tab.viewer.hint",
+  training: "tab.training.hint",
+  hub: "tab.hub.hint",
+  deploy: "tab.deploy.hint",
+  pipeline: "tab.pipeline.hint",
+};
 
 interface Props {
   tabs: readonly TabDef[];
@@ -19,6 +39,7 @@ interface Props {
  */
 export function TabBar({ tabs, active, busy = {}, onSelect }: Props) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const { t } = useI18n();
 
   /** Standard tablist keys: move the selection and focus together. */
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -49,12 +70,13 @@ export function TabBar({ tabs, active, busy = {}, onSelect }: Props) {
     <div
       className="tabbar"
       role="tablist"
-      aria-label="Dashboard sections"
+      aria-label={t("tab.sections")}
       onKeyDown={onKeyDown}
     >
       {tabs.map((tab, index) => {
         const selected = tab.id === active;
         const running = busy[tab.id] === true;
+        const hint = t(HINT_KEYS[tab.id]);
         return (
           <button
             key={tab.id}
@@ -68,10 +90,10 @@ export function TabBar({ tabs, active, busy = {}, onSelect }: Props) {
             aria-selected={selected}
             aria-controls={tabPanelId(tab.id)}
             tabIndex={selected ? 0 : -1}
-            title={running ? `${tab.hint} — running` : tab.hint}
+            title={running ? `${hint} — ${t("tab.running")}` : hint}
             onClick={() => onSelect(tab.id)}
           >
-            {tab.label}
+            {t(LABEL_KEYS[tab.id])}
             {running && <span className="shell-tab-dot" aria-hidden="true" />}
           </button>
         );

@@ -14,27 +14,27 @@ export function TrainControls({
   onTrain,
   onStop,
 }: Props) {
+  const { t } = useI18n();
   const busy = !connected || running || readOnly;
 
   return (
     <div className="actions" data-tour="train-controls">
       <button className="apply" onClick={onTrain} disabled={busy}>
         {readOnly
-          ? "Training disabled"
+          ? t("training.disabled")
           : running
-            ? "Training…"
-            : "⚡ Train model"}
+            ? t("training.running")
+            : t("training.train")}
       </button>
-      {readOnly && (
-        <p className="arch-note">Training is disabled on the public demo.</p>
-      )}
+      {readOnly && <p className="arch-note">{t("training.demoDisabled")}</p>}
       <button
         className="apply stop"
         onClick={onStop}
         disabled={!connected || !running}
       >
-        ■ Stop training
+        {t("training.stop")}
       </button>
     </div>
   );
 }
+import { useI18n } from "../i18n/I18nProvider";

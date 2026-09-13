@@ -1,4 +1,5 @@
 import { HELP } from "../helpText";
+import { useI18n } from "../i18n/I18nProvider";
 import type { TourLesson } from "../tour/types";
 import { HelpTip } from "./HelpTip";
 
@@ -11,6 +12,7 @@ interface Props {
 
 /** "Guided tours" header control and the lesson menu it reveals. */
 export function TourLauncher({ lessons, open, onToggle, onOpen }: Props) {
+  const { t } = useI18n();
   return (
     <div className="tour-launch-wrap">
       <button
@@ -19,17 +21,15 @@ export function TourLauncher({ lessons, open, onToggle, onOpen }: Props) {
         onClick={onToggle}
         aria-expanded={open}
         aria-haspopup="menu"
-        title="Guided tours"
+        title={t("tour.title")}
       >
-        Guided tours
+        {t("tour.title")}
       </button>
       <HelpTip text={HELP.tour} />
 
       {open && (
         <div className="tour-menu" role="menu">
-          <div className="tour-menu-head">
-            One lesson per snnTorch tutorial, right in the dashboard
-          </div>
+          <div className="tour-menu-head">{t("tour.intro")}</div>
           {lessons.map((lesson) => (
             <button
               key={lesson.id}

@@ -3,6 +3,8 @@ import { Activity } from "lucide-react";
 import { useTheme } from "../theme";
 import type { TourLesson } from "../tour/types";
 import type { ExecutionMode } from "../types";
+import { useI18n } from "../i18n/I18nProvider";
+import { LanguageSelect } from "./LanguageSelect";
 import { ModeToggle } from "./ModeToggle";
 import { TourLauncher } from "./TourLauncher";
 
@@ -25,6 +27,7 @@ export function TopBar({
   onOpenTour,
 }: Props) {
   const { theme, toggle } = useTheme();
+  const { t } = useI18n();
   return (
     <header className="topbar">
       <span className="logo" role="img" aria-label="Spikeforge">
@@ -40,14 +43,14 @@ export function TopBar({
         onOpen={onOpenTour}
       />
 
+      <LanguageSelect />
+
       <button
         type="button"
         className="icon-btn theme-toggle"
         onClick={toggle}
-        title={
-          theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
-        }
-        aria-label="Toggle color theme"
+        title={theme === "dark" ? t("theme.light") : t("theme.dark")}
+        aria-label={t("theme.toggle")}
       >
         {theme === "dark" ? "☀" : "☾"}
       </button>

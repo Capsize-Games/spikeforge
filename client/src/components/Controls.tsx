@@ -1,4 +1,6 @@
 import { HELP } from "../helpText";
+import { useI18n } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/translations";
 import type { DatasetInfo, EncodeConfig, TrainConfig } from "../types";
 import { EncodingControls } from "./EncodingControls";
 import { ModelSection } from "./ModelSection";
@@ -24,27 +26,35 @@ interface Props {
 }
 
 /** Human label for a dataset option, including modality and availability. */
-function datasetLabel(d: DatasetInfo): string {
-  const base = `${d.name} (${d.classes} classes)`;
+function datasetLabel(
+  d: DatasetInfo,
+  t: (key: TranslationKey) => string,
+): string {
+  const base = `${d.name} (${d.classes} ${t("dataset.classes")})`;
   if (d.modality !== "event") return base;
   if (d.available === false) {
-    return `${base} — unavailable (install the events extra)`;
+    return `${base} — ${t("dataset.unavailable")}`;
   }
-  return `${base} — events`;
+  return `${base} — ${t("dataset.events")}`;
 }
 
 /** Build the dataset dropdown, disabling event sets with no tonic loader. */
-function datasetOptions(datasets: DatasetInfo[], current: string): Option[] {
+function datasetOptions(
+  datasets: DatasetInfo[],
+  current: string,
+  t: (key: TranslationKey) => string,
+): Option[] {
   if (datasets.length === 0) return [{ value: current, label: current }];
   return datasets.map((d) => ({
     value: d.name,
-    label: datasetLabel(d),
+    label: datasetLabel(d, t),
     // Unavailable events would otherwise fail inside the download worker.
     disabled: d.modality === "event" && d.available === false,
   }));
 }
 
 export function Controls(props: Props) {
+  const { t } = useI18n();
   const {
     config,
     model,
@@ -65,31 +75,25 @@ export function Controls(props: Props) {
 
   return (
     <div className="panel controls">
-      {locked && (
-        <div className="lock-note">
-          Locked to the loaded model so training and inference stay
-          consistent. Click the ✕ on the loaded model tag in the Model panel
-          to start fresh.
-        </div>
-      )}
+      {locked && <div className="lock-note">{t("controls.locked")}</div>}
 
       <div className="controls-cols">
         <div className="controls-col">
           <Section
-            title="Data"
+            title={t("section.data")}
             hint={
               eventMode
-                ? "which event recording the network looks at"
-                : "which image the network looks at"
+                ? t("section.data.eventHint")
+                : t("section.data.imageHint")
             }
           >
             <SelectField
-              label="Dataset"
+              label={t("field.dataset")}
               value={config.dataset}
               help={HELP.dataset}
               tour="dataset"
               disabled={locked}
-              options={datasetOptions(datasets, config.dataset)}
+              options={datasetOptions(datasets, config.dataset, t)}
               onChange={(v) => onSelectSample({ dataset: v, sample_index: 0 })}
             />
 
@@ -102,13 +106,22 @@ export function Controls(props: Props) {
             )}
 
             <SliderField
-              label="subset" value={config.subset} min={1} max={50} step={1}
-              help={HELP.subset} onChange={(v) => onChange({ subset: v })}
+              label="subset"
+              value={config.subset}
+              min={1}
+              max={50}
+              step={1}
+              help={HELP.subset}
+              onChange={(v) => onChange({ subset: v })}
             />
             <SliderField
-              label="batch_size" value={config.batch_size}
-              min={8} max={512} step={8}
-              help={HELP.batch_size} onChange={(v) => onChange({ batch_size: v })}
+              label="batch_size"
+              value={config.batch_size}
+              min={8}
+              max={512}
+              step={8}
+              help={HELP.batch_size}
+              onChange={(v) => onChange({ batch_size: v })}
             />
           </Section>
 

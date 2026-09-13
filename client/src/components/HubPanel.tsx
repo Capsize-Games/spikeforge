@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { HELP } from "../helpText";
+import { useI18n } from "../i18n/I18nProvider";
 import { HUB_FRAMEWORKS, HUB_KINDS } from "../hubTypes";
 import { useHub } from "../hooks/useHub";
 import { HelpTip } from "./HelpTip";
@@ -16,11 +17,12 @@ interface Props {
 
 /** The model-hub browser: filters, entry cards, downloads, and imports. */
 export function HubPanel({ hub }: Props) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [framework, setFramework] = useState("");
   const [kind, setKind] = useState("");
 
-  const entries = hub.search ? hub.search.results : hub.list?.entries ?? [];
+  const entries = hub.search ? hub.search.results : (hub.list?.entries ?? []);
   const issues = hub.list?.issues ?? [];
   const active = hub.download?.status === "downloading" ? hub.download : null;
 
@@ -38,7 +40,7 @@ export function HubPanel({ hub }: Props) {
     <div className="panel hub-panel" data-tour="hub">
       <div className="panel-title row-title">
         <span>
-          Model hub
+          {t("hub.title")}
           <HelpTip text={HELP.hub} />
         </span>
         <span className="panel-actions">
@@ -46,8 +48,8 @@ export function HubPanel({ hub }: Props) {
             type="button"
             className="icon-btn"
             onClick={() => hub.refresh()}
-            title="Refresh the model catalog"
-            aria-label="Refresh the model catalog"
+            title={t("hub.refresh")}
+            aria-label={t("hub.refresh")}
           >
             ↻
           </button>
@@ -58,19 +60,19 @@ export function HubPanel({ hub }: Props) {
         <input
           className="hub-search-input"
           value={query}
-          placeholder="search models"
-          aria-label="Search models"
+          placeholder={t("hub.searchPlaceholder")}
+          aria-label={t("hub.search")}
           onChange={(event) => setQuery(event.target.value)}
         />
         <button type="button" onClick={() => hub.runSearch(query)}>
-          Search
+          {t("hub.search")}
         </button>
         <select
           value={framework}
-          aria-label="Filter by framework"
+          aria-label={t("hub.framework")}
           onChange={(event) => changeFramework(event.target.value)}
         >
-          <option value="">all frameworks</option>
+          <option value="">{t("hub.allFrameworks")}</option>
           {HUB_FRAMEWORKS.map((name) => (
             <option key={name} value={name}>
               {name}
@@ -79,10 +81,10 @@ export function HubPanel({ hub }: Props) {
         </select>
         <select
           value={kind}
-          aria-label="Filter by kind"
+          aria-label={t("hub.kind")}
           onChange={(event) => changeKind(event.target.value)}
         >
-          <option value="">all kinds</option>
+          <option value="">{t("hub.allKinds")}</option>
           {HUB_KINDS.map((name) => (
             <option key={name} value={name}>
               {name}
@@ -108,9 +110,7 @@ export function HubPanel({ hub }: Props) {
       )}
 
       {entries.length === 0 ? (
-        <div className="panel-note">
-          No hub entries loaded. Press ↻ to list the curated catalog.
-        </div>
+        <div className="panel-note">{t("hub.empty")}</div>
       ) : (
         <ul className="hub-list">
           {entries.map((entry) => (
