@@ -11,6 +11,14 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Added
+
+- **Few-shot teaching for the held-out-digit memory protocol.**
+  `OneShotAssociativeMemory.teach_many()` averages several hidden-layer
+  spike-count traces into one Hebbian write, and the evaluation protocol now
+  accepts `teach_examples` so representation capacity and exemplar count can
+  be measured independently.
+
 ## [spikeforge-server-v0.3.0] - 2026-09-12
 
 ### Added

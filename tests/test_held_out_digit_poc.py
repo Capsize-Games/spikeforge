@@ -55,3 +55,13 @@ def test_run_held_out_digit_poc_reports_both_numbers() -> None:
     )
     assert 0.0 <= result.retained_accuracy <= 100.0
     assert 0.0 <= result.recall_accuracy <= 100.0
+
+
+def test_run_rejects_nonpositive_teaching_example_count() -> None:
+    """The few-shot protocol requires at least one teaching example."""
+    try:
+        run_held_out_digit_poc(teach_examples=0)
+    except ValueError as error:
+        assert str(error) == "teach_examples must be positive"
+    else:
+        raise AssertionError("expected invalid teaching count to fail")
