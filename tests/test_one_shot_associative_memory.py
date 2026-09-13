@@ -56,3 +56,22 @@ def test_num_classes_tracks_teach_calls() -> None:
     assert memory.num_classes == 1
     memory.teach(_PATTERN_B)
     assert memory.num_classes == 2
+
+
+def test_many_examples_make_one_class_write() -> None:
+    """Few-shot teaching averages examples into one new memory column."""
+    memory = OneShotAssociativeMemory(in_features=4)
+    memory.teach_many(torch.stack([_PATTERN_A, _PATTERN_A]))
+    assert memory.num_classes == 1
+    assert _run(memory, _PATTERN_A) > 0
+
+
+def test_teach_rejects_wrong_example_rank() -> None:
+    """Teaching requires an explicit example dimension."""
+    memory = OneShotAssociativeMemory(in_features=4)
+    try:
+        memory.teach_many(_PATTERN_A)
+    except ValueError as error:
+        assert str(error) == "teaching examples must have shape [N, T, H]"
+    else:
+        raise AssertionError("expected invalid teaching shape to fail")
