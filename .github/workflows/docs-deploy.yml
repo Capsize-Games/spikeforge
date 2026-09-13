@@ -1,25 +1,13 @@
-name: Deploy docs
+name: Deploy landing page
 
-# Publishes spikeforge.net to GitHub Pages: landing/index.html at the site
-# root, the mkdocs build (scripts/build_docs.sh) nested under /docs/, and
-# landing/CNAME so Pages keeps serving the custom domain. Pages source is
-# set to "GitHub Actions" (repos/capsize-games/spikeforge/pages, one-time).
+# Publishes the static landing page to spikeforge.net. Long-form
+# documentation is synchronized separately to the project GitHub Wiki.
 
 on:
   push:
     branches: [main, arch-0001/phase-1]
     paths:
       - "landing/**"
-      - "plans/**"
-      - "documentation/**"
-      - "examples/README.md"
-      - "README.md"
-      - "COOKBOOK.md"
-      - "rules.md"
-      - "INTEGRATION_PLAN.md"
-      - "OPEN_SOURCE_CHECKLIST.md"
-      - "mkdocs.yml"
-      - "scripts/build_docs.sh"
       - ".github/workflows/docs-deploy.yml"
   workflow_dispatch: {}
 
@@ -39,31 +27,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install docs dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e "./packages/spikeforge[docs]"
-
-      - name: Build the docs site (fails on a broken link)
-        run: bash scripts/build_docs.sh --check
-
-      - name: Assemble the Pages root (landing page + /docs/)
+      - name: Assemble the Pages root
         run: |
           mkdir -p build/pages
           cp landing/index.html build/pages/index.html
           cp landing/i18n.js build/pages/i18n.js
           cp landing/locales.js build/pages/locales.js
-          cp landing/dashboard.png build/pages/dashboard.png
+          cp landing/cta-locales.js build/pages/cta-locales.js
           cp landing/robots.txt build/pages/robots.txt
           cp landing/sitemap.xml build/pages/sitemap.xml
           cp -r landing/assets build/pages/assets
           cp landing/CNAME build/pages/CNAME
-          cp -r build/docs build/pages/docs
 
       - uses: actions/upload-pages-artifact@v3
         with:
