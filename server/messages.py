@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 from fastapi import WebSocket
 
+from server.demo import read_only
 from server.protocol_version import PROTOCOL_VERSION
 from server.schemas import EncodeConfig
 from server.session import Session
@@ -92,6 +93,7 @@ async def send_status(
             "sample_index": engine.sample_index(),
             "true_label": engine.sample_label(),
             "modality": engine.modality,
+            "read_only": read_only(),
         },
     })
 

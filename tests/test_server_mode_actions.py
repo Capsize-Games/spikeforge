@@ -3,8 +3,10 @@
 import asyncio
 from typing import Any, Dict, List, Optional
 
+import pytest
 import torch
 
+from server.demo import READ_ONLY_ENV
 from server.handlers import dispatch
 from server.introspection_handlers import EDUCATIONAL_ONLY
 from server.schemas import ClientMessage, TrainConfig
@@ -88,6 +90,14 @@ def test_train_config_accepts_mode() -> None:
     """TrainConfig defaults to production and accepts educational."""
     assert TrainConfig().mode == "production"
     assert TrainConfig(mode="educational").mode == "educational"
+
+
+def test_public_demo_rejects_training(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Read-only demo mode blocks training before dataset work begins."""
+    monkeypatch.setenv(READ_ONLY_ENV, "1")
+    sent = asyncio.run(_dispatch(ClientMessage(type="train")))
+    assert [message["type"] for message in sent] == ["error"]
+    assert sent[0]["payload"] == "training is disabled on the public demo"
 
 
 def test_trajectory_succeeds_in_educational_mode() -> None:
