@@ -56,6 +56,8 @@ jobs:
         run: |
           mkdir -p build/pages
           cp landing/index.html build/pages/index.html
+          cp landing/i18n.js build/pages/i18n.js
+          cp landing/locales.js build/pages/locales.js
           cp landing/dashboard.png build/pages/dashboard.png
           cp landing/robots.txt build/pages/robots.txt
           cp landing/sitemap.xml build/pages/sitemap.xml

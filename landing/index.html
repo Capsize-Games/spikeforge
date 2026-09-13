@@ -13,24 +13,24 @@
   gtag('config', 'G-KM84SPCK2G');
 </script>
 <title>Spikeforge — Open-Source Spiking Neural Network Toolkit</title>
-<meta name="description" content="Spikeforge is an open-source toolkit for building, training, inspecting, and deploying spiking neural networks.">
+<meta name="description" data-i18n-content="metaDescription" content="Spikeforge is an open-source toolkit for building, training, inspecting, and deploying spiking neural networks.">
 <link rel="canonical" href="https://spikeforge.net/">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0d1117">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Spikeforge">
-<meta property="og:title" content="Spikeforge — Open-Source Spiking Neural Network Toolkit">
-<meta property="og:description" content="Build, inspect, and deploy spiking neural networks with an open-source Python toolkit and live browser dashboard.">
+<meta property="og:title" data-i18n-content="pageTitle" content="Spikeforge — Open-Source Spiking Neural Network Toolkit">
+<meta property="og:description" data-i18n-content="metaDescription" content="Build, inspect, and deploy spiking neural networks with an open-source Python toolkit and live browser dashboard.">
 <meta property="og:url" content="https://spikeforge.net/">
 <meta property="og:image" content="https://spikeforge.net/assets/spikeforge-social.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Spikeforge — spiking neural network toolkit">
+<meta property="og:image:alt" data-i18n-content="socialAlt" content="Spikeforge — spiking neural network toolkit">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Spikeforge — Open-Source Spiking Neural Network Toolkit">
-<meta name="twitter:description" content="Build, inspect, and deploy spiking neural networks with an open-source Python toolkit and live browser dashboard.">
+<meta name="twitter:title" data-i18n-content="pageTitle" content="Spikeforge — Open-Source Spiking Neural Network Toolkit">
+<meta name="twitter:description" data-i18n-content="metaDescription" content="Build, inspect, and deploy spiking neural networks with an open-source Python toolkit and live browser dashboard.">
 <meta name="twitter:image" content="https://spikeforge.net/assets/spikeforge-social.png">
-<meta name="twitter:image:alt" content="Spikeforge — spiking neural network toolkit">
+<meta name="twitter:image:alt" data-i18n-content="socialAlt" content="Spikeforge — spiking neural network toolkit">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Spikeforge","url":"https://spikeforge.net/","description":"An open-source toolkit for building, training, inspecting, and deploying spiking neural networks.","applicationCategory":"DeveloperApplication","operatingSystem":"Linux, macOS, Windows","isAccessibleForFree":true,"license":"https://github.com/Capsize-Games/spikeforge/blob/main/LICENSE","codeRepository":"https://github.com/Capsize-Games/spikeforge"}
 </script>
@@ -83,7 +83,7 @@
   }
   .wrap{max-width:980px;margin-inline:auto;padding-inline:20px;}
   a{color:var(--accent);}
-  a:focus-visible, button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  a:focus-visible, button:focus-visible, select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   code, .mono{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; font-size:0.92em;}
   p{max-width:68ch;}
   p code{background:var(--panel-alt);padding:0.05em 0.35em;border-radius:4px;}
@@ -105,6 +105,8 @@
   .topnav{display:flex;gap:20px;font-size:14px;flex-wrap:wrap;}
   .topnav a{color:var(--text);text-decoration:none;border-bottom:1px solid transparent;}
   .topnav a:hover{border-color:var(--accent);}
+  .language-select{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;}
+  .language-select select{min-height:28px;border:1px solid var(--border);border-radius:4px;background:var(--panel);color:var(--text);font:inherit;}
 
   .hero{display:grid;grid-template-columns:1.1fr 0.9fr;gap:36px;padding-block:40px 34px;align-items:start;}
   @media (max-width:820px){ .hero{grid-template-columns:1fr;} }
@@ -183,11 +185,15 @@
       spikeforge
     </a>
     <nav class="topnav">
-      <a href="#features">Features</a>
-      <a href="#status">Status</a>
-      <a href="#documentation">Documentation</a>
+      <a href="#features" data-i18n="features">Features</a>
+      <a href="#status" data-i18n="status">Status</a>
+      <a href="#documentation" data-i18n="documentation">Documentation</a>
       <a href="https://github.com/capsize-games/spikeforge">GitHub</a>
     </nav>
+    <label class="language-select">
+      <span data-i18n="language">Language</span>
+      <select id="languageSelect" aria-label="Language"></select>
+    </label>
   </div>
 </header>
 
@@ -202,19 +208,9 @@
         </span>
         spikeforge
       </h1>
-      <p>
-        A spiking-neural-network (SNN) toolkit built on
-        <a href="https://snntorch.readthedocs.io/">snnTorch</a> and PyTorch.
-        Loads MNIST-style and neuromorphic event datasets, encodes them into
-        rate, latency, delta, and random spikes, and trains, validates,
-        exports, and deploys LIF networks — with a live browser dashboard
-        served over WebSockets.
-      </p>
+      <p data-i18n-html="hero"></p>
 
-      <div class="pre1">
-        <b>Pre-1.0.</b> Before trusting any number this produces, read
-        <a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md">Implications and boundaries</a>.
-      </div>
+      <div class="pre1" data-i18n-html="pre"></div>
 
       <div class="install">
         <div class="cmd mono">
@@ -224,112 +220,108 @@
       </div>
 
       <div class="links">
-        <a href="https://github.com/capsize-games/spikeforge">Source on GitHub &rarr;</a>
-        <a href="#documentation">Documentation index &rarr;</a>
+        <a href="https://github.com/capsize-games/spikeforge" data-i18n="source">Source on GitHub &rarr;</a>
+        <a href="#documentation" data-i18n="docsIndex">Documentation index &rarr;</a>
       </div>
     </div>
 
     <div class="scope">
-      <div class="scope-head">Leaky integrate-and-fire neuron<br>&beta;=0.90, threshold=1.00, reset=subtract</div>
-      <canvas id="lifCanvas" width="600" height="280" role="img" aria-label="Animated leaky integrate-and-fire neuron: an input spike train drives a membrane-potential trace that leaks, charges, and emits an output spike on threshold crossing, then resets by subtraction."></canvas>
+      <div class="scope-head" data-i18n-html="scope">Leaky integrate-and-fire neuron<br>&beta;=0.90, threshold=1.00, reset=subtract</div>
+      <canvas id="lifCanvas" width="600" height="280" role="img" data-i18n-aria="canvasLabel" aria-label="Animated leaky integrate-and-fire neuron"></canvas>
       <div class="scope-legend">
         <span><span class="swatch" style="background:var(--muted)"></span>I[t]</span>
         <span><span class="swatch" style="background:var(--accent)"></span>U[t]</span>
         <span><span class="swatch" style="background:var(--text)"></span>S[t]</span>
       </div>
-      <p class="scope-cite">Defaults from <code>spikeforge/neurons/contract.py</code> (<code>DEFAULT_BETA</code>, <code>DEFAULT_THRESHOLD</code>). Notation matches the dashboard's own <code>U[t]</code>/<code>I[t]</code>/<code>S[t]</code> introspection traces.</p>
+      <p class="scope-cite" data-i18n-html="scopeNote"></p>
     </div>
   </div>
 
   <section id="features">
-    <h2>Features</h2>
+    <h2 data-i18n="features">Features</h2>
     <dl class="features">
-      <dt>Encoding</dt>
-      <dd>Rate, latency, delta, and random spike coders.</dd>
-      <dt>Training</dt>
-      <dd>Fully-connected and convolutional LIF networks with surrogate-gradient cross-entropy, live loss/accuracy, checkpointing, and opt-in AMP / gradient checkpointing / truncated BPTT / multi-GPU.</dd>
-      <dt>Topologies</dt>
-      <dd><code>fc_legacy</code>, <code>fc_small</code>, <code>conv_net</code>, <code>recurrent_net</code>, plus the sequence presets <code>sequence_mlp</code> and <code>sequence_attn</code>.</dd>
-      <dt>Datasets</dt>
-      <dd>MNIST, Fashion-MNIST, KMNIST, QMNIST, USPS, EMNIST, CIFAR-10, and — via the <code>events</code> extra — N-MNIST, DVS128 Gesture, CIFAR10-DVS, and Spiking Speech Commands.</dd>
-      <dt>Interpreter spine</dt>
-      <dd>NIR export, an independent NIR interpreter, and numerical drift validation against it.</dd>
-      <dt>Introspection</dt>
-      <dd>Educational-mode <code>U[t]</code>/<code>I[t]</code>/<code>S[t]</code> traces, trajectory metrics, encoding/decoding reports, and surrogate-derivative curves.</dd>
-      <dt>Deployment</dt>
-      <dd>A capability matrix, substitution/rewrite reports, weight quantization, energy accounting, and executable <code>reference</code>, <code>norse</code>, and <code>lava_loihi2</code> backends.</dd>
-      <dt>Model hub</dt>
-      <dd>A curated, offline-first catalog plus optional live Hugging Face search.</dd>
-      <dt>Dashboard</dt>
-      <dd>A React + TypeScript UI with training, introspection, analysis, targets, energy, hub, and pipeline panels, and seven guided walkthroughs.</dd>
+      <dt data-i18n="encoding">Encoding</dt>
+      <dd data-i18n="featureEncoding">Rate, latency, delta, and random spike coders.</dd>
+      <dt data-i18n="training">Training</dt>
+      <dd data-i18n="featureTraining">Fully-connected and convolutional LIF networks with surrogate-gradient cross-entropy, live loss/accuracy, checkpointing, and performance options.</dd>
+      <dt data-i18n="topologies">Topologies</dt>
+      <dd data-i18n-html="featureTopologies"></dd>
+      <dt data-i18n="datasets">Datasets</dt>
+      <dd data-i18n-html="featureDatasets"></dd>
+      <dt data-i18n="interpreter">Interpreter spine</dt>
+      <dd data-i18n="featureInterpreter">NIR export, an independent NIR interpreter, and numerical drift validation against it.</dd>
+      <dt data-i18n="introspection">Introspection</dt>
+      <dd data-i18n-html="featureIntrospection"></dd>
+      <dt data-i18n="deployment">Deployment</dt>
+      <dd data-i18n-html="featureDeployment"></dd>
+      <dt data-i18n="modelHub">Model hub</dt>
+      <dd data-i18n="featureHub">A curated, offline-first catalog plus optional live Hugging Face search.</dd>
+      <dt data-i18n="dashboard">Dashboard</dt>
+      <dd data-i18n="featureDashboard">A React + TypeScript UI with training, introspection, analysis, targets, energy, hub, and pipeline panels, and seven guided walkthroughs.</dd>
     </dl>
 
     <figure class="shot">
-      <img src="dashboard.png" width="915" height="925" loading="lazy" alt="The spikeforge dashboard's Model &amp; Data tab: dataset, encoding, and topology controls next to a live training run.">
-      <figcaption>The bundled dashboard, running locally via <code>docker compose up --build</code>.</figcaption>
+      <img src="dashboard.png" width="915" height="925" loading="lazy" data-i18n-alt="dashboardAlt" alt="The Spikeforge dashboard.">
+      <figcaption data-i18n-html="dashboardCaption"></figcaption>
     </figure>
   </section>
 
   <section id="status">
-    <h2>Status</h2>
-    <p class="intro">
-      Pulled from the target and toolkit status tables in <code>plans/</code>
-      rather than restated separately, so this can't drift from the source
-      of truth.
-    </p>
+    <h2 data-i18n="status">Status</h2>
+    <p class="intro" data-i18n="statusIntro"></p>
     <div class="status-wrap">
     <table>
-      <thead><tr><th>Component</th><th>Status</th><th>Note</th></tr></thead>
+      <thead><tr><th data-i18n="component">Component</th><th data-i18n="status">Status</th><th data-i18n="note">Note</th></tr></thead>
       <tbody>
         <tr>
-          <td>NIR export &amp; validation</td>
-          <td><span class="pill done">done</span></td>
-          <td class="note">Independent reference interpreter checks drift against tolerances, not a tautology.</td>
+          <td data-i18n="statusNir">NIR export &amp; validation</td>
+          <td><span class="pill done" data-i18n="done">done</span></td>
+          <td class="note" data-i18n="statusNirNote"></td>
         </tr>
         <tr>
-          <td>Determinism &amp; run tracking</td>
-          <td><span class="pill done">done</span></td>
-          <td class="note">Seeded, bit-exactness checked, manifest recorded per run.</td>
+          <td data-i18n="statusDeterminism">Determinism &amp; run tracking</td>
+          <td><span class="pill done" data-i18n="done">done</span></td>
+          <td class="note" data-i18n="statusDeterminismNote"></td>
         </tr>
         <tr>
           <td><code>spikeforge-serve</code></td>
-          <td><span class="pill done">done</span></td>
-          <td class="note">predict / stream / metrics endpoints, versioned deployment bundle; install/run/list/uninstall a bundle as a standalone command chainable over Unix pipes.</td>
+          <td><span class="pill done" data-i18n="done">done</span></td>
+          <td class="note" data-i18n="statusServeNote"></td>
         </tr>
         <tr>
-          <td>Pipeline builder</td>
-          <td><span class="pill done">done</span></td>
-          <td class="note">Visual DAG editor in the dashboard: chain saved checkpoints, run the graph as one program. No cycles, conditional branching, or fan-in yet — a DAG, not a state machine.</td>
+          <td data-i18n="statusPipeline">Pipeline builder</td>
+          <td><span class="pill done" data-i18n="done">done</span></td>
+          <td class="note" data-i18n="statusPipelineNote"></td>
         </tr>
         <tr>
           <td><code>lava_loihi2</code> backend</td>
-          <td><span class="pill done">done</span></td>
-          <td class="note">Lava's <code>Loihi2SimCfg</code> CPU emulator. Not device time.</td>
+          <td><span class="pill done" data-i18n="done">done</span></td>
+          <td class="note" data-i18n-html="statusLavaNote"></td>
         </tr>
         <tr>
-          <td>Model hub — architectures</td>
-          <td><span class="pill done">done</span></td>
-          <td class="note">Curated NIR graphs across snnTorch/spikingjelly/Norse/Lava, offline-first.</td>
+          <td data-i18n="statusHubArchitectures">Model hub — architectures</td>
+          <td><span class="pill done" data-i18n="done">done</span></td>
+          <td class="note" data-i18n="statusHubArchitecturesNote"></td>
         </tr>
         <tr>
-          <td>Model hub — pretrained weights</td>
-          <td><span class="pill none">not started</span></td>
-          <td class="note">Today's catalog is architecture, not a checkpoint you can deploy cold.</td>
+          <td data-i18n="statusHubWeights">Model hub — pretrained weights</td>
+          <td><span class="pill none" data-i18n="notStarted">not started</span></td>
+          <td class="note" data-i18n="statusHubWeightsNote"></td>
         </tr>
         <tr>
-          <td>On-chip / local learning rules</td>
-          <td><span class="pill dev">in progress</span></td>
-          <td class="note">A one-shot Hebbian associative-memory module and a pair-based STDP synapse (real spike-timing, not a rate code) have shipped; reward-modulated and hardware-resident variants are not started.</td>
+          <td data-i18n="statusLearning">On-chip / local learning rules</td>
+          <td><span class="pill dev" data-i18n="inProgress">in progress</span></td>
+          <td class="note" data-i18n="statusLearningNote"></td>
         </tr>
         <tr>
           <td><code>speck</code> / <code>xylo</code> / <code>spinnaker2</code></td>
-          <td><span class="pill dev">in progress</span></td>
-          <td class="note">Isolated backend probes are built and tested against each vendor SDK's own simulator; degrade honestly to "unavailable" when that SDK isn't installed. No probe has run against physical hardware.</td>
+          <td><span class="pill dev" data-i18n="inProgress">in progress</span></td>
+          <td class="note" data-i18n="statusVendorNote"></td>
         </tr>
         <tr>
-          <td>PyPI release</td>
-          <td><span class="pill done">done</span></td>
-          <td class="note">All seven distributions are on PyPI; <code>./install.sh</code> still works too.</td>
+          <td data-i18n="statusPypi">PyPI release</td>
+          <td><span class="pill done" data-i18n="done">done</span></td>
+          <td class="note" data-i18n-html="statusPypiNote"></td>
         </tr>
       </tbody>
     </table>
@@ -337,22 +329,22 @@
   </section>
 
   <section id="documentation">
-    <h2>Documentation</h2>
-    <p class="intro">The README stays short on purpose; the full reference lives in the repository.</p>
+    <h2 data-i18n="documentation">Documentation</h2>
+    <p class="intro" data-i18n="docsIntro"></p>
     <div class="status-wrap">
     <table>
-      <thead><tr><th>Document</th><th>Description</th></tr></thead>
+      <thead><tr><th data-i18n="document">Document</th><th data-i18n="description">Description</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/README.md">documentation/</a></td><td class="note">Index of the long-form reference</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/quickstart.md">Quickstart</a></td><td class="note">Install paths and first run</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/usage.md">Usage</a></td><td class="note">Docker, local dev, CLI, and device selection</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/architecture.md">Architecture</a></td><td class="note">The <code>TopologySpec</code> spine and data flow</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/project-layout.md">Project layout</a></td><td class="note">Module-by-module map</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md">Implications and boundaries</a></td><td class="note">What the results do and do not tell you</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/COOKBOOK.md">Cookbook</a></td><td class="note">Copy-pasteable recipes</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/tree/main/examples">examples/</a></td><td class="note">Fifteen runnable end-to-end journeys</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/tree/main/plans">plans/</a></td><td class="note">Design documents, ARCH-0001 split, and roadmap</td></tr>
-        <tr><td><a href="https://github.com/capsize-games/spikeforge/tree/main/protocol">protocol/</a></td><td class="note">Versioned WebSocket JSON Schema contract</td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/README.md">documentation/</a></td><td class="note" data-i18n="docIndexNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/quickstart.md" data-i18n="quickstart">Quickstart</a></td><td class="note" data-i18n="docQuickstartNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/usage.md" data-i18n="usage">Usage</a></td><td class="note" data-i18n="docUsageNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/architecture.md" data-i18n="architecture">Architecture</a></td><td class="note" data-i18n-html="docArchitectureNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/project-layout.md" data-i18n="projectLayout">Project layout</a></td><td class="note" data-i18n="docLayoutNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md" data-i18n="boundaries">Implications and boundaries</a></td><td class="note" data-i18n="docBoundariesNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/blob/main/COOKBOOK.md" data-i18n="cookbook">Cookbook</a></td><td class="note" data-i18n="docCookbookNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/tree/main/examples">examples/</a></td><td class="note" data-i18n="docExamplesNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/tree/main/plans">plans/</a></td><td class="note" data-i18n="docPlansNote"></td></tr>
+        <tr><td><a href="https://github.com/capsize-games/spikeforge/tree/main/protocol">protocol/</a></td><td class="note" data-i18n="docProtocolNote"></td></tr>
       </tbody>
     </table>
     </div>
@@ -366,13 +358,15 @@
     <span>spikeforge &middot; BSD-3-Clause &middot; Capsize LLC</span>
     <div class="foot-links">
       <a href="https://github.com/capsize-games/spikeforge">GitHub</a>
-      <a href="https://github.com/capsize-games/spikeforge/blob/main/LICENSE">License</a>
-      <a href="https://github.com/capsize-games/spikeforge/blob/main/CONTRIBUTING.md">Contributing</a>
-      <a href="https://github.com/capsize-games/spikeforge/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/capsize-games/spikeforge/blob/main/LICENSE" data-i18n="license">License</a>
+      <a href="https://github.com/capsize-games/spikeforge/blob/main/CONTRIBUTING.md" data-i18n="contributing">Contributing</a>
+      <a href="https://github.com/capsize-games/spikeforge/blob/main/CHANGELOG.md" data-i18n="changelog">Changelog</a>
     </div>
   </div>
 </footer>
 
+<script src="locales.js"></script>
+<script src="i18n.js"></script>
 <script>
 (function(){
   "use strict";
