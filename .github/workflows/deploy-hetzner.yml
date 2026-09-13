@@ -10,6 +10,7 @@ on:
       - "packages/**"
       - "Dockerfile"
       - "docker-compose.hetzner.yml"
+      - "deploy/docs.Caddyfile"
       - ".github/workflows/deploy-hetzner.yml"
   workflow_dispatch:
 
@@ -80,6 +81,30 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
             'cd /opt/spikeforge && docker compose -p spikeforge --env-file .env -f docker-compose.hetzner.yml up -d --build --remove-orphans'
+
+      - name: Configure the documentation hostname
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$HETZNER_USER@$HETZNER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          caddy_container=$(docker ps \
+            --filter label=com.docker.compose.service=caddy \
+            --format '{{.Names}}' | head -n 1)
+          test -n "$caddy_container"
+          if ! docker exec "$caddy_container" \
+            grep -q 'docs.spikeforge.net' /etc/caddy/Caddyfile; then
+            docker exec -i "$caddy_container" \
+              sh -c 'cat >> /etc/caddy/Caddyfile' \
+              < /opt/spikeforge/deploy/docs.Caddyfile
+          fi
+          docker exec "$caddy_container" \
+            caddy validate --config /etc/caddy/Caddyfile
+          docker exec "$caddy_container" \
+            caddy reload --config /etc/caddy/Caddyfile
+          REMOTE
 
       - name: Verify dashboard health
         if: always()

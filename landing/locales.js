@@ -5,7 +5,7 @@ window.SPIKEFORGE_TRANSLATIONS = {
     status: "Status",
     documentation: "Documentation",
     hero: "A spiking-neural-network (SNN) toolkit built on <a href=\"https://snntorch.readthedocs.io/\">snnTorch</a> and PyTorch. Loads image and neuromorphic event datasets, encodes them into spikes, and trains, validates, exports, and deploys LIF networks — with a live browser dashboard.",
-    pre: "<b>Pre-1.0.</b> Before trusting any number this produces, read <a href=\"https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md\">Implications and boundaries</a>.",
+    pre: "<b>Pre-1.0.</b> Before trusting any number this produces, read <a href=\"https://docs.spikeforge.net/implications-and-boundaries\">Implications and boundaries</a>.",
     source: "Source on GitHub →",
     docsIndex: "Documentation index →",
     scope: "Leaky integrate-and-fire neuron<br>β=0.90, threshold=1.00, reset=subtract",
@@ -25,7 +25,7 @@ window.SPIKEFORGE_TRANSLATIONS = {
   ja: {
     language: "言語", features: "機能", status: "状況", documentation: "ドキュメント",
     hero: "<a href=\"https://snntorch.readthedocs.io/\">snnTorch</a> と PyTorch を基盤とするスパイキングニューラルネットワーク（SNN）ツールキット。画像とニューロモーフィックイベントのデータセットをスパイクに変換し、LIF ネットワークの学習、検証、エクスポート、デプロイをライブダッシュボードで行えます。",
-    pre: "<b>バージョン 1.0 未満。</b>結果を信頼する前に、<a href=\"https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md\">影響と制約</a>をお読みください。",
+    pre: "<b>バージョン 1.0 未満。</b>結果を信頼する前に、<a href=\"https://docs.spikeforge.net/implications-and-boundaries\">影響と制約</a>をお読みください。",
     source: "GitHub のソース →", docsIndex: "ドキュメント一覧 →",
     scope: "リーキー積分発火ニューロン<br>β=0.90、しきい値=1.00、リセット=減算",
     encoding: "エンコーディング", training: "学習", topologies: "トポロジー",
@@ -42,7 +42,7 @@ window.SPIKEFORGE_TRANSLATIONS = {
   es: {
     language: "Idioma", features: "Funciones", status: "Estado", documentation: "Documentación",
     hero: "Un conjunto de herramientas para redes neuronales de picos (SNN) basado en <a href=\"https://snntorch.readthedocs.io/\">snnTorch</a> y PyTorch. Convierte conjuntos de imágenes y eventos neuromórficos en picos, y entrena, valida, exporta y despliega redes LIF mediante un panel web en vivo.",
-    pre: "<b>Versión anterior a 1.0.</b> Antes de confiar en los resultados, lee <a href=\"https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md\">Implicaciones y límites</a>.",
+    pre: "<b>Versión anterior a 1.0.</b> Antes de confiar en los resultados, lee <a href=\"https://docs.spikeforge.net/implications-and-boundaries\">Implicaciones y límites</a>.",
     source: "Código en GitHub →", docsIndex: "Índice de documentación →",
     scope: "Neurona de integración y disparo con fuga<br>β=0,90, umbral=1,00, reinicio=resta",
     encoding: "Codificación", training: "Entrenamiento", topologies: "Topologías",
@@ -58,7 +58,7 @@ window.SPIKEFORGE_TRANSLATIONS = {
   ko: {
     language: "언어", features: "기능", status: "상태", documentation: "문서",
     hero: "<a href=\"https://snntorch.readthedocs.io/\">snnTorch</a>와 PyTorch 기반의 스파이킹 신경망(SNN) 도구입니다. 이미지와 뉴로모픽 이벤트 데이터셋을 스파이크로 인코딩하고, 라이브 웹 대시보드에서 LIF 네트워크를 학습, 검증, 내보내기 및 배포합니다.",
-    pre: "<b>1.0 이전 버전입니다.</b> 결과를 신뢰하기 전에 <a href=\"https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md\">영향과 한계</a>를 읽어 주세요.",
+    pre: "<b>1.0 이전 버전입니다.</b> 결과를 신뢰하기 전에 <a href=\"https://docs.spikeforge.net/implications-and-boundaries\">영향과 한계</a>를 읽어 주세요.",
     source: "GitHub 소스 →", docsIndex: "문서 색인 →",
     scope: "누설 적분 발화 뉴런<br>β=0.90, 임계값=1.00, 리셋=빼기",
     encoding: "인코딩", training: "학습", topologies: "토폴로지", datasets: "데이터셋",
@@ -73,7 +73,7 @@ window.SPIKEFORGE_TRANSLATIONS = {
   de: {
     language: "Sprache", features: "Funktionen", status: "Status", documentation: "Dokumentation",
     hero: "Ein Toolkit für gepulste neuronale Netze (SNN) auf Basis von <a href=\"https://snntorch.readthedocs.io/\">snnTorch</a> und PyTorch. Es codiert Bild- und neuromorphe Ereignisdatensätze als Spikes und trainiert, validiert, exportiert und verteilt LIF-Netze über ein Live-Dashboard.",
-    pre: "<b>Vor Version 1.0.</b> Bevor du Ergebnissen vertraust, lies <a href=\"https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md\">Auswirkungen und Grenzen</a>.",
+    pre: "<b>Vor Version 1.0.</b> Bevor du Ergebnissen vertraust, lies <a href=\"https://docs.spikeforge.net/implications-and-boundaries\">Auswirkungen und Grenzen</a>.",
     source: "Quellcode auf GitHub →", docsIndex: "Dokumentationsindex →",
     scope: "Leaky-Integrate-and-Fire-Neuron<br>β=0,90, Schwelle=1,00, Reset=Subtraktion",
     encoding: "Kodierung", training: "Training", topologies: "Topologien", datasets: "Datensätze",
@@ -88,7 +88,7 @@ window.SPIKEFORGE_TRANSLATIONS = {
   fr: {
     language: "Langue", features: "Fonctionnalités", status: "État", documentation: "Documentation",
     hero: "Une boîte à outils de réseaux de neurones à impulsions (SNN) basée sur <a href=\"https://snntorch.readthedocs.io/\">snnTorch</a> et PyTorch. Elle encode les images et événements neuromorphiques en spikes, puis entraîne, valide, exporte et déploie des réseaux LIF avec un tableau de bord en direct.",
-    pre: "<b>Version antérieure à 1.0.</b> Avant de vous fier aux résultats, lisez <a href=\"https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md\">Implications et limites</a>.",
+    pre: "<b>Version antérieure à 1.0.</b> Avant de vous fier aux résultats, lisez <a href=\"https://docs.spikeforge.net/implications-and-boundaries\">Implications et limites</a>.",
     source: "Code source sur GitHub →", docsIndex: "Index de la documentation →",
     scope: "Neurone à intégration avec fuite<br>β=0,90, seuil=1,00, réinitialisation=soustraction",
     encoding: "Encodage", training: "Entraînement", topologies: "Topologies", datasets: "Jeux de données",
@@ -103,7 +103,7 @@ window.SPIKEFORGE_TRANSLATIONS = {
   pt: {
     language: "Idioma", features: "Recursos", status: "Estado", documentation: "Documentação",
     hero: "Um kit para redes neurais de disparos (SNN) baseado em <a href=\"https://snntorch.readthedocs.io/\">snnTorch</a> e PyTorch. Codifica imagens e eventos neuromórficos em spikes e treina, valida, exporta e implanta redes LIF com um painel web ao vivo.",
-    pre: "<b>Versão anterior à 1.0.</b> Antes de confiar nos resultados, leia <a href=\"https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md\">Implicações e limites</a>.",
+    pre: "<b>Versão anterior à 1.0.</b> Antes de confiar nos resultados, leia <a href=\"https://docs.spikeforge.net/implications-and-boundaries\">Implicações e limites</a>.",
     source: "Código no GitHub →", docsIndex: "Índice da documentação →",
     scope: "Neurônio integra-e-dispara com vazamento<br>β=0,90, limiar=1,00, reset=subtração",
     encoding: "Codificação", training: "Treino", topologies: "Topologias", datasets: "Conjuntos de dados",
@@ -118,7 +118,7 @@ window.SPIKEFORGE_TRANSLATIONS = {
   it: {
     language: "Lingua", features: "Funzionalità", status: "Stato", documentation: "Documentazione",
     hero: "Un toolkit per reti neurali a impulsi (SNN) basato su <a href=\"https://snntorch.readthedocs.io/\">snnTorch</a> e PyTorch. Codifica immagini ed eventi neuromorfici in spike e addestra, convalida, esporta e distribuisce reti LIF con una dashboard web in tempo reale.",
-    pre: "<b>Versione precedente alla 1.0.</b> Prima di fidarti dei risultati, leggi <a href=\"https://github.com/capsize-games/spikeforge/blob/main/documentation/implications-and-boundaries.md\">Implicazioni e limiti</a>.",
+    pre: "<b>Versione precedente alla 1.0.</b> Prima di fidarti dei risultati, leggi <a href=\"https://docs.spikeforge.net/implications-and-boundaries\">Implicazioni e limiti</a>.",
     source: "Codice su GitHub →", docsIndex: "Indice della documentazione →",
     scope: "Neurone leaky integrate-and-fire<br>β=0,90, soglia=1,00, reset=sottrazione",
     encoding: "Codifica", training: "Addestramento", topologies: "Topologie", datasets: "Set di dati",

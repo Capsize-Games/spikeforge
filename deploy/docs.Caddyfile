@@ -1,0 +1,6 @@
+
+# Managed by the Spikeforge deployment workflow.
+docs.spikeforge.net {
+	encode zstd gzip
+	redir https://github.com/Capsize-Games/spikeforge/wiki{uri} 308
+}
