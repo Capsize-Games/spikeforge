@@ -52,6 +52,23 @@ def mount_client(app: FastAPI) -> None:
     if assets.exists():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
+    # Root-level SEO files are outside /assets so crawlers and social
+    # preview fetchers can reach them at their conventional URLs.
+    for filename in ("robots.txt", "sitemap.xml", "spikeforge-social.png"):
+        file_path = dist / filename
+        if not file_path.is_file():
+            continue
+
+        async def static_file(path: Path = file_path) -> FileResponse:
+            return FileResponse(path)
+
+        app.add_api_route(
+            f"/{filename}",
+            static_file,
+            methods=["GET"],
+            include_in_schema=False,
+        )
+
     index = dist / "index.html"
 
     @app.get("/")
