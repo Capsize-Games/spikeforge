@@ -11,6 +11,8 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+## [spikeforge-v0.3.2] - 2026-09-13
+
 ### Added
 
 - **Few-shot teaching for the held-out-digit memory protocol.**
