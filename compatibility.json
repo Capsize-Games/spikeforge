@@ -25,5 +25,9 @@
       "spikeforge-serve": "0.2.0", "spikeforge-clients": "0.1.0",
       "spikeforge-targets": "0.1.1", "spikeforge-io": "0.1.0",
       "spikeforge-hub": "0.1.0", "dashboard": "0.3.0" }
+    ,{ "spikeforge": "0.3.3", "spikeforge-server": "0.3.0",
+      "spikeforge-serve": "0.2.0", "spikeforge-clients": "0.1.0",
+      "spikeforge-targets": "0.1.1", "spikeforge-io": "0.1.0",
+      "spikeforge-hub": "0.1.0", "dashboard": "0.3.0" }
   ]
 }

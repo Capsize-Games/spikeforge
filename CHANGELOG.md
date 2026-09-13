@@ -11,6 +11,8 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+## [spikeforge-v0.3.3] - 2026-09-13
+
 ### Added
 
 - SNN-native `AffectiveRegulator` with slow-decay broadcast state and spike
