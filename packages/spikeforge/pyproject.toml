@@ -15,7 +15,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge"
-version = "0.3.2"
+version = "0.3.3"
 description = "Spiking neural network trainer/experiments for MNIST built with snnTorch and PyTorch."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files: the distribution metadata points at the root documents while
