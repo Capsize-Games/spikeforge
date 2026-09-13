@@ -63,6 +63,15 @@ jobs:
             -o StrictHostKeyChecking=yes "$HETZNER_USER@$HETZNER_HOST" \
             'cat > /opt/spikeforge/.env && chmod 600 /opt/spikeforge/.env'
 
+      - name: Free Docker build cache
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            'docker builder prune -af && docker system prune -af'
+
       - name: Build and restart dashboard
         env:
           HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
