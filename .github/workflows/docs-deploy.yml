@@ -57,6 +57,9 @@ jobs:
           mkdir -p build/pages
           cp landing/index.html build/pages/index.html
           cp landing/dashboard.png build/pages/dashboard.png
+          cp landing/robots.txt build/pages/robots.txt
+          cp landing/sitemap.xml build/pages/sitemap.xml
+          cp -r landing/assets build/pages/assets
           cp landing/CNAME build/pages/CNAME
           cp -r build/docs build/pages/docs
 

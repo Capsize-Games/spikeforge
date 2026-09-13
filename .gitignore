@@ -8,6 +8,8 @@ docs/
 *.png
 !images/*.png
 !landing/*.png
+!landing/assets/*.png
+!client/public/*.png
 
 # Frontend client
 client/node_modules/
