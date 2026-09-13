@@ -114,6 +114,8 @@ export interface StatusPayload {
   true_label?: number | null;
   /** Modality of the configured sample (additive). */
   modality?: Modality;
+  /** Public demo mode disables training and model changes. */
+  read_only?: boolean;
 }
 
 export interface RunStatePayload {

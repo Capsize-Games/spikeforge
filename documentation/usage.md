@@ -65,6 +65,11 @@ caps it *across* sessions too, so many WebSocket connections can't each
 kick off their own run and hang the shared server. A request past the cap
 gets a clear `server busy` error instead of silently queuing or hanging.
 
+For a public read-only demo, set `SPIKEFORGE_DASHBOARD_READ_ONLY=1`. The
+server still encodes and streams samples, but rejects training and model
+changes; the Model and Train controls show the same disabled state. Leaving
+the variable unset preserves the full local dashboard.
+
 ### Compute device & resources
 
 The training panel has a **Device** dropdown (CPU / GPU) that defaults to

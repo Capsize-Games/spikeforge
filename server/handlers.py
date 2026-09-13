@@ -7,6 +7,7 @@ from fastapi import WebSocket
 
 from server import animation
 from server.concurrency import SERVER_BUSY_MESSAGE
+from server.demo import read_only
 from server.engine_factory import build_encoder, ensure_dataset
 from server.messages import (
     emit_frame,
@@ -122,6 +123,12 @@ async def handle_train(
     encode: Optional[EncodeConfig] = None,
 ) -> None:
     """Start training in a worker thread and stream its metrics."""
+    if read_only():
+        await send_locked(ws, session, {
+            "type": "error",
+            "payload": "training is disabled on the public demo",
+        })
+        return
     if session.training.is_running:
         return
     if encode is None and "encode" in cfg.model_fields_set:
@@ -145,6 +152,12 @@ async def handle_stop_train(ws: WebSocket, session: Session) -> None:
 
 async def handle_new_model(ws: WebSocket, session: Session) -> None:
     """Unload the current model so the next run starts from scratch."""
+    if read_only():
+        await send_locked(ws, session, {
+            "type": "error",
+            "payload": "model changes are disabled on the public demo",
+        })
+        return
     session.training.clear()
     await send_locked(ws, session, {"type": "model_cleared", "payload": None})
 
@@ -153,6 +166,12 @@ async def handle_save_model(
     ws: WebSocket, session: Session, name: Optional[str]
 ) -> None:
     """Persist the current trained model to disk."""
+    if read_only():
+        await send_locked(ws, session, {
+            "type": "error",
+            "payload": "model changes are disabled on the public demo",
+        })
+        return
     engine = session.training.engine
     if engine is None:
         await send_locked(ws, session, {
@@ -178,6 +197,12 @@ async def handle_load_model(ws: WebSocket, session: Session,
                             name: Optional[str],
                             cfg: TrainConfig) -> None:
     """Load a checkpoint and make it the active training engine."""
+    if read_only():
+        await send_locked(ws, session, {
+            "type": "error",
+            "payload": "model loading is disabled on the public demo",
+        })
+        return
     encode = (cfg.encode if "encode" in cfg.model_fields_set
               else session.encode_config)
     if encode is not None:
@@ -198,6 +223,12 @@ async def handle_delete_model(
     ws: WebSocket, session: Session, name: Optional[str]
 ) -> None:
     """Delete a saved checkpoint."""
+    if read_only():
+        await send_locked(ws, session, {
+            "type": "error",
+            "payload": "model changes are disabled on the public demo",
+        })
+        return
     model_store.delete(name)
     await handle_list_models(ws, session)
 

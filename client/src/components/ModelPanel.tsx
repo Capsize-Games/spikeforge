@@ -20,6 +20,7 @@ interface Props {
   onNew: () => void;
   onLoad: (name: string) => void;
   onSave: (name: string) => void;
+  readOnly?: boolean;
 }
 
 /**
@@ -36,13 +37,14 @@ export function ModelPanel({
   onNew,
   onLoad,
   onSave,
+  readOnly = false,
 }: Props) {
   const [tab, setTab] = useState<"load" | "save" | "bundle">("load");
   const [selected, setSelected] = useState("");
   const [name, setName] = useState("my_model");
   const [bundleTarget, setBundleTarget] = useState("");
   const [confirmUnload, setConfirmUnload] = useState(false);
-  const disabled = !connected || busy || loading;
+  const disabled = !connected || busy || loading || readOnly;
 
   return (
     <section className="model-panel">
@@ -63,7 +65,7 @@ export function ModelPanel({
                   type="button"
                   className="model-chip-x"
                   onClick={() => setConfirmUnload(true)}
-                  disabled={!connected || loading}
+                  disabled={!connected || loading || readOnly}
                   title="Unload model"
                   aria-label="Unload model"
                 >
@@ -82,6 +84,7 @@ export function ModelPanel({
           aria-selected={tab === "load"}
           className={`tab ${tab === "load" ? "active" : ""}`}
           onClick={() => setTab("load")}
+          disabled={readOnly}
         >
           Load model
         </button>
@@ -91,6 +94,7 @@ export function ModelPanel({
           aria-selected={tab === "save"}
           className={`tab ${tab === "save" ? "active" : ""}`}
           onClick={() => setTab("save")}
+          disabled={readOnly}
         >
           Save as
         </button>
@@ -107,6 +111,11 @@ export function ModelPanel({
 
       {tab === "load" && (
         <div className="model-block">
+          {readOnly && (
+            <p className="arch-note">
+              Model loading is disabled on the public demo.
+            </p>
+          )}
           <div className="control-row">
             <select
               className="text-input"

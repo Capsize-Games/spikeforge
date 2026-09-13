@@ -116,6 +116,7 @@ export default function App() {
 
   const listed = training.state.datasets.find((d) => d.name === config.dataset);
   const modality: Modality = listed?.modality ?? "image";
+  const readOnly = viewer.state.status?.read_only === true;
 
   return (
     <div className="app">
@@ -153,6 +154,7 @@ export default function App() {
                 connected={ws.connected}
                 busy={training.state.running}
                 loading={viewer.modelLoading}
+                readOnly={readOnly}
                 onNew={actions.newModel}
                 onLoad={actions.loadModel}
                 onSave={actions.saveModel}
@@ -166,6 +168,7 @@ export default function App() {
                   <TrainControls
                     running={training.state.running}
                     connected={ws.connected}
+                    readOnly={readOnly}
                     onTrain={actions.train}
                     onStop={actions.stopTrain}
                   />
