@@ -130,7 +130,7 @@
   .install .cmd{font-size:13px;overflow-x:auto;}
   .install .cmd .p{color:var(--accent);}
 
-  .callouts{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:24px;}
+  .callouts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0 0 34px;}
   .callout{
     display:flex;align-items:center;justify-content:space-between;gap:16px;
     min-height:86px;padding:18px 20px;border:1px solid var(--border);
@@ -144,7 +144,8 @@
   .callout-title{font-size:16px;font-weight:800;}
   .callout-note{font-size:12px;opacity:.78;}
   .callout-arrow{font-size:22px;line-height:1;}
-  @media (max-width:640px){.callouts{grid-template-columns:1fr;}}
+  @media (max-width:820px){.callouts{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:560px){.callouts{grid-template-columns:1fr;}}
 
   .scope{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 14px 4px;}
   .scope-head{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
@@ -251,20 +252,6 @@
         </div>
       </div>
 
-      <div class="callouts">
-        <a class="callout callout-primary" href="https://dash.spikeforge.net/">
-          <span class="callout-copy"><span class="callout-title" data-i18n="openDashboard">Open dashboard</span><span class="callout-note" data-i18n="openDashboardNote">Train, inspect, and deploy in the browser</span></span><span class="callout-arrow" aria-hidden="true">&rarr;</span>
-        </a>
-        <a class="callout" href="https://docs.spikeforge.net/">
-          <span class="callout-copy"><span class="callout-title" data-i18n="readDocs">Read the docs</span><span class="callout-note" data-i18n="readDocsNote">Guides, reference, examples, and plans</span></span><span class="callout-arrow" aria-hidden="true">&rarr;</span>
-        </a>
-        <a class="callout" href="#status">
-          <span class="callout-copy"><span class="callout-title" data-i18n="viewStatus">View project status</span><span class="callout-note" data-i18n="viewStatusNote">See what is ready and what is in progress</span></span><span class="callout-arrow" aria-hidden="true">&darr;</span>
-        </a>
-        <a class="callout" href="https://github.com/capsize-games/spikeforge">
-          <span class="callout-copy"><span class="callout-title" data-i18n="viewGitHub">Explore on GitHub</span><span class="callout-note" data-i18n="viewGitHubNote">Source, issues, releases, and contributions</span></span><span class="callout-arrow" aria-hidden="true">&rarr;</span>
-        </a>
-      </div>
     </div>
 
     <div class="scope">
@@ -279,8 +266,23 @@
     </div>
   </div>
 
+  <div class="callouts">
+    <a class="callout callout-primary" href="https://dash.spikeforge.net/">
+      <span class="callout-copy"><span class="callout-title" data-i18n="openDashboard">Open dashboard</span><span class="callout-note" data-i18n="openDashboardNote">Train, inspect, and deploy in the browser</span></span><span class="callout-arrow" aria-hidden="true">&rarr;</span>
+    </a>
+    <a class="callout" href="https://docs.spikeforge.net/">
+      <span class="callout-copy"><span class="callout-title" data-i18n="readDocs">Read the docs</span><span class="callout-note" data-i18n="readDocsNote">Guides, reference, examples, and plans</span></span><span class="callout-arrow" aria-hidden="true">&rarr;</span>
+    </a>
+    <a class="callout" href="#status">
+      <span class="callout-copy"><span class="callout-title" data-i18n="viewStatus">View project status</span><span class="callout-note" data-i18n="viewStatusNote">See what is ready and what is in progress</span></span><span class="callout-arrow" aria-hidden="true">&darr;</span>
+    </a>
+    <a class="callout" href="https://github.com/capsize-games/spikeforge">
+      <span class="callout-copy"><span class="callout-title" data-i18n="viewGitHub">Explore on GitHub</span><span class="callout-note" data-i18n="viewGitHubNote">Source, issues, releases, and contributions</span></span><span class="callout-arrow" aria-hidden="true">&rarr;</span>
+    </a>
+  </div>
+
   <section class="problem" aria-labelledby="problem-title">
-    <h2 id="problem-title" class="display" data-i18n="problemTitle">AI should react when the world changes.</h2>
+    <h2 id="problem-title" class="display" data-i18n="problemTitle">AI that reacts when the world changes.</h2>
     <div class="problem-copy">
       <p data-i18n="problemCopy">Most AI processes every value at every step, even when nothing meaningful changes. Spiking neural networks work more like a nervous system: they send brief signals when events happen. That can help always-on sensors, robots, cameras, and audio tools react quickly while using less energy.</p>
       <p data-i18n="solutionCopy">Spikeforge makes that approach practical. It gives researchers and developers one place to turn data into spikes, train and inspect networks, compare deployment targets, and ship models—without assembling the entire toolchain themselves.</p>
