@@ -4,9 +4,13 @@ Every probe returns ``None`` when its metric is unavailable on this platform,
 so a benchmark degrades to skipping rather than failing.
 """
 
-import resource
 import tracemalloc
 from typing import Any, Callable, Dict, Optional
+
+try:
+    import resource
+except ImportError:  # Windows does not provide the POSIX resource module.
+    resource = None
 
 import torch
 
@@ -26,6 +30,8 @@ def cuda_peak_bytes(device: Any) -> Optional[int]:
 
 def process_rss_bytes() -> Optional[int]:
     """Return the process peak resident set size in bytes, or None."""
+    if resource is None:
+        return None
     try:
         usage = resource.getrusage(resource.RUSAGE_SELF)
     except (ValueError, OSError):

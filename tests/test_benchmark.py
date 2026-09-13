@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+from pytest import MonkeyPatch
+
+from spikeforge.benchmark import memory
 from spikeforge.benchmark.__main__ import main
 from spikeforge.benchmark.config import BenchmarkConfig, default_config
 from spikeforge.benchmark.harness import run_benchmark
@@ -44,6 +47,14 @@ def test_default_fixture_is_tiny() -> None:
     assert config.batch_size <= 4
     assert config.steps <= 8
     assert config.repeats <= 3
+
+
+def test_process_rss_is_optional_without_posix_resource(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Windows degrades the POSIX-only RSS probe instead of failing import."""
+    monkeypatch.setattr(memory, "resource", None)
+    assert memory.process_rss_bytes() is None
 
 
 def test_report_covers_two_topologies_and_both_modes() -> None:
