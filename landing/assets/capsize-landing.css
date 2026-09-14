@@ -1,0 +1,52 @@
+/* Capsize public surface. Functional workbench content stays intact. */
+:root { --bg:#02040b; --panel:#081020; --panel-alt:#060c19; --panel-head:#040914; --border:#29384f; --text:#e5edfc; --muted:#a0b1cc; --accent:#a5b8ff; }
+.wrap { max-width: 1440px; padding-inline: 5%; }
+header.site { background: #030813eb; border-bottom: 1px solid #2b3555; backdrop-filter: blur(18px); }
+.topbar { padding-block: 18px; }
+.brand { letter-spacing: .02em; font-weight: 600; }
+.topnav { font-size: 11px; letter-spacing: .05em; gap: 22px; }
+.hero { position: relative; isolation: isolate; display: block; min-height: 620px; padding-block: 110px 115px; border-bottom: 1px solid #293453; }
+.hero .capsize-scene { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; border-radius: 0; background: radial-gradient(ellipse at 75% 45%,#1b1540,#02040b 75%); }
+.hero::after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(90deg,#02040bf5,#02040b85 45%,transparent 75%); }
+.hero > div { position: relative; z-index: 1; max-width: 620px; }
+.hero h1 { font-size: clamp(58px,7vw,105px); letter-spacing: -.05em; line-height: 1; font-weight: 650; }
+.hero h1 .icon { display: none; }
+.hero > div > p { max-width: 480px; font-size: 19px; line-height: 1.65; color: #c4d0e8; }
+.hero .pre1 { background: #070c1ad9; border-left: 1px solid #b28bff; border-radius: 0; max-width: 465px; }
+.hero .install { border-radius: 0; border-color: #3a4264; background: #040915cf; font-size: 12px; max-width: 465px; }
+.hero-actions { display:flex; gap:15px; flex-wrap:wrap; margin:25px 0; }
+.hero-actions a { display:inline-flex; align-items:center; min-height:44px; padding:10px 22px; border:1px solid #869add; background:#15203fcc; color:#eef4ff; text-decoration:none; font-size:12px; }
+.hero-actions a + a { background:#040a15bb; border-color:#34486a; }
+.capsize-credit { color: #b99be9; font: 10px/1.5 monospace; letter-spacing: .22em; text-transform: uppercase; display: inline-block; margin-bottom: 24px; text-decoration: none; }
+.motion-control { position: absolute; z-index: 2; right: 18px; bottom: 18px; color: #a9bbd6; border: 1px solid #33405b; background: #050a16cc; padding: 8px 12px; cursor: pointer; font-size: 10px; }
+.callouts { margin: 30px 0 65px; gap: 16px; }
+.callout { border-radius: 0; background: linear-gradient(135deg,#0c1529,#040813); min-height: 100px; }
+.callout-primary { color: #eff5ff; background: #112343; border-color: #728cc9; box-shadow: 0 0 24px #506dfb19; }
+.callout-primary:hover { color: #fff; background: #182c51; }
+.callout:hover { transform: none; }
+.callout-title { font-weight: 500; }
+.scope { width: 100%; border-radius: 0; border-color: #30415b; padding: 24px; margin: 0 0 60px; display: grid; grid-template-columns: 1fr 2fr; gap: 10px 35px; align-items: center; }
+.scope canvas { grid-column: 2; grid-row: 1/4; max-height: 240px; }
+.scope-head, .scope-legend, .scope-cite { grid-column: 1; }
+.scope-head { font-size: 14px; color: var(--text); }
+.problem { grid-template-columns: 1fr 2fr; padding-block: 45px 65px; }
+.problem h2 { font-size: 34px; font-weight: 500; letter-spacing: -.03em; }
+.feature-table { border-radius: 0; background: transparent; }
+.feature-row { min-height: 180px; padding: 27px; }
+.feature-icon { background: none; border: 1px solid #3d4766; border-radius: 0; }
+.feature-title { font-size: 16px; font-weight: 500; }
+section { padding-block: 45px; }
+footer.site { position: static; padding-block: 30px; }
+[data-theme="light"] .hero { background:#02040b; color:#eef4ff; }
+[data-theme="light"] .hero .pre1, [data-theme="light"] .hero .install { color:#c7d5ee; }
+@media(max-width:820px) {
+ .hero { padding-block: 70px 100px; min-height: 620px; }
+ .hero > div { max-width: 95%; }
+ .hero h1 { font-size: clamp(50px,10vw,76px); }
+ .hero > div > p { font-size: 17px; }
+ .hero::after { background: linear-gradient(90deg,#02040bdd,#02040b55); }
+ .scope { grid-template-columns: 1fr; }
+ .scope canvas { grid-column: 1; grid-row: auto; }
+ .problem { grid-template-columns: 1fr; gap: 25px; }
+}
+@media(prefers-reduced-motion:reduce) { .callout { transition: none; } }

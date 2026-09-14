@@ -1,0 +1,16 @@
+/* A quiet instrument surface: brand light stays away from plots and data. */
+:root:not([data-theme="light"]) .app-header {
+  background: linear-gradient(110deg,#030815,#11172e 65%,#061b2b);
+  border-bottom: 1px solid #426593;
+  box-shadow: 0 1px 16px #316bf426;
+}
+:root:not([data-theme="light"]) .app-header .brand {
+  letter-spacing: .025em;
+  color: #e2edff;
+}
+:root:not([data-theme="light"]) button:focus-visible,
+:root:not([data-theme="light"]) select:focus-visible,
+:root:not([data-theme="light"]) input:focus-visible {
+  outline: 2px solid #9dbdff;
+  outline-offset: 2px;
+}

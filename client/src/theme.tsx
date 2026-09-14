@@ -26,10 +26,10 @@ export interface CanvasColors {
 
 export const CANVAS_COLORS: Record<Theme, CanvasColors> = {
   dark: {
-    bg: "#0d1117",
-    grid: "#30363d",
-    text: "#8b949e",
-    accent: "#79c0ff",
+    bg: "#020610",
+    grid: "#2c3c55",
+    text: "#a1b2cc",
+    accent: "#70cfff",
     accentSoft: "rgba(88, 166, 255, 0.16)",
     dot: "#e3b341",
     highlight: "rgba(63, 185, 80, 0.14)",

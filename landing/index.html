@@ -205,6 +205,7 @@
 
   @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto;}*{animation-duration:0.001ms !important;}}
 </style>
+<link rel="stylesheet" href="assets/capsize-landing.css?v=20260913g">
 </head>
 <body>
 
@@ -234,7 +235,10 @@
 <div class="wrap" id="top">
 
   <div class="hero">
+    <canvas class="capsize-scene" data-scene="spikeforge" aria-hidden="true"></canvas>
+    <button class="motion-control" type="button" aria-pressed="false">Pause motion</button>
     <div>
+      <a class="capsize-credit" href="https://capsize.online/">Capsize / Neural systems</a>
       <h1 class="display">
         <span class="icon" aria-hidden="true">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
@@ -242,6 +246,8 @@
         spikeforge
       </h1>
       <p data-i18n-html="hero"></p>
+
+      <div class="hero-actions"><a href="https://dash.spikeforge.net/" data-i18n="openDashboard">Open dashboard</a><a href="https://docs.spikeforge.net/" data-i18n="readDocs">Read the docs</a></div>
 
       <div class="pre1" data-i18n-html="pre"></div>
 
@@ -254,16 +260,7 @@
 
     </div>
 
-    <div class="scope">
-      <div class="scope-head" data-i18n-html="scope">Leaky integrate-and-fire neuron<br>&beta;=0.90, threshold=1.00, reset=subtract</div>
-      <canvas id="lifCanvas" width="600" height="280" role="img" data-i18n-aria="canvasLabel" aria-label="Animated leaky integrate-and-fire neuron"></canvas>
-      <div class="scope-legend">
-        <span><span class="swatch" style="background:var(--muted)"></span>I[t]</span>
-        <span><span class="swatch" style="background:var(--accent)"></span>U[t]</span>
-        <span><span class="swatch" style="background:var(--text)"></span>S[t]</span>
-      </div>
-      <p class="scope-cite" data-i18n-html="scopeNote"></p>
-    </div>
+
   </div>
 
   <div class="callouts">
@@ -280,6 +277,17 @@
       <span class="callout-copy"><span class="callout-title" data-i18n="viewGitHub">Explore on GitHub</span><span class="callout-note" data-i18n="viewGitHubNote">Source, issues, releases, and contributions</span></span><span class="callout-arrow" aria-hidden="true">&rarr;</span>
     </a>
   </div>
+
+    <div class="scope">
+      <div class="scope-head" data-i18n-html="scope">Leaky integrate-and-fire neuron<br>&beta;=0.90, threshold=1.00, reset=subtract</div>
+      <canvas id="lifCanvas" width="600" height="280" role="img" data-i18n-aria="canvasLabel" aria-label="Animated leaky integrate-and-fire neuron"></canvas>
+      <div class="scope-legend">
+        <span><span class="swatch" style="background:var(--muted)"></span>I[t]</span>
+        <span><span class="swatch" style="background:var(--accent)"></span>U[t]</span>
+        <span><span class="swatch" style="background:var(--text)"></span>S[t]</span>
+      </div>
+      <p class="scope-cite" data-i18n-html="scopeNote"></p>
+    </div>
 
   <section class="problem" aria-labelledby="problem-title">
     <h2 id="problem-title" class="display" data-i18n="problemTitle">AI that reacts when the world changes.</h2>
@@ -380,6 +388,7 @@
   </div>
 </footer>
 
+<script type="module" src="assets/capsize/shaders.js?v=20260913g"></script>
 <script src="locales.js"></script>
 <script src="cta-locales.js"></script>
 <script src="i18n.js"></script>
@@ -480,10 +489,22 @@
     ctx.fillText('S[t]', padX, laneSpikeY - 6);
   }
 
-  draw();
-  if (!reduceMotion){
-    setInterval(function(){ step(); draw(); }, DT_MS);
+  var paused = reduceMotion;
+  var timer = null;
+  function syncMotion(){
+    clearInterval(timer);
+    timer = null;
+    draw();
+    if (!paused && !document.hidden) {
+      timer = setInterval(function(){ step(); draw(); }, DT_MS);
+    }
   }
+  document.addEventListener('capsize-motion', function(event){
+    paused = event.detail.paused;
+    syncMotion();
+  });
+  document.addEventListener('visibilitychange', syncMotion);
+  syncMotion();
 })();
 </script>
 </body>
