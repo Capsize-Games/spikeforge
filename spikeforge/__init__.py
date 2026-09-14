@@ -7,10 +7,10 @@ from spikeforge.encoding.latency_trainer import (
 )
 from spikeforge.encoding.random_spikegen import RandomSpikeGenerator
 from spikeforge.training.logger import SNNTrainerLogger
-from spikeforge.training.trainer import SSNTrainer
+from spikeforge.training.trainer import SNNTrainer
 
 __all__ = [
-    "SSNTrainer",
+    "SNNTrainer",
     "SNNTrainerLogger",
     "LatencyTrainer",
     "DeltaTrainer",

@@ -2,7 +2,6 @@
 
 from typing import Any, List, Optional, Tuple
 
-import snntorch.spikeplot as splt
 from PIL import Image
 
 from spikeforge.exporters.exporter import Exporter
@@ -87,6 +86,8 @@ class PresentationGifExporter(Exporter):
     @staticmethod
     def _raster_slide(sample_low: Any, trainer: Any) -> Image.Image:
         """Render the input-layer raster slide."""
+        import snntorch.spikeplot as splt
+
         fig = new_fig()
         ax = fig.add_subplot(111)
         splt.raster(

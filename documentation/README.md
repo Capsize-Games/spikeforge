@@ -5,6 +5,11 @@ This folder holds the detailed, implementation-oriented documentation for
 the full picture. The top-level [README](../README.md) is the short,
 human-facing entry point and links back here.
 
+If you also see a `docs/` folder locally: that is a generated, git-ignored
+MkDocs build (`scripts/build_docs.sh` regenerates it from this folder plus
+`plans/`) and never appears on GitHub — this folder is the one source of
+truth to read or edit.
+
 Start with the [architecture](architecture.md) and
 [project layout](project-layout.md), then follow the capability you need.
 

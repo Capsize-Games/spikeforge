@@ -5,12 +5,18 @@ with what is **already done** (`[x]`) versus **outstanding** (`[ ]`). Every
 "done" item was verified in the repository; every "outstanding" item names the
 concrete gap. Nothing here changes product code.
 
-Verification snapshot: `version 0.2.0`, `Development Status :: 4 - Beta`,
-`python_requires >=3.10` (classifiers for 3.10–3.13), **744 passed / 1 skipped**
-with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
+Verification snapshot: `version 0.3.3`, `Development Status :: 4 - Beta`,
+`python_requires >=3.10` (classifiers for 3.10–3.13), **1180 passed / 8
+skipped** with the optional extras, `ruff` clean, docs site builds,
+BSD-3-Clause.
 
-> **Not published.** This repository is still local. Nothing has been pushed to
-> a remote, no release has been created, and no package has been published.
+> **Published.** The repository is public at
+> [`capsize-games/spikeforge`](https://github.com/capsize-games/spikeforge)
+> with green CI, and `spikeforge` (plus its satellite distributions) is
+> published on PyPI. This checklist predates that publish; most items below
+> were verified before the repo went public and have not all been re-audited
+> since, so treat specific numbers as a snapshot rather than a live status —
+> `pip list` / the GitHub repo / PyPI are the current source of truth.
 
 ---
 
@@ -22,11 +28,12 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
   (`Capsize LLC <contact@capsizegames.com>`), matching the
   `LICENSE` copyright reference. This is the identity recorded in
   `git config user.name` / `user.email`.
-- [x] **License declared in packaging metadata.** [`setup.py`](setup.py:34)
-  sets `license="BSD-3-Clause"`, `license_files=["LICENSE"]`, and
+- [x] **License declared in packaging metadata.**
+  [`packages/spikeforge/pyproject.toml`](packages/spikeforge/pyproject.toml)
+  sets `license = "BSD-3-Clause"`, `license-files = ["LICENSE"]`, and
   `License :: OSI Approved :: BSD License`.
-- [x] **The `setup.py` author fields are filled.** `author`, `author_email`,
-  and `url` are set from the git identity and the `origin` remote
+- [x] **The packaging author fields are filled.** `authors`/`maintainers`
+  and the project URLs are set from the git identity and the `origin` remote
   (`https://github.com/capsize-games/spikeforge`) — no longer empty.
 - [x] **Confirm the intended license.** BSD-3-Clause is the deliberate choice
   for the project itself, and it is now the declared `license` plus
@@ -121,29 +128,35 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
 
 ## 5. Packaging & release
 
-- [x] **Extras are declared with version floors.** `dev`, `web`, `nir`,
-  `events`, `onnx`, `hub`, `norse`, `lava`, `tracking`, `tracking-wandb`,
-  `docs` are all in [`setup.py`](setup.py:46).
-- [x] **Console scripts are declared.** Eight entry points
-  ([`setup.py`](setup.py:88)).
-- [x] **Version bump and maturity label decided.** Bumped `0.1.0` → `0.2.0`
-  and `Development Status :: 3 - Alpha` → `4 - Beta`: the planned capabilities
-  are delivered, but hardware and energy results remain unmeasured (reported
-  as estimates), so Beta is the honest label.
+- [x] **Extras are declared with version floors.** `all`, `dev`, `nir`,
+  `events`, `onnx`, `tracking`, `tracking-wandb`, `docs` are all in
+  [`packages/spikeforge/pyproject.toml`](packages/spikeforge/pyproject.toml);
+  `norse`/`lava` now live on the `spikeforge-targets` distribution and `hub`
+  is the separate `spikeforge-hub` distribution (the core `web`/`hub` extras
+  from the pre-split layout no longer exist).
+- [x] **Console scripts are declared.** 13 entry points across the seven
+  distributions (5 on core `spikeforge` alone —
+  [`packages/spikeforge/pyproject.toml`](packages/spikeforge/pyproject.toml)).
+- [x] **Version bump and maturity label decided.** Now at `0.3.3`,
+  `Development Status :: 4 - Beta`: the planned capabilities are delivered,
+  but hardware and energy results remain unmeasured (reported as estimates),
+  so Beta is the honest label.
 - [x] **`python_requires` reconciled with what is tested.** Raised from `>=3.8`
   to `>=3.10`, with `Programming Language :: Python ::` classifiers for
   3.10–3.13 to match CI.
-- [x] **Dependency floors reconciled.** `setup.py` now matches
-  `requirements.txt` (`torch>=2.5`, `torchvision>=0.20`, `snntorch>=1.0`,
-  `matplotlib>=3.8`, `Pillow>=10.0`, `numpy>=1.26`) and declares `psutil`.
+- [x] **Dependency floors reconciled.**
+  [`packages/spikeforge/pyproject.toml`](packages/spikeforge/pyproject.toml)
+  matches `requirements.txt` (`torch>=2.5`, `torchvision>=0.20`,
+  `snntorch>=1.0`, `matplotlib>=3.8`, `Pillow>=10.0`, `numpy>=1.26`) and
+  declares `psutil`.
 - [x] **`py.typed` added.** The package ships a PEP 561 marker, included in
   `package_data`.
 - [x] **Release-notes process defined.** `CHANGELOG.md` follows Keep a
   Changelog; new work goes under `## [Unreleased]`.
-- [ ] **Decide whether to publish to PyPI.** Metadata, extras, entry points,
-  and the long description are all in place, and the author fields are filled.
-  Nothing has been published. Publishing remains a deliberate, separate human
-  decision; a release workflow should be added only once that decision is made.
+- [x] **Publish to PyPI — resolved.** `spikeforge` and its satellite
+  distributions are published; [`.github/workflows/release.yml`](.github/workflows/release.yml)
+  is the release workflow, and [`compatibility.json`](compatibility.json)
+  tracks which satellite versions go with which core release.
 
 ---
 
@@ -172,11 +185,9 @@ with the optional extras, `ruff` clean, docs site builds, BSD-3-Clause.
   extra-gated ones degrade with a clear printed message. The index is linked
   from the README, `plans/index.md`, and the MkDocs nav, and is included by the
   docs generator.
-- [ ] **Dashboard screenshots/GIF.** Deliberately not captured: the repository
-  is prepared in a headless environment with no browser, and no image is
-  faked. A clearly-marked placeholder in the README's Dashboard section lists
-  exactly what to capture and from where, so **a maintainer with a real
-  browser must fill this in** (see §9).
+- [x] **Dashboard screenshot — resolved.** [`images/dashboard.png`](images/dashboard.png)
+  is a real 915×925 capture of the running dashboard, embedded at the top of
+  the README.
 - [x] **Link the checklist from the README.** Kept current as items close.
 
 ---
@@ -232,10 +243,9 @@ They are the **only** open items on this checklist:
   `NOTICE.md`): the four fabricated `snn-community/*` entries were removed from
   the shipped catalog, which now contains only verified, concretely-licensed
   entries.
-- **The PyPI publish decision** (§5) and, if chosen, a release workflow and the
-  matching repository remote/release settings.
-- **Dashboard screenshots/GIF** (§6): capture the five items listed in the
-  README's Dashboard placeholder from a real browser session and link them.
+- **The PyPI publish decision** (§5) — resolved: published, with a release
+  workflow and `compatibility.json` tracking the matrix.
+- **Dashboard screenshot** (§6) — resolved: captured and linked.
 
 ---
 
@@ -246,5 +256,7 @@ catalog ships only verified, concretely-licensed entries; the version and
 `python_requires` decisions are consistent with `requirements.txt`; the two
 formerly-open roadmap decisions are recorded; and the remaining human decisions
 in §9 are answered.
-The repository must also be deliberately made public and published — neither of
-which this checklist performs.
+That bar has been met: the repository is public, CI is green, and the core
+plus satellite distributions are published on PyPI. This document is kept as
+a historical pre-release record — treat its per-item detail as a snapshot,
+not a live status page.

@@ -3,7 +3,6 @@
 from typing import Any, Optional
 
 import matplotlib.pyplot as plt
-import snntorch.spikeplot as splt
 import torch
 
 from spikeforge.exporters.exporter import Exporter
@@ -38,6 +37,8 @@ class DeltaPlotExporter(Exporter):
         fig: Any, position: int, spike_data: torch.Tensor, title: str
     ) -> None:
         """Draw one delta raster panel."""
+        import snntorch.spikeplot as splt
+
         ax = fig.add_subplot(3, 1, position)
         splt.raster(spike_data, ax, c="black")
         ax.set_title(f"Delta ({title})")

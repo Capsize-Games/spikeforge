@@ -1,4 +1,4 @@
-"""Abstract base class for exporters of trained SSNTrainer data."""
+"""Abstract base class for exporters of trained SNNTrainer data."""
 
 import os
 from typing import Any, Optional

@@ -5,9 +5,15 @@ Run as ``python -m spikeforge.cli.verify export --topology conv_net`` or
 ``validate`` command exits non-zero when the report falls outside tolerance,
 so it works as a CI gate. The deployment subcommands (``targets``, ``deploy``,
 ``roundtrip``, ``ingest``) are registered from
-:mod:`spikeforge_targets.cli.target_cli`, and the
-checkpoint-tracking subcommands (``records list|diff|manifest``) from
-:mod:`.records_cli`.
+:mod:`spikeforge_targets.cli.target_cli` when that optional package is
+installed, and the checkpoint-tracking subcommands (``records
+list|diff|manifest``) from :mod:`.records_cli`.
+
+``spikeforge-targets`` is not a hard dependency of the core distribution, so
+this module imports it defensively: without it, ``--help`` and the
+``export``/``validate``/``records``/``onnx-*`` subcommands still work, and
+the deployment subcommands are simply absent from the subcommand list (the
+``--help`` description names the install that brings them back).
 """
 
 import argparse
@@ -30,7 +36,11 @@ from spikeforge.topology import registry
 from spikeforge.topology.registry import build_topology
 from spikeforge.topology.spec import TopologySpec
 from spikeforge.topology.stage_module import StageModule
-from spikeforge_targets.cli import target_cli
+
+try:
+    from spikeforge_targets.cli import target_cli
+except ImportError:
+    target_cli = None
 
 _Input = Tuple[TopologySpec, StageModule, torch.Tensor]
 
@@ -124,9 +134,15 @@ def _run_validate(args: argparse.Namespace) -> int:
 
 def _parser() -> argparse.ArgumentParser:
     """Return the argument parser for the verify CLI."""
+    description = "Export and validate topology NIR graphs."
+    if target_cli is None:
+        description += (
+            " (deployment subcommands -- targets, deploy, roundtrip, "
+            "test-deploy, ingest -- need: pip install spikeforge-targets)"
+        )
     parser = argparse.ArgumentParser(
         prog="spikeforge-verify",
-        description="Export and validate topology NIR graphs.",
+        description=description,
     )
     subs = parser.add_subparsers(dest="command", required=True)
     export = subs.add_parser("export", help="export a topology to NIR")
@@ -140,7 +156,8 @@ def _parser() -> argparse.ArgumentParser:
     check.add_argument("--steps", type=int, default=10)
     check.add_argument("--seed", type=int, default=0)
     check.set_defaults(handler=_run_validate)
-    target_cli.add_subcommands(subs)
+    if target_cli is not None:
+        target_cli.add_subcommands(subs)
     records_cli.add_subcommands(subs)
     onnx_cli.add_subcommands(subs)
     return parser

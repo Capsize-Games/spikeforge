@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 import torch
 from snntorch import spikegen
 
-from spikeforge.training.trainer import SSNTrainer
+from spikeforge.training.trainer import SNNTrainer
 
 
 def convert_to_time(
@@ -15,7 +15,7 @@ def convert_to_time(
     return tau * torch.log(data / (data - threshold))
 
 
-class LatencyTrainer(SSNTrainer):
+class LatencyTrainer(SNNTrainer):
     """Encode an MNIST batch via spikegen.latency across variants."""
 
     _tau: float = 5.0

@@ -3,7 +3,6 @@
 from typing import Optional
 
 import matplotlib.pyplot as plt
-import snntorch.spikeplot as splt
 
 from spikeforge.exporters.exporter import Exporter
 
@@ -15,6 +14,8 @@ class RandomSpikeVideoExporter(Exporter):
 
     def export(self, filepath: Optional[str] = None) -> None:
         """Write the random spike sample animation to an MP4."""
+        import snntorch.spikeplot as splt
+
         filepath = filepath or self.output_path
         sample = self.trainer.spike_rand
         fig, ax = plt.subplots()

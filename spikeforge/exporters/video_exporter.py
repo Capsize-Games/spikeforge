@@ -3,7 +3,6 @@
 from typing import Optional
 
 import matplotlib.pyplot as plt
-import snntorch.spikeplot as splt
 
 from spikeforge.exporters.exporter import Exporter
 from spikeforge.exporters.plot_utils import spike_sample
@@ -16,6 +15,8 @@ class VideoExporter(Exporter):
 
     def export(self, filepath: Optional[str] = None) -> None:
         """Write the animated spike sample to an MP4 file."""
+        import snntorch.spikeplot as splt
+
         filepath = filepath or self.output_path
         fig, ax = plt.subplots()
         sample = spike_sample(self.trainer.spike_data)

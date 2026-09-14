@@ -3,7 +3,6 @@
 from typing import Optional
 
 import matplotlib.pyplot as plt
-import snntorch.spikeplot as splt
 
 from spikeforge.exporters.exporter import Exporter
 from spikeforge.exporters.plot_utils import spike_sample
@@ -18,6 +17,8 @@ class LatencyVideoExporter(Exporter):
         self, filepath: Optional[str] = None, key: str = "clip"
     ) -> None:
         """Write the animated latency sample to an MP4."""
+        import snntorch.spikeplot as splt
+
         filepath = filepath or self.output_path
         sample = spike_sample(self.trainer.latency_data[key])
         fig, ax = plt.subplots()

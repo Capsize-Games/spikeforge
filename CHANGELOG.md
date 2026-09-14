@@ -11,6 +11,68 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+## [spikeforge-v0.3.4] - 2026-09-14
+
+### Fixed
+
+- **The `spikeforge` console script crashed on a clean, minimal install**
+  (`ModuleNotFoundError: No module named 'pandas'`) because
+  `spikeforge.exporters.presentation_exporter` and seven sibling exporters
+  imported `snntorch.spikeplot` (which itself imports `pandas`, undeclared by
+  either snnTorch or spikeforge) at module level. Those imports are now lazy,
+  scoped to the function that needs them.
+- **`spikeforge` and `spikeforge-encodings` ignored `--help`** and instead
+  silently downloaded MNIST and started training. Both now have a real
+  `argparse` parser; `--help` prints help and exits without touching the
+  network.
+- **`spikeforge-verify` and `spikeforge-benchmark` also crashed on a plain
+  `pip install spikeforge`** (no extras): both unconditionally imported
+  `spikeforge_targets` at module load, even though it is not a core
+  dependency. `spikeforge-verify` now degrades honestly (the deployment
+  subcommands are simply absent, named in `--help`'s description) and the
+  benchmark's energy accounting imports `spikeforge_targets` lazily, only
+  when `--energy` is actually requested, via the new
+  `spikeforge.targets_extra` module.
+- Added `scripts/check_console_scripts.py` and wired it into the CI
+  `headless` job so every declared console script is smoke-tested with
+  `--help` against a minimal (non-`[all]`, non-`[dev]`) install going
+  forward.
+- Fixed a broken anchor link (`documentation/dashboard.md` →
+  `usage.md#access-control--rate-limiting`, which mkdocs renders as
+  `#access-control-rate-limiting`) that made `scripts/build_docs.sh --check`
+  fail under strict mode.
+- `OPEN_SOURCE_CHECKLIST.md` stated the repository was unpublished, local
+  only, with no PyPI release; all of that is now false. The banner, the
+  publish-decision item, the dashboard-screenshot item, and several stale
+  packaging facts (`setup.py` references, version, test counts) are
+  corrected.
+- `documentation/dashboard.md`'s screenshot section claimed no image was
+  committed; `images/dashboard.png` has existed for a while and is the
+  README hero image. The section now reflects that one of five planned
+  captures is done.
+
+### Changed
+
+- **Breaking:** renamed the `SSNTrainer` class (a typo) to `SNNTrainer`
+  across the public API (`spikeforge.SNNTrainer`), `LatencyTrainer`'s base
+  class, and `SNNTrainerLogger`'s base class. No compatibility alias, per
+  this project's no-back-compat-shim policy.
+- README: added a Docker-free "five lines of Python" quickstart ahead of the
+  Docker path, a positioning section comparing spikeforge to snnTorch/Norse/
+  Lava/SpikingJelly, a capability matrix (shipped/experimental/spec-only per
+  headline feature), and the compatibility-matrix/version-skew explanation
+  in the Packages table (now listing all seven distributions, not four).
+  `documentation/quickstart.md` mirrors the pip-first path.
+- `spikeforge_hub/CURATION.md` now documents that every shipped entry is
+  `"source": "bundled"` (a NIR graph rendered fresh from a topology preset,
+  never trained weights) and that a trained-checkpoint artifact kind is a
+  deliberate follow-up, not something to fake.
+- Added `scripts/build_hub_page.py`, a stdlib-only static-site generator for
+  the model-hub catalog, deployed alongside the landing page
+  (`spikeforge.net/hub/`) so it is browsable and indexable without
+  installing anything. `CONTRIBUTING.md` documents the PR-based path for
+  proposing a new catalog entry.
+
 ## [spikeforge-v0.3.3] - 2026-09-13
 
 ### Added

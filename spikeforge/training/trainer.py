@@ -10,7 +10,7 @@ from torchvision import datasets, transforms
 from spikeforge.config import MNIST_PATH
 
 
-class SSNTrainer:
+class SNNTrainer:
     """Load an MNIST subset and encode it as rate-coded spike trains."""
 
     _data_path: str = MNIST_PATH
