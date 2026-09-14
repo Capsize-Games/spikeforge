@@ -3,7 +3,6 @@
 from typing import Any, Optional
 
 import matplotlib.pyplot as plt
-import snntorch.spikeplot as splt
 import torch
 
 from spikeforge.exporters.exporter import Exporter
@@ -30,6 +29,8 @@ class LatencyRasterExporter(Exporter):
     @staticmethod
     def _panel(ax: Any, trainer: Any, key: str) -> None:
         """Draw one latency raster panel."""
+        import snntorch.spikeplot as splt
+
         spike_data: torch.Tensor = trainer.latency_data[key]
         num_steps = spike_data.size(0)
         sample = spike_sample(spike_data)

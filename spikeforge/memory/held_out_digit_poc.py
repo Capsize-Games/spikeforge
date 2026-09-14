@@ -118,7 +118,7 @@ def _train_base(
 
     ``train_subset`` reduces the training set by that integer factor
     via ``snntorch.utils.data_subset``, the same convention used
-    elsewhere in this repo (e.g. ``SSNTrainer``); 1 keeps it whole.
+    elsewhere in this repo (e.g. ``SNNTrainer``); 1 keeps it whole.
     """
     base_data = digit_subset(train_data, BASE_DIGITS)
     if train_subset > 1:

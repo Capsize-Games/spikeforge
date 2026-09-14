@@ -54,7 +54,7 @@ classifiers = [
 # torch; numpy is already a core dependency and backs the `.npy` adapter. No
 # pandas/fastapi/network client is pulled in, so an I/O install stays light.
 dependencies = [
-    "spikeforge~=0.3.3",
+    "spikeforge~=0.3.4",
     "torch>=2.5",
     "numpy>=1.26",
 ]

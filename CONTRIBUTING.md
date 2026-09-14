@@ -14,6 +14,16 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
   user goal, not just the implementation.
 - **Pull requests** — small, focused changes with tests and a clear rationale
   are the easiest to review.
+- **Model-hub entries** — propose a checked, real model for the catalog by
+  opening a pull request against
+  [`spikeforge_hub/models.json`](spikeforge_hub/models.json) that follows
+  [`spikeforge_hub/CURATION.md`](spikeforge_hub/CURATION.md): a real,
+  resolvable source, a verified concrete license (or the explicit
+  `unverified-candidate` marker if you can't verify one yet), and a checksum
+  where the upstream publishes one. `python -m spikeforge_hub.cli list` and
+  the `test_hub_catalog.py` suite must still pass. An entry that can't clear
+  `CURATION.md`'s bar belongs in an issue describing the candidate, not in
+  `models.json`.
 
 ## Getting set up
 
@@ -34,9 +44,11 @@ venv/bin/pip install -e ./packages/spikeforge-server
 (cd client && npm install)
 ```
 
-Optional capabilities are extras (`nir`, `events`, `onnx`, `hub`, `norse`,
-`lava`, `tracking`, `tracking-wandb`, `docs`). Each has an isolated probe, so a
-missing package is *reported*, never raised at import. See the
+Optional capabilities are extras on core (`nir`, `events`, `onnx`,
+`tracking`, `tracking-wandb`, `docs`) plus the separate `spikeforge-targets`
+distribution's `norse`/`lava` extras and the `spikeforge-hub` distribution.
+Each has an isolated probe, so a missing package is *reported*, never raised
+at import. See the
 [requirements reference](documentation/requirements.md#optional-extras) for the full matrix.
 
 ## The style contract
@@ -67,9 +79,9 @@ bash scripts/build_docs.sh --check            # documentation links
 
 `scripts/dev.sh check` runs the lint, test, and client steps together.
 
-Baseline when this file was written: **ruff clean**, **739 passed, 1 skipped**
-with the optional extras installed. If you add a capability, add the test that
-proves it and keep the baseline honest.
+Baseline when this file was last updated: **ruff clean**, **1180 passed, 8
+skipped** with the optional extras installed. If you add a capability, add
+the test that proves it and keep the baseline honest.
 
 ## Pull requests
 

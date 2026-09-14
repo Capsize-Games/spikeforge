@@ -3,7 +3,6 @@
 from typing import Optional
 
 import matplotlib.pyplot as plt
-import snntorch.spikeplot as splt
 import torch
 
 from spikeforge.exporters.exporter import Exporter
@@ -35,6 +34,8 @@ class RasterExporter(Exporter):
 
     def _layer_axes(self, num_steps: int, sample: torch.Tensor) -> None:
         """Draw the full input-layer raster panel."""
+        import snntorch.spikeplot as splt
+
         ax = plt.subplot(2, 1, 1)
         splt.raster(sample.reshape(num_steps, -1), ax, s=1.5, c="black")
         ax.set_title(f"Input Layer (Gain = {self.trainer.gain})")
@@ -45,6 +46,8 @@ class RasterExporter(Exporter):
         self, num_steps: int, sample: torch.Tensor, neuron_idx: int
     ) -> None:
         """Draw the single-neuron raster panel."""
+        import snntorch.spikeplot as splt
+
         ax = plt.subplot(2, 1, 2)
         splt.raster(
             sample.reshape(num_steps, -1)[:, neuron_idx].unsqueeze(1),

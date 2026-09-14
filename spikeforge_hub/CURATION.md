@@ -74,4 +74,14 @@ ingestion capability stays fully available — [`probe.py`](probe.py:1),
 The catalog itself is not the downloader; it is the list of things already
 checked.
 
+As of this writing every shipped entry is `"source": "bundled"`: a NIR graph
+rendered on demand from one of this project's own topology presets, not a
+trained checkpoint (`resolve_path` in [`inspect.py`](inspect.py:74) always
+rebuilds from the preset — a bundled entry currently cannot carry stored
+weights). That is an honest gap, not a hidden one: a visitor expecting
+pretrained weights should look at the catalog's `notes` field, which says so
+for every entry. Adding a real trained-checkpoint artifact kind is a
+deliberate follow-up, not something to fake by relabeling an untrained
+preset.
+
 See also [`NOTICE.md`](../../../NOTICE.md) for the metadata-only weights policy.

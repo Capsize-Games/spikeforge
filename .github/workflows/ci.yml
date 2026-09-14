@@ -370,6 +370,11 @@ jobs:
           /tmp/headless/bin/pip install \
             ./packages/spikeforge/dist/spikeforge-*.whl
 
+      - name: Smoke-test every console script against the minimal install
+        run: |
+          PATH="/tmp/headless/bin:${PATH}" \
+            /tmp/headless/bin/python scripts/check_console_scripts.py
+
       - name: Assert the headless wheel boundary
         run: |
           /tmp/headless/bin/python - <<'PY'

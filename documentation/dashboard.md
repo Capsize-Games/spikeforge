@@ -4,16 +4,21 @@ Phase 3 turns the browser dashboard into the go-to surface for both
 audiences. Every panel below renders from live server payloads over the
 existing WebSocket protocol, so nothing needs a page reload.
 
-### Screenshots (placeholder — not yet captured)
+### Screenshots
 
-> **Maintainer note — deliberate placeholder; no image is committed.** The
-> dashboard screenshots and the demo GIF were **not** captured, because this
-> repository is prepared in a headless environment with no browser. Do not
-> fake an image; capture the following from a real browser session and link
-> them from this section:
+The overview capture below exists
+([`images/dashboard.png`](../images/dashboard.png), also the README hero
+image); the other four are still open.
+
+![spikeforge dashboard — Model & Data panel](../images/dashboard.png)
+
+> **Maintainer note — partial: one of five captures done.** The overview
+> above was captured from a real browser session. The remaining four were
+> **not**, because this repository is often prepared in a headless
+> environment with no browser. Do not fake an image; capture the following
+> from a real browser session and link them from this section:
 >
-> - **Dashboard overview** — the full three-column layout (model controls,
->   introspection panels, analysis panels) with a sample encoded.
+> - ~~**Dashboard overview**~~ — done, see above.
 > - **Training run** — the live loss/accuracy charts mid-run.
 > - **NIR graph viewer and drift-validation panel** — a topology graph and
 >   its `within_tolerance` report.
@@ -23,9 +28,9 @@ existing WebSocket protocol, so nothing needs a page reload.
 > To reproduce: `./install.sh`, then
 > `spikeforge-server` (port
 > 8877) and `cd client && npm install && npm run dev`; open
-> <http://localhost:5173>. Commit the captures under a top-level `assets/`
-> directory (the gitignored `build/` and `docs/` trees are not suitable) and
-> link them here.
+> <http://localhost:5173>. Commit the captures under the top-level
+> `images/` directory (the gitignored `build/` and `docs/` trees are not
+> suitable) and link them here.
 
 ### Execution-mode toggle
 
@@ -141,5 +146,5 @@ set `SPIKEFORGE_DASHBOARD_TOKEN` to gate both, and
 `SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS` to cap how many `train` /
 `run_pipeline` jobs run at once server-wide -- a request past that cap gets
 a `server busy` `error` message rather than queuing silently. See
-[Usage — Access control & rate limiting](usage.md#access-control--rate-limiting)
+[Usage — Access control & rate limiting](usage.md#access-control-rate-limiting)
 for the docker-compose configuration.

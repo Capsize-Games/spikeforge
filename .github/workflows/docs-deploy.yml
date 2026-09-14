@@ -8,6 +8,8 @@ on:
     branches: [main, arch-0001/phase-1]
     paths:
       - "landing/**"
+      - "spikeforge_hub/models.json"
+      - "scripts/build_hub_page.py"
       - ".github/workflows/docs-deploy.yml"
   workflow_dispatch: {}
 
@@ -27,6 +29,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Assemble the Pages root
         run: |
           mkdir -p build/pages
@@ -38,6 +44,10 @@ jobs:
           cp landing/sitemap.xml build/pages/sitemap.xml
           cp -r landing/assets build/pages/assets
           cp landing/CNAME build/pages/CNAME
+
+      - name: Render the model-hub catalog page (stdlib-only, no core install)
+        run: |
+          python scripts/build_hub_page.py --out build/pages/hub/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

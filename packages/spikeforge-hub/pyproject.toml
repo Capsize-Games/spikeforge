@@ -53,7 +53,7 @@ dependencies = [
     # The core library owns the interpreter/simulator, ``nir_bridge``, and the
     # hub cache configuration; this distribution owns catalog/network I/O. The
     # pin is a pre-1.0 compatible-release: >=0.3.0,<0.4.0.
-    "spikeforge~=0.3.3",
+    "spikeforge~=0.3.4",
     "torch>=2.5",
     "huggingface_hub>=0.20",
 ]

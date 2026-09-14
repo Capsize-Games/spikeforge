@@ -14,7 +14,10 @@ in `issues()` rather than silently skipped. The catalog ships **only verified
 entries** — a remote entry must name a real repository/reference and a concrete
 SPDX-style license, and a known-but-unverified candidate is marked
 `"unverified-candidate"` and reported `available: false`. The full policy is in
-`spikeforge_hub/CURATION.md`.
+`spikeforge_hub/CURATION.md`, which also documents how to propose a new
+entry. `scripts/build_hub_page.py` renders the same catalog to a static,
+publicly browsable page (deployed alongside the landing site) so it is
+discoverable without installing anything.
 
 Live Hugging Face search/download is provided by the **`spikeforge-hub`
 distribution** (`packages/spikeforge-hub`, import root `spikeforge_hub`; ARCH-0001 Phase 4),

@@ -3,7 +3,6 @@
 from typing import Optional
 
 import matplotlib.pyplot as plt
-import snntorch.spikeplot as splt
 
 from spikeforge.exporters.exporter import Exporter
 
@@ -15,6 +14,8 @@ class RandomSpikeRasterExporter(Exporter):
 
     def export(self, filepath: Optional[str] = None) -> None:
         """Write the raster of the generated random spikes."""
+        import snntorch.spikeplot as splt
+
         filepath = filepath or self.output_path
         spike_rand = self.trainer.spike_rand
         num_steps = spike_rand.size(0)

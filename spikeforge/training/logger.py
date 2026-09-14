@@ -1,10 +1,10 @@
-"""Logging-aware subclass of :class:`SSNTrainer`."""
+"""Logging-aware subclass of :class:`SNNTrainer`."""
 
-from spikeforge.training.trainer import SSNTrainer
+from spikeforge.training.trainer import SNNTrainer
 
 
-class SNNTrainerLogger(SSNTrainer):
-    """SSNTrainer variant that prints diagnostics during setup."""
+class SNNTrainerLogger(SNNTrainer):
+    """SNNTrainer variant that prints diagnostics during setup."""
 
     def _log(self, message: str) -> None:
         """Emit one diagnostic line to stdout."""

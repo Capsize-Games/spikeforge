@@ -40,7 +40,7 @@ spikeforge/
     model_diff.py            Classify metadata changes between checkpoints
     hidden_frames.py         Per-step hidden-layer frames for animation
   training/                  Training loop and its collaborators
-    trainer.py               SSNTrainer: MNIST loading + rate coding
+    trainer.py               SNNTrainer: MNIST loading + rate coding
     logger.py                SNNTrainerLogger: diagnostic prints
     training_engine.py       TrainingEngine: train loop yielding metrics
     checkpoint_mixin.py      Checkpoint save/restore behaviour
