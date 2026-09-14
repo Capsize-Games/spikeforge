@@ -204,6 +204,13 @@
   .foot-links a:hover{color:var(--accent);}
 
   @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto;}*{animation-duration:0.001ms !important;}}
+
+  /* Arabic flips the page. Only a handful of rules here are direction-specific: the callout
+     rule, the table gutters, and the hero note's accent bar. */
+  [dir="rtl"] .pre1 { border-left: 0; border-right: 3px solid var(--accent); border-radius: 6px 0 0 6px; }
+  [dir="rtl"] th { text-align: right; padding: 0 0 8px 10px; }
+  [dir="rtl"] td { padding: 10px 0 10px 10px; }
+  [dir="rtl"] .callout-arrow { display: inline-block; transform: scaleX(-1); }
 </style>
 <link rel="stylesheet" href="assets/capsize-landing.css?v=20260913g">
 </head>
