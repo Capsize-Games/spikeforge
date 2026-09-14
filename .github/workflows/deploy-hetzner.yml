@@ -11,6 +11,7 @@ on:
       - "Dockerfile"
       - "docker-compose.hetzner.yml"
       - "deploy/docs.Caddyfile"
+      - "deploy/configure-docs.sh"
       - ".github/workflows/deploy-hetzner.yml"
   workflow_dispatch:
 
@@ -64,14 +65,14 @@ jobs:
             -o StrictHostKeyChecking=yes "$HETZNER_USER@$HETZNER_HOST" \
             'cat > /opt/spikeforge/.env && chmod 600 /opt/spikeforge/.env'
 
-      - name: Free Docker build cache
+      - name: Report disk capacity without deleting other services' images
         env:
           HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
           HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
-            'docker builder prune -af && docker system prune -af'
+            'df -h /'
 
       - name: Build and restart dashboard
         env:
@@ -88,23 +89,8 @@ jobs:
           HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
-            "$HETZNER_USER@$HETZNER_HOST" 'bash -s' <<'REMOTE'
-          set -euo pipefail
-          caddy_container=$(docker ps \
-            --filter label=com.docker.compose.service=caddy \
-            --format '{{.Names}}' | head -n 1)
-          test -n "$caddy_container"
-          if ! docker exec "$caddy_container" \
-            grep -q 'docs.spikeforge.net' /etc/caddy/Caddyfile; then
-            docker exec -i "$caddy_container" \
-              sh -c 'cat >> /etc/caddy/Caddyfile' \
-              < /opt/spikeforge/deploy/docs.Caddyfile
-          fi
-          docker exec "$caddy_container" \
-            caddy validate --config /etc/caddy/Caddyfile
-          docker exec "$caddy_container" \
-            caddy reload --config /etc/caddy/Caddyfile
-          REMOTE
+            "$HETZNER_USER@$HETZNER_HOST" \
+            'bash /opt/spikeforge/deploy/configure-docs.sh'
 
       - name: Verify dashboard health
         if: always()
