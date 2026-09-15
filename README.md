@@ -22,12 +22,13 @@ dashboard, or as a desktop app.
 
 ## Quickstart
 
+### Install
+
 Install from pypi
 
 ```bash
 pip install spikeforge
 ```
-
 
 Then run the following snippet in a Python REPL or script:
 
@@ -60,8 +61,10 @@ The CLI tools (`spikeforge-verify`, `spikeforge-benchmark`) and the
 NIR/deployment/energy pieces are covered in
 [Usage](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/usage.md).
 
-**On a machine with no GPU**, install the CPU torch wheels first, so pip
-doesn't pull in the full CUDA stack behind them:
+### No GPU
+
+Install the CPU torch wheels first, so pip doesn't pull in the full CUDA
+stack behind them:
 
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
@@ -73,6 +76,8 @@ Dockerfile and CI use.
 
 The order matters: with `--extra-index-url` pip still prefers the CUDA
 build from PyPI.
+
+### Browser dashboard
 
 To run the live browser dashboard locally with Docker:
 
@@ -122,34 +127,23 @@ the library itself — file an issue if that's stale.
 | Pretrained model zoo | — | — | — | ✅ (some vision tasks) | small: six of this project's own reference checkpoints with published accuracy, plus untrained preset shapes ([details](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/benchmarks.md)) |
 | Live browser training/introspection dashboard | — | — | — | — | ✅ |
 
-If you already have a training loop in snnTorch/Norse/Lava/SpikingJelly and
-don't need interop, deployment reporting, energy estimates, or the
-dashboard, you may not need spikeforge on top of it — that's a fair
-"obviously no," and better than an uninformed "obviously yes."
+If you already have a training loop in snnTorch, Norse, Lava, or
+SpikingJelly, and you don't need interop, deployment reporting, energy
+estimates, or the dashboard, you may not need spikeforge on top of it.
 
 ## Features
 
-- **Encoding** — rate, latency, delta, and random spike coders.
-- **Training** — fully-connected and convolutional LIF networks with
-  surrogate-gradient cross-entropy, checkpointing, and opt-in AMP / gradient
-  checkpointing / truncated BPTT / multi-GPU.
-- **Topologies** — `fc_legacy`, `fc_small`, `conv_net`, `recurrent_net`, plus
-  the sequence presets `sequence_mlp` and `sequence_attn`.
-- **Datasets** — MNIST, Fashion-MNIST, KMNIST, QMNIST, USPS, EMNIST,
-  CIFAR-10, and (via the `events` extra) N-MNIST, DVS128 Gesture,
-  CIFAR10-DVS, and Spiking Speech Commands.
-- **Interpreter spine** — NIR export, an independent NIR interpreter, and
-  numerical drift validation.
-- **Introspection** — educational-mode `U[t]`/`I[t]`/`S[t]` traces,
-  trajectory metrics, and surrogate-derivative curves.
-- **Deployment** — a capability matrix, weight quantization with a drift
-  check that can simulate activation/membrane rounding, energy accounting,
-  and executable `reference`, `norse`, and `lava_loihi2` backends.
-- **Model hub** — a curated, offline-first catalog carrying this project's
-  own trained reference checkpoints (with the accuracy each scores), plus
-  optional live Hugging Face search.
-- **Dashboard** — a React + TypeScript UI with training, introspection,
-  analysis, targets, energy, and hub panels, and seven guided walkthroughs.
+| Area | What's included |
+|---|---|
+| Encoding | Rate, latency, delta, and random spike coders |
+| Training | Fully-connected and convolutional LIF networks with surrogate-gradient cross-entropy and checkpointing; opt-in AMP, gradient checkpointing, truncated BPTT, and multi-GPU |
+| Topologies | `fc_legacy`, `fc_small`, `conv_net`, `recurrent_net`, `sequence_mlp`, `sequence_attn` |
+| Datasets | MNIST, Fashion-MNIST, KMNIST, QMNIST, USPS, EMNIST, CIFAR-10; via the `events` extra: N-MNIST, DVS128 Gesture, CIFAR10-DVS, Spiking Speech Commands |
+| Interpreter spine | NIR export, an independent NIR interpreter, numerical drift validation |
+| Introspection | Educational-mode `U[t]`/`I[t]`/`S[t]` traces, trajectory metrics, surrogate-derivative curves |
+| Deployment | Capability matrix; weight quantization with a drift check that can simulate activation/membrane rounding; energy accounting; executable `reference`, `norse`, and `lava_loihi2` backends |
+| Model hub | Curated, offline-first catalog of this project's own trained reference checkpoints, with the accuracy each scores, plus optional live Hugging Face search |
+| Dashboard | React + TypeScript UI — training, introspection, analysis, targets, energy, and hub panels, plus seven guided walkthroughs |
 
 ## What's implemented vs. experimental vs. spec-only
 
