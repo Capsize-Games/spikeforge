@@ -8,13 +8,22 @@
 
 ## Third-party models: metadata-only, fetched on demand
 
-The model hub ships a **curated catalog of metadata only**
-([`spikeforge_hub/models.json`](spikeforge_hub/models.json)). This
-repository does **not** redistribute third-party model weights. Every shipped
-entry is a NIR graph derived from this project's own presets (BSD-3-Clause,
-authored here); the catalog ships **only verified entries**. Weights a user
-chooses to add are fetched on demand from their source into a local cache using
-the Hugging Face ingestion mechanism
+This repository does **not** redistribute third-party model weights, and that
+has not changed. The model hub's catalog
+([`spikeforge_hub/models.json`](spikeforge_hub/models.json)) ships two kinds of
+entry, both authored here and both BSD-3-Clause:
+
+- `"source": "bundled"` — a NIR graph derived from this project's own topology
+  presets. Structure, with freshly-initialised weights.
+- `"source": "reference"` — a **trained checkpoint produced by this project**,
+  shipped inside the `spikeforge-hub` distribution under `weights/` and
+  checksum-verified on load. These are this project's own artifacts, trained on
+  publicly available datasets; they are not derived from, and do not
+  redistribute, anyone else's weights.
+
+The catalog ships **only verified entries**. Third-party weights a user chooses
+to add are fetched on demand from their source into a local cache using the
+Hugging Face ingestion mechanism
 ([`hub/hf_api.py`](spikeforge_hub/hf_api.py),
 [`hub/download_cli.py`](spikeforge_hub/download_cli.py)) plus the `hub`
 extra.
@@ -28,8 +37,13 @@ extra.
 - The catalog does not publish a checksum for every entry. An entry with no
   published checksum verifies as `unverified` rather than trusted, and integrity
   checking is best-effort.
-- No weights are bundled, so this NOTICE does not grant any right to any
-  third-party model a user chooses to add or download.
+- The only weights bundled here are this project's own reference checkpoints,
+  released under the same BSD-3-Clause terms as the rest of the repository.
+  This NOTICE grants no right to any third-party model a user chooses to add
+  or download.
+- The datasets those reference checkpoints were trained on (MNIST,
+  Fashion-MNIST, Kuzushiji-MNIST) carry their own upstream terms, which are
+  unaffected by this project's license and are not redistributed here.
 
 ### Curation
 

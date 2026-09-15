@@ -28,6 +28,7 @@ from spikeforge.benchmark.serving import (
 )
 from spikeforge.benchmark.store import BenchmarkStore
 from spikeforge.benchmark.suite import with_metadata
+from spikeforge.version import add_version_flag
 
 
 def _add_fixture_args(parser: argparse.ArgumentParser) -> None:
@@ -81,6 +82,7 @@ def _parser() -> argparse.ArgumentParser:
         prog="spikeforge-benchmark",
         description="Benchmark interpreter execution modes.",
     )
+    add_version_flag(parser)
     _add_fixture_args(parser)
     _add_serving_args(parser)
     _add_store_args(parser)

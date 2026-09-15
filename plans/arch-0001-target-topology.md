@@ -137,7 +137,7 @@ exclude = ["server*", "tests*", "spikeforge_targets*", "spikeforge_hub*"]
 ```
 
 This is the direct fix for the verified fact that
-[`setup.py`](setup.py:37) currently packages `server/` into `spikeforge`.
+`setup.py` currently packages `server/` into `spikeforge`.
 
 ## Related decisions
 

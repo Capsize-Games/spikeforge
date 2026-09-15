@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-server"
-version = "0.3.0"
+version = "0.3.1"
 description = "FastAPI + WebSocket server adapter for the spikeforge dashboard."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core distribution's metadata approach.
@@ -48,16 +48,17 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
     "websockets>=12.0",
     "pydantic>=2.5",
-    "spikeforge~=0.3.4",
-    "spikeforge-targets~=0.1.0",
-    "spikeforge-hub~=0.1.0",
-    "spikeforge-serve~=0.2.0",
+    "spikeforge~=0.3.5",
+    "spikeforge-targets~=0.1.2",
+    "spikeforge-hub~=0.2.0",
+    "spikeforge-serve~=0.2.1",
 ]
 
 [project.optional-dependencies]
@@ -71,8 +72,11 @@ dev = [
 spikeforge-server = "server.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/capsize-games/spikeforge"
-Repository = "https://github.com/capsize-games/spikeforge"
+Homepage = "https://spikeforge.net/"
+Documentation = "https://docs.spikeforge.net/"
+Repository = "https://github.com/Capsize-Games/spikeforge"
+Changelog = "https://github.com/Capsize-Games/spikeforge/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Capsize-Games/spikeforge/issues"
 
 [tool.setuptools]
 zip-safe = false
@@ -88,3 +92,9 @@ exclude = [
     "spikeforge*", "spikeforge_targets*", "spikeforge_hub*",
     "spikeforge_serve*", "tests*",
 ]
+
+[tool.setuptools.package-data]
+# PEP 561: without this marker in the wheel, a type checker treats every
+# symbol in this distribution as ``Any`` even though the source is fully
+# annotated.
+server = ["py.typed"]

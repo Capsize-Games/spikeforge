@@ -1,0 +1,107 @@
+name: Model hub submission
+description: Propose an entry for the curated model hub catalog
+title: "[Hub]: "
+labels: ["model-hub", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The catalog is a **curated allow-list**, not a directory of everything
+        that exists — every entry is something the project can stand behind.
+        Read [`spikeforge_hub/CURATION.md`](https://github.com/Capsize-Games/spikeforge/blob/main/spikeforge_hub/CURATION.md)
+        before filling this in; it is the bar an entry has to clear.
+
+        **An invented repository id or an unread license is a fabrication and
+        will be rejected.** If you cannot point at a real upstream, there is no
+        entry to add yet.
+
+  - type: input
+    id: name
+    attributes:
+      label: Model name
+      description: What a reader should see in the catalog listing.
+    validations:
+      required: true
+
+  - type: input
+    id: locator
+    attributes:
+      label: Exact locator
+      description: |
+        The resolvable address of the artifact — a full `url`, or the real
+        `org/repo` id for a Hugging Face repository. Not a namespace you
+        expect to exist.
+      placeholder: "https://… or org/repo"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: framework
+    attributes:
+      label: Framework
+      options:
+        - snntorch
+        - nir
+        - spikingjelly
+        - norse
+        - lava
+        - hf
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Artifact kind
+      options:
+        - nir_graph
+        - state_dict
+        - framework_weights
+    validations:
+      required: true
+
+  - type: input
+    id: license
+    attributes:
+      label: License (concrete SPDX id)
+      description: |
+        Read the upstream license and give its id — `Apache-2.0`, `MIT`,
+        `BSD-3-Clause`, or a compound such as `MIT OR Apache-2.0`. Free-text
+        escapes (`see upstream`, `unknown`, `TBD`) are rejected by validation.
+        If it is genuinely unverified, say `unverified-candidate` and explain
+        below; the entry will load but be reported `available: false`.
+    validations:
+      required: true
+
+  - type: input
+    id: checksum
+    attributes:
+      label: SHA-256 (and size in bytes, if known)
+      description: |
+        Prefer publishing one so a download verifies. If the source publishes
+        no checksum, leave this blank — that is honest, and the download will
+        report `unverified` rather than pretending otherwise.
+    validations:
+      required: false
+
+  - type: textarea
+    id: provenance
+    attributes:
+      label: Provenance and why it belongs here
+      description: |
+        Who trained it, on what, and what a user would do with it. If it
+        carries trained weights, say what it scores and on which split.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: verified
+    attributes:
+      label: Verification
+      options:
+        - label: I opened the upstream source and read its license myself.
+          required: true
+        - label: The locator above resolves today; I did not invent or guess it.
+          required: true
+        - label: I am not asking the project to redistribute third-party weights.
+          required: true

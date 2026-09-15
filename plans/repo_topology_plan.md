@@ -19,7 +19,7 @@ Go multi-repo only where release cadence actually diverges. Details below.
 ## 1. Component inventory
 
 The repository is one Python distribution (`spikeforge`, see
-[`setup.py`](../setup.py)), one FastAPI app (`server/`), one React app
+`setup.py`), one FastAPI app (`server/`), one React app
 (`client/`), plus tests, scripts, plans, and Docker. The Python distribution is
 the interesting part: it is monolithic, but its subpackages already cluster
 into layers with distinct dependencies and audiences.
@@ -153,7 +153,7 @@ Verified by scanning imports across `spikeforge/` and `server/`:
 
 The codebase is closer to splittable than its single distribution suggests:
 
-- **Optional extras are declared** in [`setup.py`](../setup.py:49):
+- **Optional extras are declared** in `setup.py`:
   `web`, `nir`, `events`, `onnx`, `hub`, `tracking`, `tracking-wandb`, `norse`,
   `lava`, `docs`.
 - **Optional imports are lazy** behind `api.py` shims:

@@ -10,7 +10,7 @@ grounded file references, Mermaid diagrams, and an explicit acceptance bar.
 
 > **Status — delivered (implemented).** All six workstreams (WS-A…WS-F) and
 > every phase A1–F5 shipped; the repo is at `0.2.0` with
-> `Development Status :: 4 - Beta` ([`setup.py`](setup.py)) and 739 passing
+> `Development Status :: 4 - Beta` (`setup.py`) and 739 passing
 > tests (1 skipped), `ruff` clean, and a building client. Beta rather than a
 > final release because the planned capabilities are delivered while hardware
 > and energy results remain unmeasured (reported as estimates). See
@@ -78,7 +78,7 @@ Every row is grounded in the current source. "Gap" is what this program closes.
 |---|---|---|---|---|
 | 1 | Model browser / downloader | None. No download path for models, only datasets | [`datasets.py`](spikeforge/data/datasets.py:106), [`download_cli.py`](spikeforge/data/download_cli.py:15) | A |
 | 2 | External model import | NIR only, via file path; no weight-only import | [`ingest.py`](spikeforge/nir_bridge/ingest.py:21) | A |
-| 3 | Hugging Face Hub integration | Absent; no `huggingface_hub` anywhere | [`setup.py`](setup.py:46) | A |
+| 3 | Hugging Face Hub integration | Absent; no `huggingface_hub` anywhere | `setup.py` | A |
 | 4 | Download progress + cancel | Exists for datasets only; not reusable yet | [`downloads.py`](server/downloads.py:41) | A |
 | 5 | Backend actually runs a graph | Declared only; `deployable` is a capability flag | [`report.py`](spikeforge_targets/report.py:56) | B |
 | 6 | Substitution *execution* | Declared, never applied | [`substitution.py`](spikeforge_targets/substitution.py:6), [`catalog.py`](spikeforge_targets/catalog.py:87) | B |
@@ -252,7 +252,7 @@ message, matching [`target_handlers.py`](server/target_handlers.py:85).
 
 ### 6.2 CLI console scripts
 
-Added to [`setup.py`](setup.py:66):
+Added to `setup.py`:
 
 | Script | Module | Purpose |
 |---|---|---|
@@ -260,7 +260,7 @@ Added to [`setup.py`](setup.py:66):
 | `spikeforge-energy` | [`energy/cli.py`](spikeforge_targets/energy/cli.py) | `account`, `report` |
 
 Extended (not new): `spikeforge-verify` gains `backend run`; `spikeforge-targets` gains
-`rewrite` and `run` (see [`target_cli.py`](spikeforge/cli/target_cli.py:166)).
+`rewrite` and `run` (see [`target_cli.py`](spikeforge_targets/cli/target_cli.py:164)).
 
 ### 6.3 Python API entry points
 
@@ -284,7 +284,7 @@ New under `client/src/components/` (one component per file, 80-column TS, no
 
 ## 7. Packaging extras and availability rules
 
-Extras extend [`setup.py`](setup.py:46) (existing: `dev`, `web`, `nir`,
+Extras extend `setup.py` (existing: `dev`, `web`, `nir`,
 `events`):
 
 | Extra | Packages | Enables | Absent behavior |
@@ -334,7 +334,7 @@ verifiable. Order is priority-first (hub) but B/C can be parallelized.
 | C1 | Per-stage heterogeneous neurons | [`topology/presets.py`](spikeforge/topology/presets.py), [`topology/registry.py`](spikeforge/topology/registry.py), [`server/schemas/train_config.py`](server/schemas/train_config.py) | `test_per_stage_neurons.py`, `test_train_config_stage_overrides.py` | `python -m spikeforge.cli.verify validate --topology fc_small` |
 | C2 | New module kinds + NIR contracts | [`topology/kinds.py`](spikeforge/topology/kinds.py), [`topology/stage_modules.py`](spikeforge/topology/stage_modules.py), [`nir_bridge/node_builders.py`](spikeforge/nir_bridge/node_builders.py), [`nir_bridge/mapper.py`](spikeforge/nir_bridge/mapper.py) | `test_stage_kinds_new.py`, `test_nir_unexportable_stages.py` | `python -m spikeforge.cli.verify export --topology sequence_net` |
 | C3 | Sequence/token data path | [`simulator/input_shape.py`](spikeforge/simulator/input_shape.py), [`data/sequence_source.py`](spikeforge/data/sequence_source.py) | `test_sequence_input.py` | `pytest tests/test_sequence_input.py` |
-| C4 | `sequence_net` preset + stage editor | [`topology/presets.py`](spikeforge/topology/presets.py), [`client/src/components/StageEditor.tsx`](client/src/components/StageEditor.tsx) | `test_sequence_preset.py` | `python -m spikeforge.cli.verify validate --topology sequence_net` |
+| C4 | `sequence_net` preset + stage editor | [`topology/presets.py`](spikeforge/topology/presets.py), `client/src/components/StageEditor.tsx` | `test_sequence_preset.py` | `python -m spikeforge.cli.verify validate --topology sequence_net` |
 
 ### Milestone 4 — Event Runtime and Energy (WS-D)
 

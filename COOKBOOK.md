@@ -126,7 +126,7 @@ without the dashboard.
 **Command.**
 
 ```python
-from spikeforge.training.training_engine import TrainingEngine
+from spikeforge import TrainingEngine
 
 eng = TrainingEngine(
     dataset="mnist", hidden=32, epochs=1, num_steps=5,

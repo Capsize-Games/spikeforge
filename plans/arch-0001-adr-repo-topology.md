@@ -118,7 +118,7 @@ The verified facts govern:
 1. **Server is not a separate distribution today.** `plans/repo_topology_plan.md`
    §1.2 labels `server/` "`web` extra (separate dist today)". Verified: there is
    no separate distribution; `find_packages(exclude=("tests", "tests.*"))` in
-   [`setup.py`](setup.py:37) packages `server/` into `spikeforge`. Phase 1
+   `setup.py` packages `server/` into `spikeforge`. Phase 1
    makes the separation real.
 2. **Test-file counts.** `plans/repo_topology_plan.md` §2 states 105 test files
    with "208 reference `spikeforge`" and "the 17 server tests". Verified:

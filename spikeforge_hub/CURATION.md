@@ -25,6 +25,42 @@ from a shipped topology preset). To add one:
    `"input_shape"` to its expected input.
 4. Describe the provenance in `"notes"` so a reader can tell why it is bundled.
 
+## Adding a reference entry (trained weights)
+
+A reference entry (`"source": "reference"`) is the one kind that carries
+**trained** weights: a checkpoint this project trained itself, shipped inside
+the `spikeforge-hub` distribution under `weights/` and loaded — never rebuilt —
+by [`inspect.reference_path()`](inspect.py:82).
+
+Do not hand-write these entries. They are generated, together with the
+checkpoint they describe, by:
+
+```bash
+python scripts/train_reference_models.py --only <name> --publish
+```
+
+That script trains the configuration, scores it on the **complete** held-out
+test split, copies the checkpoint into `spikeforge_hub/weights/`, and rewrites
+the entry so its `sha256`, `size_bytes`, `test_accuracy`, and `test_samples`
+describe the bytes that actually shipped. Those four fields are worse than
+useless when they drift, which is why they are never edited by hand.
+
+Validation enforces the honesty rule for this source: a reference entry must
+name its `weights` file, pin a `sha256`, say which `dataset` it trained on, and
+report a `test_accuracy`. An entry claiming trained weights that cannot say
+what it scores is rejected on load.
+
+**These are reference configurations, not state-of-the-art claims.** Stock
+hyperparameters, modest epoch counts, one seed, CPU. Each entry's `notes` names
+the exact command that reproduces it, and
+[`documentation/benchmarks.md`](../documentation/benchmarks.md) carries the full
+table. Label them that way in any copy that mentions them.
+
+**Size budget.** These checkpoints ship in the wheel because the hub is
+offline-first, so the budget is deliberately small: keep the total under a few
+megabytes and prefer small topologies. Anything larger belongs behind
+`"source": "url"` with a checksum, downloaded on demand.
+
 ## Adding a remote entry
 
 A remote entry (`"source": "url"` or `"source": "hf_repo"`) points at bytes
@@ -74,14 +110,23 @@ ingestion capability stays fully available — [`probe.py`](probe.py:1),
 The catalog itself is not the downloader; it is the list of things already
 checked.
 
-As of this writing every shipped entry is `"source": "bundled"`: a NIR graph
-rendered on demand from one of this project's own topology presets, not a
-trained checkpoint (`resolve_path` in [`inspect.py`](inspect.py:74) always
-rebuilds from the preset — a bundled entry currently cannot carry stored
-weights). That is an honest gap, not a hidden one: a visitor expecting
-pretrained weights should look at the catalog's `notes` field, which says so
-for every entry. Adding a real trained-checkpoint artifact kind is a
-deliberate follow-up, not something to fake by relabeling an untrained
-preset.
+The catalog now holds two different things, and the `source` field is what
+tells them apart:
 
-See also [`NOTICE.md`](../../../NOTICE.md) for the metadata-only weights policy.
+- `"source": "bundled"` — a NIR graph rendered on demand from one of this
+  project's own topology presets. **Structure, with freshly-initialised
+  weights.** Useful for comparing an exported graph against a known-good shape;
+  useless as a model to run. Every such entry's `notes` says so.
+- `"source": "reference"` — a checkpoint this project trained, shipped as bytes,
+  with the accuracy it scores on the complete held-out split recorded in the
+  entry itself.
+
+The distinction is deliberate and must stay visible in the UI and the copy: a
+catalog of untrained shapes and a catalog of trained models are different
+products, and relabelling the former as the latter is exactly the fabrication
+this policy exists to prevent.
+
+Third-party trained weights are still not redistributed here. The reference
+entries are this project's own artifacts, under this project's own license.
+
+See also [`NOTICE.md`](../NOTICE.md) for the metadata-only weights policy.

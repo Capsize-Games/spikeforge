@@ -7,6 +7,9 @@ streaming, so importing ``spikeforge_clients`` stays cheap. The core
 coupling, and it is validated against the schemas under ``protocol/serve/``.
 """
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _distribution_version
+
 from spikeforge_clients.bundle import BundleInfo
 from spikeforge_clients.client import ServeClient
 from spikeforge_clients.config import (
@@ -30,7 +33,14 @@ from spikeforge_clients.prediction import (
 )
 from spikeforge_clients.stream import StreamEvent
 
+try:
+    #: Read from installed metadata so it cannot drift from the wheel.
+    __version__ = _distribution_version("spikeforge-clients")
+except PackageNotFoundError:  # pragma: no cover - uninstalled source tree
+    __version__ = "0.0.0+unknown"
+
 __all__ = [
+    "__version__",
     "ASGITransport",
     "BundleInfo",
     "ClientConfig",

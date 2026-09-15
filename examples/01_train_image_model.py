@@ -17,7 +17,7 @@ until an evaluation step runs).
 
 from typing import Any, Dict
 
-from spikeforge.training.training_engine import TrainingEngine
+from spikeforge import TrainingEngine
 
 
 def train_once() -> Dict[str, Any]:

@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-targets"
-version = "0.1.1"
+version = "0.1.2"
 description = "Deployment targets, event-driven energy accounting, and backend execution for spikeforge."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core and server distributions' metadata approach.
@@ -49,9 +49,10 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = [
-    "spikeforge~=0.3.4",
+    "spikeforge~=0.3.5",
     "numpy>=1.26",
     "torch>=2.5",
 ]
@@ -74,8 +75,11 @@ spikeforge-energy = "spikeforge_targets.energy.cli:main"
 spikeforge-targets = "spikeforge_targets.cli.target_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/capsize-games/spikeforge"
-Repository = "https://github.com/capsize-games/spikeforge"
+Homepage = "https://spikeforge.net/"
+Documentation = "https://docs.spikeforge.net/"
+Repository = "https://github.com/Capsize-Games/spikeforge"
+Changelog = "https://github.com/Capsize-Games/spikeforge/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Capsize-Games/spikeforge/issues"
 
 [tool.setuptools]
 zip-safe = false
@@ -88,3 +92,9 @@ zip-safe = false
 where = ["."]
 include = ["spikeforge_targets*"]
 exclude = ["spikeforge", "server*", "tests*"]
+
+[tool.setuptools.package-data]
+# PEP 561: without this marker in the wheel, a type checker treats every
+# symbol in this distribution as ``Any`` even though the source is fully
+# annotated.
+spikeforge_targets = ["py.typed"]

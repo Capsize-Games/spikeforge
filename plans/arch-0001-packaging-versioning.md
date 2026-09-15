@@ -49,7 +49,7 @@ table records the pre-split mapping and the delivered end state.
 
 `torch>=2.5`, `torchvision>=0.20`, `snntorch>=1.0`, `matplotlib>=3.8`,
 `Pillow>=10.0`, `numpy>=1.26`, `psutil>=5.9` — exactly the current
-`install_requires` in [`setup.py`](setup.py:40). None of the core-boundary
+`install_requires` in `setup.py`. None of the core-boundary
 forbidden list ([`plans/arch-0001-core-boundary.md`](plans/arch-0001-core-boundary.md))
 appears here, which is what makes a headless install provable.
 

@@ -5,10 +5,37 @@ every artifact through an honest compatibility gate.
 
 ### Curated catalog + optional live Hugging Face
 
-[`spikeforge_hub/models.json`](../spikeforge_hub/models.json) bundles
-**10 curated entries across five frameworks** (NIR, snnTorch, SpikingJelly,
-Norse, Lava): ten NIR graphs rendered from this project's own presets. It
-renders fully offline. Entries are validated into a
+[`spikeforge_hub/models.json`](../spikeforge_hub/models.json) is the curated
+catalog, and it holds **two different kinds of thing**. The `source` field is
+what tells them apart, and the distinction matters:
+
+- **`"source": "reference"` — trained weights.** Checkpoints this project
+  trained itself, shipped inside the `spikeforge-hub` wheel under `weights/`
+  and loaded (never rebuilt) by
+  [`inspect.reference_path()`](../spikeforge_hub/inspect.py:82), verified
+  against the checksum the catalog pins. Each entry records the dataset it
+  trained on and what it scores on that dataset's **complete** held-out split.
+  These are reference configurations with stock hyperparameters, not tuned
+  attempts at state of the art — [Benchmarks](benchmarks.md) has the full
+  table and the command that reproduces each row.
+- **`"source": "bundled"` — structure only.** A NIR graph rendered on demand
+  from one of this project's own topology presets, with freshly-initialised
+  weights. Useful for checking an exported graph against a known-good shape;
+  not a model to run. Every such entry's `notes` says so.
+
+Regenerate the trained entries — checkpoint, checksum, size, and accuracy
+together — with:
+
+```bash
+python scripts/train_reference_models.py --publish
+```
+
+Never hand-edit those four fields: they are worth nothing once they drift from
+the bytes that shipped, and validation rejects a reference entry that cannot
+name its weights file, pin a checksum, say which dataset it trained on, and
+report an accuracy.
+
+The catalog renders fully offline. Entries are validated into a
 [`HubEntry`](../spikeforge_hub/entry.py:1); a malformed entry is *reported*
 in `issues()` rather than silently skipped. The catalog ships **only verified
 entries** — a remote entry must name a real repository/reference and a concrete
@@ -48,7 +75,9 @@ three-gate funnel:
 
 1. **Inspect** ([`spikeforge_hub/inspect.py`](../spikeforge_hub/inspect.py:1)) detects
    the artifact kind (`nir_graph`, `state_dict`, `framework_weights`) and
-   describes its structure.
+   describes its structure. Resolution depends on the source: a `bundled`
+   entry is rendered from its preset, a `reference` entry is loaded from the
+   packaged checkpoint, and a remote entry is read from the download cache.
 2. **Compat** ([`spikeforge_hub/compat.py`](../spikeforge_hub/compat.py:1)) returns a
    verdict — `exact`, `mappable` (with a stage mapping), or `incompatible`
    (with the specific mismatches named).

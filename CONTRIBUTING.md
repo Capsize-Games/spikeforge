@@ -23,7 +23,13 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
   where the upstream publishes one. `python -m spikeforge_hub.cli list` and
   the `test_hub_catalog.py` suite must still pass. An entry that can't clear
   `CURATION.md`'s bar belongs in an issue describing the candidate, not in
-  `models.json`.
+  `models.json` — the **Model hub submission** issue template asks for exactly
+  what the bar requires.
+  The catalog's *trained* entries (`"source": "reference"`) are a special case:
+  they are generated, never hand-written. Regenerate the checkpoint and its
+  entry together with `python scripts/train_reference_models.py --publish`, so
+  the pinned checksum, size, and accuracy always describe the bytes that
+  shipped.
 
 ## Getting set up
 

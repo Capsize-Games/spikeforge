@@ -63,7 +63,7 @@ the spine is proven.
 | Conv / recurrent support | None | n/a |
 | Neuron model library | Only `snn.Leaky` with `beta` | [`SpikingNet.__init__()`](spikeforge/network/spiking_net.py:26) |
 | Graph representation / tracing | None; no fx, no IR | n/a |
-| NIR dependency | Not present | [`requirements.txt`](requirements.txt:1), [`setup.py`](setup.py:38) |
+| NIR dependency | Not present | [`requirements.txt`](requirements.txt:1), `setup.py` |
 | NIR export | None | n/a |
 | NIR execution / cross-check | None | n/a |
 | Numerical validation | None | n/a |
@@ -190,7 +190,7 @@ Modified files:
 | [`train_config.py`](server/schemas/train_config.py:10) | Add `topology: str` and `topology_params: dict` |
 | [`handlers.py`](server/handlers.py:222) | Add `nir_export` / `nir_validate` dispatch and handlers |
 | [`server_message.py`](server/schemas/server_message.py:8) | Add `nir_graph` / `nir_validation` types |
-| [`requirements.txt`](requirements.txt:1), [`setup.py`](setup.py:38) | Add `nir` + `nirtorch` (an optional `nir` extra, on by default in Docker) |
+| [`requirements.txt`](requirements.txt:1), `setup.py` | Add `nir` + `nirtorch` (an optional `nir` extra, on by default in Docker) |
 
 New CLI module `spikeforge/cli/verify.py` exposes
 `python -m spikeforge.cli.verify export --topology conv_net` and

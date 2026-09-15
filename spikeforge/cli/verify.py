@@ -36,6 +36,7 @@ from spikeforge.topology import registry
 from spikeforge.topology.registry import build_topology
 from spikeforge.topology.spec import TopologySpec
 from spikeforge.topology.stage_module import StageModule
+from spikeforge.version import add_version_flag
 
 try:
     from spikeforge_targets.cli import target_cli
@@ -144,6 +145,7 @@ def _parser() -> argparse.ArgumentParser:
         prog="spikeforge-verify",
         description=description,
     )
+    add_version_flag(parser)
     subs = parser.add_subparsers(dest="command", required=True)
     export = subs.add_parser("export", help="export a topology to NIR")
     export.add_argument("--topology", default="conv_net")

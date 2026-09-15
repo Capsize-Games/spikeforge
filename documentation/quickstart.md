@@ -10,13 +10,35 @@ pip install spikeforge
 ```
 
 ```python
-from spikeforge.training.training_engine import TrainingEngine
+from spikeforge import TrainingEngine
 
 engine = TrainingEngine(dataset="mnist", hidden=32, epochs=1, num_steps=5)
 for metrics in engine.train():
     last = metrics
 print(last)
 ```
+
+`TrainingEngine` is the entry point for new code: it owns the cancellable
+training loop, topology selection, encoding, checkpointing, and evaluation.
+`SNNTrainer`, also exported from the package root, is the older and narrower
+MNIST rate-coding helper behind the `spikeforge` tutorial demo and the
+animation walkthroughs — it is not the class to reach for when training a
+network. See [Benchmarks](benchmarks.md) for what this configuration actually
+scores and how long it takes.
+
+**CPU-only machines.** The default `torch` wheels on PyPI carry the whole CUDA
+stack, so a plain `pip install spikeforge` builds a ~5.5 GB environment even on
+a laptop that will never use a GPU. Install the CPU wheels first and the rest
+follows them:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install spikeforge
+```
+
+That lands at ~1.1 GB. The order matters: passing `--extra-index-url` on a
+single command leaves pip free to prefer the CUDA build from PyPI. This is the
+same flow the [Dockerfile](../Dockerfile) and CI use via `TORCH_INDEX_URL`.
 
 That's the core training API with no Docker and no dashboard. For the
 deployment/NIR/energy CLIs and the dashboard:

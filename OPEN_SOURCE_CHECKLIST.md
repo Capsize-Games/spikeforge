@@ -5,10 +5,10 @@ with what is **already done** (`[x]`) versus **outstanding** (`[ ]`). Every
 "done" item was verified in the repository; every "outstanding" item names the
 concrete gap. Nothing here changes product code.
 
-Verification snapshot: `version 0.3.3`, `Development Status :: 4 - Beta`,
-`python_requires >=3.10` (classifiers for 3.10–3.13), **1180 passed / 8
-skipped** with the optional extras, `ruff` clean, docs site builds,
-BSD-3-Clause.
+Verification snapshot: `version 0.3.5`, `Development Status :: 4 - Beta`,
+`python_requires >=3.10` (classifiers for 3.10–3.13), **1246 passed / 8
+skipped** with the optional extras, `ruff` clean, `mypy` clean, docs site
+builds, BSD-3-Clause.
 
 > **Published.** The repository is public at
 > [`capsize-games/spikeforge`](https://github.com/capsize-games/spikeforge)
@@ -137,7 +137,7 @@ BSD-3-Clause.
 - [x] **Console scripts are declared.** 13 entry points across the seven
   distributions (5 on core `spikeforge` alone —
   [`packages/spikeforge/pyproject.toml`](packages/spikeforge/pyproject.toml)).
-- [x] **Version bump and maturity label decided.** Now at `0.3.3`,
+- [x] **Version bump and maturity label decided.** Now at `0.3.5`,
   `Development Status :: 4 - Beta`: the planned capabilities are delivered,
   but hardware and energy results remain unmeasured (reported as estimates),
   so Beta is the honest label.

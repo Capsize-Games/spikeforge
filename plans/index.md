@@ -17,6 +17,9 @@ install, extras, CLI, and the honest limitations — start with the README.
   program: six workstreams, interfaces, and the acceptance bar.
 - [Ecosystem roadmap](plans/ecosystem_roadmap.md) — the earlier ecosystem
   plan this program builds on.
+- [Ecosystem listings](plans/ecosystem_listings.md) — the two directories this
+  field searches (NIR's framework table, Open Neuromorphic's software guide),
+  what each currently lists, and drafted submissions for both.
 
 ## Architecture
 

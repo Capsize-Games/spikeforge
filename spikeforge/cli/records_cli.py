@@ -12,6 +12,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from spikeforge.network import model_diff, model_search, model_store
+from spikeforge.version import add_version_flag
 
 #: Exit status for a command that could not find its checkpoint.
 NOT_FOUND = 1
@@ -134,6 +135,7 @@ def _parser() -> argparse.ArgumentParser:
         prog="spikeforge-records",
         description="Search and inspect saved checkpoints.",
     )
+    add_version_flag(parser)
     actions = parser.add_subparsers(dest="records_command", required=True)
     _add_list(actions)
     _add_diff(actions)

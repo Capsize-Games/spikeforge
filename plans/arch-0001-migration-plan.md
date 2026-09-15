@@ -34,7 +34,7 @@ Goal: make the boundaries real without moving a file.
    dependencies. Update [`docker-compose.yml`](docker-compose.yml) and
    [`Dockerfile`](Dockerfile) to install `spikeforge-server`.
 5. Port `tests/test_packaging_profiles.py` to read the new
-   `packages/*/pyproject.toml` files instead of [`setup.py`](setup.py).
+   `packages/*/pyproject.toml` files instead of `setup.py`.
 
 **No test moves.** Tests stay where they are because nothing has moved.
 

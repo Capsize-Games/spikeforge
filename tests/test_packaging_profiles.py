@@ -1,5 +1,6 @@
 """Packaging extras/console scripts and docker-compose profile config."""
 
+import json
 from pathlib import Path
 from typing import Any, Dict, Set
 
@@ -15,6 +16,7 @@ _CORE = _ROOT / "packages" / "spikeforge" / "pyproject.toml"
 _SERVER = _ROOT / "packages" / "spikeforge-server" / "pyproject.toml"
 _TARGETS = _ROOT / "packages" / "spikeforge-targets" / "pyproject.toml"
 _HUB = _ROOT / "packages" / "spikeforge-hub" / "pyproject.toml"
+_MATRIX = _ROOT / "compatibility.json"
 
 _EXPECTED_SCRIPTS = {
     "spikeforge",
@@ -46,13 +48,15 @@ _EXPECTED_CORE_DEPS = {
     "numpy>=1.26",
     "psutil>=5.9",
 }
+# The satellite pins are deliberately absent here and asserted through
+# ``_satellite_pin`` instead: a frozen literal has to be hand-edited on every
+# release, and the contract that actually matters is that the pin agrees with
+# the version the satellite declares, not that it equals some past number.
 _EXPECTED_SERVER_DEPS = {
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
     "websockets>=12.0",
     "pydantic>=2.5",
-    "spikeforge-targets~=0.1.0",
-    "spikeforge-hub~=0.1.0",
 }
 _EXPECTED_SERVER_SCRIPTS = {
     "spikeforge-server",
@@ -109,6 +113,24 @@ def _core_pin() -> str:
     return f"spikeforge~={version}"
 
 
+def _satellite_pin(pyproject: Path) -> str:
+    """Return the compatible-release pin a dependent must declare.
+
+    Derived from the distribution's own declared version so the pin and the
+    version cannot drift apart across a release; ``compatibility.json`` and
+    ``scripts/check_packaging_guards.py`` police the matrix itself.
+    """
+    project = _pyproject(pyproject)["project"]
+    return f"{project['name']}~={project['version']}"
+
+
+def _matrix_version(distribution: str) -> str:
+    """Return ``distribution``'s version in the newest compatibility row."""
+    with _MATRIX.open("rb") as handle:
+        releases = json.load(handle)["releases"]
+    return str(releases[-1][distribution])
+
+
 def test_core_declares_expected_extras_and_scripts() -> None:
     """Every advertised core extra and console script is declared."""
     project = _pyproject(_CORE)["project"]
@@ -132,8 +154,8 @@ def test_core_all_extra_bundles_the_satellites() -> None:
     """The ``all`` extra pulls the targets and hub satellites only."""
     extras = _pyproject(_CORE)["project"]["optional-dependencies"]
     assert set(extras["all"]) == {
-        "spikeforge-targets~=0.1.0",
-        "spikeforge-hub~=0.1.0",
+        _satellite_pin(_TARGETS),
+        _satellite_pin(_HUB),
     }
     # The base install stays clean: no satellite may be a hard dependency.
     assert not any(
@@ -165,6 +187,8 @@ def test_server_declares_base_dependencies() -> None:
     """The server promotes the old web extra to base dependencies."""
     deps = set(_pyproject(_SERVER)["project"]["dependencies"])
     assert deps >= _EXPECTED_SERVER_DEPS
+    assert _satellite_pin(_TARGETS) in deps
+    assert _satellite_pin(_HUB) in deps
     assert any(dep.startswith("spikeforge~=") for dep in deps)
 
 
@@ -274,7 +298,7 @@ def test_io_distribution_owns_the_io_surface() -> None:
     deps = set(project["dependencies"])
     assert deps >= _EXPECTED_IO_DEPS
     assert _core_pin() in deps
-    assert project["version"] == "0.1.0"
+    assert project["version"] == _matrix_version("spikeforge-io")
 
 
 def test_io_console_script_resolves_to_the_new_root() -> None:

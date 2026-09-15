@@ -57,7 +57,7 @@ compatibility is verified (Phase A3).
 | External NIR import | Partial, file-path only | [`ingest.py`](spikeforge/nir_bridge/ingest.py:21), [`serialization.py`](spikeforge/nir_bridge/serialization.py) |
 | Weight import into a preset | None | [`model_store.py`](spikeforge/network/model_store.py:57) |
 | Compatibility validation | None for foreign artifacts | [`registry.py`](spikeforge/topology/registry.py:129) |
-| HF dependency | Absent | [`setup.py`](setup.py:46) |
+| HF dependency | Absent | `setup.py` |
 
 ### 2.1 Invariants that must not break
 
@@ -105,7 +105,7 @@ Modified files:
 
 | File | Change |
 |---|---|
-| [`setup.py`](setup.py:46) | add `hub` extra; add `spikeforge-hub` console script |
+| `setup.py` | add `hub` extra; add `spikeforge-hub` console script |
 | [`config.py`](spikeforge/config.py:10) | add `HUB_CACHE_DIR` (env `SPIKEFORGE_HUB_DIR`, default `DATA_DIR/hub`) |
 | [`server/protocol_handlers.py`](server/protocol_handlers.py:19) | route `hub_*` actions to `server/hub_handlers.py` |
 | [`server/schemas/client_message.py`](server/schemas/client_message.py:15) | add `hub_list`, `hub_search`, `hub_download`, `hub_cancel`, `hub_inspect`, `hub_import` |
@@ -243,7 +243,7 @@ incompatible, so the client can render *why*.
 ## 8. CLI surface (`spikeforge-hub`)
 
 [`hub/cli.py`](spikeforge_hub/cli.py), mirroring the argparse style of
-[`target_cli.py`](spikeforge/cli/target_cli.py:166):
+[`target_cli.py`](spikeforge_targets/cli/target_cli.py:164):
 
 ```
 spikeforge-hub list [--framework snntorch] [--available]
@@ -255,7 +255,7 @@ spikeforge-hub import <id> [--topology conv_net]
 
 Every command prints JSON. `import` exits non-zero when the verdict is
 `incompatible`, so it doubles as a CI gate (same convention as
-[`deploy_exit`](spikeforge/cli/target_cli.py:86)).
+[`deploy_exit`](spikeforge_targets/cli/target_cli.py:80)).
 
 ---
 

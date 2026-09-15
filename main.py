@@ -6,7 +6,7 @@ from typing import List, Optional
 
 def _parser() -> argparse.ArgumentParser:
     """Return the argument parser for the ``spikeforge`` demo CLI."""
-    return argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog="spikeforge",
         description=(
             "Train a rate-coded MNIST subset with snnTorch and export "
@@ -17,11 +17,28 @@ def _parser() -> argparse.ArgumentParser:
             "documentation/usage.md for the rest of the toolkit."
         ),
     )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="print the installed spikeforge versions and exit",
+    )
+    return parser
 
 
 def main(argv: Optional[List[str]] = None) -> None:
     """Parse ``argv``, then build the trainer and write every output."""
-    _parser().parse_args(argv)
+    args = _parser().parse_args(argv)
+
+    # ``--version`` resolves the report here rather than through
+    # ``spikeforge.version.add_version_flag`` so that neither it nor
+    # ``--help`` imports the spikeforge package: this entry point answers
+    # ``--help`` in milliseconds on a bare core install, and importing the
+    # package would make it pay for torch first.
+    if args.version:
+        from spikeforge.version import version_report
+
+        print(version_report())
+        return
 
     # Imported lazily so ``--help`` never pays for (or fails on) the heavy
     # snnTorch/matplotlib export stack before argparse has even run.
