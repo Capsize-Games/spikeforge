@@ -92,6 +92,11 @@ targets+=("$(spec ./packages/spikeforge)")
 targets+=("$(spec ./packages/spikeforge-targets)")
 targets+=("$(spec ./packages/spikeforge-hub)")
 if [ "$WITH_SERVER" = "1" ]; then
+  # spikeforge-serve comes first and is not optional here: the server pins it,
+  # and leaving it out makes pip resolve that pin from PyPI rather than this
+  # checkout -- quietly, with no error, mixing published code into a local
+  # install.
+  targets+=("$(spec ./packages/spikeforge-serve)")
   targets+=("$(spec ./packages/spikeforge-server)")
 fi
 
