@@ -163,7 +163,13 @@ def _promote(
 ) -> Dict[str, Any]:
     """Build the preset, map weights, validate, and save into the store."""
     from spikeforge.topology.registry import build_topology
-    spec, module = build_topology(verdict.topology)
+    # Built with the artifact's own declared class count, so the weights it
+    # carries have somewhere to land; see `expected_state`.
+    params = (
+        {} if report.num_classes is None
+        else {"num_classes": int(report.num_classes)}
+    )
+    spec, module = build_topology(verdict.topology, params)
     graph, loaded = _load(module, report, artifact_path)
     if not loaded.loaded:
         return _fail(loaded.to_dict(), None, "weights refused: " + loaded.note)

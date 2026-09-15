@@ -7,7 +7,7 @@ and tensor shapes. No tensor value ever survives into it.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Sequence, Tuple
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 #: A persisted NIR graph this project or another framework produced.
 NIR_GRAPH = "nir_graph"
@@ -32,6 +32,14 @@ class ArtifactReport:
     keys: Tuple[Dict[str, Any], ...]
     edges: Tuple[Dict[str, Any], ...]
     notes: Tuple[str, ...]
+    #: The class count the artifact's own metadata card declares, when it has
+    #: one. Compatibility builds its comparison preset with this rather than
+    #: the preset default, so a checkpoint trained on a dataset with a
+    #: different number of classes is not reported as a shape mismatch it
+    #: cannot do anything about. Deliberately the *only* dimension adopted
+    #: from the artifact: every other shape stays something the comparison
+    #: can catch.
+    num_classes: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Return the JSON-able inspect payload the socket and CLI emit."""
@@ -42,6 +50,7 @@ class ArtifactReport:
             "keys": [dict(key) for key in self.keys],
             "edges": [dict(edge) for edge in self.edges],
             "notes": list(self.notes),
+            "num_classes": self.num_classes,
         }
 
 
