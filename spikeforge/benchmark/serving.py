@@ -133,17 +133,18 @@ def _worker(
         sink.extend(local)
 
 
+def _worker_call_counts(calls: int, concurrency: int) -> List[int]:
+    """Return how many calls each of ``concurrency`` workers should run."""
+    base, extra = divmod(calls, concurrency)
+    return [base + (1 if i < extra else 0) for i in range(concurrency)]
+
+
 def _concurrent(
-    sessions: Sequence[InferenceSession],
-    sample: torch.Tensor,
-    calls: int,
-    concurrency: int,
+    sessions: Sequence[InferenceSession], sample: torch.Tensor,
+    calls: int, concurrency: int,
 ) -> Tuple[List[float], float]:
     """Time ``calls`` predict calls spread over ``concurrency`` workers."""
-    base, extra = divmod(calls, concurrency)
-    per_worker = [base + (1 if index < extra else 0) for index in range(
-        concurrency
-    )]
+    per_worker = _worker_call_counts(calls, concurrency)
     sink: List[float] = []
     lock = threading.Lock()
     start = time.perf_counter()
@@ -161,11 +162,8 @@ def _concurrent(
 
 
 def _timed_run(
-    config: ServingBenchmarkConfig,
-    bundle: DeploymentBundle,
-    session: InferenceSession,
-    sample: torch.Tensor,
-    device: torch.device,
+    config: ServingBenchmarkConfig, bundle: DeploymentBundle,
+    session: InferenceSession, sample: torch.Tensor, device: torch.device,
 ) -> Tuple[List[float], float]:
     """Run the warmup and timed calls, returning latency samples+wall."""
     _warm(session, sample, config.warmup)
@@ -214,6 +212,29 @@ def _forward_block(
     }
 
 
+def _peak_memory(memory_info: Dict[str, Any]) -> Optional[int]:
+    """Return the best available peak-memory reading."""
+    return memory_info.get("process_rss_bytes") or memory_info.get(
+        "tracemalloc_peak_bytes"
+    )
+
+
+def _serving_rates(
+    durations: Sequence[float], wall: float, steps: int
+) -> Dict[str, Any]:
+    """Return the throughput/percentile fields of the serving block."""
+    calls = len(durations)
+    return {
+        "calls": calls,
+        "frames_per_call": steps,
+        "p50_ms": percentile(durations, 50.0) * 1000.0,
+        "p99_ms": percentile(durations, 99.0) * 1000.0,
+        "mean_ms": statistics.fmean(durations) * 1000.0 if durations else 0.0,
+        "throughput_per_second": calls / wall if wall > 0 else None,
+        "steps_per_second": calls * steps / wall if wall > 0 else None,
+    }
+
+
 def _serving_block(
     config: ServingBenchmarkConfig,
     durations: Sequence[float],
@@ -224,34 +245,21 @@ def _serving_block(
     step_durations: Sequence[float],
 ) -> Dict[str, Any]:
     """Return the serving-specific latency/throughput block."""
-    calls = len(durations)
-    peak = memory_info.get("process_rss_bytes") or memory_info.get(
-        "tracemalloc_peak_bytes"
+    fields = _serving_rates(durations, wall, steps)
+    fields.update(
+        concurrency=max(int(config.concurrency), 1),
+        cold_start_ms=cold_start * 1000.0,
+        peak_memory_bytes=_peak_memory(memory_info),
+        step_p50_ms=percentile(step_durations, 50.0) * 1000.0,
+        step_p99_ms=percentile(step_durations, 99.0) * 1000.0,
     )
-    return {
-        "calls": calls,
-        "concurrency": max(int(config.concurrency), 1),
-        "frames_per_call": steps,
-        "p50_ms": percentile(durations, 50.0) * 1000.0,
-        "p99_ms": percentile(durations, 99.0) * 1000.0,
-        "mean_ms": statistics.fmean(durations) * 1000.0 if durations else 0.0,
-        "throughput_per_second": calls / wall if wall > 0 else None,
-        "steps_per_second": calls * steps / wall if wall > 0 else None,
-        "cold_start_ms": cold_start * 1000.0,
-        "peak_memory_bytes": peak,
-        "step_p50_ms": percentile(step_durations, 50.0) * 1000.0,
-        "step_p99_ms": percentile(step_durations, 99.0) * 1000.0,
-    }
+    return fields
 
 
 def _record(
-    config: ServingBenchmarkConfig,
-    bundle: DeploymentBundle,
-    durations: Sequence[float],
-    wall: float,
-    steps: int,
-    cold_start: float,
-    memory_info: Dict[str, Any],
+    config: ServingBenchmarkConfig, bundle: DeploymentBundle,
+    durations: Sequence[float], wall: float, steps: int,
+    cold_start: float, memory_info: Dict[str, Any],
     step_durations: Sequence[float],
 ) -> Dict[str, Any]:
     """Assemble one JSON-ready serving result record."""
@@ -285,12 +293,8 @@ def run_serving_benchmark(
     """Measure a bundle's in-process predict path, returning JSON-able data."""
     device = device_mod.resolve(config.device)
     bundle, session, sample, steps, cold_start = _prepare(config, device)
-    durations, wall = _timed_run(
-        config, bundle, session, sample, device
-    )
-    memory_info = memory.snapshot(
-        lambda: _one_call(session, sample), device
-    )
+    durations, wall = _timed_run(config, bundle, session, sample, device)
+    memory_info = memory.snapshot(lambda: _one_call(session, sample), device)
     step_durations = _step_latencies(session, sample)
     record = _record(
         config, bundle, durations, wall, steps, cold_start, memory_info,

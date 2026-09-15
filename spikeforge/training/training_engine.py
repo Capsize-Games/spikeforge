@@ -72,6 +72,20 @@ class TrainingEngine(
             dataset, hidden, beta, lr, weight_decay, epochs, num_steps,
             subset, batch_size,
         )
+        self._configure_session(
+            mode, seed, tracking, deterministic, encode, topology,
+            topology_params, amp, grad_checkpoint, bptt_steps, multi_gpu,
+        )
+        self._setup_input(encode, input_mode, device)
+        self._build(lr, checkpoint)
+
+    def _configure_session(
+        self, mode: str, seed: Optional[int], tracking: Optional[str],
+        deterministic: bool, encode: Any, topology: str,
+        topology_params: Optional[Dict[str, Any]], amp: bool,
+        grad_checkpoint: bool, bptt_steps: Optional[int], multi_gpu: bool,
+    ) -> None:
+        """Store the mode/seed/tracking/topology/scaleup settings."""
         self._mode = ExecutionMode(mode)
         self._seed = None if seed is None else int(seed)
         self._tracking = tracking
@@ -83,8 +97,6 @@ class TrainingEngine(
         self._scaleups = scaleup_options(
             amp, grad_checkpoint, bptt_steps, multi_gpu
         )
-        self._setup_input(encode, input_mode, device)
-        self._build(lr, checkpoint)
 
     def _store_settings(
         self, dataset: str, hidden: int, beta: float, lr: float,
@@ -121,13 +133,17 @@ class TrainingEngine(
                          num_steps=self._num_steps,
                          batch_size=self._batch_size)
 
-    def _build(self, lr: float, checkpoint: Optional[str] = None) -> None:
-        """Create the configured topology/optimiser and restore a ckpt."""
+    def _apply_seed(self) -> None:
+        """Seed torch and, if requested, enable deterministic mode."""
         if self._seed is not None:
             set_seed(self._seed)
         if self._deterministic:
             report = enable_deterministic(self._seed)
             self._determinism_report = report.to_dict()
+
+    def _build(self, lr: float, checkpoint: Optional[str] = None) -> None:
+        """Create the configured topology/optimiser and restore a ckpt."""
+        self._apply_seed()
         self._adopt_topology(checkpoint)
         params = self._topology_arguments()
         self._architecture = registry.resolved_params(self._topology, params)

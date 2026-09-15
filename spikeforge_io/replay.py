@@ -16,7 +16,16 @@ plain dict, and the caller supplies the ``send`` callable, so
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 import torch
 
@@ -57,17 +66,12 @@ def _frames(adapter: StreamAdapter, window_spec: Any) -> List[torch.Tensor]:
 
 
 def replay(
-    adapter: StreamAdapter,
-    sink: Sink,
-    *,
-    window_spec: Any = None,
+    adapter: StreamAdapter, sink: Sink, *, window_spec: Any = None
 ) -> ReplayReport:
     """Feed every frame of ``adapter`` to ``sink`` and return the report.
 
-    ``sink`` receives one frame at a time (a ``[D]`` sample, or an ``[L, D]``
-    window when ``window_spec`` is given); its return value is ignored. This is
-    the general hook an :class:`~spikeforge.serving.session.InferenceSession`,
-    the ``encode`` function, or a test double binds to.
+    ``sink`` receives a ``[D]`` sample (or ``[L, D]`` window with
+    ``window_spec``); its return value is ignored.
     """
     frames = _frames(adapter, window_spec)
     for frame in frames:
@@ -80,19 +84,15 @@ def replay(
 
 
 def stream_messages(
-    adapter: StreamAdapter,
-    *,
-    window_spec: Any = None,
-    encoded: bool = False,
-    session_id: Optional[str] = None,
+    adapter: StreamAdapter, *, window_spec: Any = None,
+    encoded: bool = False, session_id: Optional[str] = None,
     reset: bool = False,
 ) -> Iterator[Dict[str, Any]]:
     """Yield the ``/v1/stream`` messages that replay ``adapter``.
 
-    The first message is a ``{"reset": true}`` envelope when ``reset`` is set,
-    then one ``{"frame": ...}`` message per sample (or per normalized window
-    when ``window_spec`` is given). The shape matches
-    :func:`spikeforge_serve.app._stream_reply` exactly.
+    A leading ``{"reset": true}`` when ``reset`` is set, then one
+    ``{"frame": ...}`` per sample or normalized window. Matches
+    :func:`spikeforge_serve.routes._stream_reply` exactly.
     """
     if reset:
         yield _message({"reset": True}, session_id)
@@ -111,33 +111,36 @@ def _message(
     return body
 
 
-def replay_to_stream(
-    adapter: StreamAdapter,
-    send: Sink,
-    *,
-    window_spec: Any = None,
-    encoded: bool = False,
-    session_id: Optional[str] = None,
-    reset: bool = False,
-) -> ReplayReport:
-    """Replay ``adapter`` into ``/v1/stream`` through ``send``.
-
-    ``send`` takes one protocol message and returns the service reply (for a
-    WebSocket, ``send`` would serialize and await the response). The replies
-    are collected into the returned :class:`ReplayReport`.
-    """
+def _collect_replies(
+    adapter: StreamAdapter, send: Sink, window_spec: Any, encoded: bool,
+    session_id: Optional[str], reset: bool,
+) -> Tuple[int, List[Any]]:
+    """Send every stream message; return the frame count and replies."""
     frames = 0
     replies: List[Any] = []
     for message in stream_messages(
-        adapter,
-        window_spec=window_spec,
-        encoded=encoded,
-        session_id=session_id,
-        reset=reset,
+        adapter, window_spec=window_spec, encoded=encoded,
+        session_id=session_id, reset=reset,
     ):
         if "frame" in message:
             frames += 1
         replies.append(send(message))
+    return frames, replies
+
+
+def replay_to_stream(
+    adapter: StreamAdapter, send: Sink, *, window_spec: Any = None,
+    encoded: bool = False, session_id: Optional[str] = None,
+    reset: bool = False,
+) -> ReplayReport:
+    """Replay ``adapter`` into ``/v1/stream`` through ``send``.
+
+    ``send`` takes one protocol message and returns the service reply;
+    replies are collected into the returned :class:`ReplayReport`.
+    """
+    frames, replies = _collect_replies(
+        adapter, send, window_spec, encoded, session_id, reset
+    )
     return ReplayReport(
         source=adapter.source,
         frames=frames,

@@ -48,24 +48,13 @@ def _merged_params(
 
 
 def sequence_mlp(
-    seq_length: int = 8,
-    features: int = 8,
-    hidden: int = 16,
-    beta: float = 0.9,
-    num_classes: int = 4,
-    neuron: str = DEFAULT_NEURON,
-    surrogate: Optional[str] = None,
-    neurons: NeuronMap = None,
-    stage_params: ParamsMap = None,
-    threshold: Optional[float] = None,
+    seq_length: int = 8, features: int = 8, hidden: int = 16,
+    beta: float = 0.9, num_classes: int = 4, neuron: str = DEFAULT_NEURON,
+    surrogate: Optional[str] = None, neurons: NeuronMap = None,
+    stage_params: ParamsMap = None, threshold: Optional[float] = None,
     reset: Optional[str] = "zero",
 ) -> TopologySpec:
-    """NIR-mappable per-token MLP over a ``[T, B, L, seq_length]`` sequence.
-
-    Each step consumes ``[B, L, features]``; the linear stages map the
-    feature axis so the readout keeps the ``L`` token axis. ``seq_length``
-    documents the demonstration task's length and does not enter the graph.
-    """
+    """NIR-mappable per-token MLP over a ``[B, L, features]`` sequence."""
     names = ("lif1", "lif2")
     overrides = _merged_params(stage_params, names, threshold, reset)
     stage = _stage_factory(neurons, overrides)
@@ -79,60 +68,54 @@ def sequence_mlp(
     )
 
 
-def _attn_stages(
-    seq_length: int,
-    vocab: int,
-    embed_dim: int,
-    num_heads: int,
-    num_classes: int,
-    neuron: str,
-    beta: float,
-    surrogate: Optional[str],
-    stage: NeuronStage,
+def _embedding_stages(
+    seq_length: int, vocab: int, embed_dim: int, num_heads: int
 ) -> List[Stage]:
-    """Return the transformer-shaped stage list for ``sequence_attn``."""
+    """Return the embed/positional/attention stages for ``sequence_attn``."""
     return [
         Stage(
-            "embed",
-            "embedding",
+            "embed", "embedding",
             {"num_embeddings": vocab, "embedding_dim": embed_dim},
         ),
         Stage(
-            "pos",
-            "positional_encoding",
+            "pos", "positional_encoding",
             {"embed_dim": embed_dim, "max_length": seq_length},
         ),
         Stage(
-            "attn",
-            "multihead_attention",
+            "attn", "multihead_attention",
             {"embed_dim": embed_dim, "num_heads": num_heads},
         ),
-        Stage("norm", "layer_norm", {"normalized_shape": embed_dim}),
-        Stage("fc", "linear", _linear_params(embed_dim, num_classes)),
-        stage("out", neuron, beta, surrogate),
     ]
 
 
+def _attn_stages(
+    seq_length: int, vocab: int, embed_dim: int, num_heads: int,
+    num_classes: int, neuron: str, beta: float, surrogate: Optional[str],
+    stage: NeuronStage,
+) -> List[Stage]:
+    """Return the transformer-shaped stage list for ``sequence_attn``."""
+    stages = _embedding_stages(seq_length, vocab, embed_dim, num_heads)
+    stages.append(
+        Stage("norm", "layer_norm", {"normalized_shape": embed_dim})
+    )
+    stages.append(
+        Stage("fc", "linear", _linear_params(embed_dim, num_classes))
+    )
+    stages.append(stage("out", neuron, beta, surrogate))
+    return stages
+
+
 def sequence_attn(
-    seq_length: int = 8,
-    vocab: int = 32,
-    embed_dim: int = 16,
-    num_heads: int = 2,
-    beta: float = 0.9,
-    num_classes: int = 4,
-    neuron: str = DEFAULT_NEURON,
-    surrogate: Optional[str] = None,
-    neurons: NeuronMap = None,
-    stage_params: ParamsMap = None,
-    threshold: Optional[float] = None,
-    reset: Optional[str] = "subtract",
+    seq_length: int = 8, vocab: int = 32, embed_dim: int = 16,
+    num_heads: int = 2, beta: float = 0.9, num_classes: int = 4,
+    neuron: str = DEFAULT_NEURON, surrogate: Optional[str] = None,
+    neurons: NeuronMap = None, stage_params: ParamsMap = None,
+    threshold: Optional[float] = None, reset: Optional[str] = "subtract",
 ) -> TopologySpec:
     """Simulation-only spiking-transformer-shaped preset (unexportable).
 
-    The stack mirrors a transformer encoder block; because ``nir`` lacks
-    embedding, attention, and normalisation primitives, only its simulation
-    and introspection behaviour is faithful. Export fails loudly and names
-    the first unexportable stage.
+    ``nir`` lacks embedding/attention/normalisation primitives, so export
+    fails loudly, naming the first unexportable stage.
     """
     overrides = _merged_params(stage_params, ("out",), threshold, reset)
     stage = _stage_factory(neurons, overrides)

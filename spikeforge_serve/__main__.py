@@ -39,9 +39,7 @@ def _add_serve_parser(subparsers: "argparse._SubParsersAction") -> None:
         "--bundle", required=True, help="path to the .spkf deployment bundle"
     )
     parser.add_argument(
-        "--host",
-        default=DEFAULT_HOST,
-        help=f"bind address (default: {DEFAULT_HOST})",
+        "--host", default=DEFAULT_HOST, help=f"bind address ({DEFAULT_HOST})"
     )
     parser.add_argument(
         "--port", type=int, default=DEFAULT_PORT,
@@ -50,6 +48,11 @@ def _add_serve_parser(subparsers: "argparse._SubParsersAction") -> None:
     parser.add_argument(
         "--device", default="cpu", help="torch device the sessions run on"
     )
+    _add_metrics_token_arg(parser)
+
+
+def _add_metrics_token_arg(parser: argparse.ArgumentParser) -> None:
+    """Add the ``--metrics-token`` flag to ``serve``'s parser."""
     parser.add_argument(
         "--metrics-token",
         dest="metrics_token",

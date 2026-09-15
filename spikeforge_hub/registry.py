@@ -103,6 +103,18 @@ def _label(data: Mapping[str, Any]) -> str:
     return value if isinstance(value, str) and value else "(unnamed)"
 
 
+def _checkpoint_artifact(name: str) -> Tuple[str, Optional[str]]:
+    """Return the checkpoint's stored path and sha256 (None if missing)."""
+    from spikeforge.network import model_store
+
+    path = model_store.path_for(name)
+    if not os.path.exists(path):
+        return path, None
+    from spikeforge_hub.verify import file_sha256
+
+    return path, file_sha256(path)
+
+
 def stage_rank(stage: str) -> int:
     """Return the ordinal of ``stage``, or raise a typed schema error."""
     try:
@@ -171,20 +183,10 @@ class RegistryEntry:
     ) -> "RegistryEntry":
         """Build an entry for a saved checkpoint, recording its sha256.
 
-        The checkpoint path comes from
-        :func:`spikeforge.network.model_store.path_for`, so the registry builds
-        on the existing model store instead of inventing a second locator. The
-        entry id defaults to ``name`` and the model lineage link is filled from
-        ``name`` unless overridden.
+        The id defaults to ``name`` and the model lineage link is filled
+        from ``name`` unless overridden.
         """
-        from spikeforge.network import model_store
-
-        path = model_store.path_for(name)
-        digest = None
-        if os.path.exists(path):
-            from spikeforge_hub.verify import file_sha256
-
-            digest = file_sha256(path)
+        path, digest = _checkpoint_artifact(name)
         links = dict(lineage or {})
         links.setdefault("model", name)
         return cls(
@@ -202,29 +204,19 @@ class RegistryEntry:
 
     @classmethod
     def from_catalog_entry(
-        cls,
-        entry: HubEntry,
-        *,
-        stage: str = "dev",
-        status: str = "active",
-        version: str = "0.1.0",
-        **extra: Any,
+        cls, entry: HubEntry, *, stage: str = "dev", status: str = "active",
+        version: str = "0.1.0", **extra: Any,
     ) -> "RegistryEntry":
         """Adapt a curated :class:`HubEntry` into a governed registry entry.
 
-        The catalog's unverified candidate marker maps to a ``deprecated``
-        status, so a candidate can be listed but never promoted into ``prod``
-        without first replacing the marker with a concrete license.
+        An unverified candidate maps to ``deprecated`` status, so it lists
+        but never promotes into ``prod`` without a concrete license.
         """
         unverified = entry.license == UNVERIFIED_CANDIDATE
         resolved = "deprecated" if unverified else status
         return cls(
-            id=entry.id,
-            name=entry.name,
-            stage=stage,
-            status=resolved,
-            version=version,
-            artifact_sha256=entry.sha256,
+            id=entry.id, name=entry.name, stage=stage, status=resolved,
+            version=version, artifact_sha256=entry.sha256,
             lineage={"dataset": entry.framework, "model": entry.id},
             **extra,
         )
@@ -433,25 +425,8 @@ def verify_artifact(entry: RegistryEntry) -> Dict[str, Any]:
     return {"status": result.status, "reason": result.reason}
 
 
-def promote(
-    entry: RegistryEntry,
-    to_stage: str,
-    approver: str,
-    key: Any,
-    *,
-    at: Optional[float] = None,
-    check_artifact: bool = True,
-) -> RegistryEntry:
-    """Return ``entry`` advanced to ``to_stage`` with a recorded approval.
-
-    The transition must be the *next* stage (``dev -> staging -> prod``); a
-    skip, a terminal lifecycle status, a missing approver, a ``prod`` promotion
-    whose compatibility verdict is not ``exact``/``mappable``, or an artifact
-    that fails its recorded checksum are each refused with a typed error. On
-    success the returned entry records ``approver``/``approved_at`` and is
-    re-signed, so the verified signature covers the new stage.
-    """
-    entry.validated()
+def _check_stage_transition(entry: RegistryEntry, to_stage: str) -> None:
+    """Raise unless ``to_stage`` is the entry's next lifecycle stage."""
     current = stage_rank(entry.stage)
     target = stage_rank(to_stage)
     if target != current + 1:
@@ -466,6 +441,12 @@ def promote(
             entry.status,
             f"only 'active' may be promoted to {to_stage!r}",
         )
+
+
+def _check_approval_and_compat(
+    entry: RegistryEntry, to_stage: str, approver: str
+) -> None:
+    """Raise unless ``approver`` is named and prod compat is satisfied."""
     if not _text(approver):
         raise RegistryApprovalError(entry.id, "a named approver is required")
     if to_stage == "prod" and entry.compat not in (EXACT, MAPPABLE):
@@ -474,8 +455,23 @@ def promote(
             entry.compat or "(none)",
             "a 'prod' promotion requires an exact/mappable verdict",
         )
+
+
+def _validate_promotion(
+    entry: RegistryEntry, to_stage: str, approver: str, check_artifact: bool
+) -> None:
+    """Raise a typed error when ``entry`` cannot be promoted to a stage."""
+    _check_stage_transition(entry, to_stage)
+    _check_approval_and_compat(entry, to_stage, approver)
     if check_artifact:
         verify_artifact(entry)
+
+
+def _promoted_entry(
+    entry: RegistryEntry, to_stage: str, approver: str,
+    at: Optional[float], key: Any,
+) -> RegistryEntry:
+    """Return ``entry`` advanced to ``to_stage`` and freshly re-signed."""
     promoted = replace(
         entry,
         stage=to_stage,
@@ -486,9 +482,72 @@ def promote(
     return replace(promoted, signature=sign_entry(promoted, key))
 
 
+def promote(
+    entry: RegistryEntry,
+    to_stage: str,
+    approver: str,
+    key: Any,
+    *,
+    at: Optional[float] = None,
+    check_artifact: bool = True,
+) -> RegistryEntry:
+    """Return ``entry`` advanced to ``to_stage`` with a recorded approval.
+
+    Refused with a typed error on a skipped/terminal/missing-approval/
+    incompatible/checksum-failed transition; on success the entry is
+    re-signed so the signature covers the new stage.
+    """
+    entry.validated()
+    _validate_promotion(entry, to_stage, approver, check_artifact)
+    return _promoted_entry(entry, to_stage, approver, at, key)
+
+
 def default_registry_path() -> str:
     """Return the default registry document path under ``REGISTRY_DIR``."""
     return os.path.join(REGISTRY_DIR, REGISTRY_FILE)
+
+
+def _read_json_file(path: str) -> Any:
+    """Return the parsed JSON at ``path``, wrapping I/O and parse errors."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return json.load(handle)
+    except OSError as exc:
+        raise RegistrySchemaError(
+            "(registry)", f"cannot read {path}: {exc}"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise RegistrySchemaError(
+            "(registry)", f"malformed JSON: {exc}"
+        ) from exc
+
+
+def _check_registry_version(data: Mapping[str, Any]) -> int:
+    """Return the document's schema version, or raise when unsupported."""
+    version = int(data.get("version", REGISTRY_SCHEMA_VERSION))
+    if version != REGISTRY_SCHEMA_VERSION:
+        raise RegistryVersionError(
+            "(registry)",
+            f"document version {version!r} is not "
+            f"{REGISTRY_SCHEMA_VERSION}",
+        )
+    return version
+
+
+def _parse_registry_entries(
+    raw: Any,
+) -> Tuple[Tuple[RegistryEntry, ...], Tuple[str, ...]]:
+    """Parse each raw entry, collecting a message for every failure."""
+    if not isinstance(raw, list):
+        raise RegistrySchemaError("(registry)", "'entries' must be a list")
+    found: List[RegistryEntry] = []
+    problems: List[str] = []
+    for index, item in enumerate(raw):
+        try:
+            found.append(RegistryEntry.from_dict(item))
+        except RegistryError as error:
+            problems.append(_position(index, item, error))
+    return tuple(found), tuple(problems)
 
 
 @dataclass(frozen=True)
@@ -510,24 +569,9 @@ class Registry:
         """Validate a registry document, collecting every entry issue."""
         if not isinstance(data, Mapping):
             raise RegistrySchemaError("(registry)", "root must be a mapping")
-        version = int(data.get("version", REGISTRY_SCHEMA_VERSION))
-        if version != REGISTRY_SCHEMA_VERSION:
-            raise RegistryVersionError(
-                "(registry)",
-                f"document version {version!r} is not "
-                f"{REGISTRY_SCHEMA_VERSION}",
-            )
-        raw = data.get("entries", [])
-        if not isinstance(raw, list):
-            raise RegistrySchemaError("(registry)", "'entries' must be a list")
-        found: List[RegistryEntry] = []
-        problems: List[str] = []
-        for index, item in enumerate(raw):
-            try:
-                found.append(RegistryEntry.from_dict(item))
-            except RegistryError as error:
-                problems.append(_position(index, item, error))
-        return cls(entries=tuple(found), issues=tuple(problems))
+        _check_registry_version(data)
+        found, problems = _parse_registry_entries(data.get("entries", []))
+        return cls(entries=found, issues=problems)
 
     @classmethod
     def load(cls, path: Optional[str] = None) -> "Registry":
@@ -539,18 +583,7 @@ class Registry:
         resolved = path or default_registry_path()
         if not os.path.exists(resolved):
             return cls()
-        try:
-            with open(resolved, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except OSError as exc:
-            raise RegistrySchemaError(
-                "(registry)", f"cannot read {resolved}: {exc}"
-            ) from exc
-        except json.JSONDecodeError as exc:
-            raise RegistrySchemaError(
-                "(registry)", f"malformed JSON: {exc}"
-            ) from exc
-        return cls.from_dict(data)
+        return cls.from_dict(_read_json_file(resolved))
 
     def save(self, path: Optional[str] = None) -> str:
         """Write the registry to ``path`` and return that path."""
@@ -614,6 +647,16 @@ def _position(index: int, item: Any, error: RegistryError) -> str:
     return f"{label}: {error.detail}"
 
 
+def _unverified_issues(entries: List[HubEntry]) -> List[str]:
+    """Return one governance issue per unverified-candidate entry."""
+    return [
+        f"{entry.id}: unverified candidate; lifecycle maps to "
+        "'deprecated' and it may not be promoted to 'prod'"
+        for entry in entries
+        if entry.license == UNVERIFIED_CANDIDATE
+    ]
+
+
 def validate_catalog(
     path: Optional[str] = None,
 ) -> Tuple[List[HubEntry], List[str]]:
@@ -633,13 +676,7 @@ def validate_catalog(
         entries, issues = hub_catalog.load_catalog(target)
     except HubCatalogError as error:
         return [], [str(error)]
-    for entry in entries:
-        if entry.license == UNVERIFIED_CANDIDATE:
-            issues.append(
-                f"{entry.id}: unverified candidate; lifecycle maps to "
-                "'deprecated' and it may not be promoted to 'prod'"
-            )
-    return entries, issues
+    return entries, issues + _unverified_issues(entries)
 
 
 def catalog_governance() -> List[Dict[str, Any]]:

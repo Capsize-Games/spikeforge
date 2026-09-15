@@ -122,6 +122,32 @@ def _check_compatibility(
             )
 
 
+def _parse_encode_spec(path: str, encode_config: Any) -> EncodeSpec:
+    """Parse and validate an encode spec, wrapping a parse error typed."""
+    spec = EncodeSpec.from_mapping(encode_config or {})
+    try:
+        spec.validate()
+    except EncodeSpecError as error:
+        raise BundleFormatError(
+            path, f"invalid encode spec: {error}"
+        ) from None
+    return spec
+
+
+def _check_encode_version(
+    path: str, recorded: Optional[Any], strict: bool
+) -> None:
+    """Raise when ``recorded`` mismatches the runtime's spec version."""
+    if recorded is None:
+        return
+    if int(recorded) != ENCODE_SPEC_VERSION and strict:
+        raise BundleCompatibilityError(
+            path,
+            f"encode spec version {recorded!r} does not match the runtime's "
+            f"{ENCODE_SPEC_VERSION!r}",
+        )
+
+
 def _check_encode(
     path: str, manifest: Mapping[str, Any], encode_config: Any, strict: bool
 ) -> EncodeSpec:
@@ -132,22 +158,8 @@ def _check_encode(
     and validate, and its manifest ``encode_spec_version`` must match this
     runtime; a mismatch is refused under ``strict`` rather than re-encoded.
     """
-    spec = EncodeSpec.from_mapping(encode_config or {})
-    try:
-        spec.validate()
-    except EncodeSpecError as error:
-        raise BundleFormatError(
-            path, f"invalid encode spec: {error}"
-        ) from None
-    recorded = manifest.get("encode_spec_version")
-    if recorded is None:
-        return spec
-    if int(recorded) != ENCODE_SPEC_VERSION and strict:
-        raise BundleCompatibilityError(
-            path,
-            f"encode spec version {recorded!r} does not match the runtime's "
-            f"{ENCODE_SPEC_VERSION!r}",
-        )
+    spec = _parse_encode_spec(path, encode_config)
+    _check_encode_version(path, manifest.get("encode_spec_version"), strict)
     return spec
 
 
@@ -192,6 +204,16 @@ def _read_archive(path: str) -> Dict[str, bytes]:
         ) from None
 
 
+def _load_module(
+    spec_dict: Mapping[str, Any], state_dict: Mapping[str, torch.Tensor]
+) -> Tuple[TopologySpec, Any]:
+    """Build the topology module and load its trained weights."""
+    spec = TopologySpec.from_dict(spec_dict)
+    module = build_module(spec)
+    module.load_state_dict(dict(state_dict), strict=True)
+    return spec, module
+
+
 def _nir_envelope(
     spec_dict: Mapping[str, Any],
     state_dict: Mapping[str, torch.Tensor],
@@ -206,14 +228,32 @@ def _nir_envelope(
         raise BundleFormatError(
             source, "the 'nir' extra is required to include a NIR graph"
         )
-    spec = TopologySpec.from_dict(spec_dict)
-    module = build_module(spec)
-    module.load_state_dict(dict(state_dict), strict=True)
+    spec, module = _load_module(spec_dict, state_dict)
     with tempfile.TemporaryDirectory() as folder:
         graph_path = os.path.join(folder, bm.GRAPH_NAME)
         serialization.save_graph(to_nir(spec, module), graph_path)
         with open(graph_path, encoding="utf-8") as handle:
             return json.load(handle)
+
+
+def _read_bundle_parts(
+    path: str, strict: bool
+) -> Tuple[Dict[str, Any], Any, Optional[Any], Dict[str, bytes]]:
+    """Read and validate every manifest-adjacent part of a bundle archive."""
+    payloads = _read_archive(path)
+    _verify_integrity(path, payloads)
+    manifest = bm.validate_manifest(
+        _load_json(path, payloads[bm.MANIFEST_NAME], "manifest"), path
+    )
+    _check_compatibility(path, manifest.get("library_versions") or {}, strict)
+    encode_config = _load_json(
+        path, payloads[bm.ENCODE_NAME], "encode_config"
+    )
+    _check_encode(path, manifest, encode_config, strict)
+    graph = None
+    if bm.GRAPH_NAME in payloads:
+        graph = _load_json(path, payloads[bm.GRAPH_NAME], "graph")
+    return manifest, encode_config, graph, payloads
 
 
 @dataclass(frozen=True)
@@ -337,27 +377,12 @@ class DeploymentBundle:
     def load(cls, path: str, strict: bool = True) -> "DeploymentBundle":
         """Read, verify, and return the bundle at ``path``.
 
-        The archive is rejected with a typed error when it is missing
-        (:class:`BundleNotFoundError`), malformed
-        (:class:`BundleFormatError`), tampered
-        (:class:`BundleIntegrityError`), or built against an incompatible
-        runtime (:class:`BundleCompatibilityError`).
+        Rejected with a typed error when missing, malformed, tampered, or
+        built against an incompatible runtime.
         """
-        payloads = _read_archive(path)
-        _verify_integrity(path, payloads)
-        manifest = bm.validate_manifest(
-            _load_json(path, payloads[bm.MANIFEST_NAME], "manifest"), path
+        manifest, encode_config, graph, payloads = _read_bundle_parts(
+            path, strict
         )
-        _check_compatibility(
-            path, manifest.get("library_versions") or {}, strict
-        )
-        encode_config = _load_json(
-            path, payloads[bm.ENCODE_NAME], "encode_config"
-        )
-        _check_encode(path, manifest, encode_config, strict)
-        graph = None
-        if bm.GRAPH_NAME in payloads:
-            graph = _load_json(path, payloads[bm.GRAPH_NAME], "graph")
         return cls(
             manifest=manifest,
             weights=_load_weights(path, payloads[bm.WEIGHTS_NAME]),
@@ -407,40 +432,136 @@ def _frozen_encode(
     return resolved.to_dict()
 
 
+#: (stored, encoding, pruning, float weights) returned by ``_prepare_weights``.
+WeightsPrep = Tuple[
+    Dict[str, Any],
+    Optional[Dict[str, Any]],
+    Optional[Dict[str, Any]],
+    Dict[str, torch.Tensor],
+]
+
+
+def _apply_pruning(
+    resolved: Dict[str, Any], prune_sparsity: Optional[float], strategy: str
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    """Prune ``resolved`` when requested; return it and the report block."""
+    if prune_sparsity is None:
+        return resolved, None
+    pruned = prune(resolved, prune_sparsity, strategy=strategy)
+    return dict(pruned.tensors), pruned.report.to_dict()
+
+
+def _uncompressed_weights(
+    resolved: Dict[str, Any],
+) -> Tuple[Dict[str, Any], None, Dict[str, torch.Tensor]]:
+    """Return ``resolved`` unchanged, with its float tensors picked out."""
+    floats = {
+        name: value
+        for name, value in resolved.items()
+        if torch.is_tensor(value)
+    }
+    return resolved, None, floats
+
+
+def _compressed_weights(
+    resolved: Dict[str, Any], compress: str, compress_bits: int
+) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, torch.Tensor]]:
+    """Compress ``resolved`` and return the stored/encoding/float triple."""
+    compressed = compress_state_dict(resolved, compress, compress_bits)
+    encoding = dict(compressed.encoding)
+    stored = dict(compressed.tensors)
+    return stored, encoding, dequantize_state_dict(stored, encoding)
+
+
 def _prepare_weights(
     state_dict: Mapping[str, Any],
     compress: Optional[str],
     compress_bits: int,
     prune_sparsity: Optional[float],
     prune_strategy: str,
-) -> Tuple[
-    Dict[str, Any],
-    Optional[Dict[str, Any]],
-    Optional[Dict[str, Any]],
-    Dict[str, torch.Tensor],
-]:
-    """Return the stored payload, encoding, pruning block, and float weights.
-
-    Pruning runs first (when requested) and compression second, so the ratio
-    reflects the pruned tensor. The final element is the float state dict a
-    NIR graph should be exported from: for a compressed bundle it is the
-    dequantized payload, so the graph and the loaded module agree exactly.
-    """
-    resolved: Dict[str, Any] = dict(state_dict)
-    pruning: Optional[Dict[str, Any]] = None
-    if prune_sparsity is not None:
-        pruned = prune(resolved, prune_sparsity, strategy=prune_strategy)
-        resolved = dict(pruned.tensors)
-        pruning = pruned.report.to_dict()
+) -> WeightsPrep:
+    """Prune then compress ``state_dict``; return stored/encoding/floats."""
+    resolved, pruning = _apply_pruning(
+        dict(state_dict), prune_sparsity, prune_strategy
+    )
     if not compress or compress == SCHEME_NONE:
-        return resolved, None, pruning, {
-            name: value for name, value in resolved.items()
-            if torch.is_tensor(value)
-        }
-    compressed = compress_state_dict(resolved, compress, compress_bits)
-    encoding = dict(compressed.encoding)
-    stored = dict(compressed.tensors)
-    return stored, encoding, pruning, dequantize_state_dict(stored, encoding)
+        stored, encoding, floats = _uncompressed_weights(resolved)
+    else:
+        stored, encoding, floats = _compressed_weights(
+            resolved, compress, compress_bits
+        )
+    return stored, encoding, pruning, floats
+
+
+def _manifest_source_fields(
+    spec: Any, meta: Dict[str, Any], provenance: Any, encode: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Return the checkpoint/encode-derived manifest fields."""
+    return {
+        "spec": spec,
+        "meta": meta,
+        "provenance": provenance,
+        "versions": _versions(),
+        "encode_config": encode,
+        "encode_spec_version": encode["spec_version"],
+    }
+
+
+def _manifest_option_fields(
+    preprocess: Dict[str, Any],
+    label_map: Optional[Mapping[int, str]],
+    expected_metrics: Optional[Mapping[str, Any]],
+    protocol_version: Optional[str],
+    encoding: Optional[Dict[str, Any]],
+    pruning: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Return the caller-supplied option fields of the manifest."""
+    return {
+        "preprocessing": preprocess,
+        "label_map": dict(label_map or {}),
+        "expected_metrics": dict(expected_metrics or {}),
+        "protocol_version": protocol_version,
+        "weights_encoding": encoding,
+        "pruning": pruning,
+    }
+
+
+def _build_manifest(
+    spec: Any, meta: Dict[str, Any], provenance: Any, encode: Dict[str, Any],
+    preprocess: Dict[str, Any], label_map: Optional[Mapping[int, str]],
+    expected_metrics: Optional[Mapping[str, Any]],
+    protocol_version: Optional[str], encoding: Optional[Dict[str, Any]],
+    pruning: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Build the manifest block for a new bundle."""
+    fields = _manifest_source_fields(spec, meta, provenance, encode)
+    fields.update(
+        _manifest_option_fields(
+            preprocess, label_map, expected_metrics, protocol_version,
+            encoding, pruning,
+        )
+    )
+    return bm.new_manifest(**fields)
+
+
+def _finalize_bundle(
+    manifest: Dict[str, Any], stored: Dict[str, Any], encode: Dict[str, Any],
+    preprocess: Dict[str, Any], graph: Optional[Any], out: Optional[str],
+    encoding: Optional[Dict[str, Any]],
+) -> DeploymentBundle:
+    """Construct the bundle and, when ``out`` is given, save it."""
+    bundle = DeploymentBundle(
+        manifest=manifest,
+        weights=stored,
+        encode_config=encode,
+        preprocessing=preprocess,
+        graph=graph,
+        path=out,
+        weights_encoding=encoding,
+    )
+    if out:
+        bundle.save(out)
+    return bundle
 
 
 def build(
@@ -473,32 +594,13 @@ def build(
     stored, encoding, pruning, resolved = _prepare_weights(
         state_dict, compress, compress_bits, prune_sparsity, prune_strategy
     )
-    manifest = bm.new_manifest(
-        spec=spec,
-        meta=meta,
-        provenance=provenance,
-        versions=_versions(),
-        encode_config=encode,
-        preprocessing=preprocess,
-        label_map=dict(label_map or {}),
-        expected_metrics=dict(expected_metrics or {}),
-        protocol_version=protocol_version,
-        encode_spec_version=encode["spec_version"],
-        weights_encoding=encoding,
-        pruning=pruning,
+    manifest = _build_manifest(
+        spec, meta, provenance, encode, preprocess, label_map,
+        expected_metrics, protocol_version, encoding, pruning,
     )
     graph = None
     if include_nir:
         graph = _nir_envelope(spec, resolved, checkpoint)
-    bundle = DeploymentBundle(
-        manifest=manifest,
-        weights=stored,
-        encode_config=encode,
-        preprocessing=preprocess,
-        graph=graph,
-        path=out,
-        weights_encoding=encoding,
+    return _finalize_bundle(
+        manifest, stored, encode, preprocess, graph, out, encoding
     )
-    if out:
-        bundle.save(out)
-    return bundle

@@ -58,25 +58,32 @@ def run(
     Returns a process exit code (0 on success) so the CLI entry point can
     forward it directly.
     """
+    payload = _load_payload(input_file)
+    service = ServingService(resolve_bundle(name_or_path), device=device)
+    result = _run_request(service, payload)
+    json.dump(result, out)
+    out.write("\n")
+    return 0
+
+
+def _load_payload(input_file: Optional[str]) -> Dict[str, Any]:
+    """Read the request JSON from ``input_file`` or stdin."""
     if input_file is not None:
         with open(input_file, encoding="utf-8") as handle:
-            payload = _read_request(handle)
-    else:
-        payload = _read_request(sys.stdin)
+            return _read_request(handle)
+    return _read_request(sys.stdin)
 
-    bundle_path = resolve_bundle(name_or_path)
-    service = ServingService(bundle_path, device=device)
 
+def _run_request(
+    service: ServingService, payload: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Apply an optional reset, then predict and shape the JSON result."""
     if payload.get("reset"):
         service.reset(session_id_from(payload))
-
     frames = frames_from(payload)
     predictions = service.predict(
         frames,
         session_id=session_id_from(payload),
         encoded=encoded_flag(payload),
     )
-    result = {"predictions": [prediction_json(p) for p in predictions]}
-    json.dump(result, out)
-    out.write("\n")
-    return 0
+    return {"predictions": [prediction_json(p) for p in predictions]}

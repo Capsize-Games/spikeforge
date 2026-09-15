@@ -55,6 +55,10 @@ WEIGHTS = "weights"
 _Layer = Dict[str, Any]
 #: The weight pass: the graph to run, its layer records, applied, reason.
 _Weights = Tuple[Any, Layers, bool, str]
+#: The weight pass plus the drift block and the activation hook it fed.
+_Passes = Tuple[
+    Any, Layers, bool, str, Optional[Dict[str, Any]], GraphActivationQuantizer
+]
 
 
 def _resolve(target: Any) -> TargetSpec:
@@ -134,16 +138,13 @@ def _weights(graph: Any, scheme_name: str) -> _Weights:
 
 
 def _hook(
-    requested: str,
-    calibration: Optional[Calibration],
-    ready: Any,
-    spikes: Optional[Any],
+    requested: str, calibration: Optional[Calibration],
+    ready: Any, spikes: Optional[Any],
 ) -> GraphActivationQuantizer:
     """Return the activation hook, calibrated on ``spikes`` by default.
 
-    The grid is folded from a plain run of the weight-quantized graph on the
-    fixture itself, so it is fixed across steps and never clips on that
-    fixture; a supplied calibration is used as given.
+    Folded from a plain run of the weight-quantized graph, so the grid is
+    fixed and never clips; a supplied calibration is used as given.
     """
     hook = GraphActivationQuantizer(requested, calibration=calibration)
     scheme = hook.scheme
@@ -152,10 +153,7 @@ def _hook(
     if calibration is not None or spikes is None:
         return hook
     folded = calibrate_graph(
-        ready,
-        spikes,
-        bits=scheme.bits,
-        target=scheme.target,
+        ready, spikes, bits=scheme.bits, target=scheme.target,
         source=FIXTURE_SOURCE,
     )
     return GraphActivationQuantizer(requested, calibration=folded)
@@ -206,24 +204,10 @@ def declared_report(target: Any, reason: str) -> QuantizationReport:
     )
 
 
-def quantize(
-    graph_or_spec: Any,
-    target: Any,
-    spikes: Optional[Any] = None,
-    activation: Optional[str] = None,
-    calibration: Optional[Calibration] = None,
-) -> QuantizationResult:
-    """Return the quantized graph for ``target`` plus its honest report.
-
-    ``graph_or_spec`` is a NIR graph or a :class:`TopologySpec`; ``target`` a
-    name or :class:`TargetSpec`. Supplying ``spikes`` adds the post-quantize
-    drift check, executing both graphs with the reference interpreter.
-    ``activation`` names a simulated activation/membrane scheme for that
-    check, overriding the target's declared ``activation_quantization``; it
-    needs ``spikes`` to run and is otherwise reported unapplied.
-    ``calibration`` fixes the grid from ranges observed elsewhere instead of
-    from the fixture.
-    """
+def _resolve_inputs(
+    graph_or_spec: Any, target: Any, activation: Optional[str]
+) -> Tuple[TargetSpec, Any, str, str]:
+    """Resolve the target spec, graph, and weight/activation scheme names."""
     spec = _resolve(target)
     graph = _as_graph(graph_or_spec)
     weight_name = _declared(spec, WEIGHT_KEY)
@@ -231,11 +215,31 @@ def quantize(
         _declared(spec, ACTIVATION_KEY) if activation is None
         else str(activation)
     )
+    return spec, graph, weight_name, requested
+
+
+def _run_passes(
+    graph: Any,
+    weight_name: str,
+    requested: str,
+    calibration: Optional[Calibration],
+    spikes: Optional[Any],
+) -> _Passes:
+    """Run the weight and activation passes the report is built from."""
     ready, layers, applied, reason = _weights(graph, weight_name)
     hook = _hook(requested, calibration, ready, spikes)
     drift = _drift(graph, ready, spikes, applied, hook)
+    return ready, layers, applied, reason, drift, hook
+
+
+def _report(
+    spec: TargetSpec, weight_name: str, applied: bool, reason: str,
+    layers: Layers, drift: Optional[Dict[str, Any]],
+    hook: GraphActivationQuantizer, requested: str, spikes: Optional[Any],
+) -> QuantizationReport:
+    """Assemble the quantization report from the weight/activation passes."""
     refusal = NO_FIXTURE if spikes is None else None
-    report = QuantizationReport(
+    return QuantizationReport(
         spec.name,
         weight_name,
         applied,
@@ -243,5 +247,26 @@ def quantize(
         layers,
         drift,
         _activation_section(hook, requested, refusal),
+    )
+
+
+def quantize(
+    graph_or_spec: Any, target: Any, spikes: Optional[Any] = None,
+    activation: Optional[str] = None,
+    calibration: Optional[Calibration] = None,
+) -> QuantizationResult:
+    """Return the quantized graph for ``target`` plus its honest report.
+
+    ``activation``/``calibration`` override the drift check's scheme/grid.
+    """
+    spec, graph, weight_name, requested = _resolve_inputs(
+        graph_or_spec, target, activation
+    )
+    ready, layers, applied, reason, drift, hook = _run_passes(
+        graph, weight_name, requested, calibration, spikes
+    )
+    report = _report(
+        spec, weight_name, applied, reason, layers, drift, hook,
+        requested, spikes,
     )
     return QuantizationResult(ready, report)

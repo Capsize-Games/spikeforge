@@ -42,58 +42,74 @@ def _run_formats(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_adapter(args: argparse.Namespace) -> Any:
+    """Return the adapter for ``args.path`` with the shared source flags."""
+    return adapter_for(
+        args.path, delimiter=args.delimiter, has_header=not args.no_header
+    )
+
+
+def _stream_summary(adapter: Any, stream: torch.Tensor) -> Dict[str, Any]:
+    """Return the shape/channel/value-range summary for a stream."""
+    return {
+        "source": adapter.source,
+        "samples": int(stream.size(0)),
+        "channels": int(stream.size(1)),
+        "min": float(stream.min().item()) if stream.numel() else None,
+        "max": float(stream.max().item()) if stream.numel() else None,
+        "mean": float(stream.mean().item()) if stream.numel() else None,
+    }
+
+
 def _run_info(args: argparse.Namespace) -> int:
     """Describe a recorded stream: shape, channels, and value range."""
     try:
-        adapter = adapter_for(
-            args.path,
-            delimiter=args.delimiter,
-            has_header=not args.no_header,
-        )
+        adapter = _resolve_adapter(args)
         stream = adapter.stream()
     except IoError as error:
         return _fail(str(error))
-    _print(
-        {
-            "source": adapter.source,
-            "samples": int(stream.size(0)),
-            "channels": int(stream.size(1)),
-            "min": float(stream.min().item()) if stream.numel() else None,
-            "max": float(stream.max().item()) if stream.numel() else None,
-            "mean": float(stream.mean().item()) if stream.numel() else None,
-        }
-    )
+    _print(_stream_summary(adapter, stream))
     return 0
+
+
+def _resolve_window_spec(args: argparse.Namespace, adapter: Any) -> Any:
+    """Return the fitted window spec for ``--length``, or None."""
+    if args.length is None:
+        return None
+    from spikeforge_io.windowing import fit_window_spec
+
+    return fit_window_spec(
+        adapter.stream(), int(args.length), int(args.stride or 1)
+    )
 
 
 def _run_replay(args: argparse.Namespace) -> int:
     """Print the ``/v1/stream`` messages an adapter would send (a dry run)."""
     try:
-        adapter = adapter_for(
-            args.path,
-            delimiter=args.delimiter,
-            has_header=not args.no_header,
-        )
-        spec = None
-        if args.length is not None:
-            from spikeforge_io.windowing import fit_window_spec
-
-            spec = fit_window_spec(
-                adapter.stream(), int(args.length), int(args.stride or 1)
-            )
+        adapter = _resolve_adapter(args)
+        spec = _resolve_window_spec(args, adapter)
         messages: List[Dict[str, Any]] = list(
             stream_messages(
-                adapter,
-                window_spec=spec,
-                encoded=args.encoded,
-                session_id=args.session_id,
-                reset=args.reset,
+                adapter, window_spec=spec, encoded=args.encoded,
+                session_id=args.session_id, reset=args.reset,
             )
         )
     except IoError as error:
         return _fail(str(error))
     _print({"source": adapter.source, "messages": messages})
     return 0
+
+
+def _add_replay_parser(subs: Any) -> None:
+    """Add the ``replay`` subcommand and its arguments."""
+    replay = subs.add_parser("replay", help="print /v1/stream messages")
+    _add_source(replay)
+    replay.add_argument("--length", type=int, default=None)
+    replay.add_argument("--stride", type=int, default=None)
+    replay.add_argument("--encoded", action="store_true")
+    replay.add_argument("--reset", action="store_true")
+    replay.add_argument("--session-id", dest="session_id", default=None)
+    replay.set_defaults(handler=_run_replay)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -111,14 +127,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     _add_source(info)
     info.set_defaults(handler=_run_info)
 
-    replay = subs.add_parser("replay", help="print /v1/stream messages")
-    _add_source(replay)
-    replay.add_argument("--length", type=int, default=None)
-    replay.add_argument("--stride", type=int, default=None)
-    replay.add_argument("--encoded", action="store_true")
-    replay.add_argument("--reset", action="store_true")
-    replay.add_argument("--session-id", dest="session_id", default=None)
-    replay.set_defaults(handler=_run_replay)
+    _add_replay_parser(subs)
 
     args = parser.parse_args(argv)
     return int(args.handler(args))

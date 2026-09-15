@@ -9,7 +9,7 @@ name, honouring the project's honesty rule.
 
 import re
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 from spikeforge_hub.errors import HubCatalogError
 
@@ -276,17 +276,35 @@ def _check_source(data: Mapping[str, Any]) -> None:
     _check_scores(data)
 
 
-def _check_reference(data: Mapping[str, Any]) -> None:
-    """Enforce what a shipped, trained entry has to declare.
+#: (field, message) pairs a reference entry must supply non-empty text for.
+_REFERENCE_TEXT_FIELDS: Tuple[Tuple[str, str], ...] = (
+    ("sha256", "source 'reference' needs a 'sha256' checksum"),
+    ("dataset", "source 'reference' needs the 'dataset' it trained on"),
+    (
+        "dataset_license",
+        "source 'reference' needs a 'dataset_license'; an entry that "
+        "cannot say what its training data permits is not one this "
+        "project can stand behind",
+    ),
+    (
+        "dataset_attribution",
+        "source 'reference' needs a 'dataset_attribution'; the credit "
+        "the dataset's publisher asks for has to travel with the entry",
+    ),
+)
 
-    A reference entry is the only kind whose bytes this project vouches for,
-    so it has to name the packaged file, pin its checksum, and say what it was
-    trained on -- otherwise "trained weights" is an unfalsifiable claim. It
-    also has to say what that training data permits and who to credit for it:
-    :attr:`HubEntry.license` covers the weights only, and an entry that
-    records one licence while staying silent on the other invites a reader to
-    assume they are the same.
-    """
+
+def _check_text_fields(
+    data: Mapping[str, Any], fields: Sequence[Tuple[str, str]]
+) -> None:
+    """Raise for the first ``fields`` entry missing non-empty text."""
+    for field, message in fields:
+        if not _text(data.get(field)):
+            raise HubCatalogError(_label(data), message)
+
+
+def _check_weights_field(data: Mapping[str, Any]) -> None:
+    """Reject a missing or malformed reference ``weights`` filename."""
     weights = data.get("weights")
     if not _text(weights):
         raise HubCatalogError(
@@ -298,34 +316,32 @@ def _check_reference(data: Mapping[str, Any]) -> None:
             f"weights {weights!r} must be a bare '*.pt' filename inside "
             f"the packaged {WEIGHTS_DIR}/ directory",
         )
-    if not _text(data.get("sha256")):
-        raise HubCatalogError(
-            _label(data), "source 'reference' needs a 'sha256' checksum"
-        )
-    if not _text(data.get("dataset")):
-        raise HubCatalogError(
-            _label(data),
-            "source 'reference' needs the 'dataset' it trained on",
-        )
-    if not _text(data.get("dataset_license")):
-        raise HubCatalogError(
-            _label(data),
-            "source 'reference' needs a 'dataset_license'; an entry that "
-            "cannot say what its training data permits is not one this "
-            "project can stand behind",
-        )
-    if not _text(data.get("dataset_attribution")):
-        raise HubCatalogError(
-            _label(data),
-            "source 'reference' needs a 'dataset_attribution'; the credit "
-            "the dataset's publisher asks for has to travel with the entry",
-        )
+
+
+def _check_test_accuracy(data: Mapping[str, Any]) -> None:
+    """Reject a reference entry missing a reported test accuracy."""
     if data.get("test_accuracy") is None:
         raise HubCatalogError(
             _label(data),
             "source 'reference' needs a 'test_accuracy'; a trained entry "
             "that does not say what it scores is not a useful one",
         )
+
+
+def _check_reference(data: Mapping[str, Any]) -> None:
+    """Enforce what a shipped, trained entry has to declare.
+
+    A reference entry is the only kind whose bytes this project vouches for,
+    so it has to name the packaged file, pin its checksum, and say what it was
+    trained on -- otherwise "trained weights" is an unfalsifiable claim. It
+    also has to say what that training data permits and who to credit for it:
+    :attr:`HubEntry.license` covers the weights only, and an entry that
+    records one licence while staying silent on the other invites a reader to
+    assume they are the same.
+    """
+    _check_weights_field(data)
+    _check_text_fields(data, _REFERENCE_TEXT_FIELDS)
+    _check_test_accuracy(data)
 
 
 def _check_scores(data: Mapping[str, Any]) -> None:

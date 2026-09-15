@@ -81,6 +81,54 @@ def compatibility_releases() -> List[Dict[str, str]]:
     return [release for release in releases if isinstance(release, dict)]
 
 
+def _unrecorded_message(core: str, releases: List[Dict[str, str]]) -> str:
+    """Return the message for a core version absent from the matrix."""
+    known = sorted({r.get("spikeforge", "") for r in releases})
+    return (
+        f"compatibility: UNRECORDED -- spikeforge {core} is not in "
+        f"compatibility.json (recorded: {', '.join(known)}).\n"
+        f"  {_MATRIX_URL}"
+    )
+
+
+def _matches_release(
+    candidates: List[Dict[str, str]], satellites: Dict[str, str]
+) -> bool:
+    """Return True when some candidate release matches every satellite."""
+    return any(
+        all(release.get(n) == v for n, v in satellites.items())
+        for release in candidates
+    )
+
+
+def _mismatched_satellites(
+    core: str, candidates: List[Dict[str, str]], satellites: Dict[str, str]
+) -> List[str]:
+    """Return one description per satellite version outside the matrix."""
+    mismatched = []
+    for name, found in sorted(satellites.items()):
+        expected = sorted({str(r[name]) for r in candidates if r.get(name)})
+        if found not in expected:
+            mismatched.append(
+                f"{name} {found} (recorded with spikeforge {core}: "
+                f"{', '.join(expected) or 'none'})"
+            )
+    return mismatched
+
+
+def _mismatch_message(
+    core: str, candidates: List[Dict[str, str]], satellites: Dict[str, str]
+) -> str:
+    """Return the MISMATCH message naming every satellite outside range."""
+    mismatched = _mismatched_satellites(core, candidates, satellites)
+    detail = "; ".join(mismatched) or "an unrecorded combination"
+    return (
+        f"compatibility: MISMATCH -- {detail}.\n"
+        f"  Pin from the matrix rather than assuming semver alignment: "
+        f"{_MATRIX_URL}"
+    )
+
+
 def compatibility_status() -> str:
     """Describe whether the installed combination is a shipped release.
 
@@ -94,37 +142,13 @@ def compatibility_status() -> str:
         return "compatibility: unknown (compatibility.json not found)"
     if core is None:
         return "compatibility: unknown (core distribution not installed)"
-
     candidates = [r for r in releases if r.get("spikeforge") == core]
     if not candidates:
-        known = sorted({r.get("spikeforge", "") for r in releases})
-        return (
-            f"compatibility: UNRECORDED -- spikeforge {core} is not in "
-            f"compatibility.json (recorded: {', '.join(known)}).\n"
-            f"  {_MATRIX_URL}"
-        )
-
+        return _unrecorded_message(core, releases)
     satellites = {n: v for n, v in installed.items() if n != "spikeforge"}
-    for release in candidates:
-        if all(release.get(n) == v for n, v in satellites.items()):
-            return "compatibility: OK (a recorded release combination)"
-
-    mismatched = []
-    for name, found in sorted(satellites.items()):
-        expected = sorted(
-            {str(r[name]) for r in candidates if r.get(name)}
-        )
-        if found not in expected:
-            mismatched.append(
-                f"{name} {found} (recorded with spikeforge {core}: "
-                f"{', '.join(expected) or 'none'})"
-            )
-    detail = "; ".join(mismatched) or "an unrecorded combination"
-    return (
-        f"compatibility: MISMATCH -- {detail}.\n"
-        f"  Pin from the matrix rather than assuming semver alignment: "
-        f"{_MATRIX_URL}"
-    )
+    if _matches_release(candidates, satellites):
+        return "compatibility: OK (a recorded release combination)"
+    return _mismatch_message(core, candidates, satellites)
 
 
 def version_report() -> str:

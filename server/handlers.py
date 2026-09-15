@@ -1,7 +1,7 @@
 """Route inbound client messages to stream/training/model actions."""
 
 import asyncio
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import WebSocket
 
@@ -105,6 +105,16 @@ async def handle_infer(
     await send_activity(ws, session, result)
 
 
+async def _reject_if_read_only(
+    ws: WebSocket, session: Session, message: str
+) -> bool:
+    """Send a read-only error and return True when writes are disabled."""
+    if not read_only():
+        return False
+    await send_locked(ws, session, {"type": "error", "payload": message})
+    return True
+
+
 def _infer_blocker(session: Session, cfg: EncodeConfig) -> Optional[str]:
     """Return why inference cannot run, or None when it can."""
     if session.engine is None:
@@ -116,24 +126,28 @@ def _infer_blocker(session: Session, cfg: EncodeConfig) -> Optional[str]:
     return None
 
 
-async def handle_train(
-    ws: WebSocket,
-    session: Session,
-    cfg: TrainConfig,
-    encode: Optional[EncodeConfig] = None,
-) -> None:
-    """Start training in a worker thread and stream its metrics."""
-    if read_only():
-        await send_locked(ws, session, {
-            "type": "error",
-            "payload": "training is disabled on the public demo",
-        })
-        return
-    if session.training.is_running:
-        return
+def _resolve_train_dataset(
+    cfg: TrainConfig, encode: Optional[EncodeConfig]
+) -> Any:
+    """Return the resolved (encode, dataset) for a train request."""
     if encode is None and "encode" in cfg.model_fields_set:
         encode = cfg.encode
     dataset = encode.dataset if encode is not None else cfg.dataset
+    return encode, dataset
+
+
+async def handle_train(
+    ws: WebSocket, session: Session, cfg: TrainConfig,
+    encode: Optional[EncodeConfig] = None,
+) -> None:
+    """Start training in a worker thread and stream its metrics."""
+    if await _reject_if_read_only(
+        ws, session, "training is disabled on the public demo"
+    ):
+        return
+    if session.training.is_running:
+        return
+    encode, dataset = _resolve_train_dataset(cfg, encode)
     if not await ensure_dataset(ws, session, dataset):
         return
     if not session.training.start(cfg, encode):
@@ -152,11 +166,9 @@ async def handle_stop_train(ws: WebSocket, session: Session) -> None:
 
 async def handle_new_model(ws: WebSocket, session: Session) -> None:
     """Unload the current model so the next run starts from scratch."""
-    if read_only():
-        await send_locked(ws, session, {
-            "type": "error",
-            "payload": "model changes are disabled on the public demo",
-        })
+    if await _reject_if_read_only(
+        ws, session, "model changes are disabled on the public demo"
+    ):
         return
     session.training.clear()
     await send_locked(ws, session, {"type": "model_cleared", "payload": None})
@@ -166,11 +178,9 @@ async def handle_save_model(
     ws: WebSocket, session: Session, name: Optional[str]
 ) -> None:
     """Persist the current trained model to disk."""
-    if read_only():
-        await send_locked(ws, session, {
-            "type": "error",
-            "payload": "model changes are disabled on the public demo",
-        })
+    if await _reject_if_read_only(
+        ws, session, "model changes are disabled on the public demo"
+    ):
         return
     engine = session.training.engine
     if engine is None:
@@ -193,20 +203,28 @@ async def handle_list_models(ws: WebSocket, session: Session) -> None:
     })
 
 
-async def handle_load_model(ws: WebSocket, session: Session,
-                            name: Optional[str],
-                            cfg: TrainConfig) -> None:
-    """Load a checkpoint and make it the active training engine."""
-    if read_only():
-        await send_locked(ws, session, {
-            "type": "error",
-            "payload": "model loading is disabled on the public demo",
-        })
-        return
-    encode = (cfg.encode if "encode" in cfg.model_fields_set
-              else session.encode_config)
+def _resolve_load_encode(
+    session: Session, cfg: TrainConfig
+) -> Optional[EncodeConfig]:
+    """Return the resolved encode config, updating the session's default."""
+    encode = (
+        cfg.encode if "encode" in cfg.model_fields_set
+        else session.encode_config
+    )
     if encode is not None:
         session.set_config(encode)
+    return encode
+
+
+async def handle_load_model(
+    ws: WebSocket, session: Session, name: Optional[str], cfg: TrainConfig
+) -> None:
+    """Load a checkpoint and make it the active training engine."""
+    if await _reject_if_read_only(
+        ws, session, "model loading is disabled on the public demo"
+    ):
+        return
+    encode = _resolve_load_encode(session, cfg)
     meta = model_store.load(name).get("meta", {}) if name else {}
     dataset = meta.get("dataset") or cfg.dataset
     if not await ensure_dataset(ws, session, dataset):
@@ -223,11 +241,9 @@ async def handle_delete_model(
     ws: WebSocket, session: Session, name: Optional[str]
 ) -> None:
     """Delete a saved checkpoint."""
-    if read_only():
-        await send_locked(ws, session, {
-            "type": "error",
-            "payload": "model changes are disabled on the public demo",
-        })
+    if await _reject_if_read_only(
+        ws, session, "model changes are disabled on the public demo"
+    ):
         return
     model_store.delete(name)
     await handle_list_models(ws, session)

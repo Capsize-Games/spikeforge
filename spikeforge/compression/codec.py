@@ -43,19 +43,18 @@ _UINT8_LEVELS = 255.0
 _EPS = 1e-12
 
 
-def _codes_and_grid(
-    values: torch.Tensor, scheme: str
-) -> Tuple[torch.Tensor, float, int]:
-    """Return the integer codes, scale, and zero-point for ``values``."""
-    if scheme == SCHEME_INT8:
-        peak = float(values.abs().max()) if values.numel() else 0.0
-        if peak <= _EPS:
-            return torch.zeros_like(values, dtype=torch.int8), 0.0, 0
-        scale = peak / _INT8_LEVELS
-        codes = torch.round(values / scale).clamp(
-            -_INT8_LEVELS, _INT8_LEVELS
-        )
-        return codes.to(torch.int8), scale, 0
+def _int8_codes(values: torch.Tensor) -> Tuple[torch.Tensor, float, int]:
+    """Return symmetric int8 codes, scale, and zero-point for ``values``."""
+    peak = float(values.abs().max()) if values.numel() else 0.0
+    if peak <= _EPS:
+        return torch.zeros_like(values, dtype=torch.int8), 0.0, 0
+    scale = peak / _INT8_LEVELS
+    codes = torch.round(values / scale).clamp(-_INT8_LEVELS, _INT8_LEVELS)
+    return codes.to(torch.int8), scale, 0
+
+
+def _uint8_codes(values: torch.Tensor) -> Tuple[torch.Tensor, float, int]:
+    """Return asymmetric uint8 codes, scale, zero-point for ``values``."""
     if values.numel() == 0:
         return torch.zeros_like(values, dtype=torch.uint8), 0.0, 0
     low = float(values.min())
@@ -67,6 +66,15 @@ def _codes_and_grid(
     codes = torch.round(values / scale) + zero
     codes = codes.clamp(0.0, _UINT8_LEVELS).to(torch.uint8)
     return codes, scale, zero
+
+
+def _codes_and_grid(
+    values: torch.Tensor, scheme: str
+) -> Tuple[torch.Tensor, float, int]:
+    """Return the integer codes, scale, and zero-point for ``values``."""
+    if scheme == SCHEME_INT8:
+        return _int8_codes(values)
+    return _uint8_codes(values)
 
 
 def quantize_tensor(
@@ -119,7 +127,7 @@ class CompressedWeights:
         return float(sizes.get("original", 0.0)) / compressed
 
 
-def _resolve_scheme(scheme: str, bits: int) -> str:
+def resolve_scheme(scheme: str, bits: int) -> str:
     """Return a validated 8-bit scheme name or raise a typed error."""
     if scheme == SCHEME_NONE:
         return scheme
@@ -133,94 +141,3 @@ def _resolve_scheme(scheme: str, bits: int) -> str:
             f"scheme {scheme!r} only supports 8 bits, got {bits}"
         )
     return scheme
-
-
-def compress_state_dict(
-    state_dict: Mapping[str, Any],
-    scheme: str = SCHEME_INT8,
-    bits: int = 8,
-) -> CompressedWeights:
-    """Return ``state_dict`` compressed under ``scheme`` and its encoding.
-
-    Every floating parameter is quantized and every other entry is passed
-    through verbatim. The encoding records the per-tensor grid, the byte
-    totals (so a report can state a compression ratio), and the quantize
-    round-trip error (so the accuracy cost is named rather than hidden).
-    """
-    resolved = _resolve_scheme(scheme, bits)
-    if resolved == SCHEME_NONE:
-        raise CompressionError("the 'none' scheme produces no compression")
-    tensors: Dict[str, torch.Tensor] = {}
-    entries: Dict[str, Any] = {}
-    original_bytes = 0
-    compressed_bytes = 0
-    element_count = 0
-    error_peak = 0.0
-    error_sum = 0.0
-    for name, value in state_dict.items():
-        tensor = value if torch.is_tensor(value) else None
-        if tensor is None or not tensor.is_floating_point():
-            tensors[name] = value
-            continue
-        original_bytes += int(tensor.numel()) * int(tensor.element_size())
-        codes, meta = quantize_tensor(tensor, resolved)
-        tensors[name] = codes
-        entries[name] = meta
-        compressed_bytes += int(codes.numel()) * int(codes.element_size())
-        element_count += int(tensor.numel())
-        difference = (dequantize_tensor(codes, meta) - tensor.float()).abs()
-        if difference.numel():
-            error_peak = max(error_peak, float(difference.max()))
-            error_sum += float(difference.sum())
-    peak = float(
-        max(
-            (
-                tensor.abs().max()
-                for tensor in state_dict.values()
-                if torch.is_tensor(tensor) and tensor.is_floating_point()
-                and tensor.numel()
-            ),
-            default=0.0,
-        )
-    )
-    relative = error_peak / peak if peak > 0.0 else 0.0
-    mean = error_sum / element_count if element_count else 0.0
-    encoding = {
-        "version": WEIGHTS_ENCODING_VERSION,
-        "scheme": resolved,
-        "bits": int(bits),
-        "tensors": entries,
-        "counts": {"tensors": len(entries), "elements": element_count},
-        "bytes": {
-            "original": original_bytes,
-            "compressed": compressed_bytes,
-        },
-        "ratio": (
-            original_bytes / compressed_bytes if compressed_bytes else 0.0
-        ),
-        "error": {
-            "max_abs": error_peak,
-            "mean_abs": mean,
-            "relative": relative,
-        },
-    }
-    return CompressedWeights(resolved, int(bits), tensors, encoding)
-
-
-def dequantize_state_dict(
-    tensors: Mapping[str, Any], encoding: Mapping[str, Any]
-) -> Dict[str, torch.Tensor]:
-    """Return the float state dict ``tensors`` encodes under ``encoding``.
-
-    An entry the encoding does not describe is returned unchanged, so a
-    passthrough buffer survives a decompress/load cycle intact.
-    """
-    entries = encoding.get("tensors") or {}
-    restored: Dict[str, torch.Tensor] = {}
-    for name, value in tensors.items():
-        meta = entries.get(name)
-        if meta is None or not torch.is_tensor(value):
-            restored[name] = value
-            continue
-        restored[name] = dequantize_tensor(value, meta)
-    return restored

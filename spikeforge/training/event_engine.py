@@ -69,12 +69,9 @@ class EventTrainingEngine(TrainingEngine):
     ) -> None:
         """Resolve both sources, build the engine, then check geometry.
 
-        ``epoch_samples`` sets how many training samples one epoch visits.
-        Left ``None``, an epoch is the ``event_batches`` batch cap that keeps
-        the live dashboard responsive; a run whose number will be published
-        passes the training split's own size so the epoch really is a full
-        pass. It applies to the training split only — held-out scoring reads
-        its own source and decides its own extent.
+        ``epoch_samples`` (default: the dashboard's batch cap) sets the
+        training epoch's sample count; pass the split's own size for a
+        full pass. Held-out scoring uses its own source/extent regardless.
         """
         self._synthetic_only = bool(synthetic_only)
         self._epoch_samples = (
@@ -127,15 +124,10 @@ class EventTrainingEngine(TrainingEngine):
     ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
         """Return one split's events already bridged for the simulator.
 
-        ``train`` selects which source is read. The two sources opened
-        different dataset splits, so the batches are different data, not the
-        same stream under a different name.
-
         The training split is visited in a seeded random order and the
-        held-out split sequentially, exactly as the image path's loader is
-        built with ``shuffle=train``. That is load-bearing rather than tidy:
-        real event datasets ship grouped by class, so reading a training epoch
-        in order makes every batch a single class.
+        held-out split sequentially -- real event datasets ship grouped by
+        class, so reading a training epoch in order makes every batch a
+        single class.
         """
         source = self._event_source if train else self._test_source
         return event_batches.event_batches(

@@ -6,6 +6,8 @@ synchronous file I/O handled directly here, while run/stop delegate to
 the same background-thread pattern :mod:`server.training` uses.
 """
 
+from typing import Optional
+
 from fastapi import WebSocket
 
 from server.concurrency import SERVER_BUSY_MESSAGE
@@ -31,6 +33,19 @@ async def handle_list_pipelines(
     })
 
 
+async def _parsed_graph(
+    ws: WebSocket, session: Session, message: ClientMessage
+) -> Optional[PipelineGraph]:
+    """Parse and validate the pipeline graph, reporting a typed error."""
+    try:
+        graph = PipelineGraph.from_dict(message.pipeline.model_dump())
+        graph.topological_order()  # also catches a cycle before saving
+        return graph
+    except PipelineGraphError as exc:
+        await send_locked(ws, session, {"type": "error", "payload": str(exc)})
+        return None
+
+
 async def handle_save_pipeline(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
@@ -41,11 +56,8 @@ async def handle_save_pipeline(
             "type": "error", "payload": "save_pipeline requires a name",
         })
         return
-    try:
-        graph = PipelineGraph.from_dict(message.pipeline.model_dump())
-        graph.topological_order()  # also catches a cycle before saving
-    except PipelineGraphError as exc:
-        await send_locked(ws, session, {"type": "error", "payload": str(exc)})
+    graph = await _parsed_graph(ws, session, message)
+    if graph is None:
         return
     graph_dict = dict(graph.to_dict())
     graph_dict["name"] = name

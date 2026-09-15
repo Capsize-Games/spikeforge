@@ -73,39 +73,34 @@ def visit_order(
     return [int(i) for i in torch.randperm(total, generator=generator)]
 
 
+def _epoch_length(
+    subset: int, batch_size: int, samples: Optional[int]
+) -> int:
+    """Return the number of samples one epoch visits.
+
+    A cap (:func:`batch_count`), not a fraction of the split, unless
+    ``samples`` names the epoch's length outright -- pass the split's own
+    size (``source.size()``) to train on all of it, which bypasses
+    ``subset``.
+    """
+    if samples is not None:
+        return max(1, int(samples))
+    return batch_count(subset) * max(1, int(batch_size))
+
+
 def event_batches(
-    source: EventSampleSource,
-    spec: TopologySpec,
-    subset: int,
-    batch_size: int,
-    samples: Optional[int] = None,
-    shuffle: bool = False,
-    seed: Optional[int] = None,
+    source: EventSampleSource, spec: TopologySpec, subset: int,
+    batch_size: int, samples: Optional[int] = None,
+    shuffle: bool = False, seed: Optional[int] = None,
 ) -> List[Batch]:
     """Return the epoch's ``(spikes, labels)`` batches in bridge layout.
 
-    By default an epoch is :func:`batch_count` batches, which keeps the live
-    dashboard responsive: it is a demo of the pipeline, not a full pass. That
-    default is a cap, not a fraction — with ``subset=1`` it still visits only
-    ``EPOCH_BATCHES * batch_size`` samples however large the split is, so it
-    must not be what a published number is trained on.
-
-    ``samples`` names the epoch's length outright. Pass the split's own size
-    (``source.size()``) to train on all of it, which is what a reference
-    checkpoint claiming the full training split requires. ``subset`` is
-    bypassed when ``samples`` is given, since the two would otherwise both be
-    trying to set the same thing.
-
-    ``shuffle`` visits the samples in a seeded random order, which a training
-    epoch over a class-ordered dataset requires; see :func:`visit_order`. It
-    matches the image path, whose loader is built with ``shuffle=train``.
+    See :func:`_epoch_length` for how many samples one epoch visits.
+    ``shuffle`` visits samples in a seeded random order, which a
+    class-ordered dataset (e.g. SSC) requires; see :func:`visit_order`.
     """
     size = max(1, int(batch_size))
-    total = (
-        max(1, int(samples))
-        if samples is not None
-        else batch_count(subset) * size
-    )
+    total = _epoch_length(subset, batch_size, samples)
     order = visit_order(total, shuffle, seed)
     return [
         batch_event_samples(source, spec, order[start:start + size])

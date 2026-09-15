@@ -57,18 +57,13 @@ def _rewrite_graph(
 
 
 def _quantization(
-    graph_or_spec: Any,
-    module: Optional[Any],
-    target_name: str,
-    spikes: Optional[Any],
-    activation: Optional[str],
+    graph_or_spec: Any, module: Optional[Any], target_name: str,
+    spikes: Optional[Any], activation: Optional[str],
 ) -> Dict[str, Any]:
     """Return the quantization section, applied only when weights exist.
 
-    A spec without a built module has no weights to quantize, so the section
-    honestly reports the declared schemes as *unapplied* rather than inventing
-    a placeholder result; a graph or a spec plus module is quantized for real.
-    Imported lazily so a capability-only report stays free of nir and torch.
+    Declared-unapplied when a spec has no built module; imported lazily so
+    a capability-only report stays free of nir and torch.
     """
     from spikeforge_targets.quantize import declared_report, quantize
 
@@ -83,16 +78,13 @@ def _quantization(
 
 
 def _rewrite(
-    graph_or_spec: Any,
-    module: Optional[Any],
-    target_name: str,
+    graph_or_spec: Any, module: Optional[Any], target_name: str,
     spikes: Optional[Any],
 ) -> Optional[Any]:
     """Return the executed-substitution section, or ``None`` without spikes.
 
-    Imported lazily so a capability-only report stays free of torch, and
-    guarded so a rewrite failure is reported as a named error rather than
-    dropped or raised.
+    Imported lazily; guarded so a rewrite failure is reported as a named
+    error rather than dropped or raised.
     """
     if spikes is None:
         return None
@@ -115,29 +107,20 @@ def _node_buckets(matrix: CapabilityMatrix) -> Dict[str, Any]:
     }
 
 
-def deployment_report(
-    graph_or_spec: Any,
-    target_name: str,
-    module: Optional[Any] = None,
-    spikes: Optional[Any] = None,
-    tolerances: Optional[Mapping[str, float]] = None,
-    activation: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Return a JSON-serialisable deployment report for ``target_name``.
+def _resolve_validation(
+    graph_or_spec: Any, module: Optional[Any], spikes: Optional[Any],
+    tolerances: Optional[Mapping[str, float]],
+) -> Optional[Any]:
+    """Return the validation report when ``graph_or_spec`` is a spec."""
+    if not isinstance(graph_or_spec, TopologySpec):
+        return None
+    return _validation(graph_or_spec, module, spikes, tolerances)
 
-    The report is always produced; an unavailable target is marked
-    ``available``/``deployable`` false rather than raising, leaving
-    user-facing messaging to a later phase. When ``graph_or_spec`` is a
-    :class:`TopologySpec` and both ``module`` and ``spikes`` are supplied, the
-    report also carries the :class:`ValidationReport` under ``validation``.
-    ``activation`` names a simulated activation/membrane scheme for the
-    quantization drift check, overriding the target's declared one.
-    """
-    target = get_target(target_name)
-    matrix = classify(graph_or_spec, target)
-    validation = None
-    if isinstance(graph_or_spec, TopologySpec):
-        validation = _validation(graph_or_spec, module, spikes, tolerances)
+
+def _report_fields(
+    target: Any, matrix: CapabilityMatrix, validation: Optional[Any]
+) -> Dict[str, Any]:
+    """Return the capability-derived fields of the deployment report."""
     return {
         "target": target.to_dict(),
         "available": matrix.available,
@@ -145,9 +128,27 @@ def deployment_report(
         "nodes": _node_buckets(matrix),
         "constraints": dict(target.constraints),
         "validation": validation,
-        "quantization": _quantization(
-            graph_or_spec, module, target_name, spikes, activation
-        ),
-        "rewrite": _rewrite(graph_or_spec, module, target_name, spikes),
         "notes": _notes(matrix, validation),
     }
+
+
+def deployment_report(
+    graph_or_spec: Any, target_name: str, module: Optional[Any] = None,
+    spikes: Optional[Any] = None,
+    tolerances: Optional[Mapping[str, float]] = None,
+    activation: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Return a JSON-serialisable deployment report for ``target_name``.
+
+    An unavailable target is marked false rather than raising;
+    ``activation`` overrides the declared quantization drift scheme.
+    """
+    target = get_target(target_name)
+    matrix = classify(graph_or_spec, target)
+    validation = _resolve_validation(graph_or_spec, module, spikes, tolerances)
+    report = _report_fields(target, matrix, validation)
+    report["quantization"] = _quantization(
+        graph_or_spec, module, target_name, spikes, activation
+    )
+    report["rewrite"] = _rewrite(graph_or_spec, module, target_name, spikes)
+    return report
