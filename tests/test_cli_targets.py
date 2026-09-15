@@ -10,7 +10,7 @@ from spikeforge.cli import verify
 from spikeforge.nir_bridge import save_graph, to_nir
 from spikeforge.topology.registry import build_topology
 from spikeforge_targets import registry
-from spikeforge_targets.cli import target_cli
+from spikeforge_targets.cli import deploy_cli, target_cli
 
 pytest.importorskip("nir")
 
@@ -36,17 +36,17 @@ def test_main_targets_prints_json(
 
 def test_deploy_report_reference_is_deployable() -> None:
     """The reference target deploys a preset and maps to a zero status."""
-    report = target_cli.deploy_report("conv_net", "reference")
+    report = deploy_cli.deploy_report("conv_net", "reference")
     assert json.dumps(report)
     assert report["deployable"] is True
-    assert target_cli.deploy_exit(report) == 0
+    assert deploy_cli.deploy_exit(report) == 0
 
 
 def test_deploy_unavailable_target_exits_nonzero() -> None:
     """A target without its SDK is undeployable and exits non-zero."""
-    report = target_cli.deploy_report("conv_net", "norse")
+    report = deploy_cli.deploy_report("conv_net", "norse")
     assert report["deployable"] is False
-    assert target_cli.deploy_exit(report) == 1
+    assert deploy_cli.deploy_exit(report) == 1
 
 
 def test_main_deploy_failure_exits_nonzero(
@@ -57,6 +57,36 @@ def test_main_deploy_failure_exits_nonzero(
     assert verify.main(args) == 1
     payload = json.loads(capsys.readouterr().out)
     assert payload["deployable"] is False
+
+
+def test_deploy_flag_opts_into_a_simulated_activation_scheme(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``--activation-quantization`` runs the scheme in the drift check."""
+    args = [
+        "deploy",
+        "--topology", "conv_net",
+        "--target", "reference",
+        "--activation-quantization", "activation_membrane_int8",
+    ]
+    assert verify.main(args) == 0
+    section = json.loads(capsys.readouterr().out)["quantization"]
+    assert section["applied"] is False
+    assert section["activation"]["applied"] is True
+    assert section["activation"]["scheme"] == "activation_membrane_int8"
+    assert section["drift"]["includes"] == ["activation", "membrane"]
+
+
+def test_deploy_without_the_flag_keeps_the_declared_scheme(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A plain ``deploy`` reports the target's declared ``none`` scheme."""
+    args = ["deploy", "--topology", "conv_net", "--target", "reference"]
+    assert verify.main(args) == 0
+    section = json.loads(capsys.readouterr().out)["quantization"]
+    assert section["activation"]["applied"] is False
+    assert section["activation"]["scheme"] == "none"
+    assert section["drift"] is None
 
 
 def test_roundtrip_report_is_identical() -> None:

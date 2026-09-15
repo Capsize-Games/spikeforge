@@ -8,6 +8,7 @@ import torch
 
 from spikeforge.nir_bridge import api
 from spikeforge.nir_bridge.exporter import to_nir
+from spikeforge.nir_bridge.interpreter import NirInterpreter
 from spikeforge.topology import presets
 from spikeforge.topology.builder import build_module
 from spikeforge_targets.quantize import NO_QUANTIZATION, quantize
@@ -35,9 +36,23 @@ def _affine_graph(weight: np.ndarray) -> object:
 
 
 def _spikes() -> torch.Tensor:
-    """Return a fixed-seed spike train for the small conv preset."""
+    """Return a fixed-seed binary spike train for the small conv preset."""
     torch.manual_seed(0)
-    return torch.rand(4, 2, 1, 8, 8)
+    return (torch.rand(8, 2, 1, 8, 8) < 0.3).float()
+
+
+def _live_graph() -> object:
+    """Return the conv preset with its init weights scaled until it fires.
+
+    At its freshly-initialised scale the preset never spikes on this input,
+    so a drift figure over its readout could not observe anything.
+    """
+    torch.manual_seed(0)
+    module = build_module(_CONV)
+    with torch.no_grad():
+        for parameter in module.parameters():
+            parameter.mul_(8.0)
+    return to_nir(_CONV, module)
 
 
 def _unknown_scheme_target() -> TargetSpec:
@@ -97,15 +112,18 @@ def test_unknown_scheme_is_reported_unapplied() -> None:
 
 
 def test_conv_net_int8_reports_the_induced_drift() -> None:
-    """Quantizing conv_net records per-layer ranges and measured drift."""
-    graph = to_nir(_CONV, build_module(_CONV))
+    """Quantizing a firing conv_net records ranges and observable drift."""
+    graph = _live_graph()
+    assert float(NirInterpreter(graph).run(_spikes()).readout.sum()) > 0.0
     result = quantize(graph, "lava_loihi2", _spikes())
     assert result.applied() is True
     assert result.report.counts()["layers"] > 0
     drift = result.report.drift
     assert drift is not None
     assert "within_tolerance" in drift
-    assert drift["steps"] > 0
+    assert drift["steps"] == _spikes().size(0)
+    assert drift["includes"] == ["weights"]
+    assert drift["membranes"]["max_abs"] > 0.0
 
 
 def test_report_is_json_serialisable_and_device_free() -> None:

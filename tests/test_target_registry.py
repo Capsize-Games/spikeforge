@@ -104,4 +104,17 @@ def test_target_spec_dict_is_json_serialisable() -> None:
             "dtype",
             "timestep_ms",
             "quantization",
+            "activation_quantization",
         }
+
+
+def test_no_shipped_target_declares_an_activation_scheme() -> None:
+    """Every target declares ``activation_quantization: none``.
+
+    The fixed-point widths a vendor's neuron state uses are not verified in
+    this repository, so no shipped target asserts one; a caller opts into a
+    simulated scheme explicitly instead.
+    """
+    for name in registry.target_names():
+        constraints = registry.get_target(name).constraints
+        assert constraints["activation_quantization"] == "none", name

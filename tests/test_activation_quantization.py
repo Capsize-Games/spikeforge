@@ -140,9 +140,12 @@ def test_calibration_hook_is_recorded_in_the_report() -> None:
         ("fc1", torch.randn(2, 5)),
         ("fc2", torch.randn(2, 3)),
     ]
-    calibration = calibrate(observed, bits=8, target="activation")
+    calibration = calibrate(
+        observed, bits=8, target="activation", source="held-out"
+    )
     assert isinstance(calibration, Calibration)
     assert calibration.samples == 2
+    assert calibration.source == "held-out"
     assert calibration.bound("fc1") is not None
 
     quantizer = ActivationQuantizer(
@@ -152,6 +155,7 @@ def test_calibration_hook_is_recorded_in_the_report() -> None:
     report = quantizer.report()
     assert report.calibration is not None
     assert report.calibration["samples"] == 2
+    assert report.calibration["source"] == "held-out"
     assert "fc1" in report.calibration["ranges"]
 
 

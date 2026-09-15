@@ -11,6 +11,8 @@ from spikeforge_targets.registry import get_target
 UNAVAILABLE_NOTE = "target SDK is not installed; run the enabling extra"
 #: Note added when a validation section accompanies the report.
 VALIDATION_NOTE = "validation compares snnTorch against the exported graph"
+#: Reason recorded when a spec arrives without weights to quantize.
+NO_MODULE_REASON = "no built module supplied; quantization not applied"
 
 
 def _validation(
@@ -59,31 +61,23 @@ def _quantization(
     module: Optional[Any],
     target_name: str,
     spikes: Optional[Any],
+    activation: Optional[str],
 ) -> Dict[str, Any]:
     """Return the quantization section, applied only when weights exist.
 
     A spec without a built module has no weights to quantize, so the section
-    honestly reports the declared scheme as *unapplied* rather than inventing
+    honestly reports the declared schemes as *unapplied* rather than inventing
     a placeholder result; a graph or a spec plus module is quantized for real.
     Imported lazily so a capability-only report stays free of nir and torch.
     """
-    from spikeforge_targets.quantize import quantize
+    from spikeforge_targets.quantize import declared_report, quantize
 
     if isinstance(graph_or_spec, TopologySpec) and module is None:
-        target = get_target(target_name)
-        scheme = str(target.constraints.get("quantization", "none"))
-        return {
-            "target": target_name,
-            "scheme": scheme,
-            "applied": False,
-            "reason": "no built module supplied; quantization not applied",
-            "layers": [],
-            "counts": {"layers": 0},
-            "drift": None,
-        }
+        return declared_report(target_name, NO_MODULE_REASON).to_dict()
     try:
         graph = _rewrite_graph(graph_or_spec, module)
-        return quantize(graph, target_name, spikes).report.to_dict()
+        result = quantize(graph, target_name, spikes, activation=activation)
+        return result.report.to_dict()
     except Exception as exc:
         return {"target": target_name, "error": f"{type(exc).__name__}: {exc}"}
 
@@ -127,6 +121,7 @@ def deployment_report(
     module: Optional[Any] = None,
     spikes: Optional[Any] = None,
     tolerances: Optional[Mapping[str, float]] = None,
+    activation: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Return a JSON-serialisable deployment report for ``target_name``.
 
@@ -135,6 +130,8 @@ def deployment_report(
     user-facing messaging to a later phase. When ``graph_or_spec`` is a
     :class:`TopologySpec` and both ``module`` and ``spikes`` are supplied, the
     report also carries the :class:`ValidationReport` under ``validation``.
+    ``activation`` names a simulated activation/membrane scheme for the
+    quantization drift check, overriding the target's declared one.
     """
     target = get_target(target_name)
     matrix = classify(graph_or_spec, target)
@@ -149,7 +146,7 @@ def deployment_report(
         "constraints": dict(target.constraints),
         "validation": validation,
         "quantization": _quantization(
-            graph_or_spec, module, target_name, spikes
+            graph_or_spec, module, target_name, spikes, activation
         ),
         "rewrite": _rewrite(graph_or_spec, module, target_name, spikes),
         "notes": _notes(matrix, validation),

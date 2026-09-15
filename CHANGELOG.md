@@ -11,6 +11,70 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Added
+
+- **The quantization drift check can simulate activation and membrane
+  rounding.** Until now `spikeforge_targets.quantize` restricted weights only,
+  so its drift figure understated what a fixed-point device does to the
+  values flowing through a network. `quantize(..., activation=<scheme>)` (and
+  `spikeforge-verify deploy --activation-quantization <scheme>`) now runs the
+  quantized graph through the reference interpreter under a hook that snaps
+  every computed node output and every carried membrane and synaptic current
+  onto the same symmetric fixed-point grid the serving-side
+  `ActivationQuantizer` uses. The grid is calibrated on the drift fixture
+  itself unless a `Calibration` is supplied, so it is fixed across steps; the
+  report gains an `activation` section (the scheme, per-tensor ranges and
+  error, the calibration and its `source`) and the drift gains `includes`,
+  naming which roundings the figure covers (`weights`, `activation`,
+  `membrane`). A scheme requested without a spike fixture is reported
+  unapplied, and an unknown scheme is refused by name and never runs.
+
+  The core `NirInterpreter` gains an optional `post_node` hook
+  (`spikeforge.nir_bridge.PostNode`) that transforms each evaluated node's
+  `(output, state, membrane)` before any of the three is stored; `None` keeps
+  every step byte-identical, and `rewrite_drift` applies it to the rewritten
+  run only. The membrane travels through the hook so the recorded trace is
+  the snapped value rather than the one the node computed, which is what
+  makes the membrane drift below measure the current step and not only what
+  earlier steps carried in. `TargetSpec.constraints` gains
+  `activation_quantization`, declared `none` on every shipped target: the
+  fixed-point widths a vendor's neuron state actually uses are not verified
+  in this repository, so no target asserts one and a caller opts in
+  explicitly. `Calibration` records a `source`.
+
+- **Drift blocks report membrane movement.** `rewrite_drift`, and so every
+  `drift` section under `quantization` and `rewrite`, gains a `membranes`
+  summary (shared integrator nodes, max and mean absolute error). It is
+  reported, not gated: a membrane can move without any spike moving, so it is
+  where a rounding or a lossy substitution shows first, and
+  `within_tolerance` still folds only the readout and spike checks. Only the
+  carried membrane propagates, so snapping the recorded one moves this figure
+  and no dynamics; both are the same register, so both are reported under the
+  one `<node>.membrane` key rather than counted twice.
+
+### Fixed
+
+- **The boundaries page said there was no activation or membrane
+  quantization and no calibration dataset.** Both had shipped on the serving
+  path with `spikeforge-targets` 0.1.0 on 2026-09-11, the day the page was
+  written. Section 3 now states what is simulated, what remains unmodelled
+  (integer accumulation, saturation of the update itself, per-channel
+  schemes, device kernels), and that no shipped target declares an activation
+  scheme; the cookbook, targets, and interop pages no longer describe the
+  check as weight-level only.
+
+- **The cookbook published quantization figures that never reproduced.**
+  Its target-quantization section printed per-layer weight ranges (for
+  example `"before": [ -0.3238, 0.3272 ]`) as the expected output of
+  `spikeforge-verify run`. That command builds the topology with freshly
+  initialised weights and `spikeforge/cli/fixture.py` seeds only the input
+  spikes, not the initialisation, so every range, error and drift magnitude
+  it prints differs from one invocation to the next. The section now writes
+  out only what actually reproduces — the scheme names, counts, node lists
+  and `includes` — and says why the numbers are elided. The fixture's own
+  non-determinism is untouched here and still contradicts its "every fixture
+  is reproducible offline" docstring.
+
 ## [spikeforge-v0.4.0] - 2026-09-15
 
 Released together as one combination, recorded in

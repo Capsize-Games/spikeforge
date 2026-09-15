@@ -641,7 +641,10 @@ No physical device is attached, so no hardware timing is measured.
 ## 8. Target quantization
 
 **What it's for.** Restrict a graph's weight tensors to a target's declared
-scheme and read the per-layer before/after ranges plus the induced drift.
+scheme and read the per-layer before/after ranges plus the induced drift —
+and, on request, simulate what a fixed-point device does to the activations
+and membranes flowing through the network, so the drift figure covers more
+than the weights.
 
 **Command.**
 
@@ -655,22 +658,90 @@ venv/bin/spikeforge-verify run --topology conv_net --target lava_loihi2 | \
 ```json
 { "target": "lava_loihi2", "scheme": "weight_int8", "applied": true,
   "layers": [ { "node": "conv1", "primitive": "Conv2d",
-                "before": [ -0.3238, 0.3272 ], "after": [ -0.3247, "…" ] }, "…" ],
-  "counts": { "layers": "…" }, "drift": { "…": "…" } }
+                "before": [ "…", "…" ], "after": [ "…", "…" ] }, "…" ],
+  "counts": { "layers": 3 },
+  "drift": { "…": "…", "membranes": { "…": "…" }, "includes": [ "weights" ] },
+  "activation": { "scheme": "none", "applied": false,
+                  "reason": "activation quantization is disabled" } }
 ```
 
-With `--target reference` (scheme `none`) the block is an honest no-op:
+**The numeric values are elided deliberately.** These commands build the
+topology with freshly-initialised weights and do not seed that
+initialisation, so every range, error and drift magnitude below differs from
+one invocation to the next. Only the structure — the scheme names, the
+counts, the node lists, and `includes` — reproduces, so only that is written
+out here. Seed your own module and call
+`spikeforge_targets.quantize.quantize` directly when you need a figure you
+can compare against a later run.
+
+The `activation` block reports the target's declared `activation_quantization`,
+which is `none` on every shipped target: the fixed-point widths a vendor's
+neuron state actually uses are not verified in this repository, so no target
+asserts one. Opt into a simulated scheme explicitly with `deploy`; the drift
+check then runs the quantized graph through the reference interpreter under a
+hook that snaps every computed node output, every carried membrane and the
+membrane each step records onto an 8-bit grid calibrated on the drift fixture
+itself:
+
+```bash
+venv/bin/spikeforge-verify deploy --topology conv_net --target lava_loihi2 \
+  --activation-quantization activation_membrane_int8 | \
+  python -c "import json,sys; q=json.load(sys.stdin)['quantization']; print(json.dumps(q['activation'], indent=2)); print(json.dumps(q['drift'], indent=2))"
+```
+
+**Expected output (trimmed).** `deploy` exits `1` here because the Lava SDK
+is not installed, as it always does for an undeployable target; the block is
+produced either way. Each layer records the range before and after the snap
+and the error the grid introduced, `calibration.source` says where the grid's
+bounds came from, and `drift.includes` says which roundings the drift figure
+now covers:
+
+```json
+{ "scheme": "activation_membrane_int8", "bits": 8, "target": "both", "applied": true,
+  "layers": [ { "name": "conv1", "kind": "activation",
+                "before": [ "…", "…" ], "after": [ "…", "…" ],
+                "max_abs": "…", "mean_abs": "…" }, "…" ],
+  "counts": { "layers": 15, "steps": 8 },
+  "calibration": { "bits": 8, "target": "both", "samples": 144,
+                   "source": "drift fixture", "ranges": { "…": "…" } } }
+{ "steps": 8,
+  "readout": { "…": "…" },
+  "spikes": { "nodes": ["lif1", "lif2", "out"], "agreement": "…", "…": "…" },
+  "membranes": { "nodes": ["lif1__mem", "lif2__mem", "out__mem"], "max_abs": "…" },
+  "within_tolerance": false,
+  "includes": ["weights", "activation", "membrane"] }
+```
+
+`membranes` is reported, not gated: a membrane can move without any spike
+moving, so it is where a rounding shows first. Only the *carried* membrane
+propagates into the next step — the recorded one is read by no node — so
+snapping the recorded value moves this figure and no dynamics, and both are
+the same register, reported under one `<node>.membrane` key. Pass a
+`Calibration` folded from your own data
+(`activation_quant_graph.calibrate_graph`) through
+`quantize(..., calibration=...)` to fix the grid from a calibration dataset
+instead of the fixture; bounds below the observed peak then clip, which the
+report shows as `after` ranges pinned at the bound.
+
+With `--target reference` (scheme `none`) the weight block is an honest
+no-op:
 
 ```json
 { "target": "reference", "scheme": "none", "applied": false,
   "reason": "target declares no quantization", "layers": [] }
 ```
 
-**Caveats.** Weight-level only: no activation/membrane quantization, no
-calibration dataset, no integer accumulation/saturation, no per-channel
-schemes, and no device kernel. The source graph is never mutated, and
-executing a quantized graph still needs the target SDK. An unknown scheme is
-reported unapplied.
+**Caveats.** Simulated, not device-exact. Weights are restricted in the
+graph; activations and membranes are snapped *after* each node's floating
+update, so the threshold comparison still sees a float membrane and only what
+is carried is on the grid. No integer accumulation, accumulator overflow,
+per-channel schemes, or vendor kernel are modelled; the grid applies to the
+values a step produces, never to the arithmetic that produced them; without a
+supplied calibration the grid is fitted to the fixture, so it never clips on
+that fixture; a scheme requested without a spike fixture is reported unapplied, as
+is an unknown scheme. The source graph is never mutated, and executing a
+quantized graph still needs the target SDK. See
+[Implications and boundaries §3](documentation/implications-and-boundaries.md).
 
 ---
 

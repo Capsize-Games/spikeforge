@@ -110,6 +110,7 @@ spikeforge/
     api.py                   The only module importing nir/nirtorch
     exporter.py              to_nir(spec, module); graph_summary(...)
     interpreter.py           NirInterpreter: runs a graph without snnTorch
+    post_node.py             PostNode: the optional per-node transform hook
     validator.py             validate(...) -> ValidationReport
     drift.py                 Error metrics between two trajectories
     serialization.py         save_graph / load_graph (version-stamped JSON)
@@ -170,7 +171,14 @@ spikeforge_targets/                 Deployment targets, energy, event runtime
   substitute_ops.py          One rewrite function per declared substitution
   rewrite_drift.py           Post-rewrite drift check vs. the original
   quantize.py                Apply a target's declared weight quantization
+                             and run the drift check (optionally under a
+                             simulated activation/membrane scheme)
   quantize_schemes.py        none / weight_int8 / weight_uint8 schemes
+  activation_quant.py        Serving-side activation/membrane quantizer
+  activation_quant_graph.py  The same grid as an interpreter post_node hook
+  activation_quant_keys.py   Which node tensors quantize, under what key
+  activation_quant_records.py Per-tensor range/error records
+  fixed_point.py             The shared symmetric fixed-point snap
   report.py                  deployment_report(...) -> JSON
   summary.py                 Availability-annotated registry summaries
   backends/                  Executable backends behind one isolated probe
@@ -193,7 +201,8 @@ spikeforge_targets/                 Deployment targets, energy, event runtime
     sparse_runner.py         sparse_run(...) -> SparseResult
     dense_compare.py         Sparse-vs-dense readout parity check
   cli/
-    target_cli.py            targets / deploy / roundtrip / ingest
+    target_cli.py            targets / roundtrip / test-deploy / ingest
+    deploy_cli.py            deploy (with --activation-quantization)
 spikeforge_hub/                     Curated model hub (ARCH-0001 Phase 4; distribution
                                spikeforge-hub; extracted to capsize-games/spikeforge-hub)
   models.json                Bundled catalog (10 entries, five frameworks)
