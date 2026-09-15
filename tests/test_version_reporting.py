@@ -57,9 +57,21 @@ def test_core_exposes_version() -> None:
 def test_every_import_root_exposes_its_own_version(
     root: str, dist: str
 ) -> None:
-    """Each distribution reports its own version, not core's."""
+    """Each distribution reports its own version, not core's.
+
+    An import root is importable from a source checkout whether or not its
+    distribution was installed -- the repository root is on ``sys.path`` -- and
+    several CI jobs deliberately install only part of the workspace. Both
+    states are contractual: installed reports the metadata version, absent
+    reports the explicit unknown sentinel. Never core's version, and never a
+    guess.
+    """
     module = pytest.importorskip(root)
-    assert module.__version__ == distribution_version(dist)
+    installed = distribution_version(dist)
+    if installed is None:
+        assert module.__version__ == UNKNOWN
+    else:
+        assert module.__version__ == installed
 
 
 def test_installed_versions_lists_only_what_is_present() -> None:
