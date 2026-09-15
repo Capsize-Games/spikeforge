@@ -359,18 +359,35 @@ def test_compose_text_mentions_profiles() -> None:
     assert "gpu" in text
 
 
-def test_dockerfile_installs_the_server_dependency_closure() -> None:
-    """The image builds every local spikeforge package it depends on.
+@pytest.mark.parametrize(
+    "relative",
+    ["Dockerfile", ".github/workflows/ci.yml", "install.sh", "scripts/dev.sh"],
+)
+def test_install_lists_cover_the_server_dependency_closure(
+    relative: str,
+) -> None:
+    """Anything installing spikeforge-server installs what it depends on.
 
-    The Dockerfile installs the server chain from ``./packages/*``. A missing
-    entry does not fail the build loudly: pip resolves that distribution from
-    PyPI instead, so the deployed dashboard silently mixes this checkout with
-    the last published wheel. Requiring the closure keeps the image built from
-    one tree.
+    These four files install the server chain from ``./packages/*``. Omitting
+    one of its local dependencies does not fail loudly: pip resolves that pin
+    from PyPI instead, so the build silently mixes this checkout with the last
+    published wheel -- until the pin names a version PyPI does not have, and
+    then every job fails at once. Both happened: the deployed dashboard ran a
+    published ``spikeforge-serve`` for several releases, and the 0.2.1 bump
+    broke the image build and all of CI.
+
+    The check is per file rather than per command, which is coarse but keeps
+    it readable; build-only references are excluded so a ``python -m build``
+    elsewhere in the file cannot satisfy it.
     """
-    dockerfile = (_ROOT / "Dockerfile").read_text(encoding="utf-8")
-    installed = set(re.findall(r"\./packages/([\w-]+)", dockerfile))
-    assert "spikeforge-server" in installed
+    text = (_ROOT / relative).read_text(encoding="utf-8")
+    installed: Set[str] = set()
+    for line in text.splitlines():
+        if "python -m build" in line or "dist/" in line or "-wheel " in line:
+            continue
+        installed.update(re.findall(r"\./packages/([\w-]+)", line))
+    if "spikeforge-server" not in installed:
+        pytest.skip(f"{relative} does not install spikeforge-server")
 
     pending = ["spikeforge-server"]
     required: Set[str] = set()
@@ -386,6 +403,6 @@ def test_dockerfile_installs_the_server_dependency_closure() -> None:
                 pending.append(dist)
 
     assert required <= installed, (
-        f"Dockerfile omits {sorted(required - installed)}; pip would pull "
+        f"{relative} omits {sorted(required - installed)}; pip would resolve "
         f"those from PyPI instead of this checkout"
     )

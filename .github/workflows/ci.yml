@@ -68,6 +68,7 @@ jobs:
           pip install -e "./packages/spikeforge[dev,nir]" \
                       -e ./packages/spikeforge-targets \
                       -e ./packages/spikeforge-hub \
+                      -e ./packages/spikeforge-serve \
                       -e ./packages/spikeforge-server \
                       -e ./packages/spikeforge-io
 
@@ -152,6 +153,7 @@ jobs:
           pip install -e "./packages/spikeforge[dev,nir]" \
                       -e ./packages/spikeforge-targets \
                       -e ./packages/spikeforge-hub \
+                      -e ./packages/spikeforge-serve \
                       -e ./packages/spikeforge-server
 
       - name: Exercise the spikeforge-hub distribution
@@ -189,20 +191,25 @@ jobs:
 
       - name: Install the ${{ matrix.extra }} extra (+ targets, hub, server)
         run: |
-          # spikeforge-server depends on spikeforge-hub~=0.1.0, which is not
-          # published to PyPI; without an editable local install here pip
-          # falls back to PyPI and fails to resolve it.
+          # Every local distribution spikeforge-server depends on has to be
+          # installed here too. A missing one does not fail loudly: pip
+          # resolves that pin from PyPI instead, so the job silently tests a
+          # mix of this checkout and the last published wheel -- and hard-fails
+          # the moment the pin names a version PyPI does not have.
+          # tests/test_packaging_profiles.py enforces the closure.
           if [ "${{ matrix.extra }}" = "norse" ]; then
             pip install \
               -e "./packages/spikeforge[dev,nir]" \
               -e "./packages/spikeforge-targets[norse]" \
               -e ./packages/spikeforge-hub \
+              -e ./packages/spikeforge-serve \
               -e ./packages/spikeforge-server
           else
             pip install \
               -e "./packages/spikeforge[dev,nir,${{ matrix.extra }}]" \
               -e ./packages/spikeforge-targets \
               -e ./packages/spikeforge-hub \
+              -e ./packages/spikeforge-serve \
               -e ./packages/spikeforge-server
           fi
 
@@ -249,6 +256,7 @@ jobs:
             -e "./packages/spikeforge[dev,nir,events,onnx,tracking,tracking-wandb]" \
             -e ./packages/spikeforge-targets \
             -e ./packages/spikeforge-hub \
+            -e ./packages/spikeforge-serve \
             -e ./packages/spikeforge-server
 
       - name: Test with the optional extras and the server stack blocked
