@@ -119,3 +119,126 @@ def test_unsupported_node_raises_typed_error() -> None:
         NirInterpreter(graph)
     assert excinfo.value.kind == "Mystery"
     assert excinfo.value.name == "weird"
+
+
+def _four_steps() -> torch.Tensor:
+    """Return the analytic test's four-step, two-neuron input current."""
+    return torch.tensor(
+        [[[0.4, 0.1]], [[0.2, 0.9]], [[0.7, 0.3]], [[0.0, 0.5]]]
+    )
+
+
+def test_identity_post_node_is_byte_identical_and_sees_every_node() -> None:
+    """An identity hook changes nothing and is called per computed node."""
+    spikes = _four_steps()
+    plain = NirInterpreter(_lif_graph()).run(spikes)
+    seen: List[Tuple[str, str]] = []
+
+    def identity(
+        name: str,
+        kind: str,
+        output: torch.Tensor,
+        state: Any,
+        membrane: Any,
+    ) -> Tuple[torch.Tensor, Any, Any]:
+        seen.append((name, kind))
+        return output, state, membrane
+
+    hooked = NirInterpreter(_lif_graph(), post_node=identity).run(spikes)
+    assert torch.equal(plain.readout, hooked.readout)
+    assert torch.equal(plain.spikes["lif"], hooked.spikes["lif"])
+    assert torch.equal(plain.membranes["lif"], hooked.membranes["lif"])
+    assert seen == [("lif", "LIF"), ("output", "Output")] * spikes.size(0)
+
+
+def test_post_node_state_is_what_the_next_step_carries() -> None:
+    """Clearing the LIF state each step makes every update start at zero."""
+
+    def clear(
+        name: str,
+        kind: str,
+        output: torch.Tensor,
+        state: Any,
+        membrane: Any,
+    ) -> Tuple[torch.Tensor, Any, Any]:
+        if kind == "LIF":
+            return output, torch.zeros_like(state), membrane
+        return output, state, membrane
+
+    spikes = _four_steps()
+    hooked = NirInterpreter(_lif_graph(), post_node=clear).run(spikes)
+    for step in range(spikes.size(0)):
+        for index in range(2):
+            current = float(spikes[step, 0, index])
+            expected = _analytic(0.0, current, TAU, R, 0.0)
+            got = float(hooked.membranes["lif"][step, 0, index])
+            assert abs(got - expected) < 1e-6
+
+
+def test_post_node_output_is_what_the_next_node_reads() -> None:
+    """Silencing every LIF spike in the hook leaves the readout at zero."""
+
+    def silence(
+        name: str,
+        kind: str,
+        output: torch.Tensor,
+        state: Any,
+        membrane: Any,
+    ) -> Tuple[torch.Tensor, Any, Any]:
+        if kind == "LIF":
+            return torch.zeros_like(output), state, membrane
+        return output, state, membrane
+
+    spikes = _four_steps()
+    plain = NirInterpreter(_lif_graph()).run(spikes)
+    hooked = NirInterpreter(_lif_graph(), post_node=silence).run(spikes)
+    assert float(plain.readout.abs().sum()) > 0.0
+    assert float(hooked.readout.abs().sum()) == 0.0
+    assert float(hooked.spikes["lif"].sum()) == 0.0
+
+
+def test_post_node_membrane_is_what_the_trace_records() -> None:
+    """The recorded membrane is the hook's, not the value it was handed.
+
+    The trace is written after the hook, so a hook that rewrites the
+    membrane is visible in ``membranes``. Recording the pre-hook value
+    instead would silently report an unquantized membrane beside a
+    quantized one.
+    """
+
+    def blank(
+        name: str,
+        kind: str,
+        output: torch.Tensor,
+        state: Any,
+        membrane: Any,
+    ) -> Tuple[torch.Tensor, Any, Any]:
+        if membrane is None:
+            return output, state, membrane
+        return output, state, torch.zeros_like(membrane)
+
+    spikes = _four_steps()
+    plain = NirInterpreter(_lif_graph()).run(spikes)
+    hooked = NirInterpreter(_lif_graph(), post_node=blank).run(spikes)
+    assert float(plain.membranes["lif"].abs().max()) > 0.0
+    assert float(hooked.membranes["lif"].abs().max()) == 0.0
+    assert torch.equal(plain.spikes["lif"], hooked.spikes["lif"])
+
+
+def test_post_node_membrane_is_none_on_a_node_without_one() -> None:
+    """A non-integrator node is handed ``None``, never a stand-in tensor."""
+    seen: Dict[str, Any] = {}
+
+    def record(
+        name: str,
+        kind: str,
+        output: torch.Tensor,
+        state: Any,
+        membrane: Any,
+    ) -> Tuple[torch.Tensor, Any, Any]:
+        seen[kind] = membrane
+        return output, state, membrane
+
+    NirInterpreter(_lif_graph(), post_node=record).run(_four_steps())
+    assert seen["Output"] is None
+    assert torch.is_tensor(seen["LIF"])
