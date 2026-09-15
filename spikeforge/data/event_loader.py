@@ -45,7 +45,7 @@ from spikeforge.data.event_errors import (
     EventsExtraMissingError,
     EventTimestampError,
 )
-from spikeforge.events import tonic_api
+from spikeforge.events import hsd_reader, tonic_api
 from spikeforge.events.event_sample import EventSample
 
 #: Default number of time bins a loaded sample is binned into.
@@ -84,7 +84,12 @@ def open_event_dataset(
     cls = tonic_api.dataset_class(spec.tonic_class or "")
     if cls is None:
         raise EventsExtraMissingError(spec.name)
-    return cls(_root(spec, save_to), **kwargs)
+    dataset = cls(_root(spec, save_to), **kwargs)
+    if spec.native_reader == hsd_reader.HSD:
+        # Tonic did the download and owns the cache layout; only its
+        # per-sample decode is replaced. See `hsd_reader` for why.
+        return hsd_reader.open_split(dataset)
+    return dataset
 
 
 def sample_from(

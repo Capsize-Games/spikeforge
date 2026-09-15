@@ -14,7 +14,7 @@ from torchvision import transforms
 from spikeforge.config import DATA_DIR
 from spikeforge.data.dataset_spec import DatasetSpec
 from spikeforge.data.event_errors import EventSplitMissingError
-from spikeforge.events import tonic_api
+from spikeforge.events import hsd_reader, tonic_api
 
 _REGISTRY: Dict[str, DatasetSpec] = {
     "mnist": DatasetSpec(
@@ -71,6 +71,7 @@ _REGISTRY: Dict[str, DatasetSpec] = {
         "ssc", 35, "Spiking Speech Commands (35 classes)", "event",
         tonic_class="SSC",
         splits={"train": {"split": "train"}, "test": {"split": "test"}},
+        native_reader=hsd_reader.HSD,
     ),
     # Sequence modality: a fully synthetic token parity task, no loader.
     "sequence_toy": DatasetSpec(
