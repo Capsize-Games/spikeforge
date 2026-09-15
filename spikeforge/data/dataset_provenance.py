@@ -100,6 +100,15 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
         ),
         source="zenkelab.org/resources/spiking-heidelberg-datasets-shd",
     ),
+    "qmnist": DatasetProvenance(
+        license="BSD-3-Clause",
+        attribution=(
+            "QMNIST, Copyright (c) Facebook, Inc. and its affiliates, "
+            "BSD-3-Clause. Yadav, C. and Bottou, L. \"Cold Case: The Lost "
+            'MNIST Digits", NeurIPS 2019.'
+        ),
+        source="github.com/facebookresearch/qmnist LICENSE (3-clause BSD)",
+    ),
     # --- this project's own synthetic data -------------------------------
     "sequence_toy": DatasetProvenance(
         license="BSD-3-Clause",
@@ -109,10 +118,13 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
         ),
         source="generated in-repo by spikeforge.data.sequence_source",
     ),
-    # --- not confirmed from a primary source -----------------------------
-    # These carry the marker rather than a licence. Confirm from the
-    # publisher's own page and replace the marker before publishing any
-    # reference entry trained on one of them.
+    # --- no licence this project can record -------------------------------
+    # These carry the marker rather than a licence, but for two different
+    # reasons, and `source` says which. Most were checked and the publisher
+    # simply states no licence -- a verified absence, which the marker
+    # represents honestly and a guessed SPDX id would not. MNIST alone is
+    # unchecked, because its page will not serve. Either way: confirm before
+    # publishing a reference entry trained on one of them.
     "mnist": DatasetProvenance(
         license=UNVERIFIED,
         attribution=(
@@ -120,9 +132,11 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
             "Cortes, and Christopher J.C. Burges."
         ),
         source=(
-            "yann.lecun.com/exdb/mnist unreachable; the original "
-            "distribution states no explicit licence and the widely cited "
-            "CC-BY-SA-3.0 is secondary, so it is not asserted here"
+            "UNCHECKED: yann.lecun.com/exdb/mnist refused connection on "
+            "every attempt (2026-09-14, 2026-09-15). The original "
+            "distribution is widely reported to state no explicit licence "
+            "and the cited CC-BY-SA-3.0 is secondary, so neither is "
+            "asserted here. Retry from another network."
         ),
     ),
     "cifar10_dvs": DatasetProvenance(
@@ -133,25 +147,24 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
             'Classification", Frontiers in Neuroscience 11:309 (2017).'
         ),
         source=(
-            "figshare item 4724671 returned HTTP 403; the CC-BY-4.0 in "
-            "circulation is secondary, so it is not asserted here"
+            "UNCHECKED: figshare item 4724671 returned HTTP 403 and the "
+            "dataset's download endpoints answer HTTP 202 with no body; the "
+            "CC-BY-4.0 in circulation is secondary, so it is not asserted "
+            "here. Retry from another network."
         ),
-    ),
-    "qmnist": DatasetProvenance(
-        license=UNVERIFIED,
-        attribution=(
-            "QMNIST: Yadav, C. and Bottou, L. \"Cold Case: The Lost MNIST "
-            'Digits", NeurIPS 2019.'
-        ),
-        source="not yet checked against the publisher's own page",
     ),
     "usps": DatasetProvenance(
         license=UNVERIFIED,
         attribution=(
-            "USPS handwritten digits, derived from United States Postal "
-            "Service mail scans; distributed via the LIBSVM dataset archive."
+            "USPS handwritten digits. Hull, J. J. \"A Database for "
+            'Handwritten Text Recognition Research", IEEE PAMI 16(5), 1994. '
+            "Distributed via the LIBSVM dataset archive."
         ),
-        source="not yet checked against the publisher's own page",
+        source=(
+            "CHECKED, none stated: the LIBSVM multiclass archive torchvision "
+            "downloads from publishes no licence or terms, crediting only "
+            "'UCI, Statlog, StatLib and other collections'"
+        ),
     ),
     "emnist_digits": DatasetProvenance(
         license=UNVERIFIED,
@@ -160,7 +173,10 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
             '"EMNIST: an extension of MNIST to handwritten letters", 2017. '
             "Derived from the NIST Special Database 19."
         ),
-        source="not yet checked against the publisher's own page",
+        source=(
+            "CHECKED, none stated: NIST's own EMNIST page asks for the "
+            "citation above but declares no licence or terms of use"
+        ),
     ),
     "emnist_letters": DatasetProvenance(
         license=UNVERIFIED,
@@ -169,7 +185,10 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
             '"EMNIST: an extension of MNIST to handwritten letters", 2017. '
             "Derived from the NIST Special Database 19."
         ),
-        source="not yet checked against the publisher's own page",
+        source=(
+            "CHECKED, none stated: NIST's own EMNIST page asks for the "
+            "citation above but declares no licence or terms of use"
+        ),
     ),
     "cifar10": DatasetProvenance(
         license=UNVERIFIED,
@@ -177,7 +196,10 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
             "CIFAR-10: Krizhevsky, A. \"Learning Multiple Layers of Features "
             'from Tiny Images", 2009.'
         ),
-        source="not yet checked against the publisher's own page",
+        source=(
+            "CHECKED, none stated: the authors' own page asks that the tech "
+            "report be cited but declares no licence or terms of use"
+        ),
     ),
 }
 
