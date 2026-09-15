@@ -62,6 +62,10 @@ The `spikeforge-server` extraction did not fire (T4 no-go).
   single source of truth and the NIR translation.
 - [Model hub](plans/model_hub_plan.md) — curated catalog, downloads, and
   import/inspect (WS-A).
+- [Model-hub expansion](plans/hub_expansion_plan.md) — taking the catalog from
+  static-image reference checkpoints to event vision and audio, the dataset
+  provenance the schema does not yet record, and the missing event train/test
+  split that blocks both.
 - [Backend execution](plans/backend_execution_plan.md) — substitution
   execution and real backends (WS-B).
 - [Sequence primitives](plans/sequence_primitives_plan.md) — sequence/
