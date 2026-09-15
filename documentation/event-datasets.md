@@ -27,17 +27,40 @@ or `event`). `catalog()` reports `modality` and `available` per dataset,
 and the same fields ride on the `config_ack` and `status` payloads, so the
 picker only offers valid options:
 
-| Dataset | Modality | Classes | Available when |
-|---|---|---|---|
-| `n_mnist` | event | 10 | the `events` extra is installed |
-| `dvs128_gesture` | event | 11 | the `events` extra is installed |
-| `cifar10_dvs` | event | 10 | the `events` extra is installed |
-| `ssc` | event | 35 | the `events` extra is installed |
-| image datasets | image | 10-26 | always |
+| Dataset | Modality | Classes | Splits | Available when |
+|---|---|---|---|---|
+| `n_mnist` | event | 10 | train, test | the `events` extra is installed |
+| `dvs128_gesture` | event | 11 | train, test | the `events` extra is installed |
+| `cifar10_dvs` | event | 10 | train only | the `events` extra is installed |
+| `ssc` | event | 35 | train, test | the `events` extra is installed |
+| image datasets | image | 10-26 | train, test | always |
 
 Event datasets download through the existing isolated worker, so tonic's
 cache writes under `DATA_DIR/events/` (the gitignored `build/`) and the
-progress/cancel UI keeps working.
+progress/cancel UI keeps working. Every declared split is warmed there, so
+the held-out fetch never happens inside the training process.
+
+### Splits are declared per dataset, not assumed
+
+Tonic disagrees about how a split is selected — `NMNIST` and `DVSGesture`
+take `train=True/False`, `SSC` takes `split="train"/"test"`, and
+`CIFAR10DVS` ships one undivided pool with no split argument at all. So
+`DatasetSpec.splits` records the constructor arguments that select each
+split, and `dataset_split_kwargs(name, split)` resolves them:
+
+```python
+dataset_split_kwargs("n_mnist", "test")  # {"train": False}
+dataset_split_kwargs("ssc", "test")      # {"split": "test"}
+dataset_split_kwargs("cifar10_dvs", "test")  # EventSplitMissingError
+```
+
+A dataset that declares no such split raises `EventSplitMissingError` naming
+the dataset and the split rather than falling back to one it does declare.
+That last case is the point: `cifar10_dvs` cannot be scored on held-out data,
+so it raises instead of quietly scoring the data it trained on. Since
+evaluation runs from the first training step, it cannot currently be trained
+through `EventTrainingEngine` either; giving it a deterministic partition is
+an open decision.
 
 ### How event data flows
 
@@ -46,10 +69,13 @@ source -> EventSample -> frames -> bridge -> simulator / NIR
 ```
 
 1. **Source** — `EventSampleSource` (`events/event_source.py`) serves a
-   `(EventSample, label)` pair per index. It uses tonic whenever the
-   dataset is loadable and otherwise the deterministic generators in
-   `events/synthetic.py`. The chosen backend is recorded in `origin` and
-   `description`, so a synthetic stream is never presented as a recording.
+   `(EventSample, label)` pair per index, for **one split**. It uses tonic
+   whenever the dataset is loadable and otherwise the deterministic
+   generators in `events/synthetic.py`. The chosen backend and the split are
+   recorded in `origin`, `split`, and `description`, so a synthetic stream is
+   never presented as a recording. `EventTrainingEngine` holds two sources —
+   train and test — exactly as the image path holds two loaders, and
+   `_epoch_batches(train=...)` picks between them.
 2. **`EventSample`** — a validated sparse stream in `(x, y, t, p)` form
    (`x` column, `y` row, `t` 0-based time bin, `p` `+1` ON / `-1` OFF)
    with an `(H, W)` sensor layout.
@@ -105,3 +131,12 @@ of decoding a missing image.
   `synthetic_only=True`, the source serves deterministic moving-dot
   streams and says so in `origin`/`description` — they are offline
   fixtures, not real recordings.
+- **A synthetic "held-out" split is generated, not withheld.** There is no
+  recording to partition offline, so the two synthetic splits are made
+  disjoint by construction: each draws from its own index window and lays its
+  dots in a different column band. That is enough for the pipeline's split to
+  be genuinely exercised without the network, and the description keeps saying
+  `no real recording`. A synthetic accuracy is a smoke test, never a result.
+- **`cifar10_dvs` has no held-out split.** It raises
+  `EventSplitMissingError` rather than scoring its own training data; see
+  above.

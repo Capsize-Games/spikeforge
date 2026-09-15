@@ -11,6 +11,50 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Event-dataset "test accuracy" was training accuracy wearing a test
+  label.** The event training path had no train/test split anywhere in it.
+  `EventTrainingEngine._epoch_batches` accepted a `train` flag and never read
+  it, so `_load_test_batches` — whose docstring promised "held-out scoring" —
+  returned the first batches of the *training* stream, and the registry
+  hardcoded `{"train": True}` for `n_mnist` and `dvs128_gesture`,
+  `{"split": "train"}` for `ssc`, and no split at all for `cifar10_dvs`. Every
+  accuracy the event path could report was measured on data it had just
+  trained on.
+
+  A split is now threaded through all five layers. `DatasetSpec` carries
+  explicit per-split constructor arguments rather than a boolean, because
+  tonic disagrees per dataset — `NMNIST` and `DVSGesture` take
+  `train=True/False` while `SSC` takes `split="train"/"test"`. The engine
+  holds one `EventSampleSource` per split, mirroring the image path's two
+  loaders, so `event_batches` needs no split argument and the split is settled
+  by the object that opened the dataset. The download worker warms every
+  declared split, so the held-out fetch happens in the cancellable child
+  rather than inside the training process.
+
+  `cifar10_dvs` ships as one undivided pool upstream and now declares only a
+  train split: asking it for held-out data raises the new typed
+  `EventSplitMissingError`, which names the dataset and the split, instead of
+  quietly returning training data. Because scoring runs on the first training
+  step, that also means it can no longer be trained through this engine at
+  all — a deliberate trade, pending a decision on whether to give it a
+  deterministic partition. The synthetic offline backend gained a genuinely
+  disjoint held-out pool (its own index window and its own column band, with
+  the training stream's samples left byte-identical), and still refuses to
+  call itself a recording.
+
+  **Blast radius: no published number is affected.** `tonic` is absent from
+  both `requirements.txt` and the `Dockerfile`, so on the deployed dashboard
+  the event path raised `EventsExtraMissingError` rather than reporting a
+  wrong accuracy, and the public demo is read-only besides. No model hub
+  entry, benchmark row, or README figure was ever produced from an event
+  dataset. Affected: anyone who installed the `events` extra locally and
+  trained on an event dataset, whose reported held-out score was
+  meaningless. `tests/test_event_split.py` now fails if the split is removed:
+  it asserts the two splits return *different tensors*, not merely that a
+  flag is accepted.
+
 ## [spikeforge-v0.3.5] - 2026-09-14
 
 Released together as one combination, recorded in

@@ -45,7 +45,8 @@ def _engine(**kwargs: Any) -> EventTrainingEngine:
 
 
 def _fake_pair(
-    name: str, index: int, num_steps: int, save_to: Any = None
+    name: str, index: int, num_steps: int, save_to: Any = None,
+    split: str = "train",
 ) -> Tuple[EventSample, int]:
     """Return a deterministic synthetic sample in the loader's shape."""
     sample = synthetic.moving_dot(
