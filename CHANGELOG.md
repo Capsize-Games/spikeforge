@@ -11,7 +11,50 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+## [spikeforge-v0.4.0] - 2026-09-15
+
+Released together as one combination, recorded in
+[`compatibility.json`](compatibility.json): `spikeforge` 0.4.0,
+`spikeforge-hub` 0.3.0, `spikeforge-server` 0.3.2, `spikeforge-serve` 0.2.2,
+`spikeforge-targets` 0.1.3, `spikeforge-io` 0.1.2, `spikeforge-clients` 0.1.1.
+
+Only `spikeforge` and `spikeforge_hub` have source changes in this release.
+`spikeforge` takes a **minor** because it gains public modules
+(`data.dataset_provenance`, `events.hsd_reader`), two typed errors, and new
+`DatasetSpec` fields — and because `cifar10_dvs` can no longer be trained,
+which is a removal rather than an addition. `spikeforge-hub` takes a **minor**
+because `dataset_license` and `dataset_attribution` are now **required** on
+every `source: "reference"` entry: a third-party catalog that predates this
+release will fail validation until both are added, and
+`scripts/train_reference_models.py --sync-provenance` fills them in without
+retraining. `spikeforge-server`, `spikeforge-serve`, `spikeforge-io` and
+`spikeforge-targets` take patches for their widened dependency pins only;
+`spikeforge-clients` is unchanged and keeps 0.1.1.
+
+**No event reference checkpoint ships in this release.** Every event dataset is
+blocked — three cannot be downloaded at all and the two that can had their
+timestamps destroyed upstream — so the DVS128 Gesture and SSC configurations
+are registered and correct but publish no number. That is the intended
+outcome, not a shortfall.
+
 ### Added
+
+- **Compatibility builds its comparison preset with the artifact's own class
+  count.** `expected_state` built every candidate preset with the default 10
+  classes, so any checkpoint trained on a dataset with a different class count
+  was reported `incompatible` on a readout shape mismatch that said nothing
+  about the artifact — only that the comparison had been built against the
+  wrong output size. Inspection now reads `num_classes` from the checkpoint's
+  metadata card and `classify`/`import_model` build with it. A 26-class
+  checkpoint maps cleanly where it previously did not; the 10-class path is
+  byte-identical.
+
+  The class count is deliberately the *only* dimension adopted. A cochlea
+  checkpoint declaring 35 classes **and** 700 inputs still reports its input
+  width as a mismatch, because a comparison that adopted both dimensions of
+  the first layer could no longer disagree with any artifact about its shape.
+  It is read from the metadata card and never from the tensor shapes, which
+  would agree with themselves by construction.
 
 - **Heidelberg audio splits are read directly, bypassing tonic's decode.**
   `spikeforge/events/hsd_reader.py` reads the SHD/SSC HDF5 itself and scales
@@ -138,6 +181,16 @@ that and describe the local source tree only.
 
 ### Changed
 
+- **Four more dataset licences read from their publishers.** QMNIST is
+  confirmed **BSD-3-Clause** (Copyright (c) Facebook, Inc.), replacing its
+  marker. USPS, EMNIST and CIFAR-10 were each read at their own distribution
+  point and **none declares a licence** — they ask only to be cited — so they
+  keep the `unverified-candidate` marker, which represents a verified absence
+  honestly where a guessed SPDX id would not. The provenance table's `source`
+  field now distinguishes the two cases: `CHECKED, none stated` against
+  `UNCHECKED`. Only MNIST and CIFAR10-DVS remain genuinely unchecked, both
+  because their sources refuse to serve.
+
 - **`cifar10_dvs` can no longer be trained through `EventTrainingEngine`.**
   It ships upstream as one undivided pool, so it now declares only a train
   split, and asking it for held-out data raises the typed
@@ -150,6 +203,17 @@ that and describe the local source tree only.
   The other three event datasets are unaffected.
 
 ### Fixed
+
+- **The boundaries page said this repository redistributes no weights.**
+  [`documentation/implications-and-boundaries.md`](documentation/implications-and-boundaries.md)
+  §5 still described the hub as metadata-plus-downloads and claimed "the
+  repository does not redistribute weights" without qualification. That
+  stopped being true when `spikeforge-hub` 0.2.0 began shipping six trained
+  checkpoints inside the wheel; `NOTICE.md` and the curation policy were
+  updated then and this page was not, so the document whose entire purpose is
+  stating honest boundaries carried a false one for a release. It now
+  describes all three entry sources, separates the weights' licence from the
+  training data's, and records what it previously got wrong.
 
 - **Event training never shuffled, so a class-ordered dataset trained one class
   per batch.** The image path builds its loader with `shuffle=train`; the event

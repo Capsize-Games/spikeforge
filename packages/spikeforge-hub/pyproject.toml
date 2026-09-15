@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-hub"
-version = "0.2.0"
+version = "0.3.0"
 description = "Curated SNN model hub (catalog, cache, download, import) for spikeforge."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core, server, and targets distributions' metadata.
@@ -54,7 +54,7 @@ dependencies = [
     # The core library owns the interpreter/simulator, ``nir_bridge``, and the
     # hub cache configuration; this distribution owns catalog/network I/O. The
     # pin is a pre-1.0 compatible-release: >=0.3.0,<0.4.0.
-    "spikeforge~=0.3.5",
+    "spikeforge~=0.4.0",
     "torch>=2.5",
     "huggingface_hub>=0.20",
 ]
