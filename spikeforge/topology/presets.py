@@ -109,13 +109,9 @@ def fc_legacy(
 
 
 def fc_small(
-    hidden: int = 32,
-    beta: float = 0.9,
-    num_classes: int = 10,
-    input_size: int = 28 * 28,
-    neuron: str = DEFAULT_NEURON,
-    surrogate: Optional[str] = None,
-    neurons: NeuronMap = None,
+    hidden: int = 32, beta: float = 0.9, num_classes: int = 10,
+    input_size: int = 28 * 28, neuron: str = DEFAULT_NEURON,
+    surrogate: Optional[str] = None, neurons: NeuronMap = None,
     stage_params: ParamsMap = None,
 ) -> TopologySpec:
     """Small FC LIF spec with an explicit flatten entry stage."""
@@ -147,14 +143,9 @@ def _pooled_size(input_size: SizeLike) -> Tuple[int, int]:
 
 
 def _conv_stages(
-    in_channels: int,
-    channels: int,
-    num_classes: int,
-    size: Tuple[int, int],
-    neuron: str,
-    surrogate: Optional[str],
-    stage: NeuronStage,
-    dropout: float,
+    in_channels: int, channels: int, num_classes: int,
+    size: Tuple[int, int], neuron: str, surrogate: Optional[str],
+    stage: NeuronStage, dropout: float,
 ) -> List[Stage]:
     height, width = size
     features = channels * 2 * height * width
@@ -173,23 +164,16 @@ def _conv_stages(
 
 
 def conv_net(
-    in_channels: int = 1,
-    channels: int = 8,
-    num_classes: int = 10,
-    input_size: SizeLike = 28,
-    neuron: str = DEFAULT_NEURON,
-    surrogate: Optional[str] = None,
-    neurons: NeuronMap = None,
-    stage_params: ParamsMap = None,
-    dropout: float = 0.0,
+    in_channels: int = 1, channels: int = 8, num_classes: int = 10,
+    input_size: SizeLike = 28, neuron: str = DEFAULT_NEURON,
+    surrogate: Optional[str] = None, neurons: NeuronMap = None,
+    stage_params: ParamsMap = None, dropout: float = 0.0,
 ) -> TopologySpec:
     """Conv/pool feature extractor with a linear LIF readout.
 
-    ``input_size`` is the sensor geometry: an ``int`` square side (unchanged)
-    or an explicit ``(H, W)`` pair. The two 2x2 pools leave ``H/4 * W/4``
-    features per doubled channel, so each side must be at least 4.
-    ``dropout`` (default ``0.0``, the identity) sets the drop probability
-    of a stage applied to the flattened features, before the readout.
+    ``input_size`` is an ``int`` square side or an ``(H, W)`` pair; each
+    side must be >= 4 for the two 2x2 pools. ``dropout`` sets the drop
+    probability before the readout.
     """
     size = _pooled_size(input_size)
     stage = _stage_factory(neurons, stage_params)
@@ -228,13 +212,9 @@ def _recurrent_edges() -> List[Edge]:
 
 
 def recurrent_net(
-    hidden: int = 64,
-    beta: float = 0.9,
-    num_classes: int = 10,
-    input_size: int = 28 * 28,
-    neuron: str = DEFAULT_NEURON,
-    surrogate: Optional[str] = None,
-    neurons: NeuronMap = None,
+    hidden: int = 64, beta: float = 0.9, num_classes: int = 10,
+    input_size: int = 28 * 28, neuron: str = DEFAULT_NEURON,
+    surrogate: Optional[str] = None, neurons: NeuronMap = None,
     stage_params: ParamsMap = None,
 ) -> TopologySpec:
     """FC LIF spec with an explicit one-step delayed feedback edge."""

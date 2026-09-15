@@ -88,6 +88,73 @@ def validate_manifest(manifest: Any, path: str) -> Mapping[str, Any]:
     return manifest
 
 
+def _manifest_header(
+    protocol_version: Optional[str],
+    encode_spec_version: Optional[int],
+    versions: Mapping[str, Any],
+    created_at: Optional[float],
+) -> Dict[str, Any]:
+    """Return the format/version/provenance header fields."""
+    return {
+        "format": BUNDLE_FORMAT,
+        "version": BUNDLE_VERSION,
+        "created_at": time.time() if created_at is None else float(created_at),
+        "protocol_version": protocol_version,
+        "encode_spec_version": (
+            ENCODE_SPEC_VERSION
+            if encode_spec_version is None
+            else int(encode_spec_version)
+        ),
+        "library_versions": dict(versions),
+    }
+
+
+def _manifest_topology(
+    spec: Mapping[str, Any], meta: Mapping[str, Any]
+) -> Dict[str, Any]:
+    """Return the topology/checkpoint-derived fields."""
+    return {
+        "spec": dict(spec),
+        "topology": meta.get("topology"),
+        "topology_params": dict(meta.get("topology_params") or {}),
+        "input_mode": meta.get("input_mode", "raw"),
+        "coding": meta.get("coding", meta.get("input_mode", "raw")),
+        "num_steps": meta.get("num_steps"),
+        "num_classes": meta.get("num_classes"),
+        "device": meta.get("device"),
+    }
+
+
+def _manifest_config(
+    label_map: Mapping[str, Any],
+    expected_metrics: Mapping[str, Any],
+    encode_config: Mapping[str, Any],
+    preprocessing: Mapping[str, Any],
+    provenance: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """Return the caller-supplied config/provenance fields."""
+    return {
+        "label_map": {str(key): val for key, val in dict(label_map).items()},
+        "expected_metrics": dict(expected_metrics),
+        "encode_config": dict(encode_config),
+        "preprocessing": dict(preprocessing),
+        "provenance": dict(provenance),
+    }
+
+
+def _manifest_compression(
+    weights_encoding: Optional[Mapping[str, Any]],
+    pruning: Optional[Mapping[str, Any]],
+) -> Dict[str, Any]:
+    """Return the optional compression/pruning fields."""
+    return {
+        "weights_encoding": (
+            None if weights_encoding is None else dict(weights_encoding)
+        ),
+        "pruning": None if pruning is None else dict(pruning),
+    }
+
+
 def new_manifest(
     spec: Mapping[str, Any],
     meta: Mapping[str, Any],
@@ -112,32 +179,15 @@ def new_manifest(
     grids); a manifest without it describes a raw float state dict, which keeps
     every bundle built before compression loadable.
     """
-    return {
-        "format": BUNDLE_FORMAT,
-        "version": BUNDLE_VERSION,
-        "created_at": time.time() if created_at is None else float(created_at),
-        "protocol_version": protocol_version,
-        "encode_spec_version": (
-            ENCODE_SPEC_VERSION
-            if encode_spec_version is None
-            else int(encode_spec_version)
-        ),
-        "library_versions": dict(versions),
-        "spec": dict(spec),
-        "topology": meta.get("topology"),
-        "topology_params": dict(meta.get("topology_params") or {}),
-        "input_mode": meta.get("input_mode", "raw"),
-        "coding": meta.get("coding", meta.get("input_mode", "raw")),
-        "num_steps": meta.get("num_steps"),
-        "num_classes": meta.get("num_classes"),
-        "device": meta.get("device"),
-        "label_map": {str(key): val for key, val in dict(label_map).items()},
-        "expected_metrics": dict(expected_metrics),
-        "encode_config": dict(encode_config),
-        "preprocessing": dict(preprocessing),
-        "provenance": dict(provenance),
-        "weights_encoding": (
-            None if weights_encoding is None else dict(weights_encoding)
-        ),
-        "pruning": None if pruning is None else dict(pruning),
-    }
+    manifest = _manifest_header(
+        protocol_version, encode_spec_version, versions, created_at
+    )
+    manifest.update(_manifest_topology(spec, meta))
+    manifest.update(
+        _manifest_config(
+            label_map, expected_metrics, encode_config, preprocessing,
+            provenance,
+        )
+    )
+    manifest.update(_manifest_compression(weights_encoding, pruning))
+    return manifest

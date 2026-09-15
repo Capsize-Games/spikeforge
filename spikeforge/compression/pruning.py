@@ -15,12 +15,13 @@ pure metric from :mod:`spikeforge.nir_bridge.drift`, so a caller sees the
 error rather than a promise.
 """
 
-from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import torch
 
 from spikeforge.compression.errors import CompressionError
+from spikeforge.compression.pruned_weights import PrunedWeights
+from spikeforge.compression.pruning_report import PruningReport
 
 #: Names of the two supported pruning strategies.
 STRATEGIES: Tuple[str, ...] = ("unstructured", "structured")
@@ -43,54 +44,6 @@ def sparsity(state_dict: Mapping[str, Any]) -> float:
         total += int(tensor.numel())
         zeros += int((tensor == 0).sum())
     return zeros / total if total else 0.0
-
-
-@dataclass(frozen=True)
-class PruningReport:
-    """What a pruning pass removed and how far the weights moved.
-
-    ``sparsity`` is the achieved element sparsity and ``target_sparsity`` the
-    request, so a granularity-induced mismatch is visible. ``drift`` holds the
-    shared metric bundle for the flattened weights before and after.
-    """
-
-    strategy: str
-    target_sparsity: float
-    sparsity: float
-    threshold: float
-    pruned: int
-    total: int
-    tensors: Mapping[str, Any] = field(default_factory=dict)
-    drift: Optional[Mapping[str, Any]] = field(default=None)
-
-    def density(self) -> float:
-        """Return the fraction of floating parameters that remain non-zero."""
-        return 1.0 - self.sparsity
-
-    def counts(self) -> Dict[str, int]:
-        """Return the pruned and total element counts."""
-        return {"pruned": self.pruned, "total": self.total}
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Return the JSON-serialisable form of the report."""
-        return {
-            "strategy": self.strategy,
-            "target_sparsity": self.target_sparsity,
-            "sparsity": self.sparsity,
-            "density": self.density(),
-            "threshold": self.threshold,
-            "counts": self.counts(),
-            "tensors": dict(self.tensors),
-            "drift": None if self.drift is None else dict(self.drift),
-        }
-
-
-@dataclass(frozen=True)
-class PrunedWeights:
-    """A pruned state dict paired with the report describing it."""
-
-    tensors: Mapping[str, torch.Tensor]
-    report: PruningReport
 
 
 def _require_sparsity(level: float) -> float:
@@ -131,17 +84,10 @@ def _magnitude_masks(
     return masks, cutoff
 
 
-def _structured_masks(
-    state_dict: Mapping[str, Any], level: float
-) -> Tuple[Dict[str, torch.Tensor], float]:
-    """Return keep-masks that zero whole low-norm output channels.
-
-    Only tensors with at least two dimensions are grouped, one L2 norm per
-    leading-axis unit (a convolution's output channel, a linear layer's
-    output unit); the groups are thresholded globally and the surviving units
-    are broadcast back to the tensor's shape. One-dimensional tensors such as
-    biases have no channel axis, so structured pruning leaves them untouched.
-    """
+def _channel_groups(
+    state_dict: Mapping[str, Any],
+) -> Tuple[List[Tuple[str, int, torch.Tensor]], List[torch.Tensor]]:
+    """Return per-tensor (name, row_count, norm) groups and their norms."""
     groups: List[Tuple[str, int, torch.Tensor]] = []
     norms: List[torch.Tensor] = []
     for name, value in state_dict.items():
@@ -154,6 +100,19 @@ def _structured_masks(
         norm = table.norm(dim=1)
         groups.append((name, int(tensor.shape[0]), norm))
         norms.append(norm)
+    return groups, norms
+
+
+def _structured_masks(
+    state_dict: Mapping[str, Any], level: float
+) -> Tuple[Dict[str, torch.Tensor], float]:
+    """Return keep-masks that zero whole low-norm output channels.
+
+    One-dimensional tensors such as biases have no channel axis, so
+    structured pruning leaves them untouched; the groups that do exist are
+    thresholded globally and broadcast back to the tensor's shape.
+    """
+    groups, norms = _channel_groups(state_dict)
     cutoff = _threshold(_flatten(norms), level)
     masks: Dict[str, torch.Tensor] = {}
     for name, row_count, norm in groups:
@@ -184,6 +143,67 @@ def _tensor_density(tensor: torch.Tensor) -> float:
     return 1.0 - int((tensor == 0).sum()) / total
 
 
+def _pruning_masks(
+    state_dict: Mapping[str, Any], target: float, strategy: str
+) -> Tuple[Dict[str, torch.Tensor], float]:
+    """Return keep-masks and threshold for ``strategy``, validating it."""
+    if strategy not in STRATEGIES:
+        raise CompressionError(
+            f"unknown pruning strategy {strategy!r}; expected one of "
+            f"{STRATEGIES}"
+        )
+    if strategy == "structured":
+        return _structured_masks(state_dict, target)
+    return _magnitude_masks(state_dict, target)
+
+
+def _apply_masks(
+    state_dict: Mapping[str, Any], masks: Dict[str, torch.Tensor]
+) -> Tuple[Dict[str, torch.Tensor], Dict[str, Any]]:
+    """Apply ``masks`` to ``state_dict``; return pruned tensors and stats."""
+    pruned: Dict[str, torch.Tensor] = {}
+    per_tensor: Dict[str, Any] = {}
+    for name, value in state_dict.items():
+        if name not in masks:
+            pruned[name] = value
+            continue
+        alive = (value * masks[name]).to(value.dtype)
+        pruned[name] = alive
+        per_tensor[name] = {
+            "density": _tensor_density(alive),
+            "shape": [int(size) for size in value.shape],
+        }
+    return pruned, per_tensor
+
+
+def _mask_counts(
+    state_dict: Mapping[str, Any], pruned: Dict[str, torch.Tensor]
+) -> Tuple[int, int]:
+    """Return ``(total, pruned_count)`` float-element counts."""
+    total = sum(int(t.numel()) for t in _float_tensors(state_dict))
+    pruned_count = sum(int((t == 0).sum()) for t in _float_tensors(pruned))
+    return total, pruned_count
+
+
+def _build_report(
+    strategy: str, target: float, cutoff: float, per_tensor: Dict[str, Any],
+    state_dict: Mapping[str, Any], pruned: Dict[str, torch.Tensor],
+) -> PruningReport:
+    """Assemble the pruning report, including counts and drift."""
+    total, pruned_count = _mask_counts(state_dict, pruned)
+    achieved = pruned_count / total if total else 0.0
+    return PruningReport(
+        strategy=strategy,
+        target_sparsity=target,
+        sparsity=achieved,
+        threshold=cutoff,
+        pruned=pruned_count,
+        total=total,
+        tensors=per_tensor,
+        drift=_drift(state_dict, pruned),
+    )
+
+
 def prune(
     state_dict: Mapping[str, Any],
     level: float,
@@ -197,38 +217,9 @@ def prune(
     channel. The original mapping is never mutated.
     """
     target = _require_sparsity(level)
-    if strategy not in STRATEGIES:
-        raise CompressionError(
-            f"unknown pruning strategy {strategy!r}; expected one of "
-            f"{STRATEGIES}"
-        )
-    if strategy == "structured":
-        masks, cutoff = _structured_masks(state_dict, target)
-    else:
-        masks, cutoff = _magnitude_masks(state_dict, target)
-    pruned: Dict[str, torch.Tensor] = {}
-    per_tensor: Dict[str, Any] = {}
-    for name, value in state_dict.items():
-        if name in masks:
-            alive = (value * masks[name]).to(value.dtype)
-            pruned[name] = alive
-            per_tensor[name] = {
-                "density": _tensor_density(alive),
-                "shape": [int(size) for size in value.shape],
-            }
-        else:
-            pruned[name] = value
-    total = sum(int(t.numel()) for t in _float_tensors(state_dict))
-    pruned_count = sum(int((t == 0).sum()) for t in _float_tensors(pruned))
-    achieved = pruned_count / total if total else 0.0
-    report = PruningReport(
-        strategy=strategy,
-        target_sparsity=target,
-        sparsity=achieved,
-        threshold=cutoff,
-        pruned=pruned_count,
-        total=total,
-        tensors=per_tensor,
-        drift=_drift(state_dict, pruned),
+    masks, cutoff = _pruning_masks(state_dict, target, strategy)
+    pruned, per_tensor = _apply_masks(state_dict, masks)
+    report = _build_report(
+        strategy, target, cutoff, per_tensor, state_dict, pruned
     )
     return PrunedWeights(pruned, report)

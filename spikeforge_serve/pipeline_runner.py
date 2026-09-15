@@ -7,22 +7,21 @@ just with its input built from an upstream node's output instead of a
 request file.
 """
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from spikeforge_serve.payloads import (
     encoded_flag,
     frames_from,
     prediction_json,
 )
-from spikeforge_serve.pipeline import PipelineEdge, PipelineGraph
+from spikeforge_serve.pipeline import PipelineEdge, PipelineGraph, PipelineNode
+from spikeforge_serve.pipeline_run_context import (
+    CheckpointLoader,
+    NodeCallback,
+    RunContext,
+    StopCheck,
+)
 from spikeforge_serve.service import ServingService
-
-#: Returns a bundle source (path or DeploymentBundle) for one checkpoint name.
-CheckpointLoader = Callable[[str], Any]
-#: Called after each node finishes, with its id and its JSON-shaped result.
-NodeCallback = Callable[[str, Dict[str, Any]], None]
-#: Polled between nodes; returning True halts the run before the next one.
-StopCheck = Callable[[], bool]
 
 
 class PipelineRunError(RuntimeError):
@@ -60,41 +59,64 @@ def run_pipeline(
 ) -> Dict[str, Dict[str, Any]]:
     """Run every node in topological order; return ``{node_id: result}``.
 
-    ``request`` (``{"frames": [...], "encoded": ...}``, the same shape
-    :mod:`spikeforge_serve.module_runner` reads from stdin) feeds every node
-    with no incoming edge. A node with more than one incoming edge is
-    refused -- fan-in merge semantics are an explicit v1 scope cut, not an
-    oversight (see documentation/model-deployment.md).
+    Fan-in (a node with more than one incoming edge) is refused -- a
+    deliberate v1 scope cut (see documentation/model-deployment.md).
     """
-    order = graph.topological_order()
+    ctx = RunContext(graph, checkpoint_loader, request, device)
     results: Dict[str, Dict[str, Any]] = {}
-    for node in order:
+    for node in graph.topological_order():
         if should_stop is not None and should_stop():
             break
-        incoming = graph.incoming(node.id)
-        if len(incoming) > 1:
-            raise PipelineRunError(
-                f"node {node.id!r}: fan-in is not supported"
-            )
-        try:
-            bundle = checkpoint_loader(node.checkpoint)
-            service = ServingService(bundle, device=device)
-            if not incoming:
-                frames = frames_from(request)
-                encoded = encoded_flag(request)
-            else:
-                edge = incoming[0]
-                num_classes = service.bundle.manifest.get("num_classes")
-                frame = _extract(edge, results[edge.source], num_classes)
-                frames = [frame]
-                encoded = True
-            predictions = service.predict(frames, encoded=encoded)
-            payload = prediction_json(predictions[-1])
-        except Exception as exc:
-            raise PipelineRunError(
-                f"node {node.id!r} ({node.checkpoint!r}): {exc}"
-            ) from exc
-        results[node.id] = payload
-        if on_node_done is not None:
-            on_node_done(node.id, payload)
+        _process_node(ctx, node, results, on_node_done)
     return results
+
+
+def _process_node(
+    ctx: RunContext,
+    node: PipelineNode,
+    results: Dict[str, Dict[str, Any]],
+    on_node_done: Optional[NodeCallback],
+) -> None:
+    """Run one node, record its result, and fire the callback."""
+    payload = _run_node(ctx, node, results)
+    results[node.id] = payload
+    if on_node_done is not None:
+        on_node_done(node.id, payload)
+
+
+def _run_node(
+    ctx: RunContext, node: PipelineNode, results: Dict[str, Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Load the node's checkpoint, build its input, and predict."""
+    incoming = ctx.graph.incoming(node.id)
+    if len(incoming) > 1:
+        raise PipelineRunError(
+            f"node {node.id!r}: fan-in is not supported"
+        )
+    try:
+        service = ServingService(
+            ctx.checkpoint_loader(node.checkpoint), device=ctx.device
+        )
+        frames, encoded = _node_input(ctx, node, incoming, results, service)
+        predictions = service.predict(frames, encoded=encoded)
+        return prediction_json(predictions[-1])
+    except Exception as exc:
+        raise PipelineRunError(
+            f"node {node.id!r} ({node.checkpoint!r}): {exc}"
+        ) from exc
+
+
+def _node_input(
+    ctx: RunContext,
+    node: PipelineNode,
+    incoming: List[PipelineEdge],
+    results: Dict[str, Dict[str, Any]],
+    service: ServingService,
+) -> Tuple[List[float], bool]:
+    """Return the ``(frames, encoded)`` input for one node."""
+    if not incoming:
+        return frames_from(ctx.request), encoded_flag(ctx.request)
+    edge = incoming[0]
+    num_classes = service.bundle.manifest.get("num_classes")
+    frame = _extract(edge, results[edge.source], num_classes)
+    return [frame], True

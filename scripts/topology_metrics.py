@@ -69,6 +69,9 @@ CATALOG_PATH = "spikeforge_hub/models.json"
 #: Release tags are ``<distribution>-v<version>``.
 TAG_RE = re.compile(r"^(?P<dist>.+)-v(?P<version>\d+\.\d+.*)$")
 
+#: One non-merge commit's sha and the paths it touched.
+CommitChanges = Sequence[Tuple[str, Tuple[str, ...]]]
+
 #: Human-readable metric rows, in print order.
 _METRIC_ROWS: Tuple[Tuple[str, str], ...] = (
     ("Releases in window", "releases_in_window"),
@@ -254,9 +257,7 @@ def _is_isolated(paths: Sequence[str], component: str) -> bool:
     return _components_for(paths) == [component]
 
 
-def _commit_changes(
-    since: datetime,
-) -> List[Tuple[str, Tuple[str, ...]]]:
+def _commit_changes(since: datetime) -> CommitChanges:
     """Return ``(sha, paths)`` for non-merge commits since ``since``."""
     stamp = since.strftime("%Y-%m-%d %H:%M:%S")
     output = _git(
@@ -434,12 +435,20 @@ def _or(states: Sequence[Optional[bool]]) -> Optional[bool]:
     return False
 
 
-def _collect(as_of: datetime, window_days: int) -> Dict[str, object]:
-    """Compute every metric input from git and (best effort) GitHub."""
-    releases = _releases()
-    window_start = as_of - timedelta(days=window_days)
-    quarter_start = as_of - timedelta(days=QUARTER_DAYS)
+class _Inputs(NamedTuple):
+    """Collected raw release/commit evidence, before metric derivation."""
 
+    in_window: List[Release]
+    core_window: List[Release]
+    window_changes: CommitChanges
+    quarter_changes: CommitChanges
+
+
+def _releases_in_window(
+    window_start: datetime,
+) -> Tuple[List[Release], List[Release]]:
+    """Return ``(in_window, core_window)`` releases since ``window_start``."""
+    releases = _releases()
     in_window = [
         release for release in releases if release.date >= window_start
     ]
@@ -448,59 +457,120 @@ def _collect(as_of: datetime, window_days: int) -> Dict[str, object]:
         for release in in_window
         if release.distribution == CORE_DISTRIBUTION
     ]
-    window_changes = _commit_changes(window_start)
-    quarter_changes = _commit_changes(quarter_start)
+    return in_window, core_window
 
-    def isolated(
-        changes: Sequence[Tuple[str, Tuple[str, ...]]], component: str
-    ) -> int:
-        """Count single-component change sets in ``changes``."""
-        return sum(
-            1 for _, paths in changes if _is_isolated(paths, component)
-        )
 
-    core_commits = sum(
+def _collect_inputs(as_of: datetime, window_days: int) -> _Inputs:
+    """Gather the raw release/commit evidence ``_collect`` derives from."""
+    window_start = as_of - timedelta(days=window_days)
+    quarter_start = as_of - timedelta(days=QUARTER_DAYS)
+    in_window, core_window = _releases_in_window(window_start)
+    return _Inputs(
+        in_window=in_window,
+        core_window=core_window,
+        window_changes=_commit_changes(window_start),
+        quarter_changes=_commit_changes(quarter_start),
+    )
+
+
+def _isolated(changes: CommitChanges, component: str) -> int:
+    """Count single-component change sets in ``changes``."""
+    return sum(
+        1 for _, paths in changes if _is_isolated(paths, component)
+    )
+
+
+def _core_commit_count(changes: CommitChanges) -> int:
+    """Count commits in ``changes`` that touch the core distribution."""
+    return sum(
         1
-        for _, paths in quarter_changes
+        for _, paths in changes
         if any(path.startswith(CORE_PREFIX) for path in paths)
     )
-    hub_isolated = isolated(quarter_changes, "hub")
-    server_isolated = isolated(quarter_changes, "server")
 
-    backend_releases = [
-        release for release in core_window if _is_backend_sdk_release(release)
-    ]
-    catalog = _catalog_unchanged(_catalog_versions(in_window))
-    build = _dashboard_build_metrics()
 
+def _count_isolated_releases(releases: List[Release], component: str) -> int:
+    """Count releases whose changed paths touch only ``component``."""
+    return sum(
+        1
+        for release in releases
+        if _is_isolated(release.changed_paths, component)
+    )
+
+
+def _count_pin_conflicts(changes: CommitChanges) -> int:
+    """Count commits in ``changes`` that touch the core server pin."""
+    return sum(1 for _, paths in changes if SERVER_PIN_PATH in paths)
+
+
+def _release_metrics(data: _Inputs) -> Dict[str, object]:
+    """Return the release- and isolated-change-set count fields."""
     return {
-        "releases_in_window": len(in_window),
-        "core_releases_in_window": len(core_window),
-        "dashboard_isolated": isolated(window_changes, "dashboard"),
-        "targets_isolated": isolated(window_changes, "targets"),
-        "hub_isolated": hub_isolated,
-        "server_isolated": server_isolated,
+        "releases_in_window": len(data.in_window),
+        "core_releases_in_window": len(data.core_window),
+        "dashboard_isolated": _isolated(data.window_changes, "dashboard"),
+        "targets_isolated": _isolated(data.window_changes, "targets"),
+    }
+
+
+def _backend_demand_metrics(
+    in_window: List[Release], backend_releases: List[Release]
+) -> Dict[str, object]:
+    """Return the backend-SDK and hub/server release-demand fields."""
+    return {
         "backend_sdk_core_releases": len(backend_releases),
         "backend_sdk_two_in_30": _two_releases_within(backend_releases, 30),
-        "hub_only_release_demand": sum(
-            1
-            for release in in_window
-            if _is_isolated(release.changed_paths, "hub")
+        "hub_only_release_demand": _count_isolated_releases(
+            in_window, "hub"
         ),
-        "server_only_release_demand": sum(
-            1
-            for release in in_window
-            if _is_isolated(release.changed_paths, "server")
+        "server_only_release_demand": _count_isolated_releases(
+            in_window, "server"
         ),
+    }
+
+
+def _share_metrics(
+    window_changes: CommitChanges,
+    core_commits: int,
+    hub_isolated: int,
+    server_isolated: int,
+) -> Dict[str, object]:
+    """Return the isolated-count, commit-share, and pin-conflict fields."""
+    return {
+        "hub_isolated": hub_isolated,
+        "server_isolated": server_isolated,
         "hub_share": hub_isolated / core_commits if core_commits else 0.0,
         "server_share": (
             server_isolated / core_commits if core_commits else 0.0
         ),
-        "pin_conflict_commits": sum(
-            1
-            for _, paths in window_changes
-            if SERVER_PIN_PATH in paths
-        ),
+        "pin_conflict_commits": _count_pin_conflicts(window_changes),
+    }
+
+
+def _demand_metrics(data: _Inputs) -> Dict[str, object]:
+    """Return the demand/share/backend-SDK fields."""
+    core_commits = _core_commit_count(data.quarter_changes)
+    hub_isolated = _isolated(data.quarter_changes, "hub")
+    server_isolated = _isolated(data.quarter_changes, "server")
+    backend_releases = [
+        release
+        for release in data.core_window
+        if _is_backend_sdk_release(release)
+    ]
+    fields = _backend_demand_metrics(data.in_window, backend_releases)
+    fields.update(
+        _share_metrics(
+            data.window_changes, core_commits, hub_isolated, server_isolated
+        )
+    )
+    return fields
+
+
+def _build_metrics(data: _Inputs) -> Dict[str, object]:
+    """Return the catalog-stability and dashboard-build fields."""
+    catalog = _catalog_unchanged(_catalog_versions(data.in_window))
+    build = _dashboard_build_metrics()
+    return {
         "catalog_unchanged": catalog,
         "dashboard_build_minutes": build.minutes,
         "dashboard_build_share": build.share,
@@ -508,90 +578,137 @@ def _collect(as_of: datetime, window_days: int) -> Dict[str, object]:
     }
 
 
+def _collect(as_of: datetime, window_days: int) -> Dict[str, object]:
+    """Compute every metric input from git and (best effort) GitHub."""
+    data = _collect_inputs(as_of, window_days)
+    fields = _release_metrics(data)
+    fields.update(_demand_metrics(data))
+    fields.update(_build_metrics(data))
+    return fields
+
+
+def _t1_clauses(metrics: Dict[str, object]) -> Tuple[Clause, ...]:
+    """Return T1's clauses: dashboard (Phase 2) evidence."""
+    build_slow = _or(
+        (
+            _ge(metrics["dashboard_build_minutes"], 10.0),
+            _ge(metrics["dashboard_build_share"], 0.40),
+        )
+    )
+    return (
+        Clause(
+            "isolated client-only change sets >= 4",
+            _ge(metrics["dashboard_isolated"], 4),
+        ),
+        Clause("client build >= 10 min or >= 40% wall-clock", build_slow),
+        Clause(
+            "client PRs blocked on Python review >= 3",
+            _ge(metrics["dashboard_blocked_prs"], 3),
+        ),
+    )
+
+
+def _trigger_t1(metrics: Dict[str, object]) -> Trigger:
+    """Build T1: the dashboard (Phase 2) trigger."""
+    return Trigger(
+        name="T1",
+        phase="dashboard (Phase 2)",
+        mode="any",
+        clauses=_t1_clauses(metrics),
+    )
+
+
+def _t2_clauses(metrics: Dict[str, object]) -> Tuple[Clause, ...]:
+    """Return T2's clauses: spikeforge-targets (Phase 3) evidence."""
+    return (
+        Clause(
+            "backend-SDK-caused core releases >= 2",
+            _ge(metrics["backend_sdk_core_releases"], 2),
+        ),
+        Clause(
+            "one backend SDK forces 2 releases <= 30d",
+            bool(metrics["backend_sdk_two_in_30"]),
+        ),
+        Clause(
+            "isolated targets change sets >= 6",
+            _ge(metrics["targets_isolated"], 6),
+        ),
+    )
+
+
+def _trigger_t2(metrics: Dict[str, object]) -> Trigger:
+    """Build T2: the spikeforge-targets (Phase 3) trigger."""
+    return Trigger(
+        name="T2",
+        phase="spikeforge-targets (Phase 3)",
+        mode="any",
+        clauses=_t2_clauses(metrics),
+    )
+
+
+def _t3_clauses(metrics: Dict[str, object]) -> Tuple[Clause, ...]:
+    """Return T3's clauses: spikeforge-hub (Phase 4 go) evidence."""
+    return (
+        Clause(
+            "hub-only release demand >= 2",
+            _ge(metrics["hub_only_release_demand"], 2),
+        ),
+        Clause(
+            "catalog schema_version unchanged >= 2 releases",
+            metrics["catalog_unchanged"],
+        ),
+        Clause(
+            "isolated hub change sets >= 15% of core commits",
+            _ge(metrics["hub_share"], 0.15),
+        ),
+    )
+
+
+def _trigger_t3(metrics: Dict[str, object]) -> Trigger:
+    """Build T3: the spikeforge-hub (Phase 4 go) trigger."""
+    return Trigger(
+        name="T3",
+        phase="spikeforge-hub (Phase 4 go)",
+        mode="all",
+        clauses=_t3_clauses(metrics),
+    )
+
+
+def _t4_clauses(metrics: Dict[str, object]) -> Tuple[Clause, ...]:
+    """Return T4's clauses: spikeforge-server (Phase 4 conditional)."""
+    return (
+        Clause(
+            "server-only release demand >= 3",
+            _ge(metrics["server_only_release_demand"], 3),
+        ),
+        Clause(
+            "core pin conflicts >= 2 in window",
+            _ge(metrics["pin_conflict_commits"], 2),
+        ),
+        Clause(
+            "isolated server change sets >= 20% of core commits",
+            _ge(metrics["server_share"], 0.20),
+        ),
+    )
+
+
+def _trigger_t4(metrics: Dict[str, object]) -> Trigger:
+    """Build T4: the spikeforge-server (Phase 4 conditional) trigger."""
+    return Trigger(
+        name="T4",
+        phase="spikeforge-server (Phase 4 conditional)",
+        mode="all",
+        clauses=_t4_clauses(metrics),
+    )
+
+
 def _build_triggers(metrics: Dict[str, object]) -> List[Trigger]:
     """Assemble the four named triggers from the collected metrics."""
     return [
-        Trigger(
-            name="T1",
-            phase="dashboard (Phase 2)",
-            mode="any",
-            clauses=(
-                Clause(
-                    "isolated client-only change sets >= 4",
-                    _ge(metrics["dashboard_isolated"], 4),
-                ),
-                Clause(
-                    "client build >= 10 min or >= 40% wall-clock",
-                    _or(
-                        (
-                            _ge(metrics["dashboard_build_minutes"], 10.0),
-                            _ge(metrics["dashboard_build_share"], 0.40),
-                        )
-                    ),
-                ),
-                Clause(
-                    "client PRs blocked on Python review >= 3",
-                    _ge(metrics["dashboard_blocked_prs"], 3),
-                ),
-            ),
-        ),
-        Trigger(
-            name="T2",
-            phase="spikeforge-targets (Phase 3)",
-            mode="any",
-            clauses=(
-                Clause(
-                    "backend-SDK-caused core releases >= 2",
-                    _ge(metrics["backend_sdk_core_releases"], 2),
-                ),
-                Clause(
-                    "one backend SDK forces 2 releases <= 30d",
-                    bool(metrics["backend_sdk_two_in_30"]),
-                ),
-                Clause(
-                    "isolated targets change sets >= 6",
-                    _ge(metrics["targets_isolated"], 6),
-                ),
-            ),
-        ),
-        Trigger(
-            name="T3",
-            phase="spikeforge-hub (Phase 4 go)",
-            mode="all",
-            clauses=(
-                Clause(
-                    "hub-only release demand >= 2",
-                    _ge(metrics["hub_only_release_demand"], 2),
-                ),
-                Clause(
-                    "catalog schema_version unchanged >= 2 releases",
-                    metrics["catalog_unchanged"],
-                ),
-                Clause(
-                    "isolated hub change sets >= 15% of core commits",
-                    _ge(metrics["hub_share"], 0.15),
-                ),
-            ),
-        ),
-        Trigger(
-            name="T4",
-            phase="spikeforge-server (Phase 4 conditional)",
-            mode="all",
-            clauses=(
-                Clause(
-                    "server-only release demand >= 3",
-                    _ge(metrics["server_only_release_demand"], 3),
-                ),
-                Clause(
-                    "core pin conflicts >= 2 in window",
-                    _ge(metrics["pin_conflict_commits"], 2),
-                ),
-                Clause(
-                    "isolated server change sets >= 20% of core commits",
-                    _ge(metrics["server_share"], 0.20),
-                ),
-            ),
-        ),
+        _trigger_t1(metrics),
+        _trigger_t2(metrics),
+        _trigger_t3(metrics),
+        _trigger_t4(metrics),
     ]
 
 

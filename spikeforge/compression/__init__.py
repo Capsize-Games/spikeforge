@@ -18,18 +18,17 @@ from spikeforge.compression.codec import (
     SCHEMES,
     WEIGHTS_ENCODING_VERSION,
     CompressedWeights,
-    compress_state_dict,
-    dequantize_state_dict,
     dequantize_tensor,
     quantize_tensor,
 )
-from spikeforge.compression.errors import CompressionError
-from spikeforge.compression.pruning import (
-    PrunedWeights,
-    PruningReport,
-    prune,
-    sparsity,
+from spikeforge.compression.encoding import (
+    compress_state_dict,
+    dequantize_state_dict,
 )
+from spikeforge.compression.errors import CompressionError
+from spikeforge.compression.pruned_weights import PrunedWeights
+from spikeforge.compression.pruning import prune, sparsity
+from spikeforge.compression.pruning_report import PruningReport
 from spikeforge.compression.report import CompressionReport
 
 __all__ = [

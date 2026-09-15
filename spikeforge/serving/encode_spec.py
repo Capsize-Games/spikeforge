@@ -143,6 +143,49 @@ def _coerce(data: Mapping[str, Any]) -> Dict[str, Any]:
     return fields
 
 
+def _from_attrs(cls: Any, cfg: Any) -> Any:
+    """Return a spec built from ``cfg``'s attributes matching known fields."""
+    data = {
+        name: getattr(cfg, name) for name in _FIELDS if hasattr(cfg, name)
+    }
+    if not data:
+        raise EncodeSpecError(
+            f"cannot read an encode spec from {type(cfg).__name__}"
+        )
+    return cls.from_dict(data)
+
+
+def _check_coding(coding: Any) -> None:
+    """Raise unless ``coding`` is a known coding name."""
+    if not isinstance(coding, str) or coding not in CODINGS:
+        raise EncodeSpecError(
+            f"unsupported coding {coding!r}; expected one of {CODINGS}"
+        )
+
+
+def _check_num_steps(steps: Any) -> None:
+    """Raise unless ``steps`` is a positive int."""
+    if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
+        raise EncodeSpecError("num_steps must be an integer >= 1")
+
+
+def _check_random_seed(seed: Any) -> None:
+    """Raise unless ``seed`` is an int or None."""
+    if seed is not None and (
+        isinstance(seed, bool) or not isinstance(seed, int)
+    ):
+        raise EncodeSpecError("random_seed must be an integer or null")
+
+
+def _check_spec_version(version: Any) -> None:
+    """Raise unless ``version`` matches the runtime's encode contract."""
+    if version != ENCODE_SPEC_VERSION:
+        raise EncodeSpecError(
+            f"unsupported encode spec version {version!r}; this runtime "
+            f"speaks {ENCODE_SPEC_VERSION}"
+        )
+
+
 @dataclass(frozen=True)
 class EncodeSpec:
     """The frozen encode parameters a bundle pins and both paths share.
@@ -172,9 +215,8 @@ class EncodeSpec:
     def from_mapping(cls, cfg: Any) -> "EncodeSpec":
         """Return a spec from a mapping, a ``model_dump()``-able, or ``None``.
 
-        ``None`` yields the defaults. A mapping (or an EncodeConfig-like
-        object with ``model_dump``) is parsed tolerantly; unknown keys are
-        ignored and every known key is coerced to its field type.
+        ``None`` yields the defaults; unknown keys are ignored and known
+        keys are coerced to their field type.
         """
         if cfg is None:
             return cls()
@@ -185,16 +227,7 @@ class EncodeSpec:
         dump = getattr(cfg, "model_dump", None)
         if callable(dump):
             return cls.from_dict(dump())
-        data = {
-            name: getattr(cfg, name)
-            for name in _FIELDS
-            if hasattr(cfg, name)
-        }
-        if not data:
-            raise EncodeSpecError(
-                f"cannot read an encode spec from {type(cfg).__name__}"
-            )
-        return cls.from_dict(data)
+        return _from_attrs(cls, cfg)
 
     @classmethod
     def from_dict(cls, data: Any) -> "EncodeSpec":
@@ -207,9 +240,12 @@ class EncodeSpec:
 
     def to_dict(self) -> Dict[str, Any]:
         """Return the canonical, JSON-ready spec including ``spec_version``."""
-        size: Optional[list] = None
-        if self.input_size is not None:
-            size = [int(self.input_size[0]), int(self.input_size[1])]
+        fields = self._coding_fields()
+        fields.update(self._meta_fields())
+        return fields
+
+    def _coding_fields(self) -> Dict[str, Any]:
+        """Return the coding-math fields of the canonical dict."""
         return {
             "coding": self.coding,
             "num_steps": int(self.num_steps),
@@ -225,9 +261,14 @@ class EncodeSpec:
             ),
             "gain": float(self.gain),
             "off_spike": bool(self.off_spike),
-            "input_size": size,
-            "spec_version": int(self.spec_version),
         }
+
+    def _meta_fields(self) -> Dict[str, Any]:
+        """Return the geometry/version metadata fields of the dict."""
+        size: Optional[list] = None
+        if self.input_size is not None:
+            size = [int(self.input_size[0]), int(self.input_size[1])]
+        return {"input_size": size, "spec_version": int(self.spec_version)}
 
     def to_encoder(self) -> SpikeEncoder:
         """Return the encoder this spec pins, without reimplementing math."""
@@ -254,30 +295,16 @@ class EncodeSpec:
 
     def validate(self) -> None:
         """Raise :class:`EncodeSpecError` when the spec is unusable."""
-        if not isinstance(self.coding, str) or self.coding not in CODINGS:
-            raise EncodeSpecError(
-                f"unsupported coding {self.coding!r}; expected one of "
-                f"{CODINGS}"
-            )
-        steps = self.num_steps
-        if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
-            raise EncodeSpecError("num_steps must be an integer >= 1")
+        _check_coding(self.coding)
+        _check_num_steps(self.num_steps)
         _require_positive(self.tau, "tau")
         _require_positive(self.threshold, "threshold")
         _require_non_negative(self.delta_threshold, "delta_threshold")
         _require_non_negative(self.random_scale, "random_scale")
-        if self.random_seed is not None and (
-            isinstance(self.random_seed, bool)
-            or not isinstance(self.random_seed, int)
-        ):
-            raise EncodeSpecError("random_seed must be an integer or null")
+        _check_random_seed(self.random_seed)
         if self.input_size is not None:
             _require_size(self.input_size)
-        if self.spec_version != ENCODE_SPEC_VERSION:
-            raise EncodeSpecError(
-                f"unsupported encode spec version {self.spec_version!r}; this "
-                f"runtime speaks {ENCODE_SPEC_VERSION}"
-            )
+        _check_spec_version(self.spec_version)
 
 
 def _is_number(value: Any) -> bool:

@@ -55,17 +55,10 @@ class FewShotResult:
 
 
 def run_few_shot_generalization_poc(
-    seed: int = 0,
-    hidden: int = 64,
-    embed_dim: int = 32,
-    num_steps: int = 15,
-    train_episodes: int = 300,
-    train_n_way: int = 5,
-    train_k_shot: int = 5,
-    train_n_query: int = 5,
-    eval_episodes: int = 50,
-    eval_n_way: int = 5,
-    eval_n_query: int = 5,
+    seed: int = 0, hidden: int = 64, embed_dim: int = 32,
+    num_steps: int = 15, train_episodes: int = 300, train_n_way: int = 5,
+    train_k_shot: int = 5, train_n_query: int = 5, eval_episodes: int = 50,
+    eval_n_way: int = 5, eval_n_query: int = 5,
 ) -> FewShotResult:
     """Train on EMNIST letters, evaluate one-shot recall on KMNIST."""
     torch.manual_seed(seed)
@@ -103,13 +96,8 @@ def _train_embedder(
 
 
 def _evaluate_cross_script(
-    net: StageModule,
-    encoder: SpikeEncoder,
-    embed_dim: int,
-    eval_episodes: int,
-    n_way: int,
-    n_query: int,
-    seed: int,
+    net: StageModule, encoder: SpikeEncoder, embed_dim: int,
+    eval_episodes: int, n_way: int, n_query: int, seed: int,
 ) -> float:
     """Average one-shot discrimination accuracy over held-out episodes."""
     eval_data = build_dataset(EVAL_DATASET, train=False)
@@ -126,14 +114,9 @@ def _evaluate_cross_script(
 
 
 def _run_one_episode(
-    net: StageModule,
-    encoder: SpikeEncoder,
-    eval_data: Dataset,
-    by_class: Dict[int, List[int]],
-    embed_dim: int,
-    n_way: int,
-    n_query: int,
-    rng: random.Random,
+    net: StageModule, encoder: SpikeEncoder, eval_data: Dataset,
+    by_class: Dict[int, List[int]], embed_dim: int, n_way: int,
+    n_query: int, rng: random.Random,
 ) -> float:
     """Teach one memory neuron per class from one example; score queries."""
     support_x, support_y, query_x, query_y = sample_episode(

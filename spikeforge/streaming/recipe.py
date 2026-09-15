@@ -117,15 +117,92 @@ def predict_logits(
         return _mean_logits(module, spikes)
 
 
+def _train_one_batch(
+    module: StageModule,
+    optimizer: torch.optim.Optimizer,
+    windows: torch.Tensor,
+    labels: torch.Tensor,
+    encode_spec: EncodeSpec,
+    config: StreamTrainConfig,
+) -> Tuple[float, int]:
+    """Run one optimizer step on one batch; return (loss, correct count)."""
+    spikes = encode_windows(
+        windows, encode_spec, delta_along_window=config.delta_along_window
+    )
+    logits = _mean_logits(module, spikes)
+    loss = cross_entropy(logits, labels)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    correct = int((logits.argmax(dim=-1) == labels).sum().item())
+    return float(loss.item()), correct
+
+
+def _train_one_epoch(
+    module: StageModule, optimizer: torch.optim.Optimizer,
+    train: StreamDataset, encode_spec: EncodeSpec,
+    config: StreamTrainConfig, order: torch.Generator,
+) -> Tuple[float, float]:
+    """Run one training epoch; return its mean loss and accuracy."""
+    total = int(train.windows.size(0))
+    permutation = torch.randperm(total, generator=order)
+    epoch_loss = 0.0
+    correct = batches = 0
+    for start in range(0, total, config.batch_size):
+        index = permutation[start:start + config.batch_size]
+        loss, hits = _train_one_batch(
+            module, optimizer, train.windows[index], train.labels[index],
+            encode_spec, config,
+        )
+        epoch_loss += loss
+        correct += hits
+        batches += 1
+    return epoch_loss / max(batches, 1), correct / max(total, 1)
+
+
+def _run_epochs(
+    module: StageModule, optimizer: torch.optim.Optimizer,
+    train: StreamDataset, encode_spec: EncodeSpec,
+    config: StreamTrainConfig, order: torch.Generator,
+) -> Tuple[Dict[str, float], ...]:
+    """Run every training epoch; return the per-epoch metric history."""
+    history = []
+    for epoch in range(config.epochs):
+        loss, accuracy = _train_one_epoch(
+            module, optimizer, train, encode_spec, config, order
+        )
+        history.append(
+            {"epoch": float(epoch), "loss": loss, "train_accuracy": accuracy}
+        )
+    return tuple(history)
+
+
+def _finalize_training(
+    spec: TopologySpec,
+    module: StageModule,
+    config: StreamTrainConfig,
+    encode_spec: EncodeSpec,
+    history: Tuple[Dict[str, float], ...],
+) -> StreamTrainingResult:
+    """Switch to eval mode and package the trained trunk for serving."""
+    module.eval()
+    return StreamTrainingResult(
+        spec=spec,
+        module=module,
+        config=config,
+        encode_spec=encode_spec,
+        history=history,
+    )
+
+
 def train_classifier(
     train: StreamDataset,
     config: StreamTrainConfig,
 ) -> StreamTrainingResult:
     """Train the trunk for ``config.epochs`` on ``train`` (CPU, deterministic).
 
-    The shuffle generator is seeded once and is independent of the encode
-    RNG, so two runs of the same config visit the same batches in the same
-    order and produce the same loss history.
+    The shuffle generator is seeded once, independent of the encode RNG, so
+    two runs of the same config produce the same loss history.
     """
     config.validate()
     set_seed(config.seed)
@@ -133,69 +210,38 @@ def train_classifier(
     module.train()
     optimizer = torch.optim.Adam(module.parameters(), lr=config.lr)
     encode_spec = config.encode_spec()
-    windows = train.windows
-    labels = train.labels
-    total = int(windows.size(0))
     order = torch.Generator().manual_seed(config.seed)
-    history = []
-    for epoch in range(config.epochs):
-        permutation = torch.randperm(total, generator=order)
-        epoch_loss = 0.0
-        correct = 0
-        batches = 0
-        for start in range(0, total, config.batch_size):
-            index = permutation[start:start + config.batch_size]
-            spikes = encode_windows(
-                windows[index],
-                encode_spec,
-                delta_along_window=config.delta_along_window,
-            )
-            logits = _mean_logits(module, spikes)
-            loss = cross_entropy(logits, labels[index])
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            epoch_loss += float(loss.item())
-            correct += int(
-                (logits.argmax(dim=-1) == labels[index]).sum().item()
-            )
-            batches += 1
-        history.append(
-            {
-                "epoch": float(epoch),
-                "loss": epoch_loss / max(batches, 1),
-                "train_accuracy": correct / max(total, 1),
-            }
-        )
-    module.eval()
-    return StreamTrainingResult(
-        spec=spec,
-        module=module,
-        config=config,
-        encode_spec=encode_spec,
-        history=tuple(history),
+    history = _run_epochs(
+        module, optimizer, train, encode_spec, config, order
     )
+    return _finalize_training(spec, module, config, encode_spec, history)
 
 
-def class_metrics(
-    y_true: torch.Tensor, y_pred: torch.Tensor, num_classes: int
-) -> Dict[str, Any]:
-    """Return accuracy, macro-F1, balanced accuracy, and per-class recall."""
-    truth = torch.as_tensor(y_true, dtype=torch.long)
-    pred = torch.as_tensor(y_pred, dtype=torch.long)
-    total = int(truth.numel())
-    if total == 0:
-        return {
-            "accuracy": 0.0,
-            "macro_f1": 0.0,
-            "balanced_accuracy": 0.0,
-            "per_class_recall": [0.0] * int(num_classes),
-        }
-    confusion = torch.bincount(
+def _empty_class_metrics(num_classes: int) -> Dict[str, Any]:
+    """Return zeroed metrics when there are no samples."""
+    return {
+        "accuracy": 0.0,
+        "macro_f1": 0.0,
+        "balanced_accuracy": 0.0,
+        "per_class_recall": [0.0] * int(num_classes),
+    }
+
+
+def _confusion_matrix(
+    truth: torch.Tensor, pred: torch.Tensor, num_classes: int
+) -> torch.Tensor:
+    """Return the ``[C, C]`` confusion matrix for ``truth``/``pred``."""
+    counts = torch.bincount(
         truth * int(num_classes) + pred, minlength=int(num_classes) ** 2
-    ).reshape(int(num_classes), int(num_classes)).float()
+    )
+    return counts.reshape(int(num_classes), int(num_classes)).float()
+
+
+def _precision_recall_f1(
+    confusion: torch.Tensor,
+) -> Tuple[torch.Tensor, float, float]:
+    """Return recall, macro-F1, and balanced accuracy from ``confusion``."""
     diag = torch.diagonal(confusion)
-    accuracy = float(diag.sum().item() / total)
     support = confusion.sum(dim=1)
     predicted = confusion.sum(dim=0)
     recall = diag / support.clamp_min(1.0)
@@ -207,6 +253,21 @@ def class_metrics(
     balanced = (
         float(recall[present].mean().item()) if bool(present.any()) else 0.0
     )
+    return recall, macro_f1, balanced
+
+
+def class_metrics(
+    y_true: torch.Tensor, y_pred: torch.Tensor, num_classes: int
+) -> Dict[str, Any]:
+    """Return accuracy, macro-F1, balanced accuracy, and per-class recall."""
+    truth = torch.as_tensor(y_true, dtype=torch.long)
+    pred = torch.as_tensor(y_pred, dtype=torch.long)
+    total = int(truth.numel())
+    if total == 0:
+        return _empty_class_metrics(num_classes)
+    confusion = _confusion_matrix(truth, pred, num_classes)
+    recall, macro_f1, balanced = _precision_recall_f1(confusion)
+    accuracy = float(torch.diagonal(confusion).sum().item() / total)
     return {
         "accuracy": accuracy,
         "macro_f1": macro_f1,
@@ -304,6 +365,36 @@ def fit_threshold(
     return anomaly_threshold(anomaly_scores(logits), percentile)
 
 
+def _classification_report(
+    module: StageModule, dataset: StreamDataset, config: StreamTrainConfig
+) -> Tuple[Dict[str, Any], torch.Tensor]:
+    """Return the class-metrics report and the raw logits it was scored on."""
+    logits = predict_logits(module, dataset.windows, config)
+    predictions = logits.argmax(dim=-1)
+    report = class_metrics(dataset.labels, predictions, config.num_classes)
+    report.pop("_flat", None)
+    return report, logits
+
+
+def _anomaly_report(
+    logits: torch.Tensor, dataset: StreamDataset, threshold: Optional[float]
+) -> Dict[str, Any]:
+    """Return the anomaly-detection fields of the evaluation report."""
+    scores = anomaly_scores(logits)
+    resolved = (
+        anomaly_threshold(scores) if threshold is None else float(threshold)
+    )
+    flags = anomaly_rule(scores, resolved)
+    precision, recall = _precision_recall(flags, dataset.anomaly)
+    return {
+        "num_windows": len(dataset),
+        "anomaly_threshold": resolved,
+        "anomaly_auroc": auroc(scores, dataset.anomaly),
+        "anomaly_precision": precision,
+        "anomaly_recall": recall,
+    }
+
+
 def evaluate(
     module: StageModule,
     dataset: StreamDataset,
@@ -317,25 +408,6 @@ def evaluate(
     convenience; a real deployment rule fits the threshold with
     :func:`fit_threshold` on the train split (as the tests and example do).
     """
-    logits = predict_logits(module, dataset.windows, config)
-    predictions = logits.argmax(dim=-1)
-    report: Dict[str, Any] = class_metrics(
-        dataset.labels, predictions, config.num_classes
-    )
-    report.pop("_flat", None)
-    scores = anomaly_scores(logits)
-    resolved = (
-        anomaly_threshold(scores) if threshold is None else float(threshold)
-    )
-    flags = anomaly_rule(scores, resolved)
-    precision, recall = _precision_recall(flags, dataset.anomaly)
-    report.update(
-        {
-            "num_windows": len(dataset),
-            "anomaly_threshold": resolved,
-            "anomaly_auroc": auroc(scores, dataset.anomaly),
-            "anomaly_precision": precision,
-            "anomaly_recall": recall,
-        }
-    )
+    report, logits = _classification_report(module, dataset, config)
+    report.update(_anomaly_report(logits, dataset, threshold))
     return report

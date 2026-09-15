@@ -33,6 +33,58 @@ def _parse(raw: bytes) -> Any:
     return json.loads(raw.decode("utf-8"))
 
 
+def _collector() -> Any:
+    """Return a list and an ASGI ``send`` callable that appends to it."""
+    sent: List[Dict[str, Any]] = []
+
+    async def send(message: Dict[str, Any]) -> None:
+        """Record one message into ``sent``."""
+        sent.append(message)
+
+    return sent, send
+
+
+def _fill_queue(messages: List[Any]) -> asyncio.Queue[Dict[str, Any]]:
+    """Return a queue pre-loaded with connect/receive/disconnect frames."""
+    queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
+    queue.put_nowait({"type": "websocket.connect"})
+    for message in messages:
+        queue.put_nowait(
+            {"type": "websocket.receive", "text": json.dumps(message)}
+        )
+    queue.put_nowait({"type": "websocket.disconnect", "code": 1000})
+    return queue
+
+
+def _asgi_base(path: str) -> Dict[str, Any]:
+    """Return the ASGI scope fields common to http and websocket."""
+    return {
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "path": path,
+        "raw_path": path.encode(),
+        "query_string": b"",
+        "root_path": "",
+        "client": ("spikeforge-clients", 50000),
+        "server": ("testserver", 80),
+    }
+
+
+def _collect_response(sent: List[Dict[str, Any]]) -> Response:
+    """Extract the status and JSON body from collected ASGI messages."""
+    status = next(
+        item["status"]
+        for item in sent
+        if item["type"] == "http.response.start"
+    )
+    chunks = [
+        item["body"]
+        for item in sent
+        if item["type"] == "http.response.body"
+    ]
+    return Response(int(status), _parse(b"".join(chunks)))
+
+
 class ASGITransport:
     """Drive an ASGI ``app`` with no socket, for tests and embedding."""
 
@@ -60,35 +112,15 @@ class ASGITransport:
     ) -> Response:
         """Feed one http scope to the app and collect the response."""
         raw = b"" if payload is None else json.dumps(payload).encode()
-        sent: List[Dict[str, Any]] = []
+        sent, send = _collector()
 
         async def receive() -> Dict[str, Any]:
             """Return the whole request body once."""
-            return {
-                "type": "http.request",
-                "body": raw,
-                "more_body": False,
-            }
+            return {"type": "http.request", "body": raw, "more_body": False}
 
-        async def send(message: Dict[str, Any]) -> None:
-            """Record one response message."""
-            sent.append(message)
-
-        scope = self._http_scope(
-            method, path, payload is not None, headers
-        )
+        scope = self._http_scope(method, path, payload is not None, headers)
         await self._app(scope, receive, send)
-        status = next(
-            item["status"]
-            for item in sent
-            if item["type"] == "http.response.start"
-        )
-        chunks = [
-            item["body"]
-            for item in sent
-            if item["type"] == "http.response.body"
-        ]
-        return Response(int(status), _parse(b"".join(chunks)))
+        return _collect_response(sent)
 
     def stream(
         self,
@@ -107,25 +139,12 @@ class ASGITransport:
         self, path: str, messages: List[Any]
     ) -> List[Dict[str, Any]]:
         """Feed one websocket scope to the app and collect sent frames."""
-        queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
-        await queue.put({"type": "websocket.connect"})
-        for message in messages:
-            await queue.put(
-                {
-                    "type": "websocket.receive",
-                    "text": json.dumps(message),
-                }
-            )
-        await queue.put({"type": "websocket.disconnect", "code": 1000})
-        sent: List[Dict[str, Any]] = []
+        queue = _fill_queue(messages)
+        sent, send = _collector()
 
         async def receive() -> Dict[str, Any]:
             """Return the next queued client message."""
             return await queue.get()
-
-        async def send(message: Dict[str, Any]) -> None:
-            """Record one server frame."""
-            sent.append(message)
 
         await self._app(self._ws_scope(path), receive, send)
         return sent
@@ -138,34 +157,18 @@ class ASGITransport:
         headers: Optional[Mapping[str, str]],
     ) -> Dict[str, Any]:
         """Return an ASGI http scope for ``method`` and ``path``."""
-        return {
-            "type": "http",
-            "asgi": {"version": "3.0", "spec_version": "2.3"},
-            "http_version": "1.1",
-            "method": method,
-            "scheme": "http",
-            "path": path,
-            "raw_path": path.encode(),
-            "query_string": b"",
-            "root_path": "",
-            "headers": _pairs(has_body, headers),
-            "client": ("spikeforge-clients", 50000),
-            "server": ("testserver", 80),
-        }
+        scope = _asgi_base(path)
+        scope.update(
+            type="http",
+            method=method,
+            scheme="http",
+            headers=_pairs(has_body, headers),
+        )
+        return scope
 
     def _ws_scope(self, path: str) -> Dict[str, Any]:
         """Return an ASGI websocket scope for ``path``."""
-        return {
-            "type": "websocket",
-            "asgi": {"version": "3.0", "spec_version": "2.3"},
-            "http_version": "1.1",
-            "scheme": "ws",
-            "path": path,
-            "raw_path": path.encode(),
-            "query_string": b"",
-            "root_path": "",
-            "headers": [],
-            "client": ("spikeforge-clients", 50000),
-            "server": ("testserver", 80),
-            "subprotocols": [],
-        }
+        scope = _asgi_base(path)
+        scope.update(type="websocket", scheme="ws", headers=[])
+        scope["subprotocols"] = []
+        return scope

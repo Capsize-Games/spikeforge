@@ -46,21 +46,12 @@ class InferenceSession:
     """
 
     def __init__(
-        self,
-        bundle: DeploymentBundle,
-        module: StageModule,
+        self, bundle: DeploymentBundle, module: StageModule,
         device: Union[str, torch.device] = "cpu",
         mode: ExecutionMode = ExecutionMode.PRODUCTION,
         post_step: Optional[PostStep] = None,
     ) -> None:
-        """Wrap an already-built ``module`` and its ``bundle``.
-
-        ``post_step`` is an optional per-step transform of the stage outputs
-        and carried state, applied by the shared step body. Leaving it unset
-        keeps every step byte-identical; a quantization hook such as
-        ``spikeforge_targets.activation_quant.ActivationQuantizer`` is the
-        intended user, and it records its own error report.
-        """
+        """Wrap ``module`` and ``bundle``; see the ``post_step`` property."""
         self._bundle = bundle
         self._module = module
         self._device = torch.device(device)
@@ -74,27 +65,16 @@ class InferenceSession:
 
     @classmethod
     def load(
-        cls,
-        bundle: Union[DeploymentBundle, str],
+        cls, bundle: Union[DeploymentBundle, str],
         device: Union[str, torch.device] = "cpu",
         mode: ExecutionMode = ExecutionMode.PRODUCTION,
-        strict: bool = True,
-        post_step: Optional[PostStep] = None,
+        strict: bool = True, post_step: Optional[PostStep] = None,
     ) -> "InferenceSession":
-        """Load a session from a bundle object or a ``.spkf`` path.
-
-        ``post_step`` opts into a per-step transform (activation/membrane
-        quantization); it defaults to ``None`` so existing behaviour is
-        unchanged.
-        """
+        """Load a session from a bundle object or a ``.spkf`` path."""
         resolved = _resolve_bundle(bundle, strict)
         module = resolved.build_module(device=device)
         return cls(
-            resolved,
-            module,
-            device=device,
-            mode=mode,
-            post_step=post_step,
+            resolved, module, device=device, mode=mode, post_step=post_step
         )
 
     @property
@@ -181,22 +161,25 @@ class InferenceSession:
         self._totals = _decode_optional(state.get("totals"), self._device)
         self._steps = int(state.get("steps", 0) or 0)
 
-    def _advance(self, inputs: torch.Tensor) -> Prediction:
-        """Run one shared step and fold its readout into the totals."""
+    def _step_once(
+        self, inputs: torch.Tensor
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
+        """Run one shared step under no_grad; update carried state/totals."""
         with torch.no_grad():
             if self._state is None:
                 self._state = dict(initial_state(self._spec, inputs))
             outputs, state = step_stages(
-                self._module,
-                inputs,
-                self._state,
-                post_step=self._post_step,
+                self._module, inputs, self._state, post_step=self._post_step
             )
             readout = outputs[self._spec.output].detach()
             total = readout if self._totals is None else self._totals + readout
             self._state = detach_state(state)
             spikes = self._spikes(outputs)
-            totals = total.detach()
+            return readout, spikes, total.detach()
+
+    def _advance(self, inputs: torch.Tensor) -> Prediction:
+        """Run one shared step and fold its readout into the totals."""
+        readout, spikes, totals = self._step_once(inputs)
         self._totals = totals
         self._steps += 1
         return Prediction(

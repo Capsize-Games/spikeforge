@@ -151,25 +151,51 @@ class PipelineGraph:
         zero-in-degree node is left, they form a cycle.
         """
         self.validate()
-        by_id = {node.id: node for node in self.nodes}
-        in_degree = {node.id: 0 for node in self.nodes}
-        for edge in self.edges:
-            in_degree[edge.target] += 1
-        ready = sorted(
-            node_id for node_id, degree in in_degree.items() if degree == 0
-        )
-        remaining_edges = list(self.edges)
-        ordered: List[PipelineNode] = []
-        while ready:
-            node_id = ready.pop(0)
-            ordered.append(by_id[node_id])
-            outgoing = [e for e in remaining_edges if e.source == node_id]
-            for edge in outgoing:
-                remaining_edges.remove(edge)
-                in_degree[edge.target] -= 1
-                if in_degree[edge.target] == 0:
-                    ready.append(edge.target)
-            ready.sort()
+        ordered = _kahn_order(self.nodes, self.edges)
         if len(ordered) != len(self.nodes):
             raise PipelineGraphError("pipeline graph contains a cycle")
         return ordered
+
+
+def _in_degrees(
+    nodes: Tuple[PipelineNode, ...], edges: Tuple[PipelineEdge, ...]
+) -> Dict[str, int]:
+    """Return each node id's in-degree (count of incoming edges)."""
+    in_degree = {node.id: 0 for node in nodes}
+    for edge in edges:
+        in_degree[edge.target] += 1
+    return in_degree
+
+
+def _kahn_order(
+    nodes: Tuple[PipelineNode, ...], edges: Tuple[PipelineEdge, ...]
+) -> List[PipelineNode]:
+    """Return ``nodes`` in a zero-in-degree-first topological order."""
+    by_id = {node.id: node for node in nodes}
+    in_degree = _in_degrees(nodes, edges)
+    ready = sorted(
+        node_id for node_id, degree in in_degree.items() if degree == 0
+    )
+    remaining_edges = list(edges)
+    ordered: List[PipelineNode] = []
+    while ready:
+        node_id = ready.pop(0)
+        ordered.append(by_id[node_id])
+        _release_targets(node_id, remaining_edges, in_degree, ready)
+        ready.sort()
+    return ordered
+
+
+def _release_targets(
+    node_id: str,
+    remaining_edges: List[PipelineEdge],
+    in_degree: Dict[str, int],
+    ready: List[str],
+) -> None:
+    """Drop ``node_id``'s outgoing edges, queuing newly zero-in-degree ids."""
+    outgoing = [e for e in remaining_edges if e.source == node_id]
+    for edge in outgoing:
+        remaining_edges.remove(edge)
+        in_degree[edge.target] -= 1
+        if in_degree[edge.target] == 0:
+            ready.append(edge.target)

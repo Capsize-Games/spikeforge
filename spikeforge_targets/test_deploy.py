@@ -90,19 +90,11 @@ def _declared_only(
     )
 
 
-def _cell(name: str, graph: Any, spikes: Any) -> DeployCell:
-    """Return the test-deploy cell for ``name`` over a graph and spikes.
-
-    When an executable backend is wired, its own capability-checked
-    availability is what the cell reports; a target with no backend falls back
-    to the registry probe and names that gap rather than reporting a failure.
-    """
-    spec = get_target(name)
-    capability = classify(graph, spec).to_dict()
-    backend = backend_for(name)
-    if backend is None:
-        return _declared_only(spec, available(name), capability)
-    result = compile_run(spec, graph, spikes)
+def _backend_cell(
+    spec: TargetSpec, backend: Any, result: BackendResult,
+    capability: Dict[str, Any],
+) -> DeployCell:
+    """Return the cell for a target whose backend actually ran."""
     parity = result.compare if result.status == STATUS_OK else None
     return DeployCell(
         target=spec.name,
@@ -120,24 +112,34 @@ def _cell(name: str, graph: Any, spikes: Any) -> DeployCell:
     )
 
 
+def _cell(name: str, graph: Any, spikes: Any) -> DeployCell:
+    """Return the test-deploy cell for ``name`` over a graph and spikes.
+
+    An executable backend's own availability is reported; without one, the
+    registry probe names the gap rather than reporting a failure.
+    """
+    spec = get_target(name)
+    capability = classify(graph, spec).to_dict()
+    backend = backend_for(name)
+    if backend is None:
+        return _declared_only(spec, available(name), capability)
+    result = compile_run(spec, graph, spikes)
+    return _backend_cell(spec, backend, result, capability)
+
+
 def _selected(targets: Optional[Iterable[str]]) -> List[str]:
     """Return the target names to run, defaulting to the full registry."""
     return list(targets) if targets is not None else target_names()
 
 
 def run_matrix(
-    graph: Any,
-    spikes: Any,
-    topology: str = DEFAULT_TOPOLOGY,
+    graph: Any, spikes: Any, topology: str = DEFAULT_TOPOLOGY,
     targets: Optional[Iterable[str]] = None,
 ) -> TestDeployMatrix:
     """Test-deploy ``graph`` on every registered simulator; never raise.
 
-    ``graph`` is a target-ready NIR graph and ``spikes`` its ``[T, ...]``
-    input. Each target yields one cell; an absent SDK or a declared-only
-    simulator is reported ``unavailable`` with a named reason, an available
-    backend that refuses the graph is reported ``error`` with the reason, and
-    a completed run carries its reference parity comparison.
+    Each target yields one cell: unavailable, error, or a completed run
+    with its reference parity comparison.
     """
     cells: Tuple[DeployCell, ...] = tuple(
         _cell(name, graph, spikes) for name in _selected(targets)
@@ -153,10 +155,7 @@ def run_matrix(
 
 
 def matrix_by_name(
-    topology: str,
-    steps: int,
-    batch: int,
-    seed: int,
+    topology: str, steps: int, batch: int, seed: int,
     targets: Optional[Iterable[str]] = None,
 ) -> TestDeployMatrix:
     """Test-deploy a shipped topology's graph on a deterministic fixture.
@@ -171,8 +170,5 @@ def matrix_by_name(
         topology, steps, batch, seed
     )
     return run_matrix(
-        to_nir(spec, module),
-        spikes,
-        topology=topology,
-        targets=targets,
+        to_nir(spec, module), spikes, topology=topology, targets=targets
     )

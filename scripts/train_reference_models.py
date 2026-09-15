@@ -38,7 +38,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = REPO_ROOT / "build" / "reference"
@@ -271,6 +271,19 @@ def _full_test_accuracy(engine: Any, dataset: str) -> Dict[str, Any]:
     )
 
 
+def _checkpoint_payload(
+    engine: Any, history: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Return the lean checkpoint payload: weights, meta, manifest."""
+    return {
+        "state_dict": engine.net.state_dict(),
+        "meta": engine._meta(),
+        "history": history[-1:],
+        "manifest": engine._manifest(history[-1:]),
+        "saved_at": time.time(),
+    }
+
+
 def _save_checkpoint(
     engine: Any,
     reference: Reference,
@@ -289,48 +302,44 @@ def _save_checkpoint(
     import torch
 
     path = out / f"{reference.name}.pt"
-    torch.save(
-        {
-            "state_dict": engine.net.state_dict(),
-            "meta": engine._meta(),
-            "history": history[-1:],
-            "manifest": engine._manifest(history[-1:]),
-            "saved_at": time.time(),
-        },
-        path,
-    )
+    torch.save(_checkpoint_payload(engine, history), path)
     return path
+
+
+def _shrink_event_progress(engine: Any) -> None:
+    """Shrink the progress probe on the event-bridged path.
+
+    Bridging is per-sample, so the probe is sized in samples directly
+    rather than by truncating a loader that does not exist here.
+    """
+    from spikeforge.training.event_batches import batch_event_samples
+
+    source = engine._test_source
+    count = min(PROGRESS_SAMPLES, source.size())
+    engine._test_batches = [
+        batch_event_samples(
+            source, engine._spec, range(count), engine._bridge
+        )
+    ]
 
 
 def _shrink_progress_evaluation(engine: Any, dataset: str) -> None:
     """Make the engine's in-training progress check cheap.
 
     ``EvalMixin`` scores four batches of 1000 held-out samples every fifth
-    step, which is right for a live dashboard and ruinous for a full-dataset
-    run: it costs several times more than the training it reports on
-    (``conv_net`` spent over an hour in it). The published number does not
-    come from those checks anyway -- it comes from the full held-out pass in
-    :func:`_full_test_accuracy` once training is done -- so the progress probe
-    is shrunk to a single small batch. It matters more on the event path,
-    where every probe sample is bridged rather than read from a tensor file.
+    step -- ruinous for a full-dataset run (``conv_net`` spent over an hour
+    in it) and unnecessary, since the published number comes from the full
+    held-out pass in :func:`_full_test_accuracy`, not these checks. Shrunk to
+    a single small batch; more so on the event path, where every probe
+    sample is bridged rather than read from a tensor file.
     """
+    if _is_event(dataset):
+        _shrink_event_progress(engine)
+        return
     from itertools import islice
 
     from spikeforge.data.data_loader import build_loader
 
-    if _is_event(dataset):
-        # Bridging is per-sample, so the probe is sized in samples directly
-        # rather than by truncating a loader that does not exist here.
-        from spikeforge.training.event_batches import batch_event_samples
-
-        source = engine._test_source
-        count = min(PROGRESS_SAMPLES, source.size())
-        engine._test_batches = [
-            batch_event_samples(
-                source, engine._spec, range(count), engine._bridge
-            )
-        ]
-        return
     loader = build_loader(dataset, 1, PROGRESS_SAMPLES, train=False)
     engine._test_batches = list(islice(loader, 1))
 
@@ -377,26 +386,24 @@ def _use_full_event_epoch(engine: Any, dataset: str) -> Optional[int]:
     return samples
 
 
-def _train(reference: Reference, out: Path) -> Dict[str, Any]:
-    """Train one configuration, score it, and persist its checkpoint."""
-    print(f"[{reference.name}] training ...", flush=True)
+def _run_training(
+    engine: Any, name: str
+) -> Tuple[List[Dict[str, Any]], float]:
+    """Run the training loop; return its per-epoch history and duration."""
+    print(f"[{name}] training ...", flush=True)
     started = time.perf_counter()
-    engine = _engine_for(reference)
-    _use_full_event_epoch(engine, reference.dataset)
-    _shrink_progress_evaluation(engine, reference.dataset)
     history: List[Dict[str, Any]] = []
-    last: Optional[Dict[str, Any]] = None
     for metrics in engine.train():
         history.append(metrics)
-        last = metrics
     train_seconds = time.perf_counter() - started
-    if last is None:
-        raise RuntimeError(f"{reference.name}: training yielded no metrics")
+    if not history:
+        raise RuntimeError(f"{name}: training yielded no metrics")
+    return history, train_seconds
 
-    scored = _full_test_accuracy(engine, reference.dataset)
-    checkpoint = _save_checkpoint(engine, reference, history, out)
 
-    record = {
+def _reference_fields(reference: Reference) -> Dict[str, Any]:
+    """Return the reference-config fields of a result record."""
+    return {
         "name": reference.name,
         "dataset": reference.dataset,
         "topology": reference.topology,
@@ -409,21 +416,73 @@ def _train(reference: Reference, out: Path) -> Dict[str, Any]:
         "lr": reference.lr,
         "seed": reference.seed,
         "note": reference.note,
-        "final_loss": round(float(last["loss"]), 4),
-        "train_seconds": round(train_seconds, 1),
-        "checkpoint": str(checkpoint.relative_to(REPO_ROOT)),
-        "checkpoint_bytes": checkpoint.stat().st_size,
-        "sha256": _digest(checkpoint),
         "command": reference.command(),
-        **scored,
     }
+
+
+def _build_record(
+    reference: Reference,
+    history: List[Dict[str, Any]],
+    train_seconds: float,
+    scored: Dict[str, Any],
+    checkpoint: Path,
+) -> Dict[str, Any]:
+    """Assemble the JSON-ready result record for one trained config."""
+    last = history[-1]
+    record = _reference_fields(reference)
+    record.update(
+        final_loss=round(float(last["loss"]), 4),
+        train_seconds=round(train_seconds, 1),
+        checkpoint=str(checkpoint.relative_to(REPO_ROOT)),
+        checkpoint_bytes=checkpoint.stat().st_size,
+        sha256=_digest(checkpoint),
+        **scored,
+    )
+    return record
+
+
+def _print_train_summary(name: str, record: Dict[str, Any]) -> None:
+    """Print one line summarizing a trained config's held-out score."""
     print(
-        f"[{reference.name}] {record['test_accuracy']}% on "
+        f"[{name}] {record['test_accuracy']}% on "
         f"{record['test_samples']} held-out samples, "
         f"{record['train_seconds']}s",
         flush=True,
     )
+
+
+def _train(reference: Reference, out: Path) -> Dict[str, Any]:
+    """Train one configuration, score it, and persist its checkpoint."""
+    engine = _engine_for(reference)
+    _use_full_event_epoch(engine, reference.dataset)
+    _shrink_progress_evaluation(engine, reference.dataset)
+    history, train_seconds = _run_training(engine, reference.name)
+    scored = _full_test_accuracy(engine, reference.dataset)
+    checkpoint = _save_checkpoint(engine, reference, history, out)
+    record = _build_record(
+        reference, history, train_seconds, scored, checkpoint
+    )
+    _print_train_summary(reference.name, record)
     return record
+
+
+def _markdown_row(record: Dict[str, Any]) -> str:
+    """Return one Markdown table row for a trained config's result."""
+    return (
+        f"| `{record['name']}` | {record['dataset']} | "
+        f"`{record['topology']}` | **{record['test_accuracy']}%** | "
+        f"{record['epochs']} | {record['num_steps']} | "
+        f"{record['train_seconds']} s |"
+    )
+
+
+def _markdown_footer(hardware: Dict[str, Any]) -> str:
+    """Return the hardware footer line for the results table."""
+    return (
+        f"Hardware: {hardware['processor']}, "
+        f"{hardware['torch_threads']} torch threads, CPU only. "
+        f"Python {hardware['python']}, torch {hardware['torch']}."
+    )
 
 
 def _markdown(records: List[Dict[str, Any]], hardware: Dict[str, Any]) -> str:
@@ -433,21 +492,8 @@ def _markdown(records: List[Dict[str, Any]], hardware: Dict[str, Any]) -> str:
         "Steps | Train time |",
         "|---|---|---|---|---|---|---|",
     ]
-    for record in records:
-        lines.append(
-            f"| `{record['name']}` | {record['dataset']} | "
-            f"`{record['topology']}` | **{record['test_accuracy']}%** | "
-            f"{record['epochs']} | {record['num_steps']} | "
-            f"{record['train_seconds']} s |"
-        )
-    lines.extend(
-        [
-            "",
-            f"Hardware: {hardware['processor']}, "
-            f"{hardware['torch_threads']} torch threads, CPU only. "
-            f"Python {hardware['python']}, torch {hardware['torch']}.",
-        ]
-    )
+    lines.extend(_markdown_row(record) for record in records)
+    lines.extend(["", _markdown_footer(hardware)])
     return "\n".join(lines)
 
 
@@ -458,21 +504,8 @@ CATALOG_PATH = REPO_ROOT / "spikeforge_hub" / "models.json"
 CATALOG_PREFIX = "reference/"
 
 
-def _catalog_entry(record: Dict[str, Any]) -> Dict[str, Any]:
-    """Render one result record as a ``source: "reference"`` catalog entry.
-
-    The dataset's licence and attribution are read from the provenance table
-    that sits beside the dataset registry, never restated here: two copies of
-    a licence is one copy that can go stale.
-    """
-    # Imported here, not at module scope: `spikeforge/__init__` pulls in
-    # torch, and `--list` has to work without it.
-    from spikeforge.data.dataset_provenance import dataset_provenance
-
-    reference = next(
-        item for item in REFERENCES if item.name == record["name"]
-    )
-    provenance = dataset_provenance(record["dataset"])
+def _catalog_identity(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the identity/labelling fields of a catalog entry."""
     return {
         "id": f"{CATALOG_PREFIX}{record['name']}",
         "name": (
@@ -490,23 +523,110 @@ def _catalog_entry(record: Dict[str, Any]) -> Dict[str, Any]:
         "topology": record["topology"],
         "weights": f"{record['name']}.pt",
         "dataset": record["dataset"],
+    }
+
+
+def _catalog_scoring(
+    record: Dict[str, Any], provenance: Any
+) -> Dict[str, Any]:
+    """Return the provenance/scoring fields of a catalog entry."""
+    return {
         "dataset_license": provenance.license,
         "dataset_attribution": provenance.attribution,
         "test_accuracy": record["test_accuracy"],
         "test_samples": record["test_samples"],
         "sha256": record["sha256"],
         "size_bytes": record["checkpoint_bytes"],
-        "notes": (
-            f"Trained by this project on the full {record['dataset']} "
-            f"training split: {record['epochs']} epochs, "
-            f"{record['num_steps']} time steps, seed {record['seed']}, CPU. "
-            f"Scores {record['test_accuracy']}% on all "
-            f"{record['test_samples']} held-out samples. A reference "
-            f"configuration with stock hyperparameters, not a tuned attempt "
-            f"at state of the art. Reproduce with: {record['command']}. "
-            f"{reference.note}"
-        ),
     }
+
+
+def _catalog_fields(
+    record: Dict[str, Any], provenance: Any
+) -> Dict[str, Any]:
+    """Return the catalog entry's fields other than its ``notes``."""
+    fields = _catalog_identity(record)
+    fields.update(_catalog_scoring(record, provenance))
+    return fields
+
+
+def _catalog_notes(record: Dict[str, Any], reference: Reference) -> str:
+    """Return the human-readable reproduction note for a catalog entry."""
+    return (
+        f"Trained by this project on the full {record['dataset']} "
+        f"training split: {record['epochs']} epochs, "
+        f"{record['num_steps']} time steps, seed {record['seed']}, CPU. "
+        f"Scores {record['test_accuracy']}% on all "
+        f"{record['test_samples']} held-out samples. A reference "
+        f"configuration with stock hyperparameters, not a tuned attempt "
+        f"at state of the art. Reproduce with: {record['command']}. "
+        f"{reference.note}"
+    )
+
+
+def _catalog_entry(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Render one result record as a ``source: "reference"`` catalog entry.
+
+    The dataset's licence and attribution are read from the provenance table
+    that sits beside the dataset registry, never restated here: two copies of
+    a licence is one copy that can go stale.
+    """
+    # Imported here, not at module scope: `spikeforge/__init__` pulls in
+    # torch, and `--list` has to work without it.
+    from spikeforge.data.dataset_provenance import dataset_provenance
+
+    reference = next(
+        item for item in REFERENCES if item.name == record["name"]
+    )
+    provenance = dataset_provenance(record["dataset"])
+    entry = _catalog_fields(record, provenance)
+    entry["notes"] = _catalog_notes(record, reference)
+    return entry
+
+
+def _rebuild_with_provenance(
+    entry: Dict[str, Any], wanted: Dict[str, str]
+) -> Dict[str, Any]:
+    """Return ``entry`` with ``wanted`` fields placed beside ``dataset``.
+
+    Rebuilt in order so the two fields sit beside the dataset they describe
+    rather than at the end of the record.
+    """
+    rebuilt: Dict[str, Any] = {}
+    for key, value in entry.items():
+        rebuilt[key] = value
+        if key == "dataset":
+            rebuilt.update(wanted)
+    if "dataset_license" not in rebuilt:
+        rebuilt.update(wanted)
+    return rebuilt
+
+
+def _print_synced_entry(entry: Dict[str, Any], provenance: Any) -> None:
+    """Print the provenance change for one synced catalog entry."""
+    print(
+        f"provenance {entry['id']}: {provenance.license} "
+        f"({provenance.source})"
+    )
+
+
+def _sync_entry(entry: Dict[str, Any]) -> bool:
+    """Refresh one catalog entry's provenance; report if it changed."""
+    from spikeforge.data.dataset_provenance import dataset_provenance
+
+    if entry.get("source") != "reference":
+        return False
+    provenance = dataset_provenance(str(entry["dataset"]))
+    wanted = {
+        "dataset_license": provenance.license,
+        "dataset_attribution": provenance.attribution,
+    }
+    if all(entry.get(k) == v for k, v in wanted.items()):
+        return False
+    rebuilt = _rebuild_with_provenance(entry, wanted)
+    entry.clear()
+    entry.update(rebuilt)
+    _print_synced_entry(entry, provenance)
+    return True
 
 
 def _sync_provenance() -> int:
@@ -522,36 +642,8 @@ def _sync_provenance() -> int:
 
     Returns the number of entries whose provenance changed.
     """
-    from spikeforge.data.dataset_provenance import dataset_provenance
-
     catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-    changed = 0
-    for entry in catalog["entries"]:
-        if entry.get("source") != "reference":
-            continue
-        provenance = dataset_provenance(str(entry["dataset"]))
-        wanted = {
-            "dataset_license": provenance.license,
-            "dataset_attribution": provenance.attribution,
-        }
-        if all(entry.get(k) == v for k, v in wanted.items()):
-            continue
-        # Rebuild in order so the two fields sit beside the dataset they
-        # describe rather than at the end of the record.
-        rebuilt: Dict[str, Any] = {}
-        for key, value in entry.items():
-            rebuilt[key] = value
-            if key == "dataset":
-                rebuilt.update(wanted)
-        if "dataset_license" not in rebuilt:
-            rebuilt.update(wanted)
-        entry.clear()
-        entry.update(rebuilt)
-        changed += 1
-        print(
-            f"provenance {entry['id']}: {provenance.license} "
-            f"({provenance.source})"
-        )
+    changed = sum(_sync_entry(entry) for entry in catalog["entries"])
     CATALOG_PATH.write_text(
         json.dumps(catalog, indent=2) + "\n", encoding="utf-8"
     )
@@ -559,19 +651,17 @@ def _sync_provenance() -> int:
     return changed
 
 
-def _publish(records: List[Dict[str, Any]], out: Path) -> None:
-    """Copy the checkpoints into the hub package and update its catalog.
-
-    Rewriting the catalog from the results is what keeps the pinned checksum,
-    size, and accuracy true of the bytes that actually shipped -- three fields
-    that are worse than useless when they drift.
-    """
+def _copy_checkpoints(records: List[Dict[str, Any]]) -> None:
+    """Copy every trained checkpoint into the hub's weights directory."""
     WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
     for record in records:
         source = REPO_ROOT / record["checkpoint"]
         shutil.copy2(source, WEIGHTS_DIR / f"{record['name']}.pt")
         print(f"published {record['name']}.pt")
 
+
+def _rewrite_catalog(records: List[Dict[str, Any]]) -> None:
+    """Replace published reference entries with freshly built ones."""
     catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     published = {record["name"] for record in records}
     kept = [
@@ -590,12 +680,19 @@ def _publish(records: List[Dict[str, Any]], out: Path) -> None:
     )
 
 
-def main(argv: Optional[List[str]] = None) -> int:
-    """Train the selected reference configurations and write the results."""
-    parser = argparse.ArgumentParser(
-        prog="train_reference_models",
-        description=__doc__.splitlines()[0],
-    )
+def _publish(records: List[Dict[str, Any]], out: Path) -> None:
+    """Copy the checkpoints into the hub package and update its catalog.
+
+    Rewriting the catalog from the results is what keeps the pinned checksum,
+    size, and accuracy true of the bytes that actually shipped -- three fields
+    that are worse than useless when they drift.
+    """
+    _copy_checkpoints(records)
+    _rewrite_catalog(records)
+
+
+def _add_selection_args(parser: argparse.ArgumentParser) -> None:
+    """Add the flags that pick which configs to run and how."""
     parser.add_argument(
         "--only",
         action="append",
@@ -614,6 +711,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         default=None,
         help="torch CPU threads; defaults to torch's own choice",
     )
+
+
+def _add_action_args(parser: argparse.ArgumentParser) -> None:
+    """Add the flags that select a mode instead of training normally."""
     parser.add_argument(
         "--list",
         action="store_true",
@@ -627,6 +728,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             "rewrite the catalog's reference entries to match"
         ),
     )
+
+
+def _add_sync_provenance_arg(parser: argparse.ArgumentParser) -> None:
+    """Add the ``--sync-provenance`` maintenance-mode flag."""
     parser.add_argument(
         "--sync-provenance",
         action="store_true",
@@ -636,27 +741,55 @@ def main(argv: Optional[List[str]] = None) -> int:
             "retraining anything, and exit"
         ),
     )
-    args = parser.parse_args(argv)
 
-    if args.sync_provenance:
-        _sync_provenance()
-        return 0
 
-    if args.list:
-        for reference in REFERENCES:
-            print(f"{reference.name}\t{reference.dataset}\t"
-                  f"{reference.topology}")
-        return 0
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser."""
+    parser = argparse.ArgumentParser(
+        prog="train_reference_models",
+        description=__doc__.splitlines()[0],
+    )
+    _add_selection_args(parser)
+    _add_action_args(parser)
+    _add_sync_provenance_arg(parser)
+    return parser
 
-    selected = [
+
+def _print_config_names() -> None:
+    """Print each reference configuration's name, dataset, and topology."""
+    for reference in REFERENCES:
+        print(
+            f"{reference.name}\t{reference.dataset}\t{reference.topology}"
+        )
+
+
+def _select_references(only: Optional[List[str]]) -> List[Reference]:
+    """Return the reference configs matching ``--only``, or all of them."""
+    return [
         reference
         for reference in REFERENCES
-        if args.only is None or reference.name in set(args.only)
+        if only is None or reference.name in set(only)
     ]
-    if not selected:
-        print(f"no configuration matched {args.only}", file=sys.stderr)
-        return 2
 
+
+def _write_results(
+    records: List[Dict[str, Any]], hardware: Dict[str, Any], out: Path
+) -> None:
+    """Write ``results.json`` and ``results.md`` under ``out``."""
+    payload = {"hardware": hardware, "results": records}
+    (out / "results.json").write_text(
+        json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+    )
+    (out / "results.md").write_text(
+        _markdown(records, hardware) + "\n", encoding="utf-8"
+    )
+    print(f"\nwrote {out / 'results.json'} and {out / 'results.md'}")
+
+
+def _train_and_write(
+    args: argparse.Namespace, selected: List[Reference]
+) -> int:
+    """Train every selected config, write results, and optionally publish."""
     import torch
 
     if args.threads:
@@ -666,18 +799,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     hardware = _hardware()
     records = [_train(reference, out) for reference in selected]
-
-    payload = {"hardware": hardware, "results": records}
-    (out / "results.json").write_text(
-        json.dumps(payload, indent=2) + "\n", encoding="utf-8"
-    )
-    (out / "results.md").write_text(
-        _markdown(records, hardware) + "\n", encoding="utf-8"
-    )
-    print(f"\nwrote {out / 'results.json'} and {out / 'results.md'}")
+    _write_results(records, hardware, out)
     if args.publish:
         _publish(records, out)
     return 0
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """Train the selected reference configurations and write the results."""
+    args = _build_parser().parse_args(argv)
+    if args.sync_provenance:
+        _sync_provenance()
+        return 0
+    if args.list:
+        _print_config_names()
+        return 0
+    selected = _select_references(args.only)
+    if not selected:
+        print(f"no configuration matched {args.only}", file=sys.stderr)
+        return 2
+    return _train_and_write(args, selected)
 
 
 if __name__ == "__main__":
