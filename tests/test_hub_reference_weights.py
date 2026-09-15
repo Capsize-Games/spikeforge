@@ -15,7 +15,11 @@ import pytest
 import torch
 
 from spikeforge_hub.catalog import CATALOG_PATH, availability, entries
-from spikeforge_hub.entry import WEIGHTS_DIR, HubEntry
+from spikeforge_hub.entry import (
+    UNVERIFIED_CANDIDATE,
+    WEIGHTS_DIR,
+    HubEntry,
+)
 from spikeforge_hub.errors import HubArtifactError, HubCatalogError
 from spikeforge_hub.inspect import (
     STATE_DICT,
@@ -40,6 +44,8 @@ def _reference(**overrides: Any) -> Dict[str, Any]:
         "notes": "Trained by this project.",
         "weights": "example.pt",
         "dataset": "mnist",
+        "dataset_license": "CC-BY-SA-4.0",
+        "dataset_attribution": "Example dataset, by someone else.",
         "sha256": "0" * 64,
         "test_accuracy": 94.0,
         "test_samples": 10000,
@@ -87,13 +93,15 @@ def test_a_bundled_entry_is_not_trained() -> None:
         ("weights", "weights"),
         ("sha256", "sha256"),
         ("dataset", "dataset"),
+        ("dataset_license", "dataset_license"),
+        ("dataset_attribution", "dataset_attribution"),
         ("test_accuracy", "test_accuracy"),
     ],
 )
 def test_a_reference_entry_must_declare_its_evidence(
     field: str, detail: str
 ) -> None:
-    """Dropping any of the four load-bearing fields is rejected by name."""
+    """Dropping any load-bearing field is rejected by name."""
     data = _reference()
     data[field] = None
     with pytest.raises(HubCatalogError) as error:
@@ -322,3 +330,64 @@ def test_a_reference_entry_survives_the_import_funnel(
         pytest.skip("no reference entries are shipped in this catalog")
     result = import_model(entry_id=shipped[0].id)
     assert result["verdict"]["verdict"] != "incompatible", result["verdict"]
+
+
+def test_every_shipped_entry_declares_its_training_data_terms() -> None:
+    """No shipped checkpoint leaves what its training data permits unsaid.
+
+    The `license` beside it covers the weights, which are this project's own.
+    An entry recording one and not the other invites a reader to assume the
+    first answers both questions.
+    """
+    from spikeforge.data.dataset_provenance import dataset_provenance
+
+    shipped = _shipped()
+    assert shipped
+    for entry in shipped:
+        provenance = dataset_provenance(str(entry.dataset))
+        assert entry.dataset_license == provenance.license, entry.id
+        assert entry.dataset_attribution == provenance.attribution, entry.id
+        assert entry.license == "BSD-3-Clause", entry.id
+
+
+def test_a_dataset_licence_is_never_free_text() -> None:
+    """`dataset_license` is held to the same rule as `license`."""
+    for value in ("see upstream", "unknown", "TBD", "CC BY-SA 4.0 probably"):
+        with pytest.raises(HubCatalogError) as error:
+            HubEntry.from_dict(_reference(dataset_license=value))
+        assert "dataset_license" in str(error.value)
+
+
+def test_an_unverified_dataset_licence_is_allowed_and_disclosed() -> None:
+    """The marker records an unconfirmed licence rather than inventing one.
+
+    It is accepted on a reference entry deliberately: four shipped MNIST
+    checkpoints carry it, because MNIST's own terms could not be read from a
+    primary source. Refusing it would force a guess.
+    """
+    entry = HubEntry.from_dict(
+        _reference(dataset_license=UNVERIFIED_CANDIDATE)
+    )
+    assert entry.dataset_license == UNVERIFIED_CANDIDATE
+
+
+def test_an_unverified_dataset_licence_does_not_gate_availability() -> None:
+    """What the data permits is disclosure, not a claim about the weights."""
+    entry = HubEntry.from_dict(
+        _reference(dataset_license=UNVERIFIED_CANDIDATE)
+    )
+    available, reason = availability(entry)
+    assert available is True
+    assert reason is None
+
+
+def test_the_catalog_round_trips_the_provenance_fields() -> None:
+    """Both fields survive the schema projection in declared order."""
+    entry = HubEntry.from_dict(_reference())
+    payload = entry.to_dict()
+    keys = list(payload)
+    assert keys.index("dataset") < keys.index("dataset_license")
+    assert keys.index("dataset_license") < keys.index("dataset_attribution")
+    assert payload["dataset_attribution"] == (
+        "Example dataset, by someone else."
+    )

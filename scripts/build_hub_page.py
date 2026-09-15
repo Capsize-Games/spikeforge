@@ -33,13 +33,16 @@ UNVERIFIED_CANDIDATE = "unverified-candidate"
 TRAINED_SOURCE = "reference"
 
 _STYLE = """
-body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem
+body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 2rem
   auto; padding: 0 1rem; color: #1a1a1a; background: #fff; }
 h1 { margin-bottom: 0.25rem; }
 .sub { color: #555; margin-top: 0; }
 .notice { background: #fff8e1; border: 1px solid #e0c46c; border-radius: 6px;
   padding: 0.75rem 1rem; margin: 1.25rem 0; }
-table { border-collapse: collapse; width: 100%; margin-top: 1.5rem; }
+/* Eight columns do not fit a phone; the table scrolls inside its own box
+   rather than making the whole page scroll sideways. */
+.table-scroll { overflow-x: auto; margin-top: 1.5rem; }
+table { border-collapse: collapse; width: 100%; }
 th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid
   #ddd; vertical-align: top; font-size: 0.92rem; }
 th { background: #f5f5f5; }
@@ -50,10 +53,18 @@ th { background: #f5f5f5; }
 .badge-trained { background: #e4edfb; color: #1d4a8f; }
 .badge-untrained { background: #f0f0f0; color: #555; }
 .score { font-variant-numeric: tabular-nums; font-weight: 600; }
+/* The requested credit line is often a full citation; keep it legible but
+   subordinate to the licence id above it. */
+.attribution { color: #555; font-size: 0.8rem; line-height: 1.4; display:
+  inline-block; margin-top: 0.15rem; }
+.muted { color: #888; }
 /* The weights column is the one a visitor scans first; give it room so the
    score does not wrap one word per line. */
 th:nth-child(2), td:nth-child(2) { min-width: 12rem; }
 td:nth-child(2) { font-size: 0.86rem; line-height: 1.45; }
+/* Training data: the citation needs width, or every row grows a tall
+   one-word-per-line column. */
+th:nth-child(7), td:nth-child(7) { min-width: 13rem; }
 code { background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
 footer { margin-top: 2rem; color: #666; font-size: 0.85rem; }
 """
@@ -102,6 +113,32 @@ def _weights_cell(entry: Dict[str, Any]) -> str:
     )
 
 
+def _dataset_cell(entry: Dict[str, Any]) -> str:
+    """Return the cell naming the training data's own terms and credit.
+
+    The `License` column beside this one describes the *weights* -- this
+    project's artifact. This one describes the data they were trained on,
+    which is a different licence with a different holder. Showing only the
+    first invites a reader to assume it covers both.
+    """
+    esc = html.escape
+    dataset = entry.get("dataset")
+    if not dataset:
+        return '<span class="muted">not trained on a dataset</span>'
+    license_id = str(entry.get("dataset_license") or "")
+    unverified = license_id == UNVERIFIED_CANDIDATE
+    badge = (
+        f'<span class="badge badge-unverified">{esc(license_id)}</span>'
+        if unverified
+        else f"<code>{esc(license_id)}</code>"
+    )
+    attribution = esc(str(entry.get("dataset_attribution") or ""))
+    return (
+        f"<strong>{esc(str(dataset))}</strong><br>{badge}<br>"
+        f'<span class="attribution">{attribution}</span>'
+    )
+
+
 def _row(entry: Dict[str, Any]) -> str:
     """Return one ``<tr>`` for ``entry``, HTML-escaping every field."""
     esc = html.escape
@@ -121,6 +158,7 @@ def _row(entry: Dict[str, Any]) -> str:
     <code>{esc(str(locator))}</code></td>
   <td>{esc(str(entry.get("license", "")))}
     <span class="badge {badge_class}">{badge_text}</span></td>
+  <td>{_dataset_cell(entry)}</td>
   <td>{esc(str(entry.get("notes", "")))}</td>
 </tr>"""
 
@@ -182,13 +220,16 @@ weights, {verified_count} with a verified source and license. Generated from
 <code>scripts/build_hub_page.py</code> -- not a live view of what is
 downloaded or cached.</p>
 {_notice(trained_count)}
+<div class="table-scroll">
 <table>
 <thead><tr><th>Name / id</th><th>Weights</th><th>Framework</th><th>Kind</th>
-<th>Source</th><th>License</th><th>Notes</th></tr></thead>
+<th>Source</th><th>License</th><th>Training data</th>
+<th>Notes</th></tr></thead>
 <tbody>
 {rows}
 </tbody>
 </table>
+</div>
 <footer>
 Browse locally with <code>pip install spikeforge-hub &amp;&amp;
 spikeforge-hub list</code>, or from the
