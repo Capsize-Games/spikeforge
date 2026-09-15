@@ -104,7 +104,24 @@ tests. It must assert the split is *real*, not merely that a flag is accepted:
 - A dataset with no declared test split raises the typed error by name rather
   than returning training data.
 
-### 1.3 Honesty follow-through
+### 1.3 Blast radius — already established, do not re-investigate
+
+Checked on 2026-09-15, so this can be scoped calmly rather than treated as an
+incident:
+
+- **The public dashboard is not affected.** `tonic` is not installed in the
+  deployed image (absent from both `requirements.txt` and the `Dockerfile`, and
+  confirmed absent inside a built container), so `EventTrainingEngine._source()`
+  raises `EventsExtraMissingError` rather than returning a number. The event
+  path fails honestly there instead of reporting a wrong accuracy. The public
+  demo is read-only on top of that.
+- **Who is actually affected:** anyone who installs the `events` extra locally
+  and trains on an event dataset. Real, but bounded — and nobody has published a
+  number from it.
+
+So this is a correctness bug to fix properly and in sequence, not a hotfix.
+
+### 1.4 Honesty follow-through
 
 `_load_test_batches`'s docstring currently states something untrue. Fix it.
 Check whether any dashboard copy, `documentation/` page, or panel label presents
