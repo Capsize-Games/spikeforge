@@ -1,7 +1,20 @@
 # Ecosystem listings — getting spikeforge into the two directories this field searches
 
-**Status:** drafted, not submitted. Both submissions are outward-facing and
-need a maintainer to file them under their own account.
+**Status:** both submitted on 2026-09-15, after the 0.3.5 release put the
+corrected README and metadata on PyPI.
+
+- NIR framework support table: [neuromorphs/NIR#196](https://github.com/neuromorphs/NIR/pull/196)
+- Open Neuromorphic software guide: [open-neuromorphic.github.io#504](https://github.com/open-neuromorphic/open-neuromorphic.github.io/issues/504)
+
+The NIR pull request deviates from the draft below in one place, deliberately.
+The draft assumed a plain ✓ for *Read from NIR*. spikeforge loads a NIR graph
+and **executes** it through the independent interpreter; it does not
+reconstruct a native module the way the other listed frameworks do
+(`nir_bridge/stage_builders.py` and `stage_mapping.py` are export-direction
+only, and nothing builds a `TopologySpec` from a graph). The pull request
+states that difference and invites the maintainers to mark the cell ⬚ if they
+read the column as "convert to native" -- overclaiming a cell in the table
+this project's positioning rests on would cost more than the row is worth.
 
 ## Why this is the promotion work worth doing
 
