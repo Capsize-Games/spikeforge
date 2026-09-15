@@ -16,7 +16,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-serve"
-version = "0.2.2"
+version = "0.2.3"
 description = "Headless REST/WebSocket inference service for a spikeforge deployment bundle."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core and server distributions' metadata approach.
@@ -52,7 +52,7 @@ classifiers = [
 dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
-    "spikeforge~=0.4.0",
+    "spikeforge~=0.5.0",
 ]
 
 [project.optional-dependencies]

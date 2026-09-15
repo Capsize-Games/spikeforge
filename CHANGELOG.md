@@ -11,6 +11,42 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+## [spikeforge-v0.5.0] - 2026-09-15
+
+Released together as one combination, recorded in
+[`compatibility.json`](compatibility.json): `spikeforge` 0.5.0,
+`spikeforge-targets` 0.2.0, `spikeforge-hub` 0.3.1, `spikeforge-server`
+0.3.3, `spikeforge-serve` 0.2.3, `spikeforge-io` 0.1.3, `spikeforge-clients`
+0.1.1.
+
+Only `spikeforge` and `spikeforge_targets` have source changes in this
+release. `spikeforge` takes a **minor** because it gains a public module and
+symbol (`nir_bridge.post_node.PostNode`, exported from `spikeforge.nir_bridge`)
+and because the synthetic deployment fixtures now seed their weights, which
+changes the numbers four CLI commands print — they were previously different
+on every invocation, so nothing that reproduced before stops reproducing, but
+the output is not byte-identical to 0.4.0.
+
+`spikeforge-targets` takes a **minor** because it gains five public modules,
+because `TargetSpec.constraints` now carries `activation_quantization` on
+every target, and because `deploy_report`/`deploy_exit` moved from
+`spikeforge_targets.cli.target_cli` to `spikeforge_targets.cli.deploy_cli`.
+Anything importing those two names from the old module must update the
+import; the `spikeforge-verify deploy` command itself is unchanged apart from
+its new flag.
+
+A core minor invalidates the `spikeforge~=0.4.0` pin in four distributions,
+so `spikeforge-hub`, `spikeforge-server`, `spikeforge-serve` and
+`spikeforge-io` take patches for their widened pins alone.
+`spikeforge-clients` neither changed nor pins core, so it stays at 0.1.1.
+
+This release closes the third of the six documented boundaries. Quantization
+is no longer weight-level only: the drift check can simulate what a
+fixed-point device does to activations and membranes. It remains a
+simulation, and [Implications and boundaries
+§3](documentation/implications-and-boundaries.md) states exactly what is and
+is not modelled.
+
 ### Added
 
 - **The quantization drift check can simulate activation and membrane
