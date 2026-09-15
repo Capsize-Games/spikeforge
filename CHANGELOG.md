@@ -11,7 +11,74 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Added
+
+- **Every trained hub entry now records what its training data permits, and
+  who to credit.** An entry's `license` describes the **weights** — this
+  project's own artifact, BSD-3-Clause — and nothing recorded the terms of the
+  data they encode. That gap was already live: `reference/kmnist-fc-legacy`
+  shipped marked `BSD-3-Clause` while KMNIST is CC BY-SA 4.0 with a specific
+  attribution CODH asks for, which appeared nowhere in the artifact.
+
+  `HubEntry` gains `dataset_license` and `dataset_attribution`, both required
+  for `source: "reference"` alongside `weights`/`sha256`/`dataset`/
+  `test_accuracy`, and `dataset_license` is held to exactly the rule `license`
+  is held to — a concrete SPDX-style id or the `unverified-candidate` marker,
+  never free text. Values come from one table beside the dataset registry
+  ([`spikeforge/data/dataset_provenance.py`](spikeforge/data/dataset_provenance.py))
+  so the catalog and the registry cannot disagree; a test fails if a registry
+  dataset is missing from it. The public page at
+  <https://spikeforge.net/hub/> gains a Training data column, and
+  [`NOTICE.md`](NOTICE.md) carries the attributions.
+
+  Whether trained weights are "adapted material" under a ShareAlike licence is
+  unsettled — the prevailing ML norm says they are not, and Creative Commons
+  state their licences are not designed to govern model weights. This project
+  takes no position. It records the provenance and lets a reader judge, which
+  is the same move it makes everywhere else.
+
+  Licences were read from each publisher's own page: Fashion-MNIST MIT,
+  KMNIST CC BY-SA 4.0 (CODH's requested wording, verbatim), N-MNIST
+  CC BY-SA 4.0, DVS128 Gesture CC BY 4.0, Spiking Speech Commands CC BY 4.0.
+  **MNIST and CIFAR10-DVS are recorded as `unverified-candidate`**: their
+  primary sources were unreachable, and the widely cited licences for both are
+  secondary, so they are not asserted. Four shipped MNIST checkpoints
+  therefore disclose an unverified data licence rather than a guessed one.
+  Unlike `license`, `dataset_license` does not gate availability: what the
+  data permits is disclosure for a reader, not a claim about whether the
+  weights load.
+
+- **`--sync-provenance`** on `scripts/train_reference_models.py` refreshes
+  those two fields from the provenance table without retraining. A licence
+  gets verified, or changes upstream, long after the bytes were published, and
+  republishing a checkpoint to correct a citation would replace the artifact
+  its numbers were measured on. The four fields that describe the bytes are
+  never touched by it.
+
+### Changed
+
+- **`cifar10_dvs` can no longer be trained through `EventTrainingEngine`.**
+  It ships upstream as one undivided pool, so it now declares only a train
+  split, and asking it for held-out data raises the typed
+  `EventSplitMissingError` naming the dataset and the split. Because
+  evaluation runs from the first training step, refusing to score it also
+  refuses to train it — the engine fails at construction rather than part-way
+  through. That is deliberate: the alternative is a partition this project
+  invented, which no published number elsewhere would be comparable to. One
+  line in the registry reverses it if that trade stops being the right one.
+  The other three event datasets are unaffected.
+
 ### Fixed
+
+- **The catalog's license validation let one-word free text through.**
+  `CURATION.md` has always said that `"unknown"` and `"TBD"` are rejected;
+  they were not. The shape rule refused `"see upstream"` only because it
+  contains a space, so any single id-shaped token passed — `unknown`, `TBD`,
+  `NOASSERTION`, `none`, `proprietary` all validated as concrete licences,
+  which is the exact escape the rule exists to close. Those words are now
+  refused by name, case-insensitively and whole-string, so real ids that
+  merely resemble one (`Unlicense`) are unaffected. No shipped entry used one;
+  the documented guarantee simply was not true.
 
 - **Event-dataset "test accuracy" was training accuracy wearing a test
   label.** The event training path had no train/test split anywhere in it.
@@ -33,16 +100,15 @@ that and describe the local source tree only.
   declared split, so the held-out fetch happens in the cancellable child
   rather than inside the training process.
 
-  `cifar10_dvs` ships as one undivided pool upstream and now declares only a
-  train split: asking it for held-out data raises the new typed
-  `EventSplitMissingError`, which names the dataset and the split, instead of
-  quietly returning training data. Because scoring runs on the first training
-  step, that also means it can no longer be trained through this engine at
-  all — a deliberate trade, pending a decision on whether to give it a
-  deterministic partition. The synthetic offline backend gained a genuinely
-  disjoint held-out pool (its own index window and its own column band, with
-  the training stream's samples left byte-identical), and still refuses to
-  call itself a recording.
+  A dataset that declares no test split now raises the new typed
+  `EventSplitMissingError` naming the dataset and the split, rather than
+  quietly returning training data; see **Changed** for what that means for
+  `cifar10_dvs`. The synthetic offline backend gained a genuinely disjoint
+  held-out pool — its own index window *and* its own column band, because the
+  generator ignores its seed when jitter is off, so index 64 would otherwise
+  have produced a sample pixel-identical to training index 16 under a mere
+  relabelling. The training stream's own samples are left byte-identical, and
+  the stream still refuses to call itself a recording.
 
   **Blast radius: no published number is affected.** `tonic` is absent from
   both `requirements.txt` and the `Dockerfile`, so on the deployed dashboard

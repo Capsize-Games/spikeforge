@@ -20,6 +20,7 @@ Usage::
     python scripts/train_reference_models.py                 # all of them
     python scripts/train_reference_models.py --only mnist-fc-legacy
     python scripts/train_reference_models.py --list
+    python scripts/train_reference_models.py --sync-provenance
 
 Outputs (under ``--out``, default ``build/reference/``):
 
@@ -337,10 +338,20 @@ CATALOG_PREFIX = "reference/"
 
 
 def _catalog_entry(record: Dict[str, Any]) -> Dict[str, Any]:
-    """Render one result record as a ``source: "reference"`` catalog entry."""
+    """Render one result record as a ``source: "reference"`` catalog entry.
+
+    The dataset's licence and attribution are read from the provenance table
+    that sits beside the dataset registry, never restated here: two copies of
+    a licence is one copy that can go stale.
+    """
+    # Imported here, not at module scope: `spikeforge/__init__` pulls in
+    # torch, and `--list` has to work without it.
+    from spikeforge.data.dataset_provenance import dataset_provenance
+
     reference = next(
         item for item in REFERENCES if item.name == record["name"]
     )
+    provenance = dataset_provenance(record["dataset"])
     return {
         "id": f"{CATALOG_PREFIX}{record['name']}",
         "name": (
@@ -352,10 +363,14 @@ def _catalog_entry(record: Dict[str, Any]) -> Dict[str, Any]:
         "framework": "snntorch",
         "kind": "state_dict",
         "source": "reference",
+        # This project's own licence, for the weights. The training data's
+        # own terms are a separate question and a separate field.
         "license": "BSD-3-Clause",
         "topology": record["topology"],
         "weights": f"{record['name']}.pt",
         "dataset": record["dataset"],
+        "dataset_license": provenance.license,
+        "dataset_attribution": provenance.attribution,
         "test_accuracy": record["test_accuracy"],
         "test_samples": record["test_samples"],
         "sha256": record["sha256"],
@@ -371,6 +386,56 @@ def _catalog_entry(record: Dict[str, Any]) -> Dict[str, Any]:
             f"{reference.note}"
         ),
     }
+
+
+def _sync_provenance() -> int:
+    """Refresh every reference entry's dataset licence and attribution.
+
+    These two fields are looked up from the provenance table by dataset name,
+    not derived from the checkpoint, so they can be corrected without
+    retraining — and they must be, because a licence gets verified (or
+    changes upstream) long after the bytes were published. Everything that
+    *does* describe the bytes (``sha256``, ``size_bytes``, ``test_accuracy``,
+    ``test_samples``) is left untouched: republishing a checkpoint to fix a
+    citation would replace the artifact the numbers were measured on.
+
+    Returns the number of entries whose provenance changed.
+    """
+    from spikeforge.data.dataset_provenance import dataset_provenance
+
+    catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    changed = 0
+    for entry in catalog["entries"]:
+        if entry.get("source") != "reference":
+            continue
+        provenance = dataset_provenance(str(entry["dataset"]))
+        wanted = {
+            "dataset_license": provenance.license,
+            "dataset_attribution": provenance.attribution,
+        }
+        if all(entry.get(k) == v for k, v in wanted.items()):
+            continue
+        # Rebuild in order so the two fields sit beside the dataset they
+        # describe rather than at the end of the record.
+        rebuilt: Dict[str, Any] = {}
+        for key, value in entry.items():
+            rebuilt[key] = value
+            if key == "dataset":
+                rebuilt.update(wanted)
+        if "dataset_license" not in rebuilt:
+            rebuilt.update(wanted)
+        entry.clear()
+        entry.update(rebuilt)
+        changed += 1
+        print(
+            f"provenance {entry['id']}: {provenance.license} "
+            f"({provenance.source})"
+        )
+    CATALOG_PATH.write_text(
+        json.dumps(catalog, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"catalog provenance synced: {changed} entries updated")
+    return changed
 
 
 def _publish(records: List[Dict[str, Any]], out: Path) -> None:
@@ -441,7 +506,20 @@ def main(argv: Optional[List[str]] = None) -> int:
             "rewrite the catalog's reference entries to match"
         ),
     )
+    parser.add_argument(
+        "--sync-provenance",
+        action="store_true",
+        help=(
+            "rewrite existing reference entries' dataset_license and "
+            "dataset_attribution from the provenance table, without "
+            "retraining anything, and exit"
+        ),
+    )
     args = parser.parse_args(argv)
+
+    if args.sync_provenance:
+        _sync_provenance()
+        return 0
 
     if args.list:
         for reference in REFERENCES:

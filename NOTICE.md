@@ -41,9 +41,47 @@ extra.
   released under the same BSD-3-Clause terms as the rest of the repository.
   This NOTICE grants no right to any third-party model a user chooses to add
   or download.
-- The datasets those reference checkpoints were trained on (MNIST,
-  Fashion-MNIST, Kuzushiji-MNIST) carry their own upstream terms, which are
-  unaffected by this project's license and are not redistributed here.
+- The datasets those reference checkpoints were trained on carry their own
+  upstream terms, which are unaffected by this project's license and are not
+  redistributed here. Each entry now records them in its own fields —
+  `dataset_license` and `dataset_attribution`, separate from the `license`
+  that covers the weights — and they are reproduced under
+  [Training-data attribution](#training-data-attribution) below.
+
+## Training-data attribution
+
+A trained checkpoint's `license` describes **the weights**: this project's own
+artifact, BSD-3-Clause. It says nothing about the data those weights encode.
+Whether trained weights are "adapted material" under a ShareAlike licence is
+genuinely unsettled — the prevailing ML norm says they are not, and Creative
+Commons state their licences are not designed to govern model weights. This
+project takes no position on that question. It records the provenance instead,
+carries the credit each publisher asks for, and leaves the judgement to the
+reader.
+
+The table below is generated from the same source as the catalog's fields —
+[`spikeforge/data/dataset_provenance.py`](spikeforge/data/dataset_provenance.py)
+— so the two cannot disagree. A licence recorded as `unverified-candidate` is
+one this project could **not** confirm from the publisher's own page; it is
+deliberately not filled in from secondary sources.
+
+| Dataset | Upstream licence | Credit |
+|---|---|---|
+| MNIST | `unverified-candidate` | The MNIST database of handwritten digits, Yann LeCun, Corinna Cortes, and Christopher J.C. Burges. |
+| Fashion-MNIST | MIT | Fashion-MNIST, Copyright (c) 2017 Zalando SE (https://tech.zalando.com), MIT licensed. |
+| Kuzushiji-MNIST | CC BY-SA 4.0 | "KMNIST Dataset" (created by CODH), adapted from "Kuzushiji Dataset" (created by NIJL and others), doi:10.20676/00000341 |
+
+The wording for Kuzushiji-MNIST is the attribution CODH asks for and is
+reproduced verbatim.
+
+Datasets the registry can load but no shipped checkpoint was trained on carry
+their provenance in the same table. Those confirmed from the publisher's own
+page are N-MNIST (CC BY-SA 4.0, Orchard et al. 2015), DVS128 Gesture
+(CC BY 4.0, Amir et al., CVPR 2017), and Spiking Speech Commands (CC BY 4.0,
+Cramer et al., IEEE TNNLS 2022). The remainder — CIFAR10-DVS, QMNIST, USPS,
+EMNIST, CIFAR-10 — are recorded as `unverified-candidate` until someone reads
+the publisher's terms; **verify before publishing any checkpoint trained on
+one of them.**
 
 ### Curation
 

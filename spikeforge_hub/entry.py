@@ -48,6 +48,34 @@ _LICENSE = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9.+-]*"
     r"(?:\s+(?:AND|OR|WITH)\s+[A-Za-z0-9][A-Za-z0-9.+-]*)*$"
 )
+#: Single words that are not license ids, however id-shaped they look.
+#:
+#: The shape rule above rejects ``"see upstream"`` because it has a space, but
+#: ``"unknown"``, ``"TBD"`` and ``"NOASSERTION"`` are one token each and used
+#: to pass it -- the exact escape the rule exists to close, wearing an
+#: identifier's shape. Matching is case-insensitive and whole-string, so real
+#: ids that merely resemble one of these (``Unlicense``) are untouched. An
+#: entry whose license genuinely is not established declares
+#: :data:`UNVERIFIED_CANDIDATE`, which is explicit and machine-readable.
+_LICENSE_ESCAPES = frozenset(
+    {
+        "unknown",
+        "unspecified",
+        "unverified",
+        "unlicensed",
+        "tbd",
+        "todo",
+        "none",
+        "noassertion",
+        "n/a",
+        "na",
+        "other",
+        "custom",
+        "various",
+        "proprietary",
+        "private",
+    }
+)
 
 _REQUIRED: Tuple[str, ...] = (
     "id",
@@ -67,6 +95,8 @@ _FIELDS: Tuple[str, ...] = _REQUIRED + (
     "input_shape",
     "weights",
     "dataset",
+    "dataset_license",
+    "dataset_attribution",
     "test_accuracy",
     "test_samples",
 )
@@ -99,6 +129,14 @@ class HubEntry:
     #: dataset's complete held-out split. Present only for trained entries, so
     #: an entry that claims an accuracy is exactly an entry that has weights.
     dataset: Optional[str] = None
+    #: The **training data's** own licence, which is not
+    #: :attr:`license`: that one describes the weights, this project's own
+    #: artifact. A trained entry has to say what the data it encodes permits,
+    #: so the two are recorded separately and neither stands in for the other.
+    dataset_license: Optional[str] = None
+    #: The credit the dataset's publisher asks for, verbatim where they
+    #: request specific wording.
+    dataset_attribution: Optional[str] = None
     test_accuracy: Optional[float] = None
     test_samples: Optional[int] = None
 
@@ -114,6 +152,7 @@ class HubEntry:
         _check_id(data)
         _check_allowed(data)
         _check_license(data)
+        _check_dataset_license(data)
         _check_source(data)
         return cls(**_fields(data))
 
@@ -170,6 +209,17 @@ def _check_allowed(data: Mapping[str, Any]) -> None:
             )
 
 
+def _concrete_license(value: Any) -> bool:
+    """Return True when ``value`` is a concrete SPDX-style id or the marker."""
+    if value == UNVERIFIED_CANDIDATE:
+        return True
+    if not isinstance(value, str):
+        return False
+    if value.strip().lower() in _LICENSE_ESCAPES:
+        return False
+    return bool(_LICENSE.match(value))
+
+
 def _check_license(data: Mapping[str, Any]) -> None:
     """Reject a license that is neither a concrete id nor the marker.
 
@@ -180,13 +230,33 @@ def _check_license(data: Mapping[str, Any]) -> None:
     unavailable by :func:`spikeforge_hub.catalog.availability`.
     """
     value = data.get("license")
-    if value == UNVERIFIED_CANDIDATE:
-        return
-    if isinstance(value, str) and _LICENSE.match(value):
+    if _concrete_license(value):
         return
     raise HubCatalogError(
         _label(data),
         f"license {value!r} is not a concrete SPDX-style id or the "
+        f"{UNVERIFIED_CANDIDATE!r} marker",
+    )
+
+
+def _check_dataset_license(data: Mapping[str, Any]) -> None:
+    """Hold ``dataset_license`` to exactly the rule ``license`` is held to.
+
+    The same rule, deliberately: a looser one would let the training data's
+    terms be recorded as the free text the weights' own licence may not be,
+    which is the escape hatch this validation exists to close. The marker is
+    accepted here too -- a dataset whose upstream terms could not be read
+    from a primary source must say so rather than carry an inferred licence.
+    Unlike :attr:`HubEntry.license`, this field does not gate availability:
+    what the training data permits is disclosure for a reader to judge, not a
+    claim about whether the shipped weights load.
+    """
+    value = data.get("dataset_license")
+    if value is None or _concrete_license(value):
+        return
+    raise HubCatalogError(
+        _label(data),
+        f"dataset_license {value!r} is not a concrete SPDX-style id or the "
         f"{UNVERIFIED_CANDIDATE!r} marker",
     )
 
@@ -211,7 +281,11 @@ def _check_reference(data: Mapping[str, Any]) -> None:
 
     A reference entry is the only kind whose bytes this project vouches for,
     so it has to name the packaged file, pin its checksum, and say what it was
-    trained on -- otherwise "trained weights" is an unfalsifiable claim.
+    trained on -- otherwise "trained weights" is an unfalsifiable claim. It
+    also has to say what that training data permits and who to credit for it:
+    :attr:`HubEntry.license` covers the weights only, and an entry that
+    records one licence while staying silent on the other invites a reader to
+    assume they are the same.
     """
     weights = data.get("weights")
     if not _text(weights):
@@ -232,6 +306,19 @@ def _check_reference(data: Mapping[str, Any]) -> None:
         raise HubCatalogError(
             _label(data),
             "source 'reference' needs the 'dataset' it trained on",
+        )
+    if not _text(data.get("dataset_license")):
+        raise HubCatalogError(
+            _label(data),
+            "source 'reference' needs a 'dataset_license'; an entry that "
+            "cannot say what its training data permits is not one this "
+            "project can stand behind",
+        )
+    if not _text(data.get("dataset_attribution")):
+        raise HubCatalogError(
+            _label(data),
+            "source 'reference' needs a 'dataset_attribution'; the credit "
+            "the dataset's publisher asks for has to travel with the entry",
         )
     if data.get("test_accuracy") is None:
         raise HubCatalogError(

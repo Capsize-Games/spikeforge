@@ -46,9 +46,34 @@ describe the bytes that actually shipped. Those four fields are worse than
 useless when they drift, which is why they are never edited by hand.
 
 Validation enforces the honesty rule for this source: a reference entry must
-name its `weights` file, pin a `sha256`, say which `dataset` it trained on, and
-report a `test_accuracy`. An entry claiming trained weights that cannot say
-what it scores is rejected on load.
+name its `weights` file, pin a `sha256`, say which `dataset` it trained on,
+report a `test_accuracy`, and declare that dataset's own
+`dataset_license` and `dataset_attribution`. An entry claiming trained weights
+that cannot say what it scores, or what the data it encodes permits, is
+rejected on load.
+
+**`license` is the weights; `dataset_license` is the data.** The first is this
+project's own term (`BSD-3-Clause`); the second is the upstream dataset's, with
+a different holder, and neither stands in for the other. Both are held to the
+same rule — a concrete SPDX-style id or the `unverified-candidate` marker, with
+free text rejected — so a dataset whose terms could not be read from the
+publisher's own page says exactly that rather than carrying an inferred
+licence. Unlike `license`, `dataset_license` does **not** gate availability:
+what the training data permits is disclosure for a reader to judge, not a claim
+about whether the shipped weights load.
+
+Neither field is hand-written. Both are looked up by dataset name from
+[`spikeforge/data/dataset_provenance.py`](../spikeforge/data/dataset_provenance.py),
+which sits beside the dataset registry so the two cannot drift. When a licence
+is later verified or changes upstream, refresh the catalog without retraining:
+
+```bash
+python scripts/train_reference_models.py --sync-provenance
+```
+
+That rewrites only those two fields. The four that describe the shipped bytes
+are never touched by it, because republishing a checkpoint to correct a
+citation would replace the artifact its numbers were measured on.
 
 **These are reference configurations, not state-of-the-art claims.** Stock
 hyperparameters, modest epoch counts, one seed, CPU. Each entry's `notes` names

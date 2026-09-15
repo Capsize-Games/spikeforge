@@ -14,10 +14,12 @@ what tells them apart, and the distinction matters:
   and loaded (never rebuilt) by
   [`inspect.reference_path()`](../spikeforge_hub/inspect.py:82), verified
   against the checksum the catalog pins. Each entry records the dataset it
-  trained on and what it scores on that dataset's **complete** held-out split.
-  These are reference configurations with stock hyperparameters, not tuned
-  attempts at state of the art — [Benchmarks](benchmarks.md) has the full
-  table and the command that reproduces each row.
+  trained on, what it scores on that dataset's **complete** held-out split,
+  and — separately from its own `license` — that dataset's `dataset_license`
+  and `dataset_attribution`. These are reference configurations with stock
+  hyperparameters, not tuned attempts at state of the art —
+  [Benchmarks](benchmarks.md) has the full table and the command that
+  reproduces each row.
 - **`"source": "bundled"` — structure only.** A NIR graph rendered on demand
   from one of this project's own topology presets, with freshly-initialised
   weights. Useful for checking an exported graph against a known-good shape;
@@ -32,8 +34,36 @@ python scripts/train_reference_models.py --publish
 
 Never hand-edit those four fields: they are worth nothing once they drift from
 the bytes that shipped, and validation rejects a reference entry that cannot
-name its weights file, pin a checksum, say which dataset it trained on, and
-report an accuracy.
+name its weights file, pin a checksum, say which dataset it trained on, report
+an accuracy, and declare that dataset's own licence and attribution.
+
+### The weights' licence is not the data's licence
+
+An entry's `license` covers the **weights**: this project's own artifact,
+`BSD-3-Clause`. `dataset_license` covers the data those weights encode, which
+has a different holder and different terms — KMNIST is CC BY-SA 4.0 with a
+specific wording its publisher asks for, carried verbatim in
+`dataset_attribution`. Both fields are held to the same rule: a concrete
+SPDX-style id or the explicit `unverified-candidate` marker, with free text
+rejected. Unlike `license`, `dataset_license` does not gate availability —
+what the training data permits is disclosure for a reader to judge, not a
+claim about whether the shipped weights load.
+
+Whether trained weights are "adapted material" under a ShareAlike licence is
+genuinely unsettled, and this project takes no position on it. Recording the
+provenance removes the need to have one.
+
+Both fields are looked up by dataset name from
+[`dataset_provenance.py`](../spikeforge/data/dataset_provenance.py), which sits
+beside the dataset registry so the two cannot drift. A licence recorded there
+as `unverified-candidate` is one that could **not** be read from the
+publisher's own page — MNIST and CIFAR10-DVS are both in that state — and is
+deliberately not filled in from secondary sources. When one is later
+confirmed, refresh the catalog without retraining:
+
+```bash
+python scripts/train_reference_models.py --sync-provenance
+```
 
 The catalog renders fully offline. Entries are validated into a
 [`HubEntry`](../spikeforge_hub/entry.py:1); a malformed entry is *reported*
