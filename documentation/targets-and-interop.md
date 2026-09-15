@@ -11,8 +11,10 @@ import/export surface with a round-trip fidelity guarantee. Every surface
 [`spikeforge_targets/`](../spikeforge_targets/__init__.py:1) declares
 what each target *can* run as a [`TargetSpec`](../spikeforge_targets/target_spec.py:10):
 its kind, the pip `extra` that would install its SDK, the primitives it
-supports, its substitutions, and its constraints (dtype, timestep,
-quantization). The registry ships:
+supports, its substitutions, and its constraints (dtype, timestep, weight
+`quantization`, and `activation_quantization`, which is `none` on every
+shipped target because the vendors' state widths are not verified here).
+The registry ships:
 
 | Target | Kind | Extra | Notes |
 |---|---|---|---|
@@ -99,7 +101,10 @@ python -m spikeforge.cli.verify test-deploy --topology fc_legacy
 ```
 
 `targets` lists the registry with live availability; `deploy` classifies a
-topology against a target and exits `0` only when `deployable`; `roundtrip`
+topology against a target and exits `0` only when `deployable` (its
+`--activation-quantization <scheme>` flag makes the quantization drift check
+simulate that activation/membrane scheme, see
+[Implications and boundaries §3](implications-and-boundaries.md)); `roundtrip`
 exits `0` only when the persisted graph is `identical`; `ingest` runs a saved
 external graph and prints its traced nodes, or a typed error with a non-zero
 exit. `ingest` reads the version-stamped JSON envelope written by

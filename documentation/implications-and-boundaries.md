@@ -39,19 +39,49 @@ consequence.
   named stage (for the shipped preset, `embedding`). `sequence_mlp` is the
   NIR-exportable sequence preset because it uses only mappable kinds.
 
-### 3. Quantization is weight-level only
+### 3. Quantization is simulated, not device-exact
 
-- **What it does.** It restricts the weight tensors of affine/conv NIR nodes
-  to the target's declared scheme (int8 symmetric per-tensor, uint8 asymmetric
-  per-tensor), with a per-layer before/after range report and an optional
-  post-quantize drift check. The original graph is never mutated.
-- **Implication.** There is no activation or membrane quantization, no
-  calibration dataset, no integer-accumulation/saturation modelling, no
-  per-channel schemes, and no device kernel — so it *estimates* a target's
-  precision impact; it does not reproduce the vendor compiler's numerics, and
-  executing a quantized graph still requires the target SDK. A target whose
-  declared scheme is `none` is a reported no-op, and an unsupported scheme
-  (for example `int4`) is reported unapplied rather than silently ignored.
+- **What it does.** Weights are restricted in the graph itself: the weight
+  tensors of affine/conv NIR nodes go onto the target's declared scheme (int8
+  symmetric per-tensor, uint8 asymmetric per-tensor) with a per-layer
+  before/after range report, and the original graph is never mutated.
+  Activations and membranes cannot be restricted in a NIR graph, so they are
+  quantized *at execution time* instead: the post-quantize drift check runs
+  the quantized graph through the reference interpreter under a hook that
+  snaps every computed node output, every carried membrane and synaptic
+  current, and the membrane each step records onto a symmetric fixed-point
+  grid, and the same schemes serve a bundle through `InferenceSession`. The grid is fixed from a calibration
+  (folded from the drift fixture itself unless a calibration dataset's ranges
+  are supplied), and the report records per-tensor ranges, the error each
+  grid introduced, and under `drift.includes` which roundings the drift
+  figure covers.
+- **Why the boundary remains.** The snap happens after each node's floating
+  update, so the threshold comparison still sees a float membrane: the grid
+  is applied to the values a step produces, never to the arithmetic that
+  produced them. Integer accumulation, accumulator overflow, per-channel
+  schemes, and the vendor compiler's numerics are not modelled, and executing
+  a quantized graph still requires the target SDK. No shipped
+  target declares an activation scheme: the fixed-point widths a vendor's
+  neuron state actually uses are not verified in this repository, so
+  `activation_quantization` is `none` on every target and a caller opts in
+  explicitly (`quantize(..., activation=...)`,
+  `spikeforge-verify deploy --activation-quantization <scheme>`).
+- **Implication.** The drift check can include the rounding a fixed-point
+  device applies to what flows through the network, not only to its weights,
+  so it no longer understates that part of deployment error — but it is still
+  an *estimate* of a target's precision impact, never a reproduction of the
+  device. A target whose declared weight scheme is `none` is a reported
+  no-op, an unsupported scheme (for example `int4`) is reported unapplied
+  rather than silently ignored, and an activation scheme requested without a
+  spike fixture is reported unapplied because there is nothing to simulate
+  on.
+- **What this page got wrong.** From the day it was written, 2026-09-11 —
+  the same day `spikeforge-targets` began shipping the serving-side
+  `ActivationQuantizer` and its calibration hook — until 2026-09-15 this
+  section said there was "no activation or membrane quantization, no
+  calibration dataset". Both existed on the serving path the whole time;
+  what did not exist until 2026-09-15 was any of it in the target drift
+  check, which stayed weight-only.
 
 ### 4. ONNX is a single-step structural bridge
 

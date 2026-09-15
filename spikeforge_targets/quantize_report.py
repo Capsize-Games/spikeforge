@@ -3,9 +3,13 @@
 ``applied`` is true only when weights were actually restricted to a scheme's
 levels; a target that declares ``none`` or an unknown scheme leaves the graph
 untouched and records the named ``reason`` instead. ``layers`` lists the
-per-layer before/after value ranges so the clamping is visible, and the
-optional ``drift`` section quantifies how far the quantized trajectory moved
-from the original when both were executed by the reference interpreter.
+per-layer before/after value ranges so the clamping is visible, the optional
+``drift`` section quantifies how far the quantized trajectory moved from the
+original when both were executed by the reference interpreter (and names
+under ``includes`` which roundings it covers), and ``activation`` carries
+the simulated activation/membrane scheme's own applied/refused report in
+the shape of
+:class:`~spikeforge_targets.activation_quant_report.ActivationQuantizationReport`.
 """
 
 from dataclasses import dataclass, field
@@ -27,6 +31,7 @@ class QuantizationReport:
     reason: str
     layers: Layers = ()
     drift: Optional[Mapping[str, Any]] = field(default=None)
+    activation: Optional[Mapping[str, Any]] = field(default=None)
 
     def counts(self) -> Dict[str, int]:
         """Return the number of weight-bearing layers quantized."""
@@ -42,4 +47,7 @@ class QuantizationReport:
             "layers": [dict(item) for item in self.layers],
             "counts": self.counts(),
             "drift": None if self.drift is None else dict(self.drift),
+            "activation": (
+                None if self.activation is None else dict(self.activation)
+            ),
         }

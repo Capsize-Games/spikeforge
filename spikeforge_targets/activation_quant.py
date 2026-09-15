@@ -15,17 +15,26 @@ module does not implement is refused in the report rather than approximated,
 and ``none`` is an explicit no-op. :func:`calibrate` is the calibration-dataset
 hook: feed it observed tensors once, then hand the resulting ranges to the
 quantizer so the grid is chosen from data instead of per-step extremes.
+
+The same schemes, grid, and report shape serve the NIR side: the
+:class:`~spikeforge_targets.activation_quant_graph.GraphActivationQuantizer`
+hook applies them to a reference-interpreter run.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
+from typing import Any, Dict, Iterable, Mapping, Optional, Tuple, TypeGuard
 
 import torch
 
 from spikeforge.topology.stage_module import CURRENT_KEY, PREV_KEY
+from spikeforge_targets.activation_quant_records import (
+    RangeRecords,
+    tensor_range,
+)
 from spikeforge_targets.activation_quant_report import (
     ActivationQuantizationReport,
 )
+from spikeforge_targets.fixed_point import EPS, levels_for, snap
 
 #: Quantize spiking activations only.
 TARGET_ACTIVATION = "activation"
@@ -41,8 +50,8 @@ NO_ACTIVATION_SCHEME = "activation quantization is disabled"
 #: Reason recorded for a scheme name this module cannot apply.
 UNKNOWN_ACTIVATION_SCHEME = "unknown activation quantization scheme {scheme!r}"
 
-#: Peak below which a tensor is treated as all-zero.
-_EPS = 1e-12
+#: A running (min, max) per calibration key.
+Ranges = Dict[str, Tuple[float, float]]
 
 
 @dataclass(frozen=True)
@@ -55,15 +64,17 @@ class FixedPointScheme:
 
     def levels(self) -> float:
         """Return the largest magnitude the scheme's grid can represent."""
-        if self.bits <= 0:
-            return 0.0
-        return float(2 ** (self.bits - 1) - 1)
+        return levels_for(self.bits)
+
+    def covers(self, target: str) -> bool:
+        """Return True when the scheme quantizes ``target``'s tensors."""
+        return self.target in (target, TARGET_BOTH)
 
     def grid(self, tensor: torch.Tensor) -> Tuple[torch.Tensor, float, int]:
         """Return the codes, scale, and level count for ``tensor``."""
         bound = float(tensor.abs().max()) if tensor.numel() else 0.0
         levels = self.levels()
-        if bound <= _EPS or levels <= 0.0:
+        if bound <= EPS or levels <= 0.0:
             return torch.zeros_like(tensor), 0.0, int(levels)
         scale = bound / levels
         codes = torch.round(tensor / scale).clamp(-levels, levels)
@@ -105,16 +116,65 @@ def scheme_for(name: str) -> Optional[FixedPointScheme]:
     return SCHEMES.get(str(name))
 
 
-def _is_float(value: Any) -> bool:
-    """Return True when ``value`` is a floating torch tensor."""
+def refused_report(
+    scheme: str,
+    reason: str,
+    *,
+    steps: int = 0,
+    calibration: Optional[Mapping[str, Any]] = None,
+) -> ActivationQuantizationReport:
+    """Return the report of ``scheme`` left unapplied for ``reason``."""
+    resolved = scheme_for(scheme)
+    return ActivationQuantizationReport(
+        scheme=scheme,
+        bits=0 if resolved is None else resolved.bits,
+        target="unknown" if resolved is None else resolved.target,
+        applied=False,
+        reason=reason,
+        steps=steps,
+        calibration=calibration,
+    )
+
+
+def scheme_report(
+    requested: str,
+    records: RangeRecords,
+    *,
+    steps: int,
+    calibration: Optional["Calibration"],
+) -> ActivationQuantizationReport:
+    """Return the report for ``requested``: applied, or refused by name."""
+    scheme = scheme_for(requested)
+    block = None if calibration is None else calibration.to_dict()
+    if scheme is None:
+        reason = UNKNOWN_ACTIVATION_SCHEME.format(scheme=requested)
+        return refused_report(
+            requested, reason, steps=steps, calibration=block
+        )
+    if scheme.target == "none":
+        return refused_report(
+            scheme.name, NO_ACTIVATION_SCHEME, steps=steps, calibration=block
+        )
+    return ActivationQuantizationReport(
+        scheme=scheme.name,
+        bits=scheme.bits,
+        target=scheme.target,
+        applied=True,
+        reason="",
+        layers=records.layers(),
+        steps=steps,
+        calibration=block,
+    )
+
+
+def is_float(value: Any) -> TypeGuard[torch.Tensor]:
+    """Return True when ``value`` is a floating torch tensor.
+
+    Declared as a :class:`TypeGuard` so a caller holding an optional or
+    duck-typed value is narrowed to ``Tensor`` by the check itself, rather
+    than asserting the narrowing separately.
+    """
     return torch.is_tensor(value) and value.is_floating_point()
-
-
-def _range(tensor: torch.Tensor) -> Tuple[float, float]:
-    """Return the (min, max) of ``tensor`` as floats, or zeros when empty."""
-    if not tensor.numel():
-        return (0.0, 0.0)
-    return (float(tensor.min()), float(tensor.max()))
 
 
 @dataclass(frozen=True)
@@ -124,13 +184,16 @@ class Calibration:
     ``ranges`` maps the same stage keys the quantizer uses to an ``(min, max)``
     pair, and ``samples`` records how many tensors were folded in. A quantizer
     handed a calibration uses these bounds in place of its per-step extremes,
-    so the grid is stable from the first served step.
+    so the grid is stable from the first served step. ``source`` names where
+    the ranges came from, so a report can say whether the grid was chosen
+    from a separate dataset or from the very fixture it is checked on.
     """
 
     bits: int
     target: str
     ranges: Mapping[str, Tuple[float, float]]
     samples: int = 0
+    source: str = ""
 
     def bound(self, key: str) -> Optional[float]:
         """Return the symmetric magnitude for ``key``, or ``None``."""
@@ -145,6 +208,7 @@ class Calibration:
             "bits": self.bits,
             "target": self.target,
             "samples": self.samples,
+            "source": self.source,
             "ranges": {
                 key: [float(span[0]), float(span[1])]
                 for key, span in self.ranges.items()
@@ -152,11 +216,29 @@ class Calibration:
         }
 
 
+def fold_range(seen: Ranges, key: str, value: Any) -> bool:
+    """Fold ``value``'s range into ``seen`` under ``key``.
+
+    Returns True when a floating tensor was folded and False when the value
+    was ignored, so a caller can count samples.
+    """
+    if not is_float(value):
+        return False
+    low, high = tensor_range(torch.as_tensor(value).float())
+    earlier = seen.get(key)
+    if earlier is None:
+        seen[key] = (low, high)
+    else:
+        seen[key] = (min(earlier[0], low), max(earlier[1], high))
+    return True
+
+
 def calibrate(
     tensors: Iterable[Tuple[str, Any]],
     *,
     bits: int = 8,
     target: str = TARGET_BOTH,
+    source: str = "",
 ) -> Calibration:
     """Return per-key ranges folded from an observed tensor iterable.
 
@@ -164,19 +246,23 @@ def calibrate(
     and carried-state tensors of a short calibration pass. Non-floating
     values are ignored; the ranges are the running min/max per key.
     """
-    seen: Dict[str, Tuple[float, float]] = {}
+    seen: Ranges = {}
     samples = 0
     for key, value in tensors:
-        if not _is_float(value):
-            continue
-        low, high = _range(torch.as_tensor(value).float())
-        samples += 1
-        if key in seen:
-            earlier = seen[key]
-            seen[key] = (min(earlier[0], low), max(earlier[1], high))
-        else:
-            seen[key] = (low, high)
-    return Calibration(int(bits), str(target), seen, samples)
+        if fold_range(seen, key, value):
+            samples += 1
+    return Calibration(int(bits), str(target), seen, samples, str(source))
+
+
+def calibrated_bound(
+    calibration: Optional[Calibration], key: str, tensor: torch.Tensor
+) -> float:
+    """Return the calibration bound for ``key``, or the tensor's own peak."""
+    if calibration is not None:
+        bound = calibration.bound(key)
+        if bound is not None and bound > EPS:
+            return bound
+    return float(tensor.abs().max()) if tensor.numel() else 0.0
 
 
 class ActivationQuantizer:
@@ -203,21 +289,13 @@ class ActivationQuantizer:
         self._neurons = (
             None if neuron_names is None else frozenset(neuron_names)
         )
-        self._records: Dict[str, Dict[str, Any]] = {}
+        self._records = RangeRecords()
         self._steps = 0
 
     @property
     def applied(self) -> bool:
         """Return True when a scheme will quantize at least one tensor."""
         return self._scheme is not None and self._scheme.target != "none"
-
-    def _bound(self, key: str, tensor: torch.Tensor) -> float:
-        """Return the calibration bound for ``key``, or the tensor's peak."""
-        if self._calibration is not None:
-            bound = self._calibration.bound(key)
-            if bound is not None and bound > _EPS:
-                return bound
-        return float(tensor.abs().max()) if tensor.numel() else 0.0
 
     def _quantize(
         self, key: str, tensor: torch.Tensor, kind: str
@@ -226,49 +304,10 @@ class ActivationQuantizer:
         levels = self._scheme.levels() if self._scheme else 0.0
         if levels <= 0.0:
             return tensor
-        bound = self._bound(key, tensor)
-        if bound <= _EPS:
-            quantized = torch.zeros_like(tensor)
-        else:
-            scale = bound / levels
-            codes = torch.round(tensor / scale).clamp(-levels, levels)
-            quantized = codes * scale
-        self._record(key, kind, tensor, quantized)
+        bound = calibrated_bound(self._calibration, key, tensor)
+        quantized = snap(tensor, bound, levels)
+        self._records.fold(key, kind, tensor, quantized)
         return quantized
-
-    def _record(
-        self,
-        key: str,
-        kind: str,
-        before: torch.Tensor,
-        after: torch.Tensor,
-    ) -> None:
-        """Fold one tensor's before/after ranges and error into the record."""
-        record = self._records.get(key)
-        if record is None:
-            record = {
-                "name": key,
-                "kind": kind,
-                "before": [float("inf"), float("-inf")],
-                "after": [float("inf"), float("-inf")],
-                "max_abs": 0.0,
-                "_abs_sum": 0.0,
-                "_count": 0,
-            }
-            self._records[key] = record
-        low, high = _range(before)
-        record["before"][0] = min(record["before"][0], low)
-        record["before"][1] = max(record["before"][1], high)
-        low, high = _range(after)
-        record["after"][0] = min(record["after"][0], low)
-        record["after"][1] = max(record["after"][1], high)
-        difference = (after - before).abs()
-        if difference.numel():
-            record["max_abs"] = max(
-                record["max_abs"], float(difference.max())
-            )
-            record["_abs_sum"] += float(difference.sum())
-            record["_count"] += int(difference.numel())
 
     def _outputs(
         self, outputs: Mapping[str, torch.Tensor], active: bool
@@ -279,7 +318,7 @@ class ActivationQuantizer:
         return {
             name: (
                 self._quantize(name, value, TARGET_ACTIVATION)
-                if _is_float(value)
+                if is_float(value)
                 else value
             )
             for name, value in outputs.items()
@@ -291,18 +330,29 @@ class ActivationQuantizer:
         """Return one neuron state entry with its membranes quantized."""
         if not active:
             return value
-        if _is_float(value):
+        if is_float(value):
             return self._quantize(name, value, TARGET_MEMBRANE)
         if isinstance(value, tuple):
             return tuple(
                 self._quantize(
                     f"{name}[{index}]", item, TARGET_MEMBRANE
                 )
-                if _is_float(item)
+                if is_float(item)
                 else item
                 for index, item in enumerate(value)
             )
         return value
+
+    def _currents(self, current: Mapping[str, Any]) -> Dict[str, Any]:
+        """Return the input-current entries quantized as membranes."""
+        return {
+            name: (
+                self._quantize(f"{name}.current", value, TARGET_MEMBRANE)
+                if is_float(value)
+                else value
+            )
+            for name, value in current.items()
+        }
 
     def __call__(
         self,
@@ -310,11 +360,10 @@ class ActivationQuantizer:
         state: Mapping[str, Any],
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, Any]]:
         """Return the step's outputs and state with the grids applied."""
-        if not self.applied:
+        if not self.applied or self._scheme is None:
             return dict(outputs), dict(state)
-        target = self._scheme.target if self._scheme else "none"
-        activation = target in (TARGET_ACTIVATION, TARGET_BOTH)
-        membrane = target in (TARGET_MEMBRANE, TARGET_BOTH)
+        activation = self._scheme.covers(TARGET_ACTIVATION)
+        membrane = self._scheme.covers(TARGET_MEMBRANE)
         new_outputs = self._outputs(outputs, activation)
         new_state: Dict[str, Any] = dict(state)
         previous = state.get(PREV_KEY)
@@ -325,16 +374,7 @@ class ActivationQuantizer:
             }
         current = state.get(CURRENT_KEY)
         if membrane and isinstance(current, Mapping):
-            new_state[CURRENT_KEY] = {
-                name: (
-                    self._quantize(
-                        f"{name}.current", value, TARGET_MEMBRANE
-                    )
-                    if _is_float(value)
-                    else value
-                )
-                for name, value in current.items()
-            }
+            new_state[CURRENT_KEY] = self._currents(current)
         for name, value in state.items():
             if name in (PREV_KEY, CURRENT_KEY):
                 continue
@@ -346,62 +386,9 @@ class ActivationQuantizer:
 
     def report(self) -> ActivationQuantizationReport:
         """Return the report of everything observed so far."""
-        scheme = self._scheme
-        if scheme is None:
-            return ActivationQuantizationReport(
-                scheme=self._requested,
-                bits=0,
-                target="unknown",
-                applied=False,
-                reason=UNKNOWN_ACTIVATION_SCHEME.format(
-                    scheme=self._requested
-                ),
-                steps=self._steps,
-                calibration=self._calibration_dict(),
-            )
-        if scheme.target == "none":
-            return ActivationQuantizationReport(
-                scheme=scheme.name,
-                bits=scheme.bits,
-                target=scheme.target,
-                applied=False,
-                reason=NO_ACTIVATION_SCHEME,
-                steps=self._steps,
-                calibration=self._calibration_dict(),
-            )
-        layers = tuple(
-            self._layer(record)
-            for record in sorted(
-                self._records.values(), key=lambda item: item["name"]
-            )
-        )
-        return ActivationQuantizationReport(
-            scheme=scheme.name,
-            bits=scheme.bits,
-            target=scheme.target,
-            applied=True,
-            reason="",
-            layers=layers,
+        return scheme_report(
+            self._requested,
+            self._records,
             steps=self._steps,
-            calibration=self._calibration_dict(),
+            calibration=self._calibration,
         )
-
-    def _layer(self, record: Mapping[str, Any]) -> Dict[str, Any]:
-        """Return the JSON-able per-stage record without private counters."""
-        count = int(record["_count"])
-        return {
-            "name": record["name"],
-            "kind": record["kind"],
-            "before": [float(record["before"][0]), float(record["before"][1])],
-            "after": [float(record["after"][0]), float(record["after"][1])],
-            "max_abs": float(record["max_abs"]),
-            "mean_abs": (
-                float(record["_abs_sum"]) / count if count else 0.0
-            ),
-        }
-
-    def _calibration_dict(self) -> Optional[Dict[str, Any]]:
-        """Return the calibration block for the report, or ``None``."""
-        if self._calibration is None:
-            return None
-        return self._calibration.to_dict()

@@ -11,6 +11,87 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Added
+
+- **The quantization drift check can simulate activation and membrane
+  rounding.** Until now `spikeforge_targets.quantize` restricted weights only,
+  so its drift figure understated what a fixed-point device does to the
+  values flowing through a network. `quantize(..., activation=<scheme>)` (and
+  `spikeforge-verify deploy --activation-quantization <scheme>`) now runs the
+  quantized graph through the reference interpreter under a hook that snaps
+  every computed node output and every carried membrane and synaptic current
+  onto the same symmetric fixed-point grid the serving-side
+  `ActivationQuantizer` uses. The grid is calibrated on the drift fixture
+  itself unless a `Calibration` is supplied, so it is fixed across steps; the
+  report gains an `activation` section (the scheme, per-tensor ranges and
+  error, the calibration and its `source`) and the drift gains `includes`,
+  naming which roundings the figure covers (`weights`, `activation`,
+  `membrane`). A scheme requested without a spike fixture is reported
+  unapplied, and an unknown scheme is refused by name and never runs.
+
+  The core `NirInterpreter` gains an optional `post_node` hook
+  (`spikeforge.nir_bridge.PostNode`) that transforms each evaluated node's
+  `(output, state, membrane)` before any of the three is stored; `None` keeps
+  every step byte-identical, and `rewrite_drift` applies it to the rewritten
+  run only. The membrane travels through the hook so the recorded trace is
+  the snapped value rather than the one the node computed, which is what
+  makes the membrane drift below measure the current step and not only what
+  earlier steps carried in. `TargetSpec.constraints` gains
+  `activation_quantization`, declared `none` on every shipped target: the
+  fixed-point widths a vendor's neuron state actually uses are not verified
+  in this repository, so no target asserts one and a caller opts in
+  explicitly. `Calibration` records a `source`.
+
+- **Drift blocks report membrane movement.** `rewrite_drift`, and so every
+  `drift` section under `quantization` and `rewrite`, gains a `membranes`
+  summary (shared integrator nodes, max and mean absolute error). It is
+  reported, not gated: a membrane can move without any spike moving, so it is
+  where a rounding or a lossy substitution shows first, and
+  `within_tolerance` still folds only the readout and spike checks. Only the
+  carried membrane propagates, so snapping the recorded one moves this figure
+  and no dynamics; both are the same register, so both are reported under the
+  one `<node>.membrane` key rather than counted twice.
+
+### Fixed
+
+- **The boundaries page said there was no activation or membrane
+  quantization and no calibration dataset.** Both had shipped on the serving
+  path with `spikeforge-targets` 0.1.0 on 2026-09-11, the day the page was
+  written. Section 3 now states what is simulated, what remains unmodelled
+  (integer accumulation, saturation of the update itself, per-channel
+  schemes, device kernels), and that no shipped target declares an activation
+  scheme; the cookbook, targets, and interop pages no longer describe the
+  check as weight-level only.
+
+- **The synthetic deployment fixtures did not seed their weights.**
+  `spikeforge/cli/fixture.py` called `build_topology` *before*
+  `torch.manual_seed`, so a fixture's spikes reproduced while its module was
+  initialised from whatever ambient RNG state the process happened to be in
+  — and the sequence path never seeded the build at all. The `seed` argument
+  therefore had no effect on the weights of any fixture, contradicting the
+  module's own "every fixture is reproducible offline" docstring. Every
+  figure the deployment commands (`deploy`, `rewrite`, `run`, `roundtrip`)
+  derive from those weights — per-layer ranges, quantization error, drift
+  magnitudes — consequently differed on each invocation. Three consecutive
+  `deploy` runs reported `conv1` lower bounds of -0.327312, -0.319907 and
+  -0.328470.
+
+  Both paths now build under the seed. The input volume is re-seeded
+  afterwards so it stays a function of the seed and its shape alone, which
+  keeps every fixture's spikes byte-identical to before: the only behavioural
+  change is that the weights, and so the reports, now reproduce.
+  `tests/test_cli_fixture.py` covers both directions — that one seed gives
+  one result from differing ambient RNG state, and that differing seeds give
+  differing weights from identical ambient state.
+
+- **The cookbook published quantization figures that never reproduced.**
+  Its target-quantization section printed per-layer weight ranges (for
+  example `"before": [ -0.3238, 0.3272 ]`) as the expected output of
+  `spikeforge-verify run`, which could not reproduce for the reason above.
+  With the fixture seeded the figures are real again and are republished from
+  a captured run, with a note that they follow torch's RNG stream and so hold
+  for a given torch build rather than universally.
+
 ## [spikeforge-v0.4.0] - 2026-09-15
 
 Released together as one combination, recorded in

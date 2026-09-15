@@ -14,9 +14,9 @@ the exact zero-order-hold form
 
 where ``decay = exp(-dt / tau)`` and one NIR time unit is one step
 (``dt = 1``). ``Threshold`` and ``Scale`` are stateless pointwise nodes and
-``Delay`` is a one-step stateful buffer, so a stage that feeds a reset back
-into its own integrator still executes as a well-ordered graph: the delay
-is evaluated at the start of each step from the previous step's value.
+``Delay`` is a one-step stateful buffer, so a stage feeding a reset back into
+its own integrator still executes as a well-ordered graph: the delay is
+evaluated at the start of each step from the previous step's value.
 """
 
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -40,6 +40,7 @@ from spikeforge.nir_bridge.ops_registry import (
     stack,
     sum_inputs,
 )
+from spikeforge.nir_bridge.post_node import PostNode
 
 _Tensors = Dict[str, torch.Tensor]
 _States = Dict[str, Any]
@@ -51,8 +52,7 @@ def _flatten_or_pass(frame: torch.Tensor) -> torch.Tensor:
     """Flatten a flat feature frame, passing multi-dimensional ones through.
 
     Sequence frames (``[B, L, D]``) and tokens reach their first node intact,
-    exactly as spatial frames already do; only the historical ``[B, F]``
-    feature frame is collapsed, which is the identity for it.
+    like spatial frames; only the historical ``[B, F]`` frame is collapsed.
     """
     if frame.dim() >= 3:
         return frame
@@ -62,9 +62,18 @@ def _flatten_or_pass(frame: torch.Tensor) -> torch.Tensor:
 class NirInterpreter:
     """Execute an exported NIR graph step by step, without snnTorch."""
 
-    def __init__(self, graph: Any) -> None:
-        """Index ``graph`` and precompute ordering, delays and frame shape."""
+    def __init__(
+        self, graph: Any, post_node: Optional[PostNode] = None
+    ) -> None:
+        """Index ``graph`` and precompute ordering, delays and frame shape.
+
+        ``post_node`` optionally transforms every evaluated node's
+        ``(output, state, membrane)`` before the output feeds the next node,
+        the state is carried and the membrane recorded; ``None`` keeps every
+        step byte-identical.
+        """
         self._graph = graph
+        self._post_node = post_node
         self._nodes: Dict[str, Any] = dict(graph.nodes)
         self._kinds = {
             name: type(node).__name__ for name, node in self._nodes.items()
@@ -192,6 +201,10 @@ class NirInterpreter:
     ) -> None:
         """Evaluate node ``name``, recording a membrane when it has one."""
         output, new_state, membrane = self._apply(name, kind, values, state)
+        if self._post_node is not None:
+            output, new_state, membrane = self._post_node(
+                name, kind, output, new_state, membrane
+            )
         values[name] = output
         if new_state is not None:
             state[name] = new_state

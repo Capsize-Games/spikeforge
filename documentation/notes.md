@@ -82,7 +82,7 @@
   profiles are alternate services; only one can own port 8877 at a time.
 - **Professionalization limitations (WS-A…WS-F).** These are the honest
   boundaries of the shipped program. The six that shape real use — no measured
-  energy, simulation-only `sequence_attn`, weight-level-only quantization, the
+  energy, simulation-only `sequence_attn`, simulated-only quantization, the
   single-step ONNX bridge, fetch-on-demand hub weights, and SDK-gated hardware
   backends — are each reasoned about in
   [Implications and boundaries](implications-and-boundaries.md), with *why* they

@@ -12,10 +12,16 @@ from typing import Any, Dict, FrozenSet, List
 from spikeforge_targets.primitives import EMITTED_PRIMITIVES
 from spikeforge_targets.target_spec import TargetSpec
 
-#: Constraint keys every target declares, beyond the quantization field.
+#: Constraint keys every target declares, beyond the weight quantization
+#: field. ``activation_quantization`` is ``none`` on every shipped target: the
+#: fixed-point widths a vendor's neuron state actually uses are not verified
+#: in this repository, and a declared scheme would read as a claim about the
+#: hardware. A caller opts into a simulated scheme explicitly instead
+#: (``quantize(..., activation=...)`` or ``deploy --activation-quantization``).
 _BASE_CONSTRAINTS: Dict[str, Any] = {
     "dtype": "float32",
     "timestep_ms": 1.0,
+    "activation_quantization": "none",
 }
 
 #: Primitives SynSense Speck runs: a single conv/LIF chain, no pooling.

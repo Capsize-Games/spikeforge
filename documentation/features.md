@@ -64,5 +64,6 @@
   site (see below)
 - **Interop fold-ins (WS-F)**: event-dataset training, an ONNX bridge,
   `nirtorch` extraction of third-party PyTorch modules, weight-level
-  quantization, non-square sensor geometry, and per-step hidden-layer
-  animation (see below)
+  quantization (whose drift check can now also simulate activation/membrane
+  rounding, see [Implications and boundaries §3](implications-and-boundaries.md)),
+  non-square sensor geometry, and per-step hidden-layer animation (see below)
