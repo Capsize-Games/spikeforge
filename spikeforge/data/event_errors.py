@@ -55,11 +55,12 @@ class EventTimestampError(ValueError):
     This is not hypothetical. Tonic's SHD/SSC reader scales the file's
     timestamps by ``1e6`` to convert seconds to microseconds, but the
     Heidelberg files store them as ``float16``, whose maximum is 65504 -- so
-    the multiply overflows to ``inf``, becomes ``NaN``, and every timestamp
-    in the sample casts to ``INT64_MIN``. Binning then sees a zero-width
-    time span and collapses every event into the first time step, which
-    trains and scores perfectly happily while having destroyed all timing.
-    A named failure is the only honest outcome.
+    under NumPy 2 the scale factor itself becomes ``inf`` and every product
+    is ``inf`` (or ``NaN`` where the timestamp is 0), which casts to
+    ``INT64_MIN``. Binning then sees a zero-width time span and collapses
+    every event into the first time step, which trains and scores perfectly
+    happily while having destroyed all timing. A named failure is the only
+    honest outcome. :mod:`spikeforge.events.hsd_reader` is the way around it.
     """
 
     def __init__(self, detail: str = "") -> None:
@@ -68,8 +69,8 @@ class EventTimestampError(ValueError):
             "event timestamps are negative, so they are not recording times "
             f"{detail}; this is what a non-finite timestamp cast to an "
             "integer looks like. Tonic's SHD/SSC reader produces it by "
-            "scaling float16 seconds by 1e6 (the multiply overflows to inf, "
-            "then NaN, then INT64_MIN), which would silently collapse every "
-            "event into one time bin. Refusing rather than reporting a "
-            "number measured on destroyed timing."
+            "scaling float16 seconds by 1e6, which does not fit in float16 "
+            "and so becomes inf, then INT64_MIN on cast; that would "
+            "silently collapse every event into one time bin. Refusing "
+            "rather than reporting a number measured on destroyed timing."
         )

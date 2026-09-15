@@ -53,12 +53,34 @@ def batch_event_samples(
     return spikes, labels
 
 
+def visit_order(
+    total: int, shuffle: bool, seed: Optional[int] = None
+) -> List[int]:
+    """Return the sample indices one epoch visits, in visiting order.
+
+    Sequential unless ``shuffle``. Shuffling is not cosmetic here: real event
+    datasets arrive grouped by class -- SSC's training split is 35 contiguous
+    runs over 75,466 samples -- so reading them in order makes every batch a
+    single class and training collapses to predicting whichever class it is
+    currently being shown. ``seed`` makes the permutation reproducible, which a
+    published row needs.
+    """
+    if not shuffle:
+        return list(range(total))
+    generator = None
+    if seed is not None:
+        generator = torch.Generator().manual_seed(int(seed))
+    return [int(i) for i in torch.randperm(total, generator=generator)]
+
+
 def event_batches(
     source: EventSampleSource,
     spec: TopologySpec,
     subset: int,
     batch_size: int,
     samples: Optional[int] = None,
+    shuffle: bool = False,
+    seed: Optional[int] = None,
 ) -> List[Batch]:
     """Return the epoch's ``(spikes, labels)`` batches in bridge layout.
 
@@ -73,6 +95,10 @@ def event_batches(
     checkpoint claiming the full training split requires. ``subset`` is
     bypassed when ``samples`` is given, since the two would otherwise both be
     trying to set the same thing.
+
+    ``shuffle`` visits the samples in a seeded random order, which a training
+    epoch over a class-ordered dataset requires; see :func:`visit_order`. It
+    matches the image path, whose loader is built with ``shuffle=train``.
     """
     size = max(1, int(batch_size))
     total = (
@@ -80,9 +106,8 @@ def event_batches(
         if samples is not None
         else batch_count(subset) * size
     )
+    order = visit_order(total, shuffle, seed)
     return [
-        batch_event_samples(
-            source, spec, range(start, min(start + size, total))
-        )
+        batch_event_samples(source, spec, order[start:start + size])
         for start in range(0, total, size)
     ]

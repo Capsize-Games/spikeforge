@@ -158,11 +158,15 @@ of decoding a missing image.
   is still an error.
 - **🔴 SHD and SSC cannot currently be trained on.** The Heidelberg files
   store timestamps as `float16`, and tonic's reader scales them by `1e6` —
-  which overflows float16 to `inf`, then `NaN`, then `INT64_MIN` for every
-  timestamp in every sample. All timing is gone before the data reaches us.
-  `EventTimestampError` refuses such a stream rather than binning every event
-  into the first time step and reporting a number measured on it. Verified
-  against tonic 1.4.3 on both datasets; it needs an upstream fix.
+  which under NumPy 2 stays in `float16`, where `1e6` does not fit, so every
+  timestamp becomes `inf`/`NaN` and casts to `INT64_MIN`. All timing is gone
+  before the data reaches us. `EventTimestampError` refuses such a stream
+  rather than binning every event into the first time step and reporting a
+  number measured on it. **`ssc` routes around it**: the registry's
+  `native_reader` field sends it to `spikeforge.events.hsd_reader`, which
+  reads the HDF5 itself and scales in `float64`. Tonic still downloads the
+  dataset and still owns the cache layout; only the per-sample decode is
+  replaced, and only for the datasets tonic decodes wrongly.
 - **The DVS datasets cannot currently be downloaded.** `dvs128_gesture` and
   `cifar10_dvs` are served from figshare, which answers tonic's downloader
   with `HTTP 202` and an empty body (tonic then reports "File not found or
