@@ -106,8 +106,8 @@ tests. It must assert the split is *real*, not merely that a flag is accepted:
 
 ### 1.3 Blast radius — already established, do not re-investigate
 
-Checked on 2026-09-15, so this can be scoped calmly rather than treated as an
-incident:
+Checked while writing this plan, so it can be scoped calmly rather than
+treated as an incident:
 
 - **The public dashboard is not affected.** `tonic` is not installed in the
   deployed image (absent from both `requirements.txt` and the `Dockerfile`, and
@@ -156,7 +156,10 @@ judge. That is the same move the project already makes everywhere else.
 
 ### 2.2 Verified dataset licences
 
-Confirmed against primary sources on 2026-09-15:
+Each of these was checked against the dataset's own publisher during the
+session that wrote this plan — not carried over from memory. Re-verify rather
+than trusting this table: the authority is the publisher's page, and a licence
+can change.
 
 | Dataset | Licence | Attribution |
 |---|---|---|
