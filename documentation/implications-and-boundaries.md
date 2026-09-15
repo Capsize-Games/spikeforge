@@ -70,18 +70,31 @@ consequence.
   the feed-forward math and for structural round-trips, not for cross-runtime
   time execution.
 
-### 5. Hub weights are fetched on demand
+### 5. Only this project's own weights are redistributed
 
-- **What it does.** The catalog stores metadata (source, expected size, and a
-  checksum when one is published) for **verified entries only**; bundled NIR
-  preset graphs materialize locally and remote artifacts a user chooses to add
-  download into a cache on first use.
-- **Implication.** The repository does not redistribute weights, for licensing
-  and size reasons, so **you** are responsible for honouring each model's
-  license. An entry with no published checksum verifies as `unverified` rather
-  than trusted, network access (plus the `hub` extra for Hugging Face) is
-  required unless the artifact is already cached, and integrity checking is
-  best-effort.
+- **What it does.** The catalog holds three kinds of entry, and the `source`
+  field says which. `bundled` renders a NIR graph from a shipped topology
+  preset — structure with freshly-initialised weights. `reference` carries
+  **trained weights this project produced itself**, shipped inside the
+  `spikeforge-hub` wheel under `weights/` and verified against the checksum the
+  catalog pins. `url`/`hf_repo` point at bytes elsewhere, which download into a
+  cache on first use.
+- **Implication.** No *third-party* weights are redistributed here, for
+  licensing and size reasons, so for anything you add yourself **you** are
+  responsible for honouring its upstream license. The reference checkpoints are
+  the exception and are this project's own artifacts under its own
+  BSD-3-Clause terms — but the datasets they were trained on are not: each
+  entry records the training data's own `dataset_license` and
+  `dataset_attribution` separately from the `license` covering the weights, and
+  `NOTICE.md` reproduces them. An entry with no published checksum verifies as
+  `unverified` rather than trusted, network access (plus the `hub` extra for
+  Hugging Face) is required for remote artifacts not already cached, and
+  integrity checking for those is best-effort.
+- **What this page got wrong.** Until 2026-09-15 this section said the
+  repository "does not redistribute weights" without qualification. That
+  stopped being true when `spikeforge-hub` 0.2.0 began shipping six trained
+  checkpoints; `NOTICE.md` and the curation policy were updated then and this
+  page was not.
 
 ### 6. Hardware backends are declared until their SDKs are installed
 
