@@ -63,17 +63,34 @@ that and describe the local source tree only.
   scheme; the cookbook, targets, and interop pages no longer describe the
   check as weight-level only.
 
+- **The synthetic deployment fixtures did not seed their weights.**
+  `spikeforge/cli/fixture.py` called `build_topology` *before*
+  `torch.manual_seed`, so a fixture's spikes reproduced while its module was
+  initialised from whatever ambient RNG state the process happened to be in
+  — and the sequence path never seeded the build at all. The `seed` argument
+  therefore had no effect on the weights of any fixture, contradicting the
+  module's own "every fixture is reproducible offline" docstring. Every
+  figure the deployment commands (`deploy`, `rewrite`, `run`, `roundtrip`)
+  derive from those weights — per-layer ranges, quantization error, drift
+  magnitudes — consequently differed on each invocation. Three consecutive
+  `deploy` runs reported `conv1` lower bounds of -0.327312, -0.319907 and
+  -0.328470.
+
+  Both paths now build under the seed. The input volume is re-seeded
+  afterwards so it stays a function of the seed and its shape alone, which
+  keeps every fixture's spikes byte-identical to before: the only behavioural
+  change is that the weights, and so the reports, now reproduce.
+  `tests/test_cli_fixture.py` covers both directions — that one seed gives
+  one result from differing ambient RNG state, and that differing seeds give
+  differing weights from identical ambient state.
+
 - **The cookbook published quantization figures that never reproduced.**
   Its target-quantization section printed per-layer weight ranges (for
   example `"before": [ -0.3238, 0.3272 ]`) as the expected output of
-  `spikeforge-verify run`. That command builds the topology with freshly
-  initialised weights and `spikeforge/cli/fixture.py` seeds only the input
-  spikes, not the initialisation, so every range, error and drift magnitude
-  it prints differs from one invocation to the next. The section now writes
-  out only what actually reproduces — the scheme names, counts, node lists
-  and `includes` — and says why the numbers are elided. The fixture's own
-  non-determinism is untouched here and still contradicts its "every fixture
-  is reproducible offline" docstring.
+  `spikeforge-verify run`, which could not reproduce for the reason above.
+  With the fixture seeded the figures are real again and are republished from
+  a captured run, with a note that they follow torch's RNG stream and so hold
+  for a given torch build rather than universally.
 
 ## [spikeforge-v0.4.0] - 2026-09-15
 

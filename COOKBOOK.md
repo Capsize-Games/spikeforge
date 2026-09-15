@@ -658,21 +658,17 @@ venv/bin/spikeforge-verify run --topology conv_net --target lava_loihi2 | \
 ```json
 { "target": "lava_loihi2", "scheme": "weight_int8", "applied": true,
   "layers": [ { "node": "conv1", "primitive": "Conv2d",
-                "before": [ "…", "…" ], "after": [ "…", "…" ] }, "…" ],
+                "before": [ -0.3184, 0.3314 ], "after": [ -0.3183, "…" ] }, "…" ],
   "counts": { "layers": 3 },
   "drift": { "…": "…", "membranes": { "…": "…" }, "includes": [ "weights" ] },
   "activation": { "scheme": "none", "applied": false,
                   "reason": "activation quantization is disabled" } }
 ```
 
-**The numeric values are elided deliberately.** These commands build the
-topology with freshly-initialised weights and do not seed that
-initialisation, so every range, error and drift magnitude below differs from
-one invocation to the next. Only the structure — the scheme names, the
-counts, the node lists, and `includes` — reproduces, so only that is written
-out here. Seed your own module and call
-`spikeforge_targets.quantize.quantize` directly when you need a figure you
-can compare against a later run.
+These figures reproduce: the fixture builds its module under its own seed, so
+running the command again prints the same numbers. They do come from torch's
+RNG stream, so a torch build whose stream differs will produce its own
+consistent set rather than these.
 
 The `activation` block reports the target's declared `activation_quantization`,
 which is `none` on every shipped target: the fixed-point widths a vendor's
@@ -699,15 +695,15 @@ now covers:
 ```json
 { "scheme": "activation_membrane_int8", "bits": 8, "target": "both", "applied": true,
   "layers": [ { "name": "conv1", "kind": "activation",
-                "before": [ "…", "…" ], "after": [ "…", "…" ],
-                "max_abs": "…", "mean_abs": "…" }, "…" ],
+                "before": [ -1.0968, 1.0960 ], "after": [ -1.0968, 1.0968 ],
+                "max_abs": 0.0043, "mean_abs": 0.0022 }, "…" ],
   "counts": { "layers": 15, "steps": 8 },
   "calibration": { "bits": 8, "target": "both", "samples": 144,
                    "source": "drift fixture", "ranges": { "…": "…" } } }
 { "steps": 8,
-  "readout": { "…": "…" },
-  "spikes": { "nodes": ["lif1", "lif2", "out"], "agreement": "…", "…": "…" },
-  "membranes": { "nodes": ["lif1__mem", "lif2__mem", "out__mem"], "max_abs": "…" },
+  "readout": { "max_abs": 0.0000, "…": "…" },
+  "spikes": { "nodes": ["lif1", "lif2", "out"], "agreement": 0.9958, "…": "…" },
+  "membranes": { "nodes": ["lif1__mem", "lif2__mem", "out__mem"], "max_abs": 1.0080, "…": "…" },
   "within_tolerance": false,
   "includes": ["weights", "activation", "membrane"] }
 ```
