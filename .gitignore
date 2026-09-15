@@ -26,6 +26,10 @@ client/*.tsbuildinfo
 *.pt
 *.pth
 *.ckpt
+# ...except the model hub's own reference checkpoints, which are a shipped
+# artifact of the `spikeforge-hub` distribution rather than a training output.
+# Regenerate them with `python scripts/train_reference_models.py --publish`.
+!spikeforge_hub/weights/*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

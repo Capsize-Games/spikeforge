@@ -6,6 +6,8 @@ import build on this core in later phases; anything unavailable is reported,
 never faked.
 """
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _distribution_version
 from typing import Any, Dict, List, Optional
 
 from spikeforge_hub import cache, probe
@@ -53,7 +55,14 @@ from spikeforge_hub.registry_errors import (
     RegistryVersionError,
 )
 
+try:
+    #: Read from installed metadata so it cannot drift from the wheel.
+    __version__ = _distribution_version("spikeforge-hub")
+except PackageNotFoundError:  # pragma: no cover - uninstalled source tree
+    __version__ = "0.0.0+unknown"
+
 __all__ = [
+    "__version__",
     "REGISTRY_SCHEMA_VERSION",
     "STAGES",
     "STATUSES",

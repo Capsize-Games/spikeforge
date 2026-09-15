@@ -17,6 +17,9 @@ contract. No pandas, no fastapi, no client SDK is imported here.
     windows = adapter.windows(spec)    # [W, L, D], z-scored by the frozen spec
 """
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _distribution_version
+
 from spikeforge_io.adapters import (
     DATASET_METHODS,
     FACTORIES,
@@ -55,7 +58,14 @@ from spikeforge_io.windowing import (
     windows,
 )
 
+try:
+    #: Read from installed metadata so it cannot drift from the wheel.
+    __version__ = _distribution_version("spikeforge-io")
+except PackageNotFoundError:  # pragma: no cover - uninstalled source tree
+    __version__ = "0.0.0+unknown"
+
 __all__ = [
+    "__version__",
     "DATASET_METHODS",
     "FACTORIES",
     "WINDOW_SPEC_VERSION",

@@ -29,6 +29,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CATALOG_PATH = REPO_ROOT / "spikeforge_hub" / "models.json"
 DEFAULT_OUT = REPO_ROOT / "build" / "pages" / "hub" / "index.html"
 UNVERIFIED_CANDIDATE = "unverified-candidate"
+#: The one catalog source whose entries carry trained weights.
+TRAINED_SOURCE = "reference"
 
 _STYLE = """
 body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem
@@ -45,6 +47,13 @@ th { background: #f5f5f5; }
   font-size: 0.78rem; font-weight: 600; }
 .badge-verified { background: #e3f6e5; color: #1b6d2f; }
 .badge-unverified { background: #fde3e3; color: #a12222; }
+.badge-trained { background: #e4edfb; color: #1d4a8f; }
+.badge-untrained { background: #f0f0f0; color: #555; }
+.score { font-variant-numeric: tabular-nums; font-weight: 600; }
+/* The weights column is the one a visitor scans first; give it room so the
+   score does not wrap one word per line. */
+th:nth-child(2), td:nth-child(2) { min-width: 12rem; }
+td:nth-child(2) { font-size: 0.86rem; line-height: 1.45; }
 code { background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
 footer { margin-top: 2rem; color: #666; font-size: 0.85rem; }
 """
@@ -62,6 +71,37 @@ def _verified(entry: Dict[str, Any]) -> bool:
     return entry.get("license") != UNVERIFIED_CANDIDATE
 
 
+def _trained(entry: Dict[str, Any]) -> bool:
+    """Return True only for an entry that carries trained weights."""
+    return entry.get("source") == TRAINED_SOURCE
+
+
+def _weights_cell(entry: Dict[str, Any]) -> str:
+    """Return the cell that says whether this entry is a usable model.
+
+    This is the column a visitor actually came for. A catalog of untrained
+    shapes and a catalog of trained models are different products, so the
+    page states which each row is instead of leaving it to the notes.
+    """
+    if not _trained(entry):
+        return (
+            '<span class="badge badge-untrained">structure only</span>'
+        )
+    accuracy = entry.get("test_accuracy")
+    samples = entry.get("test_samples")
+    dataset = html.escape(str(entry.get("dataset", "")))
+    score = (
+        f'<span class="score">{accuracy}%</span> on {samples} held-out '
+        f"{dataset} samples"
+        if accuracy is not None
+        else ""
+    )
+    return (
+        '<span class="badge badge-trained">trained weights</span><br>'
+        f"{score}"
+    )
+
+
 def _row(entry: Dict[str, Any]) -> str:
     """Return one ``<tr>`` for ``entry``, HTML-escaping every field."""
     esc = html.escape
@@ -74,6 +114,7 @@ def _row(entry: Dict[str, Any]) -> str:
     return f"""<tr>
   <td><strong>{esc(str(entry.get("name", "")))}</strong><br>
     <code>{esc(str(entry.get("id", "")))}</code></td>
+  <td>{_weights_cell(entry)}</td>
   <td>{esc(str(entry.get("framework", "")))}</td>
   <td>{esc(str(entry.get("kind", "")))}</td>
   <td>{esc(str(entry.get("source", "")))}<br>
@@ -84,10 +125,45 @@ def _row(entry: Dict[str, Any]) -> str:
 </tr>"""
 
 
+def _notice(trained_count: int) -> str:
+    """Return the standing honesty notice, sized to what the catalog holds."""
+    curation = (
+        "https://github.com/Capsize-Games/spikeforge/blob/main/"
+        "spikeforge_hub/CURATION.md"
+    )
+    if trained_count:
+        body = (
+            f"<strong>{trained_count} entries carry trained weights</strong> "
+            "-- checkpoints this project trained itself, shipped with "
+            "<code>spikeforge-hub</code>, each showing what it scores on the "
+            "complete held-out test split. They are reference configurations "
+            "with stock hyperparameters, <strong>not</strong> tuned attempts "
+            "at state of the art, and every one names the command that "
+            "reproduces it. The remaining entries are "
+            "<code>bundled</code>: this project's own NIR graph presets -- "
+            "structure, with freshly-initialised weights. No third-party "
+            "weights are redistributed."
+        )
+    else:
+        body = (
+            "This catalog is <strong>metadata-only</strong>: entries marked "
+            "<code>bundled</code> are this project's own NIR graph presets "
+            "(structure, not third-party trained weights); no third-party "
+            "weights are redistributed."
+        )
+    return (
+        f'<div class="notice">\n{body}\nSee\n'
+        f'<a href="{curation}">CURATION.md</a>\n'
+        "for the verification policy, and open a pull request there to "
+        "propose a\nreal, checked entry.\n</div>"
+    )
+
+
 def render(entries: List[Dict[str, Any]]) -> str:
     """Return the full standalone HTML page for ``entries``."""
     rows = "\n".join(_row(entry) for entry in entries)
     verified_count = sum(1 for entry in entries if _verified(entry))
+    trained_count = sum(1 for entry in entries if _trained(entry))
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -100,22 +176,14 @@ the spikeforge model-hub catalog.">
 </head>
 <body>
 <h1>spikeforge model hub</h1>
-<p class="sub">{len(entries)} catalog entries, {verified_count} with a
-verified source and license. Generated from
+<p class="sub">{len(entries)} catalog entries -- {trained_count} with trained
+weights, {verified_count} with a verified source and license. Generated from
 <code>spikeforge_hub/models.json</code> by
 <code>scripts/build_hub_page.py</code> -- not a live view of what is
 downloaded or cached.</p>
-<div class="notice">
-This catalog is <strong>metadata-only</strong>: entries marked
-<code>bundled</code> are this project's own NIR graph presets (structure,
-not third-party trained weights); no third-party weights are redistributed.
-See
-<a href="https://github.com/capsize-games/spikeforge/blob/main/spikeforge_hub/CURATION.md">CURATION.md</a>
-for the verification policy, and open a pull request there to propose a
-real, checked entry.
-</div>
+{_notice(trained_count)}
 <table>
-<thead><tr><th>Name / id</th><th>Framework</th><th>Kind</th>
+<thead><tr><th>Name / id</th><th>Weights</th><th>Framework</th><th>Kind</th>
 <th>Source</th><th>License</th><th>Notes</th></tr></thead>
 <tbody>
 {rows}
@@ -124,7 +192,7 @@ real, checked entry.
 <footer>
 Browse locally with <code>pip install spikeforge-hub &amp;&amp;
 spikeforge-hub list</code>, or from the
-<a href="https://github.com/capsize-games/spikeforge">spikeforge</a>
+<a href="https://github.com/Capsize-Games/spikeforge">spikeforge</a>
 dashboard's Hub panel.
 </footer>
 </body>

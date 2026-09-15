@@ -17,6 +17,26 @@ theme:
     - navigation.top
     - content.code.copy
 
+plugins:
+  # `search` is MkDocs' default and has to be restated once any plugin list
+  # is declared, or it is dropped.
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: sphinx
+            show_source: false
+            show_root_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            members_order: source
+            # Without this the constructor is filtered out with the other
+            # dunders and a class renders with no signature at all -- which
+            # is the single thing a reader comes to an API reference for.
+            merge_init_into_class: true
+            filters: ["!^_"]
+
 markdown_extensions:
   - admonition
   - tables
@@ -54,6 +74,8 @@ nav:
       - Architecture: architecture.md
       - Project layout: project-layout.md
       - Features: features.md
+      - Benchmarks: benchmarks.md
+      - API reference: api-reference.md
       - Interpreter spine: interpreter-spine.md
       - Introspection: introspection.md
       - Dashboard: dashboard.md
@@ -73,6 +95,7 @@ nav:
   - Roadmap:
       - Professionalization roadmap: professional_roadmap.md
       - Ecosystem roadmap: ecosystem_roadmap.md
+      - Ecosystem listings: ecosystem_listings.md
   - Architecture:
       - Repo topology and split: repo_topology_plan.md
       - ARCH-0001 phased repo split:

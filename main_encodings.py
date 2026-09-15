@@ -10,7 +10,7 @@ from typing import List, Optional
 
 def _parser() -> argparse.ArgumentParser:
     """Return the argument parser for the ``spikeforge-encodings`` CLI."""
-    return argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog="spikeforge-encodings",
         description=(
             "Train the latency/delta/random tutorial encoders and export "
@@ -18,11 +18,25 @@ def _parser() -> argparse.ArgumentParser:
             "is the tutorial demo, not a general-purpose encoding CLI."
         ),
     )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="print the installed spikeforge versions and exit",
+    )
+    return parser
 
 
 def main(argv: Optional[List[str]] = None) -> None:
     """Parse ``argv``, then train the encoders and export their visuals."""
-    _parser().parse_args(argv)
+    args = _parser().parse_args(argv)
+
+    # Deferred for the same reason as ``main.py``: keep ``--help`` free of
+    # the spikeforge package, and therefore of torch.
+    if args.version:
+        from spikeforge.version import version_report
+
+        print(version_report())
+        return
 
     # Imported lazily so ``--help`` never pays for (or fails on) the heavy
     # snnTorch/matplotlib export stack before argparse has even run.

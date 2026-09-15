@@ -25,7 +25,17 @@ FRAMEWORKS: Tuple[str, ...] = (
 #: Artifact kinds an entry may describe.
 KINDS: Tuple[str, ...] = ("nir_graph", "state_dict", "framework_weights")
 #: Where an entry's artifact comes from.
-SOURCES: Tuple[str, ...] = ("bundled", "url", "hf_repo")
+#:
+#: ``bundled`` renders a shipped topology preset to a NIR graph -- structure
+#: with freshly-initialised weights. ``reference`` is the one source that
+#: carries *trained* weights: a checkpoint this project trained itself, shipped
+#: inside the distribution and named by :attr:`HubEntry.weights`. The
+#: distinction matters because a catalog of untrained shapes and a catalog of
+#: trained models are different products, and the entry has to say which it is.
+SOURCES: Tuple[str, ...] = ("bundled", "reference", "url", "hf_repo")
+
+#: Directory inside this package holding the shipped reference checkpoints.
+WEIGHTS_DIR = "weights"
 
 #: Explicit marker for a candidate whose upstream license is not verified.
 #:
@@ -55,7 +65,13 @@ _FIELDS: Tuple[str, ...] = _REQUIRED + (
     "size_bytes",
     "topology",
     "input_shape",
+    "weights",
+    "dataset",
+    "test_accuracy",
+    "test_samples",
 )
+#: A packaged weights filename: one path segment, no directory traversal.
+_WEIGHTS_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.pt$")
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
 
 
@@ -76,6 +92,20 @@ class HubEntry:
     size_bytes: Optional[int] = None
     topology: Optional[str] = None
     input_shape: Optional[str] = None
+    #: For ``source: "reference"``: the checkpoint filename inside
+    #: ``spikeforge_hub/weights/``.
+    weights: Optional[str] = None
+    #: What the shipped checkpoint was trained on, and what it scores on that
+    #: dataset's complete held-out split. Present only for trained entries, so
+    #: an entry that claims an accuracy is exactly an entry that has weights.
+    dataset: Optional[str] = None
+    test_accuracy: Optional[float] = None
+    test_samples: Optional[int] = None
+
+    @property
+    def trained(self) -> bool:
+        """Return True when this entry carries trained weights."""
+        return self.source == "reference"
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "HubEntry":
@@ -170,7 +200,67 @@ def _check_source(data: Mapping[str, Any]) -> None:
         raise HubCatalogError(
             _label(data), "source 'hf_repo' needs an 'hf_repo'"
         )
+    if source == "reference":
+        _check_reference(data)
     _check_optional(data)
+    _check_scores(data)
+
+
+def _check_reference(data: Mapping[str, Any]) -> None:
+    """Enforce what a shipped, trained entry has to declare.
+
+    A reference entry is the only kind whose bytes this project vouches for,
+    so it has to name the packaged file, pin its checksum, and say what it was
+    trained on -- otherwise "trained weights" is an unfalsifiable claim.
+    """
+    weights = data.get("weights")
+    if not _text(weights):
+        raise HubCatalogError(
+            _label(data), "source 'reference' needs a 'weights' filename"
+        )
+    if not _WEIGHTS_NAME.match(str(weights)):
+        raise HubCatalogError(
+            _label(data),
+            f"weights {weights!r} must be a bare '*.pt' filename inside "
+            f"the packaged {WEIGHTS_DIR}/ directory",
+        )
+    if not _text(data.get("sha256")):
+        raise HubCatalogError(
+            _label(data), "source 'reference' needs a 'sha256' checksum"
+        )
+    if not _text(data.get("dataset")):
+        raise HubCatalogError(
+            _label(data),
+            "source 'reference' needs the 'dataset' it trained on",
+        )
+    if data.get("test_accuracy") is None:
+        raise HubCatalogError(
+            _label(data),
+            "source 'reference' needs a 'test_accuracy'; a trained entry "
+            "that does not say what it scores is not a useful one",
+        )
+
+
+def _check_scores(data: Mapping[str, Any]) -> None:
+    """Reject a malformed or impossible reported score."""
+    accuracy = data.get("test_accuracy")
+    if accuracy is not None:
+        if isinstance(accuracy, bool) or not isinstance(
+            accuracy, (int, float)
+        ):
+            raise HubCatalogError(
+                _label(data), "test_accuracy must be a number"
+            )
+        if not 0.0 <= float(accuracy) <= 100.0:
+            raise HubCatalogError(
+                _label(data),
+                f"test_accuracy {accuracy} is outside 0-100 percent",
+            )
+    samples = data.get("test_samples")
+    if samples is not None and (
+        isinstance(samples, bool) or not isinstance(samples, int)
+    ):
+        raise HubCatalogError(_label(data), "test_samples must be an integer")
 
 
 def _check_optional(data: Mapping[str, Any]) -> None:

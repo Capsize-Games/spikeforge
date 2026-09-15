@@ -1,15 +1,15 @@
 # spikeforge
 
-[![CI](https://github.com/capsize-games/spikeforge/actions/workflows/ci.yml/badge.svg)](https://github.com/capsize-games/spikeforge/actions/workflows/ci.yml)
+[![CI](https://github.com/Capsize-Games/spikeforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Capsize-Games/spikeforge/actions/workflows/ci.yml)
 [![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white)](https://capsizegames.com/discord)
-[![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-orange.svg)](OPEN_SOURCE_CHECKLIST.md)
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
+[![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-orange.svg)](https://github.com/Capsize-Games/spikeforge/blob/main/OPEN_SOURCE_CHECKLIST.md)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://github.com/Capsize-Games/spikeforge/blob/main/LICENSE)
 [![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-3776AB.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/capsize-games/spikeforge/blob/main/CONTRIBUTING.md)
-[![Docs](https://img.shields.io/badge/docs-long--form%20reference-blue.svg)](documentation/README.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Capsize-Games/spikeforge/blob/main/CONTRIBUTING.md)
+[![Docs](https://img.shields.io/badge/docs-long--form%20reference-blue.svg)](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/README.md)
 
-![spikeforge dashboard](images/dashboard.png)
+![spikeforge dashboard](https://raw.githubusercontent.com/Capsize-Games/spikeforge/main/images/dashboard.png)
 
 A spiking-neural-network (SNN) toolkit built on
 [snnTorch](https://snntorch.readthedocs.io/) and PyTorch. Loads MNIST-style
@@ -18,7 +18,7 @@ random spikes, and trains, validates, exports, and deploys LIF networks —
 with a live browser dashboard served over WebSockets.
 
 > **Pre-1.0.** Before trusting any number this produces, read
-> [Implications and boundaries](documentation/implications-and-boundaries.md).
+> [Implications and boundaries](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/implications-and-boundaries.md).
 
 ## Quickstart
 
@@ -29,7 +29,7 @@ pip install spikeforge
 ```
 
 ```python
-from spikeforge.training.training_engine import TrainingEngine
+from spikeforge import TrainingEngine
 
 engine = TrainingEngine(dataset="mnist", hidden=32, epochs=1, num_steps=5)
 for metrics in engine.train():
@@ -37,14 +37,37 @@ for metrics in engine.train():
 print(last)  # {'loss': ..., 'train_accuracy': ..., 'test_accuracy': ...}
 ```
 
-The first run downloads MNIST; later runs are offline. That's the training
-API — `spikeforge-verify`, `spikeforge-benchmark`, and the NIR/deployment/
-energy pieces live in [Usage](documentation/usage.md).
+That finishes in seconds — about 3 s on a 12-thread desktop CPU, nearer 14 s
+on a laptop — and lands in the mid-80s for accuracy. The snippet sets no seed,
+so the exact figure moves between runs, and the `test_accuracy` it prints is
+the engine's fast progress probe rather than the whole test split. For numbers
+measured on the *complete* held-out split, with the command that reproduces
+each one, see [Benchmarks](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/benchmarks.md).
+The first run downloads MNIST; later runs are offline.
+
+`TrainingEngine` is the entry point for new code — it owns the training loop,
+topology selection, encoding, checkpointing, and evaluation. (`SNNTrainer`,
+also exported, is the older MNIST rate-coding helper behind the tutorial demo;
+reach for `TrainingEngine`.) `spikeforge-verify`, `spikeforge-benchmark`, and
+the NIR/deployment/energy pieces live in
+[Usage](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/usage.md).
+
+**On a machine with no GPU**, install the CPU torch wheels *first* so pip does
+not pull the entire CUDA stack in behind them:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install spikeforge
+```
+
+That is a ~1.1 GB environment instead of ~5.5 GB, and it is the same flow the
+Dockerfile and CI use. The order matters: with `--extra-index-url` pip still
+prefers the CUDA build from PyPI.
 
 Want the live browser dashboard instead? That's the richer, second path:
 
 ```bash
-git clone https://github.com/capsize-games/spikeforge.git
+git clone https://github.com/Capsize-Games/spikeforge.git
 cd spikeforge
 docker compose up --build
 ```
@@ -52,7 +75,7 @@ docker compose up --build
 Open <http://localhost:8877> — the dashboard connects to the WebSocket on
 the same host and port. No separate backend or proxy to run.
 
-See [Usage](documentation/usage.md) and [Quickstart](documentation/quickstart.md)
+See [Usage](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/usage.md) and [Quickstart](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/quickstart.md)
 for every path (`./install.sh`, local dev with Vite, `examples/`, and the
 `spikeforge-*` console scripts).
 
@@ -79,7 +102,7 @@ stale.
 | Independent re-execution + drift check of the exported graph | — | — | — | — | ✅ |
 | Per-target deployment capability matrix (op support, honest availability) | — | — | Loihi-focused | — | ✅ (reference/Norse/Lava/SpiNNaker2/Speck/Xylo) |
 | Built-in event-driven energy estimator (SOP/MAC/AC) | — | — | — | — | ✅ (labelled `estimate`, not hardware-measured) |
-| Pretrained model zoo | — | — | — | ✅ (some vision tasks) | catalog infra ships; mostly untrained preset shapes today ([details](spikeforge_hub/models.json)) |
+| Pretrained model zoo | — | — | — | ✅ (some vision tasks) | small: six of this project's own reference checkpoints with published accuracy, plus untrained preset shapes ([details](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/benchmarks.md)) |
 | Live browser training/introspection dashboard | — | — | — | — | ✅ |
 
 If you already have a training loop in snnTorch/Norse/Lava/SpikingJelly and
@@ -105,8 +128,9 @@ dashboard, you may not need spikeforge on top of it — that's a fair
 - **Deployment** — a capability matrix, weight quantization, energy
   accounting, and executable `reference`, `norse`, and `lava_loihi2`
   backends.
-- **Model hub** — a curated, offline-first catalog plus optional live
-  Hugging Face search.
+- **Model hub** — a curated, offline-first catalog carrying this project's
+  own trained reference checkpoints (with the accuracy each scores), plus
+  optional live Hugging Face search.
 - **Dashboard** — a React + TypeScript UI with training, introspection,
   analysis, targets, energy, and hub panels, and seven guided walkthroughs.
 
@@ -117,19 +141,44 @@ the ten-second version; each row links to the honest detail.
 
 | Capability | Status | Detail |
 |---|---|---|
-| Training, encoding, topologies, checkpointing | Shipped | [Features](documentation/features.md) |
-| NIR export + independent-interpreter drift validation | Shipped | [Interpreter spine](documentation/interpreter-spine.md) |
-| Deployment — `reference` target | Shipped, always available | [Backend execution](documentation/backend-execution.md) |
-| Deployment — `norse`, `lava_loihi2` targets | Shipped, gated on an SDK extra (`pip install spikeforge-targets[norse]` or `[lava]`) | [Targets and interop](documentation/targets-and-interop.md) |
-| Deployment — `spinnaker2`, `speck`, `xylo` targets | Spec-only — registered in the capability matrix, no installable SDK integration yet | [Targets and interop](documentation/targets-and-interop.md) |
-| Energy accounting (SOP/MAC/AC) | Shipped as an explicit `estimate`, not hardware-measured | [Event runtime and energy](documentation/event-runtime-and-energy.md) |
-| Model hub catalog, CLI, dashboard panel, opt-in live HF search | Shipped | [Model hub](documentation/model-hub.md) |
-| Model hub catalog *content* | Thin — bundled NIR shapes today, not trained weights | [`spikeforge_hub/models.json`](spikeforge_hub/models.json) |
-| Sequence/attention topologies (`sequence_mlp`, `sequence_attn`) | Experimental — research scope, not production sequence training | [Sequence primitives](documentation/sequence-primitives.md) |
-| ONNX interop | Shipped, single-step export/import only | [Interop fold-ins](documentation/interop-foldins.md) |
-| Production use-case toolkit: streaming time-series (UC-1) | Shipped | [UC-1](plans/use_case_streaming_timeseries.md) |
-| Production use-case toolkit: UC-2 through UC-10 | Spec-only (design docs behind issues #13–#21) | [plans/index.md](plans/index.md#production-use-cases-pc-0) |
-| Live browser dashboard | Shipped | [Dashboard](documentation/dashboard.md) |
+| Training, encoding, topologies, checkpointing | Shipped | [Features](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/features.md) |
+| NIR export + independent-interpreter drift validation | Shipped | [Interpreter spine](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/interpreter-spine.md) |
+| Deployment — `reference` target | Shipped, always available | [Backend execution](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/backend-execution.md) |
+| Deployment — `norse`, `lava_loihi2` targets | Shipped, gated on an SDK extra (`pip install spikeforge-targets[norse]` or `[lava]`) | [Targets and interop](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/targets-and-interop.md) |
+| Deployment — `spinnaker2`, `speck`, `xylo` targets | Spec-only — registered in the capability matrix, no installable SDK integration yet | [Targets and interop](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/targets-and-interop.md) |
+| Energy accounting (SOP/MAC/AC) | Shipped as an explicit `estimate`, not hardware-measured | [Event runtime and energy](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/event-runtime-and-energy.md) |
+| Model hub catalog, CLI, dashboard panel, opt-in live HF search | Shipped | [Model hub](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/model-hub.md) |
+| Model hub catalog *content* | Six trained reference checkpoints with published accuracy, alongside untrained preset shapes — not a large zoo | [Benchmarks](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/benchmarks.md) |
+| Sequence/attention topologies (`sequence_mlp`, `sequence_attn`) | Experimental — research scope, not production sequence training | [Sequence primitives](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/sequence-primitives.md) |
+| ONNX interop | Shipped, single-step export/import only | [Interop fold-ins](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/interop-foldins.md) |
+| Production use-case toolkit: streaming time-series (UC-1) | Shipped | [UC-1](https://github.com/Capsize-Games/spikeforge/blob/main/plans/use_case_streaming_timeseries.md) |
+| Production use-case toolkit: UC-2 through UC-10 | Spec-only (design docs behind issues #13–#21) | [plans/index.md](https://github.com/Capsize-Games/spikeforge/blob/main/plans/index.md#production-use-cases-pc-0) |
+| Live browser dashboard | Shipped | [Dashboard](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/dashboard.md) |
+
+## What it scores
+
+Reference configurations on the datasets and topologies that ship, each
+measured on the **complete** held-out test split, with the command that
+reproduces it:
+
+| Dataset | Topology | Test accuracy | Train time (CPU) |
+|---|---|---|---|
+| MNIST | `conv_net` | **97.13%** | 249 s |
+| MNIST | `fc_legacy` | **94.29%** | 50 s |
+| MNIST | `recurrent_net` | **92.46%** | 55 s |
+| MNIST | `fc_small` | **92.16%** | 40 s |
+| Fashion-MNIST | `fc_legacy` | **75.55%** | 62 s |
+| KMNIST | `fc_legacy` | **70.79%** | 49 s |
+
+Every figure is the **complete** held-out test split, on a 12-thread x86-64
+CPU with no GPU. The full table — epochs, time steps, hardware, seed, and the
+one command that reproduces each row — is in
+[Benchmarks](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/benchmarks.md).
+
+These are reference configurations with stock hyperparameters and a single
+seed, **not** tuned attempts at state of the art; read them as a floor the
+shipped defaults reach, not as a ceiling. The checkpoints they produce are the
+trained entries in the model hub (`spikeforge-hub list --trained`).
 
 ## Packages
 
@@ -146,32 +195,32 @@ each versioned independently:
 | `spikeforge-clients` | `spikeforge_clients` | Python/TypeScript/CLI clients for `spikeforge-serve` (no torch dependency) |
 | `spikeforge-io` | `spikeforge_io` | Recorded-stream I/O adapters and windowing |
 
-`spikeforge-hub` and `spikeforge-targets` sit at `0.1.x` while core is at
-`0.3.x` by design, not neglect — each package is versioned independently, and
-[`compatibility.json`](compatibility.json) is the source of truth for which
+The satellites sit at lower version numbers than core by design, not neglect —
+each package is versioned independently and moves only when it changes, and
+[`compatibility.json`](https://github.com/Capsize-Games/spikeforge/blob/main/compatibility.json) is the source of truth for which
 satellite versions go with which core release. If you're pinning versions by
 hand, read that file rather than assuming semver alignment across packages.
 
 ## Documentation
 
 This README covers first contact and positioning; it deliberately doesn't
-go deeper. [`documentation/`](documentation/README.md) is the full reference — install
+go deeper. [`documentation/`](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/README.md) is the full reference — install
 paths, the CLI tools, architecture, module layout, and the dev workflow —
 written for contributors and coding agents alike. Also see
-[COOKBOOK.md](COOKBOOK.md) for copy-pasteable recipes,
-[examples/](examples/) for runnable end-to-end scripts, and
-[plans/](plans/) for design documents and the roadmap.
+[COOKBOOK.md](https://github.com/Capsize-Games/spikeforge/blob/main/COOKBOOK.md) for copy-pasteable recipes,
+[examples/](https://github.com/Capsize-Games/spikeforge/tree/main/examples/) for runnable end-to-end scripts, and
+[plans/](https://github.com/Capsize-Games/spikeforge/tree/main/plans/) for design documents and the roadmap.
 
-See [CONTRIBUTING.md](https://github.com/capsize-games/spikeforge/blob/main/CONTRIBUTING.md)
-and [rules.md](rules.md) before opening a pull request.
+See [CONTRIBUTING.md](https://github.com/Capsize-Games/spikeforge/blob/main/CONTRIBUTING.md)
+and [rules.md](https://github.com/Capsize-Games/spikeforge/blob/main/rules.md) before opening a pull request.
 
 ## Citing
 
 If spikeforge is useful in your research, please cite it — see
-[CITATION.cff](CITATION.cff) (GitHub renders a "Cite this repository"
+[CITATION.cff](https://github.com/Capsize-Games/spikeforge/blob/main/CITATION.cff) (GitHub renders a "Cite this repository"
 button from it automatically).
 
 ## License
 
-Released under the **BSD 3-Clause License** — see [LICENSE](LICENSE) and
-[AUTHORS](AUTHORS).
+Released under the **BSD 3-Clause License** — see [LICENSE](https://github.com/Capsize-Games/spikeforge/blob/main/LICENSE) and
+[AUTHORS](https://github.com/Capsize-Games/spikeforge/blob/main/AUTHORS).

@@ -13,9 +13,14 @@ type: software
 authors:
   - name: "Capsize LLC"
     email: contact@capsizegames.com
-repository-code: "https://github.com/capsize-games/spikeforge"
+repository-code: "https://github.com/Capsize-Games/spikeforge"
 url: "https://spikeforge.net"
 license: BSD-3-Clause
+# The version and date of the release this metadata describes. GitHub's
+# "Cite this repository" button emits these verbatim, so a citation without
+# them names no particular version of the software.
+version: 0.3.5
+date-released: "2026-09-14"
 keywords:
   - spiking neural networks
   - neuromorphic computing

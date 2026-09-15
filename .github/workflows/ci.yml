@@ -34,6 +34,15 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      - name: Type-check (mypy)
+        # All seven distributions ship `py.typed`, which was a promise to type
+        # checkers that nothing verified. `mypy.ini` documents what this gate
+        # does and does not yet cover, and is written to be tightened.
+        run: |
+          pip install mypy
+          mypy spikeforge/ spikeforge_targets/ spikeforge_hub/ \
+               spikeforge_io/ spikeforge_serve/ spikeforge_clients/ server/
+
   test:
     # The full suite across every supported interpreter (python_requires).
     runs-on: ubuntu-latest
@@ -284,7 +293,8 @@ jobs:
 
   docs:
     # A broken documentation link must fail the pull request, not just a local
-    # `build_docs.sh --check`.
+    # `build_docs.sh --check`. This gate covers the MkDocs tree in `docs/`;
+    # the `published-surfaces` job below covers what readers actually land on.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -301,6 +311,36 @@ jobs:
 
       - name: Check documentation links
         run: bash scripts/build_docs.sh --check
+
+  published-surfaces:
+    # The two pages a stranger actually lands on -- the PyPI project page and
+    # docs.spikeforge.net -- are generated from files in this repository, and
+    # neither was covered by any gate: the `docs` job validates the MkDocs
+    # tree, which is published nowhere, and nothing at all looked at the
+    # packaged README. Both surfaces are rendered here the way their host
+    # renders them, so a dead link fails the pull request instead of shipping.
+    #
+    # Deliberately torch-free: readme_renderer plus the stdlib is the whole
+    # dependency set, so this stays one of the fastest jobs in the matrix.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install the renderer PyPI itself uses
+        run: |
+          python -m pip install --upgrade pip
+          pip install "readme_renderer[md]"
+
+      - name: The packaged README must render cleanly on PyPI
+        run: python scripts/check_readme_links.py
+
+      - name: The published documentation site must have no dead links
+        run: python scripts/check_wiki_links.py
 
   client:
     # `client/` is a read-only mirror for one release; the full build now lives
@@ -327,6 +367,9 @@ jobs:
 
       - name: The generated protocol types must be current
         run: git diff --exit-code -- client/src/protocol/generated.ts
+
+      - name: Landing-page i18n (no build step, stdlib node only)
+        run: node landing/i18n_test.js
 
   core-boundary:
     # The static half of the core boundary: no module-level import of a

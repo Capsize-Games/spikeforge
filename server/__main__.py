@@ -5,6 +5,8 @@ from typing import Optional, Sequence
 
 import uvicorn
 
+from spikeforge.version import add_version_flag
+
 #: Default bind address and port (the single-port dashboard contract on :8877).
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8877
@@ -16,6 +18,7 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
         prog="spikeforge-server",
         description="Run the spikeforge dashboard/WebSocket server.",
     )
+    add_version_flag(parser)
     parser.add_argument(
         "--host",
         default=DEFAULT_HOST,

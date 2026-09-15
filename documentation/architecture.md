@@ -39,18 +39,18 @@ The deploy layer — deploy backends, quantization, energy accounting, and the
 sparse event runtime — is extracted to
 [`capsize-games/spikeforge-targets`](https://github.com/capsize-games/spikeforge-targets)
 (ARCH-0001 Phase 3; distribution `spikeforge-targets`, import root `spikeforge_targets`).
-It depends on core (`spikeforge~=0.3.1`) but core never depends on it. The
+It depends on core (`spikeforge~=0.3.5`) but core never depends on it. The
 top-level `spikeforge_targets/` package stays here as the `packages/spikeforge-targets`
 workspace distribution.
 
 The model hub is likewise extracted to
 [`capsize-games/spikeforge-hub`](https://github.com/capsize-games/spikeforge-hub)
 (ARCH-0001 Phase 4; distribution `spikeforge-hub`, import root `spikeforge_hub`),
-also depending on `spikeforge~=0.3.1`. Core itself lives at
+also depending on `spikeforge~=0.3.5`. Core itself lives at
 [`capsize-games/spikeforge`](https://github.com/capsize-games/spikeforge); the
 `spikeforge-server` distribution (import root `server`) stays in that repository
 because its extraction trigger T4 did not fire.
 
-Because the project is pre-1.0 and unpublished, the extraction shipped without
-back-compat aliases: the old `spikeforge.{targets,energy,event_runtime,hub}`
+Because the project was pre-1.0 and unpublished when the split landed, the
+extraction shipped without back-compat aliases: the old `spikeforge.{targets,energy,event_runtime,hub}`
 import paths were deleted rather than kept as shims.

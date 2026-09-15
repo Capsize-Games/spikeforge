@@ -21,7 +21,7 @@ animation** in the client. Each is a small, independently verifiable phase.
 |---|---|---|
 | Event-dataset training | `build_dataset` refuses event specs (`spec.cls is None`) | [`datasets.py`](spikeforge/data/datasets.py:111) |
 | Event loading | `EventSampleSource`, bridge, frames exist | [`event_source.py`](spikeforge/events/event_source.py), [`event_bridge.py`](spikeforge/events/event_bridge.py) |
-| ONNX | Absent | [`setup.py`](setup.py:46) |
+| ONNX | Absent | `setup.py` |
 | `nirtorch` extraction | Probe exists, extraction deferred | [`api.py`](spikeforge/nir_bridge/api.py:63) |
 | Quantization | Declared in constraints only | [`target_spec.py`](spikeforge_targets/target_spec.py:28) |
 | Geometry | 28x28 / square conv math hardcoded | [`presets.py`](spikeforge/topology/presets.py:128), [`datasets.py`](spikeforge/data/datasets.py:73) |

@@ -61,6 +61,83 @@ sed -i \
   -e 's|](README.md|](readme.md|g' \
   "$DOCS"/*.md
 
+# The API reference is generated into docs/ only, never into documentation/:
+# mkdocstrings' `:::` directives are meaningless anywhere but a MkDocs build,
+# and documentation/ is also the source for the published GitHub Wiki, where
+# they would render as literal text.
+info "Generating the API reference page"
+cat > "$DOCS/api-reference.md" <<'MARKDOWN'
+# API reference
+
+Generated from the shipped docstrings and type hints, so the signatures here
+cannot drift from the code. This covers the **public** surface of each
+distribution -- the names exported from each import root, plus the modules a
+caller integrating spikeforge into their own code reaches for directly.
+Private names (leading underscore) are omitted.
+
+For narrative documentation start at [Quickstart](quickstart.md) and
+[Architecture](architecture.md); this page is the lookup table.
+
+## spikeforge
+
+`TrainingEngine` is the entry point for new code: it owns the cancellable
+training loop, topology selection, encoding, checkpointing, and evaluation.
+`SNNTrainer` is the older, narrower MNIST rate-coding helper behind the
+tutorial demo.
+
+::: spikeforge
+    options:
+      members:
+        - TrainingEngine
+        - SNNTrainer
+        - SNNTrainerLogger
+        - LatencyTrainer
+        - DeltaTrainer
+        - RandomSpikeGenerator
+        - convert_to_time
+
+### Version and compatibility reporting
+
+::: spikeforge.version
+
+### Topologies
+
+::: spikeforge.topology.registry
+
+### Encoding
+
+::: spikeforge.encoding.spike_encoder
+
+### Datasets
+
+::: spikeforge.data.datasets
+
+::: spikeforge.data.data_loader
+
+### NIR bridge
+
+::: spikeforge.nir_bridge
+
+## spikeforge_targets
+
+::: spikeforge_targets
+
+## spikeforge_hub
+
+::: spikeforge_hub.catalog
+
+::: spikeforge_hub.entry
+    options:
+      members:
+        - HubEntry
+
+::: spikeforge_hub.inspect
+
+## spikeforge_io
+
+::: spikeforge_io
+MARKDOWN
+
 if [ "$CHECK" = "1" ]; then
   info "mkdocs build --strict"
   "$PY" -m mkdocs build --strict

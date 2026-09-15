@@ -16,6 +16,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
+from spikeforge.version import add_version_flag
 from spikeforge_hub import registry
 from spikeforge_hub.registry import Registry, RegistryEntry
 from spikeforge_hub.registry_errors import RegistryError
@@ -179,6 +180,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         prog="spikeforge-registry",
         description="Govern the dev/staging/prod promotion registry.",
     )
+    add_version_flag(parser)
     subs = parser.add_subparsers(dest="command", required=True)
     add_subcommands(subs)
     args = parser.parse_args(argv)

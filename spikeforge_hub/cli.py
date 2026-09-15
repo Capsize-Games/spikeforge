@@ -11,6 +11,7 @@ import argparse
 import json
 from typing import Any, Dict, List, Optional
 
+from spikeforge.version import add_version_flag
 from spikeforge_hub import download as hub_download
 from spikeforge_hub import probe
 from spikeforge_hub.catalog import get, issues, list_entries, search
@@ -39,6 +40,7 @@ def _list_payload(args: argparse.Namespace) -> Dict[str, Any]:
         framework=args.framework,
         kind=args.kind,
         available=True if args.available else None,
+        trained=True if args.trained else None,
     )
     return {"entries": entries, "issues": issues()}
 
@@ -113,6 +115,11 @@ def _add_listing(subs: Any) -> None:
     listing.add_argument("--framework", default=None)
     listing.add_argument("--kind", default=None)
     listing.add_argument("--available", action="store_true")
+    listing.add_argument(
+        "--trained",
+        action="store_true",
+        help="only entries that carry trained weights, not preset structure",
+    )
     listing.set_defaults(handler=_run_list)
 
     search_cmd = subs.add_parser("search", help="search the curated catalog")
@@ -150,6 +157,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         prog="spikeforge-hub",
         description="Browse, download, inspect, and import curated models.",
     )
+    add_version_flag(parser)
     subs = parser.add_subparsers(dest="command", required=True)
     add_subcommands(subs)
     args = parser.parse_args(argv)

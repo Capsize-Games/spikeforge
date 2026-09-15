@@ -131,6 +131,7 @@ def entry_dict(entry: HubEntry) -> Dict[str, object]:
         **entry.to_dict(),
         "available": available,
         "reason": reason,
+        "trained": entry.trained,
         "cached": cache.cached(entry.id),
     }
 
@@ -139,11 +140,19 @@ def list_entries(
     framework: Optional[str] = None,
     kind: Optional[str] = None,
     available: Optional[bool] = None,
+    trained: Optional[bool] = None,
 ) -> List[Dict[str, object]]:
-    """Return entry cards, filtered by framework, kind, and availability."""
+    """Return entry cards, filtered by framework, kind, and availability.
+
+    ``trained`` selects on whether an entry carries real weights, which is the
+    distinction a visitor actually cares about: the catalog holds both trained
+    checkpoints and untrained preset structure.
+    """
     cards = [entry_dict(entry) for entry in entries()]
     return [
-        card for card in cards if _matches(card, framework, kind, available)
+        card
+        for card in cards
+        if _matches(card, framework, kind, available, trained)
     ]
 
 
@@ -152,11 +161,14 @@ def _matches(
     framework: Optional[str],
     kind: Optional[str],
     available: Optional[bool],
+    trained: Optional[bool] = None,
 ) -> bool:
     """Return True when ``card`` passes every supplied filter."""
     if framework is not None and card["framework"] != framework:
         return False
     if kind is not None and card["kind"] != kind:
+        return False
+    if trained is not None and card["trained"] is not trained:
         return False
     if available is None:
         return True

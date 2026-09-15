@@ -20,6 +20,7 @@ from typing import Optional, Sequence
 
 import uvicorn
 
+from spikeforge.version import add_version_flag
 from spikeforge_serve import modules
 from spikeforge_serve.app import create_app
 from spikeforge_serve.module_runner import run as run_module
@@ -118,6 +119,7 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
         prog="spikeforge-serve",
         description="Serve, run, and install .spkf deployment bundles.",
     )
+    add_version_flag(parser)
     subparsers = parser.add_subparsers(dest="command", required=True)
     _add_serve_parser(subparsers)
     _add_run_parser(subparsers)

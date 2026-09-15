@@ -5,6 +5,13 @@ example ``spikeforge/...py:14``), which are not documentation pages and
 which MkDocs cannot distinguish from a broken page link. This checker narrows
 the contract to what matters for a browsable site: every relative link that
 targets another markdown page must resolve inside the generated docs tree.
+
+Scope note: this guards the **MkDocs** tree in ``docs/``, which
+``scripts/build_docs.sh`` generates and strict-mode validates. The site
+readers actually land on -- ``docs.spikeforge.net``, which serves the GitHub
+wiki -- is guarded by ``scripts/check_wiki_links.py``, which audits every
+link on the generated wiki rather than only the ``.md`` ones. Keep both: this
+one proves the MkDocs nav is sound, that one proves the published pages are.
 """
 
 import re

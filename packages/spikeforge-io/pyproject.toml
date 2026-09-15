@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-io"
-version = "0.1.0"
+version = "0.1.1"
 description = "Recorded-stream I/O adapters and the windowing surface for spikeforge."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core and client distributions' metadata approach.
@@ -49,12 +49,13 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 # The core runtime supplies the frozen window/normalize/encode contract and
 # torch; numpy is already a core dependency and backs the `.npy` adapter. No
 # pandas/fastapi/network client is pulled in, so an I/O install stays light.
 dependencies = [
-    "spikeforge~=0.3.4",
+    "spikeforge~=0.3.5",
     "torch>=2.5",
     "numpy>=1.26",
 ]
@@ -70,8 +71,11 @@ dev = [
 spikeforge-io = "spikeforge_io.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/capsize-games/spikeforge"
-Repository = "https://github.com/capsize-games/spikeforge"
+Homepage = "https://spikeforge.net/"
+Documentation = "https://docs.spikeforge.net/"
+Repository = "https://github.com/Capsize-Games/spikeforge"
+Changelog = "https://github.com/Capsize-Games/spikeforge/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Capsize-Games/spikeforge/issues"
 
 [tool.setuptools]
 zip-safe = false

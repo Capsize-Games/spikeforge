@@ -219,7 +219,7 @@ adds the *executed* view. Routed via
 
 ### 5.2 CLI
 
-Extended in [`target_cli.py`](spikeforge/cli/target_cli.py:166):
+Extended in [`target_cli.py`](spikeforge_targets/cli/target_cli.py:164):
 
 ```
 spikeforge-targets rewrite --topology conv_net --target norse      # rewrite report + drift
@@ -228,7 +228,7 @@ spikeforge-targets run     --topology conv_net --target norse      # compile + r
 
 Both print JSON; `run` exits non-zero unless `status == "ok"` and the compare
 is within tolerance, so it is a CI gate (same convention as
-[`deploy_exit`](spikeforge/cli/target_cli.py:86)).
+[`deploy_exit`](spikeforge_targets/cli/target_cli.py:80)).
 
 ### 5.3 Client
 

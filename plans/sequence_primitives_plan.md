@@ -236,9 +236,9 @@ typed unexportable error on the existing `error` channel with the stage named.
 
 ### 6.2 Client
 
-- [`StageEditor.tsx`](client/src/components/StageEditor.tsx): per-stage kind,
+- `StageEditor.tsx`: per-stage kind,
   neuron kind, params, and surrogate; renders the spec from `graph_summary`.
-- [`TopologyStageList.tsx`](client/src/components/TopologyStageList.tsx): the
+- `TopologyStageList.tsx`: the
   flat list of stages with their heterogeneity.
 - The neuron picker ([`Controls.tsx`](client/src/components/Controls.tsx))
   keeps its global default and gains a "per-stage" expansion.
