@@ -130,11 +130,18 @@ class EventTrainingEngine(TrainingEngine):
         ``train`` selects which source is read. The two sources opened
         different dataset splits, so the batches are different data, not the
         same stream under a different name.
+
+        The training split is visited in a seeded random order and the
+        held-out split sequentially, exactly as the image path's loader is
+        built with ``shuffle=train``. That is load-bearing rather than tidy:
+        real event datasets ship grouped by class, so reading a training epoch
+        in order makes every batch a single class.
         """
         source = self._event_source if train else self._test_source
         return event_batches.event_batches(
             source, self._spec, self._subset, self._batch_size,
             self._epoch_samples if train else None,
+            shuffle=train, seed=self._seed,
         )
 
     def _load_test_batches(

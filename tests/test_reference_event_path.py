@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import pytest
+import torch
 
 import scripts.train_reference_models as trm
 from spikeforge.data import event_loader
@@ -142,6 +143,78 @@ def test_image_rows_are_left_alone_by_the_epoch_helper() -> None:
         _reference(dataset="mnist", topology="fc_small", topology_params={})
     )
     assert trm._use_full_event_epoch(engine, "mnist") is None
+
+
+# --- shuffling the training split ---------------------------------------
+
+
+def test_the_training_split_is_visited_in_a_shuffled_order(
+    tonic_stub: None,
+) -> None:
+    """Real event datasets ship grouped by class, so order matters.
+
+    SSC's training split is 35 contiguous runs over 75,466 samples. Read in
+    order, every batch is a single class and the network learns only to name
+    whichever class it is currently being shown -- which scored 3.84% against
+    a 2.86% chance baseline on 35 classes. The synthetic fixture hid this
+    completely, because its labels are ``index % num_classes`` and therefore
+    perfectly interleaved by accident.
+    """
+    engine = trm._engine_for(_reference())
+    trm._use_full_event_epoch(engine, "n_mnist")
+    batches = engine._epoch_batches(train=True)
+    visited = [
+        int(label) for _inputs, labels in batches for label in labels
+    ]
+    assert len(visited) == _TRAIN_SAMPLES
+    assert visited != sorted(visited)
+
+
+def test_the_held_out_split_is_not_shuffled(tonic_stub: None) -> None:
+    """Scoring reads the split in order, as the image loader does."""
+    engine = trm._engine_for(_reference())
+    first = engine._epoch_batches(train=False)
+    second = engine._epoch_batches(train=False)
+    for (inputs, _l), (again, _r) in zip(first, second):
+        assert torch.equal(inputs, again)
+
+
+def test_the_shuffle_is_reproducible_from_the_seed(tonic_stub: None) -> None:
+    """A published row has to be reproducible, so the order is seeded."""
+    orders = []
+    for _ in range(2):
+        engine = trm._engine_for(_reference(seed=7))
+        trm._use_full_event_epoch(engine, "n_mnist")
+        orders.append([
+            int(label)
+            for _inputs, labels in engine._epoch_batches(train=True)
+            for label in labels
+        ])
+    assert orders[0] == orders[1]
+
+
+def test_a_different_seed_gives_a_different_order(tonic_stub: None) -> None:
+    """The order really is seeded, not a fixed permutation."""
+    def order(seed: int) -> list:
+        engine = trm._engine_for(_reference(seed=seed))
+        trm._use_full_event_epoch(engine, "n_mnist")
+        return [
+            int(label)
+            for _inputs, labels in engine._epoch_batches(train=True)
+            for label in labels
+        ]
+
+    assert order(1) != order(2)
+
+
+def test_batch_helper_defaults_to_sequential() -> None:
+    """The dashboard's path is unchanged: shuffling is opt-in."""
+    from spikeforge.training.event_batches import visit_order
+
+    assert visit_order(6, shuffle=False) == [0, 1, 2, 3, 4, 5]
+    shuffled = visit_order(64, shuffle=True, seed=0)
+    assert sorted(shuffled) == list(range(64))
+    assert shuffled != list(range(64))
 
 
 # --- the complete held-out split ----------------------------------------

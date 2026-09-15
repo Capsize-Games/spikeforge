@@ -2,12 +2,14 @@
 
 Tonic downloads these datasets correctly and then decodes them wrongly. Its
 reader converts the file's timestamps from seconds to microseconds with
-``times * 1e6``, but the Heidelberg files store them as ``float16`` (maximum
-65504). Under NumPy 2's NEP 50 promotion a ``float16`` array times a Python
-float stays ``float16``, so the multiply overflows to ``inf``, becomes ``NaN``,
-and casts to ``INT64_MIN`` -- for every timestamp in every sample. Binning then
-sees a zero-width span and collapses the whole recording into one time step, so
-a 25-step spiking network trains on a single static frame and still reports a
+``times * 1e6``, but the Heidelberg files store them as ``float16``, whose
+maximum is 65504. Under NumPy 2's NEP 50 promotion a ``float16`` array times a
+Python float stays ``float16``, and ``1e6`` does not fit: the scale factor
+itself becomes ``inf``. Every product is then ``inf`` -- or ``NaN`` wherever
+the timestamp is exactly 0 -- and casting either to ``int64`` yields
+``INT64_MIN``, for every timestamp in every sample. Binning then sees a
+zero-width span and collapses the whole recording into one time step, so a
+25-step spiking network trains on a single static frame and still reports a
 plausible accuracy.
 
 So this module replaces that one conversion. It does **not** replace tonic:

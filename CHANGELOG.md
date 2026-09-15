@@ -13,6 +13,32 @@ that and describe the local source tree only.
 
 ### Added
 
+- **Heidelberg audio splits are read directly, bypassing tonic's decode.**
+  `spikeforge/events/hsd_reader.py` reads the SHD/SSC HDF5 itself and scales
+  seconds to microseconds in `float64`, which recovers every timestamp tonic
+  loses (see **Fixed**). It replaces exactly one thing — the per-sample decode.
+  Tonic still downloads the dataset, extracts it, owns the cache layout, and
+  supplies the sensor geometry; the reader is handed the constructed tonic
+  dataset and consults it for all of that. The emitted stream keeps tonic's own
+  `(t, x, p)` structured layout, so nothing downstream can tell the two paths
+  apart.
+
+  Routing is declared on the dataset, not hard-coded in the loader:
+  `DatasetSpec.native_reader` names the reader, and only `ssc` sets it — the
+  DVS datasets keep tonic's decode, which is correct for them. `h5py` arrives
+  with tonic itself and is imported defensively, so this module is to `h5py`
+  what `tonic_api` is to `tonic`: the only one that imports it.
+
+  Pinning `numpy<2` would also have worked and was rejected: a published number
+  whose reproduce command silently yields single-bin garbage on numpy 2 is not
+  reproducible. This fix is correct on any numpy, and
+  `tests/test_hsd_reader.py` asserts the broken promotion *is* still broken, so
+  the workaround cannot quietly outlive its reason.
+
+  It also opens the HDF5 once rather than per `__getitem__` as tonic does,
+  which is what lets the source's open-once caching actually pay off here:
+  0.50 ms/sample against 2.29 ms through tonic.
+
 - **Auditory event sensors load.** A cochlea has channels, not pixel rows:
   tonic's SHD and SSC declare `sensor_size = (700, 1, 1)` and their streams
   carry `(t, x, p)` with no `y` field at all, so `events_to_sample` raised
@@ -125,11 +151,33 @@ that and describe the local source tree only.
 
 ### Fixed
 
+- **Event training never shuffled, so a class-ordered dataset trained one class
+  per batch.** The image path builds its loader with `shuffle=train`; the event
+  path read `range(start, stop)` strictly in order and had no shuffle anywhere.
+  Real event datasets ship grouped by class — SSC's training split is exactly
+  **35 contiguous runs over 75,466 samples** — so every batch contained a
+  single class in class order, and the network learned only to name whichever
+  class it was currently being shown. Measured on SSC: **3.84%** unshuffled
+  against a 2.86% chance baseline on 35 classes, rising to **11.88%** once the
+  training split is visited in a seeded random order.
+
+  The synthetic fixture hid this completely. Its labels are
+  `index % num_classes`, so consecutive indices cycle through every class —
+  accidentally perfect interleaving, which is why no existing test caught it
+  and why it only surfaced against a real recording.
+
+  `event_batches` now takes `shuffle` and `seed`; the engine passes
+  `shuffle=train`, mirroring the image loader exactly, and the order is seeded
+  so a published row stays reproducible. The default is sequential, so the
+  dashboard and every existing caller are unchanged.
+
 - **Tonic destroys every SHD and SSC timestamp, and the pipeline would have
   trained on it silently.** The Heidelberg files store `spikes/times` as
   `float16`, whose maximum is 65504. Tonic's reader converts seconds to
-  microseconds with `times * 1e6`, which overflows float16 to `inf`, becomes
-  `NaN`, and casts to `INT64_MIN` — for **every timestamp in every sample**,
+  microseconds with `times * 1e6`; under NumPy 2's NEP 50 promotion that stays
+  in `float16`, where `1e6` itself does not fit — so the scale factor becomes
+  `inf`, every product is `inf` (or `NaN` where the timestamp is 0), and the
+  cast to `int64` yields `INT64_MIN` for **every timestamp in every sample**,
   in both SHD and SSC, on tonic 1.4.3. Our binning then saw a zero-width span
   and collapsed all events into the first time step: a spiking network trained
   on that has had all of its timing removed, and would still report a

@@ -169,7 +169,7 @@ REFERENCES = (
         name="ssc-fc-legacy",
         dataset="ssc",
         topology="fc_legacy",
-        epochs=1,
+        epochs=3,
         num_steps=25,
         batch_size=128,
         # A cochlea has 700 channels and no second spatial axis, so the flat
