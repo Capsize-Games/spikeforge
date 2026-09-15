@@ -13,6 +13,30 @@ that and describe the local source tree only.
 
 ### Added
 
+- **Auditory event sensors load.** A cochlea has channels, not pixel rows:
+  tonic's SHD and SSC declare `sensor_size = (700, 1, 1)` and their streams
+  carry `(t, x, p)` with no `y` field at all, so `events_to_sample` raised
+  "event stream has no 'y' field" and no audio dataset could be read. A sensor
+  whose declared height is 1 now places every event on row 0. A missing `y` on
+  a taller sensor is still an error — there the field is absent *data* rather
+  than an axis the recording does not have, and defaulting it would silently
+  flatten a 2-D recording onto one row.
+
+- **Impossible timestamps are refused by name.** `EventTimestampError` rejects
+  a stream whose timestamps are negative, which recording times cannot be.
+  This is what a non-finite float cast to an integer looks like, and it is not
+  hypothetical: see **Fixed** below. The check sits before binning, because
+  binning is deliberately forgiving of a zero-width time span — a real sample
+  can have every event at one instant — and so cannot tell a genuine instant
+  from timing that arrived destroyed.
+
+- **An SSC reference configuration**, `ssc-fc-legacy`: `fc_legacy` at
+  `input_size=700` (the flat cochlea area), `num_classes` left to the
+  registry's 35. Registered so the target and its geometry are recorded, and
+  so running it reports the upstream blocker at the point of use. **No
+  checkpoint or catalog entry is published**, because no honest number can be
+  produced from it yet.
+
 - **The reference-training script can train and score an event dataset.**
   Three things blocked it, all now closed. `_train` hard-coded
   `TrainingEngine`, so it now picks the engine from the registry's `modality`
@@ -100,6 +124,26 @@ that and describe the local source tree only.
   The other three event datasets are unaffected.
 
 ### Fixed
+
+- **Tonic destroys every SHD and SSC timestamp, and the pipeline would have
+  trained on it silently.** The Heidelberg files store `spikes/times` as
+  `float16`, whose maximum is 65504. Tonic's reader converts seconds to
+  microseconds with `times * 1e6`, which overflows float16 to `inf`, becomes
+  `NaN`, and casts to `INT64_MIN` — for **every timestamp in every sample**,
+  in both SHD and SSC, on tonic 1.4.3. Our binning then saw a zero-width span
+  and collapsed all events into the first time step: a spiking network trained
+  on that has had all of its timing removed, and would still report a
+  plausible-looking accuracy. This is upstream's bug, not ours, but publishing
+  a number through it would have been ours. The new `EventTimestampError`
+  refuses the stream instead; the audio row stays unpublished until upstream
+  is fixed.
+
+- **The loader's named field error never fired for real tonic data.**
+  `_field` caught `KeyError`/`IndexError`/`TypeError`, which is what a mapping
+  raises for a missing key — but a numpy structured array raises `ValueError`,
+  so every actual tonic stream reported numpy's wording instead of this
+  project's message naming the absent field. Both container shapes now get the
+  named error. The existing test passed because it used a dict.
 
 - **Reading an event dataset re-opened it once per sample.**
   `EventSampleSource.load` called `load_event_pair`, which constructed the

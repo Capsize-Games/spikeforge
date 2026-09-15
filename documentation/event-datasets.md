@@ -151,3 +151,20 @@ of decoding a missing image.
   once and holds it, because opening indexes the split's files. Opening stays
   lazy: constructing a source reaches neither disk nor network, so downloads
   keep happening in the isolated child worker.
+- **Auditory sensors have no `y` axis.** SHD and SSC report
+  `sensor_size = (700, 1, 1)`, so their flat area is 700 and a feature-input
+  topology needs `input_size=700`. Their streams carry no `y` field, and on a
+  one-row sensor every event sits on row 0; a missing `y` on a taller sensor
+  is still an error.
+- **🔴 SHD and SSC cannot currently be trained on.** The Heidelberg files
+  store timestamps as `float16`, and tonic's reader scales them by `1e6` —
+  which overflows float16 to `inf`, then `NaN`, then `INT64_MIN` for every
+  timestamp in every sample. All timing is gone before the data reaches us.
+  `EventTimestampError` refuses such a stream rather than binning every event
+  into the first time step and reporting a number measured on it. Verified
+  against tonic 1.4.3 on both datasets; it needs an upstream fix.
+- **The DVS datasets cannot currently be downloaded.** `dvs128_gesture` and
+  `cifar10_dvs` are served from figshare, which answers tonic's downloader
+  with `HTTP 202` and an empty body (tonic then reports "File not found or
+  corrupted"), and tonic's pinned N-MNIST URL on Mendeley returns `404`. Only
+  the Heidelberg datasets still serve bytes — and see above.

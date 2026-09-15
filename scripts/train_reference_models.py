@@ -166,6 +166,22 @@ REFERENCES = (
         ),
     ),
     Reference(
+        name="ssc-fc-legacy",
+        dataset="ssc",
+        topology="fc_legacy",
+        epochs=1,
+        num_steps=25,
+        batch_size=128,
+        # A cochlea has 700 channels and no second spatial axis, so the flat
+        # sensor area is 700. `num_classes` is absent on purpose: the engine
+        # injects the registry's 35.
+        topology_params={"input_size": 700},
+        note=(
+            "The audio row: a spiking cochlea model of Speech Commands, so "
+            "the catalog spans static vision, event vision, and audio."
+        ),
+    ),
+    Reference(
         name="kmnist-fc-legacy",
         dataset="kmnist",
         topology="fc_legacy",

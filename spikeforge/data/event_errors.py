@@ -43,3 +43,33 @@ class EventSplitMissingError(RuntimeError):
             "dataset that ships a test split, or declare a deterministic "
             "partition for it in the registry"
         )
+
+
+class EventTimestampError(ValueError):
+    """Raised when a stream's timestamps cannot be real recording times.
+
+    Microsecond timestamps are non-negative, so a negative one is not data:
+    it is the signature of a non-finite float cast to an integer, and
+    ``int(float("nan"))`` under numpy lands on ``INT64_MIN``.
+
+    This is not hypothetical. Tonic's SHD/SSC reader scales the file's
+    timestamps by ``1e6`` to convert seconds to microseconds, but the
+    Heidelberg files store them as ``float16``, whose maximum is 65504 -- so
+    the multiply overflows to ``inf``, becomes ``NaN``, and every timestamp
+    in the sample casts to ``INT64_MIN``. Binning then sees a zero-width
+    time span and collapses every event into the first time step, which
+    trains and scores perfectly happily while having destroyed all timing.
+    A named failure is the only honest outcome.
+    """
+
+    def __init__(self, detail: str = "") -> None:
+        """Explain what was seen and why it cannot be a recording time."""
+        super().__init__(
+            "event timestamps are negative, so they are not recording times "
+            f"{detail}; this is what a non-finite timestamp cast to an "
+            "integer looks like. Tonic's SHD/SSC reader produces it by "
+            "scaling float16 seconds by 1e6 (the multiply overflows to inf, "
+            "then NaN, then INT64_MIN), which would silently collapse every "
+            "event into one time bin. Refusing rather than reporting a "
+            "number measured on destroyed timing."
+        )

@@ -6,7 +6,10 @@ safely whether or not the ``events`` extra is installed.
 
 Tonic event tensors use a structured ``(x, y, t, p)`` layout where ``x`` is
 the column, ``y`` the row, ``t`` a microsecond timestamp, and ``p`` a
-boolean polarity (``True`` is ON). We map that to
+boolean polarity (``True`` is ON). Auditory sensors are the exception: a
+cochlea has channels, not pixel rows, so tonic's SHD/SSC streams are
+``(t, x, p)`` on a sensor declared one row tall and every event sits on row
+0. We map either shape to
 :class:`~spikeforge.events.event_sample.EventSample` by keeping ``x``
 and ``y``, converting ``p`` to ``+1`` (ON) / ``-1`` (OFF), and binning each
 microsecond timestamp into ``num_steps`` uniform 0-based bins spanning the
@@ -38,7 +41,10 @@ import torch
 from spikeforge.config import DATA_DIR
 from spikeforge.data.dataset_spec import DatasetSpec
 from spikeforge.data.datasets import dataset_spec, dataset_split_kwargs
-from spikeforge.data.event_errors import EventsExtraMissingError
+from spikeforge.data.event_errors import (
+    EventsExtraMissingError,
+    EventTimestampError,
+)
 from spikeforge.events import tonic_api
 from spikeforge.events.event_sample import EventSample
 
@@ -104,14 +110,56 @@ def _field(events: Any, name: str) -> torch.Tensor:
     """Return one flat integer column from a structured event stream."""
     try:
         column = events[name]
-    except (KeyError, IndexError, TypeError) as exc:
+    # A mapping raises KeyError for an absent key; a numpy structured array
+    # raises ValueError. Both mean the same thing and both get the named
+    # message rather than leaking the container's own wording.
+    except (KeyError, IndexError, TypeError, ValueError) as exc:
         raise ValueError(f"event stream has no {name!r} field") from exc
     return torch.as_tensor(np.ascontiguousarray(column)).reshape(-1).long()
+
+
+def _has_field(events: Any, name: str) -> bool:
+    """Return True when a structured event stream carries ``name``."""
+    try:
+        events[name]
+    except (KeyError, IndexError, TypeError, ValueError):
+        return False
+    return True
+
+
+def _rows(events: Any, x: torch.Tensor, height: int) -> torch.Tensor:
+    """Return each event's row index, or zeros for a one-row sensor.
+
+    Auditory sensors have no second spatial axis. Tonic's SHD and SSC declare
+    ``sensor_size = (700, 1, 1)`` and their streams carry ``(t, x, p)`` with
+    no ``y`` field at all, because a cochlea channel is not a pixel row. On a
+    sensor whose declared height is 1 every event therefore sits on row 0.
+
+    A missing ``y`` on a taller sensor is still an error: there the field is
+    absent *data* rather than an axis the recording does not have, and
+    defaulting it would silently collapse a 2-D recording onto one row.
+    """
+    if height == 1 and not _has_field(events, "y"):
+        return torch.zeros_like(x)
+    return _field(events, "y")
 
 
 def _polarity(p: torch.Tensor) -> torch.Tensor:
     """Map tonic's 1/0 ON/OFF polarity to our ``+1``/``-1`` convention."""
     return torch.where(p > 0, 1, -1).long()
+
+
+def _checked_times(t: torch.Tensor) -> torch.Tensor:
+    """Return ``t`` unchanged, or refuse a stream whose times are impossible.
+
+    Binning is deliberately forgiving -- a zero-width span is legitimate for
+    a sample whose events share one timestamp -- so it cannot tell a real
+    instant from timestamps that arrived destroyed. This check runs before
+    binning, where the difference is still visible.
+    """
+    if t.numel() and int(t.min()) < 0:
+        raise EventTimestampError(f"(minimum {int(t.min())})")
+    return t
 
 
 def _time_bins(t: torch.Tensor, num_steps: int) -> torch.Tensor:
@@ -130,12 +178,19 @@ def _time_bins(t: torch.Tensor, num_steps: int) -> torch.Tensor:
 def events_to_sample(
     events: Any, shape: Tuple[int, int], num_steps: int
 ) -> EventSample:
-    """Convert a tonic ``(x, y, t, p)`` stream to an ``EventSample``."""
+    """Convert a tonic ``(x, y, t, p)`` stream to an ``EventSample``.
+
+    ``y`` is optional on a sensor one row tall; see :func:`_rows`.
+
+    Raises :class:`~spikeforge.data.event_errors.EventTimestampError` when the
+    timestamps cannot be recording times, rather than binning garbage into a
+    tensor that trains without complaint.
+    """
     x = _field(events, "x")
-    y = _field(events, "y")
-    t = _time_bins(_field(events, "t"), num_steps)
+    y = _rows(events, x, shape[0])
+    t = _checked_times(_field(events, "t"))
     p = _polarity(_field(events, "p"))
-    return EventSample(x, y, t, p, shape, num_steps)
+    return EventSample(x, y, _time_bins(t, num_steps), p, shape, num_steps)
 
 
 def load_event_pair(
