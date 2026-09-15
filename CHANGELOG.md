@@ -13,6 +13,37 @@ that and describe the local source tree only.
 
 ### Added
 
+- **The reference-training script can train and score an event dataset.**
+  Three things blocked it, all now closed. `_train` hard-coded
+  `TrainingEngine`, so it now picks the engine from the registry's `modality`
+  and a new event dataset needs no change there. `_full_test_accuracy` went
+  through `build_loader`, which refuses an event dataset **by design**, so
+  events get their own walk over the test source's full length — every
+  sample, not the four batches `EvalMixin` caches for the dashboard, so an
+  event row means what the image rows mean. `_shrink_progress_evaluation`
+  likewise no longer needs an image loader to size its in-training probe.
+
+- **`epoch_samples` on `EventTrainingEngine`, so an epoch can be a real pass.**
+  `event_batches` caps an epoch at `EPOCH_BATCHES` (10) batches, which is
+  right for the live dashboard and is a **cap, not a fraction**: even at
+  `subset=1` — documented everywhere else as "the whole training split" — an
+  event epoch visited only `10 * batch_size` samples however large the split
+  was. Every reference entry's notes claim training "on the full <dataset>
+  training split", so publishing an event row on the old default would have
+  shipped a false claim. Naming the split's own size makes it true, and the
+  extent is recorded in the reproducibility manifest because it changes what
+  an epoch means. The default is unchanged, so the dashboard is unaffected,
+  and no such row was ever published.
+
+- **A DVS128 Gesture reference configuration**, `dvs128-gesture-conv-net`, is
+  registered in the script's table: `conv_net` at `in_channels=2`,
+  `input_size=128`, batch 16 (one bridged sample is ~3.3 MB, so the image
+  rows' batch of 128 would be hundreds of megabytes of input tensor alone).
+  `num_classes` is deliberately absent — the engine injects the registry's 11.
+  **No checkpoint or catalog entry is published yet:** the dataset could not
+  be downloaded (see below), so there is no number, and inventing one is the
+  thing this project exists not to do.
+
 - **Every trained hub entry now records what its training data permits, and
   who to credit.** An entry's `license` describes the **weights** — this
   project's own artifact, BSD-3-Clause — and nothing recorded the terms of the
@@ -69,6 +100,19 @@ that and describe the local source tree only.
   The other three event datasets are unaffected.
 
 ### Fixed
+
+- **Reading an event dataset re-opened it once per sample.**
+  `EventSampleSource.load` called `load_event_pair`, which constructed the
+  tonic dataset on every call — and constructing one indexes the split's
+  files. A 1000-sample epoch therefore indexed the split 1000 times, which
+  would have dominated any event training run and any timing measured from
+  one. The source now opens its split at most once and holds it; opening
+  stays lazy, so constructing a source still touches neither disk nor
+  network, and the download still happens in the isolated child.
+  `open_event_dataset` and `sample_from` are the two halves, split so a
+  caller reading many samples pays the indexing cost once. `load_event_pair`
+  keeps its behaviour for one-off reads and its docstring now says which is
+  which.
 
 - **The catalog's license validation let one-word free text through.**
   `CURATION.md` has always said that `"unknown"` and `"TBD"` are rejected;

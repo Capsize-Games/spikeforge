@@ -140,3 +140,14 @@ of decoding a missing image.
 - **`cifar10_dvs` has no held-out split.** It raises
   `EventSplitMissingError` rather than scoring its own training data; see
   above.
+- **An event epoch is capped, unless you say otherwise.** `event_batches`
+  visits `EPOCH_BATCHES // subset` batches, which keeps the live dashboard
+  responsive. That is a *cap*, not a fraction: at `subset=1` it still visits
+  `10 * batch_size` samples however large the split is. Anything whose number
+  will be published must pass `epoch_samples=source.size()` — the
+  reference-training script does — or the epoch is not the full pass the
+  entry claims. The extent lands in the reproducibility manifest either way.
+- **One source, one open.** A source opens its split's tonic dataset at most
+  once and holds it, because opening indexes the split's files. Opening stays
+  lazy: constructing a source reaches neither disk nor network, so downloads
+  keep happening in the isolated child worker.

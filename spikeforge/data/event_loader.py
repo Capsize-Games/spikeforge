@@ -55,10 +55,16 @@ def _root(spec: DatasetSpec, save_to: Optional[str]) -> str:
     return os.path.join(DATA_DIR, "events", spec.name)
 
 
-def _dataset(
-    name: str, save_to: Optional[str], split: str = DEFAULT_SPLIT
+def open_event_dataset(
+    name: str, save_to: Optional[str] = None, split: str = DEFAULT_SPLIT
 ) -> Any:
     """Instantiate one split of the tonic dataset named by a registry key.
+
+    Constructing a tonic dataset is not free -- it indexes the split's files
+    -- and it is also what triggers the cached download. So a caller that
+    reads many samples should open the dataset **once** and hold it (see
+    :class:`~spikeforge.events.event_source.EventSampleSource`) rather than
+    calling :func:`load_event_pair` per sample.
 
     The split's constructor arguments come from the registry rather than
     from this module, because tonic spells them differently per dataset;
@@ -73,6 +79,19 @@ def _dataset(
     if cls is None:
         raise EventsExtraMissingError(spec.name)
     return cls(_root(spec, save_to), **kwargs)
+
+
+def sample_from(
+    dataset: Any, index: int, num_steps: int = DEFAULT_NUM_STEPS
+) -> Tuple[EventSample, int]:
+    """Return one ``(EventSample, label)`` pair from an already-open dataset.
+
+    Split from :func:`open_event_dataset` so a caller holding the dataset
+    pays the indexing cost once instead of once per sample.
+    """
+    events, target = dataset[int(index)]
+    sample = events_to_sample(events, _shape(dataset), num_steps)
+    return sample, int(target)
 
 
 def _shape(dataset: Any) -> Tuple[int, int]:
@@ -128,15 +147,19 @@ def load_event_pair(
 ) -> Tuple[EventSample, int]:
     """Load sample ``index`` of ``split`` as an ``(EventSample, label)`` pair.
 
+    Opens the dataset and reads one sample, so it is the convenient form for
+    a one-off read and the wrong one for a loop: reading ``n`` samples this
+    way indexes the split ``n`` times. Hold an
+    :class:`~spikeforge.events.event_source.EventSampleSource` for that.
+
     Raises :class:`EventsExtraMissingError` when the ``events`` extra is
     not installed, and
     :class:`~spikeforge.data.event_errors.EventSplitMissingError` when the
     dataset declares no such split.
     """
-    dataset = _dataset(name, save_to, split)
-    events, target = dataset[int(index)]
-    sample = events_to_sample(events, _shape(dataset), num_steps)
-    return sample, int(target)
+    return sample_from(
+        open_event_dataset(name, save_to, split), index, num_steps
+    )
 
 
 def load_event_sample(
@@ -160,4 +183,4 @@ def ensure_event_dataset(
     runs inside the server, including the held-out fetch that scoring
     would otherwise trigger mid-training.
     """
-    _dataset(name, save_to, split)
+    open_event_dataset(name, save_to, split)

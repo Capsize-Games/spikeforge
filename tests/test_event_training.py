@@ -44,9 +44,21 @@ def _engine(**kwargs: Any) -> EventTrainingEngine:
     return EventTrainingEngine(**defaults)
 
 
+class _FakeDataset:
+    """Stands in for a tonic dataset the loader opens once per split."""
+
+    sensor_size = (28, 28, 2)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Accept tonic's root plus whatever split kwargs the registry gave."""
+
+    def __len__(self) -> int:
+        """Return a plausible split length."""
+        return 32
+
+
 def _fake_pair(
-    name: str, index: int, num_steps: int, save_to: Any = None,
-    split: str = "train",
+    dataset: Any, index: int, num_steps: int = 10
 ) -> Tuple[EventSample, int]:
     """Return a deterministic synthetic sample in the loader's shape."""
     sample = synthetic.moving_dot(
@@ -129,7 +141,10 @@ def test_tonic_backed_path_uses_the_loader(
 ) -> None:
     """With tonic present the engine loads through the event loader."""
     monkeypatch.setattr(event_source, "dataset_available", lambda name: True)
-    monkeypatch.setattr(event_loader, "load_event_pair", _fake_pair)
+    monkeypatch.setattr(
+        event_loader.tonic_api, "dataset_class", lambda name: _FakeDataset
+    )
+    monkeypatch.setattr(event_loader, "sample_from", _fake_pair)
     engine = _engine(synthetic_only=False)
     assert engine._event_source.origin == event_source.TONIC
     points = list(engine.train())
