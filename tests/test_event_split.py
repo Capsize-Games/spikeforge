@@ -245,6 +245,6 @@ def test_tonic_split_lengths_differ(
         event_loader.tonic_api, "dataset_class",
         lambda name: _RecordingDataset,
     )
-    train = event_loader._dataset("n_mnist", None, "train")
-    test = event_loader._dataset("n_mnist", None, "test")
+    train = event_loader.open_event_dataset("n_mnist", None, "train")
+    test = event_loader.open_event_dataset("n_mnist", None, "test")
     assert len(train) != len(test)

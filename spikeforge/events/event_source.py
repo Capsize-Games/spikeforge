@@ -73,6 +73,9 @@ class EventSampleSource:
     whether ``tonic`` happens to be installed.
     """
 
+    #: The opened tonic dataset, or ``None`` until the first load.
+    _opened: Optional[Any]
+
     def __init__(
         self,
         dataset: str = "n_mnist",
@@ -91,6 +94,7 @@ class EventSampleSource:
         dataset_split_kwargs(dataset, split)
         self._classes = dataset_info(dataset)[0]
         self._origin = self._pick(synthetic_only)
+        self._opened = None
 
     def _pick(self, synthetic_only: bool) -> str:
         """Return the backend name this source will use."""
@@ -118,11 +122,36 @@ class EventSampleSource:
     def load(self, index: int) -> Tuple[EventSample, int]:
         """Return the ``(sample, label)`` pair for ``index`` in this split."""
         if self._origin == TONIC:
-            return event_loader.load_event_pair(
-                self._dataset, index, self._num_steps, self._save_to,
-                self._split,
+            return event_loader.sample_from(
+                self._opened_dataset(), index, self._num_steps
             )
         return self._synthetic(index), self._synthetic_label(index)
+
+    def _opened_dataset(self) -> Any:
+        """Return this split's tonic dataset, opening it at most once.
+
+        Opening indexes the split's files and is what triggers tonic's
+        cached download, so it is deliberately lazy -- constructing a source
+        must not reach the disk or the network -- and deliberately cached:
+        opening per sample made an epoch pay the indexing cost once for
+        every sample it read.
+        """
+        if self._opened is None:
+            self._opened = event_loader.open_event_dataset(
+                self._dataset, self._save_to, self._split
+            )
+        return self._opened
+
+    def size(self) -> int:
+        """Return how many samples this split holds.
+
+        Under ``tonic`` this is the real split length, which is what scoring
+        the *complete* held-out split has to iterate. Under the synthetic
+        backend it is the generated window's width.
+        """
+        if self._origin == SYNTHETIC:
+            return self.synthetic_range()[1]
+        return int(len(self._opened_dataset()))
 
     def _synthetic(self, index: int) -> EventSample:
         """Return a deterministic two-polarity stream for ``index``.

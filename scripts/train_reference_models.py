@@ -146,6 +146,26 @@ REFERENCES = (
         note="Fashion-MNIST: same shape, a harder ten-class problem.",
     ),
     Reference(
+        name="dvs128-gesture-conv-net",
+        dataset="dvs128_gesture",
+        topology="conv_net",
+        epochs=3,
+        num_steps=25,
+        # One bridged sample is 25 x 2 x 128 x 128 floats (~3.3 MB at fp32),
+        # so the image rows' batch of 128 would be hundreds of megabytes of
+        # input tensor alone before any activations.
+        batch_size=16,
+        # `num_classes` is deliberately absent: the engine injects the
+        # registry's count (11), so stating it here would be a second place
+        # for it to drift. `input_size` is sensor geometry, which the registry
+        # does not carry -- a mismatch raises EventGeometryError by name.
+        topology_params={"in_channels": 2, "input_size": 128},
+        note=(
+            "The event-native row: a real DVS recording rather than a "
+            "re-rendered static image, on the canonical gesture task."
+        ),
+    ),
+    Reference(
         name="kmnist-fc-legacy",
         dataset="kmnist",
         topology="fc_legacy",
@@ -179,22 +199,14 @@ def _hardware() -> Dict[str, Any]:
     }
 
 
-def _full_test_accuracy(engine: Any, dataset: str) -> Dict[str, Any]:
-    """Score the complete held-out split, not a sample of it.
-
-    ``TrainingEngine.evaluate`` deliberately scores four cached batches so the
-    live dashboard stays responsive. A published number has to be the whole
-    test set, so this walks it end to end.
-    """
+def _score_batches(engine: Any, batches: Any) -> Dict[str, Any]:
+    """Score an iterable of ``(inputs, targets)`` batches end to end."""
     import torch
 
-    from spikeforge.data.data_loader import build_loader
-
-    loader = build_loader(dataset, 1, EVAL_BATCH, train=False)
     correct = total = 0
     started = time.perf_counter()
     with torch.no_grad():
-        for inputs, targets in loader:
+        for inputs, targets in batches:
             predicted = engine.predict(inputs).cpu()
             correct += int((predicted == targets).sum())
             total += int(len(targets))
@@ -203,6 +215,44 @@ def _full_test_accuracy(engine: Any, dataset: str) -> Dict[str, Any]:
         "test_samples": total,
         "eval_seconds": round(time.perf_counter() - started, 1),
     }
+
+
+def _event_test_batches(engine: Any) -> Any:
+    """Yield the engine's **whole** held-out event split, in eval batches.
+
+    ``build_dataset`` refuses an event dataset by design, and the engine's own
+    ``_load_test_batches`` truncates to the four batches the dashboard scores,
+    so neither can produce a published number. This walks the test source's
+    full length instead -- every sample, bridged through the same path
+    training used -- so an event row means what the image rows mean.
+    """
+    from spikeforge.training.event_batches import batch_event_samples
+
+    source = engine._test_source
+    total = source.size()
+    for start in range(0, total, EVAL_BATCH):
+        stop = min(start + EVAL_BATCH, total)
+        yield batch_event_samples(
+            source, engine._spec, range(start, stop), engine._bridge
+        )
+
+
+def _full_test_accuracy(engine: Any, dataset: str) -> Dict[str, Any]:
+    """Score the complete held-out split, not a sample of it.
+
+    ``TrainingEngine.evaluate`` deliberately scores four cached batches so the
+    live dashboard stays responsive. A published number has to be the whole
+    test set, so this walks it end to end -- identically for both modalities,
+    because a row a reader compares against another row has to mean the same
+    thing in both.
+    """
+    from spikeforge.data.data_loader import build_loader
+
+    if _is_event(dataset):
+        return _score_batches(engine, _event_test_batches(engine))
+    return _score_batches(
+        engine, build_loader(dataset, 1, EVAL_BATCH, train=False)
+    )
 
 
 def _save_checkpoint(
@@ -245,23 +295,78 @@ def _shrink_progress_evaluation(engine: Any, dataset: str) -> None:
     (``conv_net`` spent over an hour in it). The published number does not
     come from those checks anyway -- it comes from the full held-out pass in
     :func:`_full_test_accuracy` once training is done -- so the progress probe
-    is shrunk to a single small batch.
+    is shrunk to a single small batch. It matters more on the event path,
+    where every probe sample is bridged rather than read from a tensor file.
     """
     from itertools import islice
 
     from spikeforge.data.data_loader import build_loader
 
+    if _is_event(dataset):
+        # Bridging is per-sample, so the probe is sized in samples directly
+        # rather than by truncating a loader that does not exist here.
+        from spikeforge.training.event_batches import batch_event_samples
+
+        source = engine._test_source
+        count = min(PROGRESS_SAMPLES, source.size())
+        engine._test_batches = [
+            batch_event_samples(
+                source, engine._spec, range(count), engine._bridge
+            )
+        ]
+        return
     loader = build_loader(dataset, 1, PROGRESS_SAMPLES, train=False)
     engine._test_batches = list(islice(loader, 1))
 
 
-def _train(reference: Reference, out: Path) -> Dict[str, Any]:
-    """Train one configuration, score it, and persist its checkpoint."""
+def _is_event(dataset: str) -> bool:
+    """Return True when a dataset is served through the event batch path."""
+    from spikeforge.data.datasets import dataset_modality
+
+    return dataset_modality(dataset) == "event"
+
+
+def _engine_for(reference: Reference) -> Any:
+    """Build the engine the dataset's modality selects.
+
+    Branching on the registry's ``modality`` rather than on the dataset name
+    means a new event dataset needs no change here.
+    """
+    if _is_event(reference.dataset):
+        from spikeforge.training.event_engine import EventTrainingEngine
+
+        return EventTrainingEngine(**reference.engine_kwargs())
     from spikeforge import TrainingEngine
 
+    return TrainingEngine(**reference.engine_kwargs())
+
+
+def _use_full_event_epoch(engine: Any, dataset: str) -> Optional[int]:
+    """Make one event epoch a full pass over the training split.
+
+    ``event_batches`` caps an epoch at ``EPOCH_BATCHES`` batches by default,
+    which is right for the live dashboard and wrong for a published number: at
+    ``subset=1`` it would still visit only ``10 * batch_size`` samples however
+    large the split is, while the entry's notes claim the full training split.
+    Naming the split's own size makes the claim true.
+
+    Returns the epoch length, or ``None`` for an image dataset where the
+    loader already walks the whole split.
+    """
+    if not _is_event(dataset):
+        return None
+    samples = engine._event_source.size()
+    engine._epoch_samples = samples
+    print(f"  event epoch: {samples} training samples (full split)")
+    return samples
+
+
+def _train(reference: Reference, out: Path) -> Dict[str, Any]:
+    """Train one configuration, score it, and persist its checkpoint."""
     print(f"[{reference.name}] training ...", flush=True)
     started = time.perf_counter()
-    engine = TrainingEngine(**reference.engine_kwargs())
+    engine = _engine_for(reference)
+    _use_full_event_epoch(engine, reference.dataset)
     _shrink_progress_evaluation(engine, reference.dataset)
     history: List[Dict[str, Any]] = []
     last: Optional[Dict[str, Any]] = None

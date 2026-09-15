@@ -58,10 +58,28 @@ def event_batches(
     spec: TopologySpec,
     subset: int,
     batch_size: int,
+    samples: Optional[int] = None,
 ) -> List[Batch]:
-    """Return the epoch's ``(spikes, labels)`` batches in bridge layout."""
+    """Return the epoch's ``(spikes, labels)`` batches in bridge layout.
+
+    By default an epoch is :func:`batch_count` batches, which keeps the live
+    dashboard responsive: it is a demo of the pipeline, not a full pass. That
+    default is a cap, not a fraction — with ``subset=1`` it still visits only
+    ``EPOCH_BATCHES * batch_size`` samples however large the split is, so it
+    must not be what a published number is trained on.
+
+    ``samples`` names the epoch's length outright. Pass the split's own size
+    (``source.size()``) to train on all of it, which is what a reference
+    checkpoint claiming the full training split requires. ``subset`` is
+    bypassed when ``samples`` is given, since the two would otherwise both be
+    trying to set the same thing.
+    """
     size = max(1, int(batch_size))
-    total = batch_count(subset) * size
+    total = (
+        max(1, int(samples))
+        if samples is not None
+        else batch_count(subset) * size
+    )
     return [
         batch_event_samples(
             source, spec, range(start, min(start + size, total))

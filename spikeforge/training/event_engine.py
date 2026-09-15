@@ -60,13 +60,26 @@ class EventTrainingEngine(TrainingEngine):
     _event_source: EventSampleSource
     _test_source: EventSampleSource
     _bridge: EventSpikeBridge
+    #: Training samples per epoch, or ``None`` for the dashboard's batch cap.
+    _epoch_samples: Optional[int]
 
     def __init__(
         self, dataset: str = "n_mnist", synthetic_only: bool = False,
-        **kwargs: Any,
+        epoch_samples: Optional[int] = None, **kwargs: Any,
     ) -> None:
-        """Resolve both sources, build the engine, then check geometry."""
+        """Resolve both sources, build the engine, then check geometry.
+
+        ``epoch_samples`` sets how many training samples one epoch visits.
+        Left ``None``, an epoch is the ``event_batches`` batch cap that keeps
+        the live dashboard responsive; a run whose number will be published
+        passes the training split's own size so the epoch really is a full
+        pass. It applies to the training split only — held-out scoring reads
+        its own source and decides its own extent.
+        """
         self._synthetic_only = bool(synthetic_only)
+        self._epoch_samples = (
+            None if epoch_samples is None else int(epoch_samples)
+        )
         self._bridge = EventSpikeBridge()
         self._event_source = self._source(dataset, kwargs)
         self._test_source = self._source(dataset, kwargs, split="test")
@@ -120,7 +133,8 @@ class EventTrainingEngine(TrainingEngine):
         """
         source = self._event_source if train else self._test_source
         return event_batches.event_batches(
-            source, self._spec, self._subset, self._batch_size
+            source, self._spec, self._subset, self._batch_size,
+            self._epoch_samples if train else None,
         )
 
     def _load_test_batches(
@@ -164,9 +178,14 @@ class EventTrainingEngine(TrainingEngine):
         return meta
 
     def _manifest_config(self) -> Dict[str, Any]:
-        """Record the event modality in the reproducibility manifest."""
+        """Record the event modality and epoch extent in the manifest.
+
+        ``epoch_samples`` changes what an epoch means, so a manifest that
+        omitted it could not reproduce the run it describes.
+        """
         config = super()._manifest_config()
         config["modality"] = "event"
+        config["epoch_samples"] = self._epoch_samples
         return config
 
     # --- geometry ---------------------------------------------------------
