@@ -11,7 +11,8 @@ from spikeforge.events.synthetic import moving_dot
 
 
 def _fake_pair(
-    name: str, index: int, num_steps: int, save_to: object
+    name: str, index: int, num_steps: int, save_to: object,
+    split: str = "train",
 ) -> Tuple[EventSample, int]:
     """Return a tiny deterministic pair standing in for tonic."""
     sample = moving_dot(num_steps=num_steps, shape=(8, 8), seed=index)

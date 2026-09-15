@@ -21,6 +21,12 @@ working unchanged. Tonic has no ``download=False`` switch, so
 :func:`ensure_event_dataset` constructs the dataset and lets tonic skip the
 network when the cache is warm; the loader never touches the network at
 import time.
+
+Every entry point takes a ``split``. The split is not a boolean here: the
+registry records the constructor arguments that select it, because
+``NMNIST`` and ``DVSGesture`` take ``train=True/False`` while ``SSC`` takes
+``split="train"/"test"``. Both splits of one dataset share a cache root, so
+tonic's own ``train``/``test`` subdirectories keep the progress poll working.
 """
 
 import os
@@ -31,13 +37,15 @@ import torch
 
 from spikeforge.config import DATA_DIR
 from spikeforge.data.dataset_spec import DatasetSpec
-from spikeforge.data.datasets import dataset_spec
+from spikeforge.data.datasets import dataset_spec, dataset_split_kwargs
 from spikeforge.data.event_errors import EventsExtraMissingError
 from spikeforge.events import tonic_api
 from spikeforge.events.event_sample import EventSample
 
 #: Default number of time bins a loaded sample is binned into.
 DEFAULT_NUM_STEPS = 10
+#: The split loaded when a caller names none.
+DEFAULT_SPLIT = "train"
 
 
 def _root(spec: DatasetSpec, save_to: Optional[str]) -> str:
@@ -47,15 +55,24 @@ def _root(spec: DatasetSpec, save_to: Optional[str]) -> str:
     return os.path.join(DATA_DIR, "events", spec.name)
 
 
-def _dataset(name: str, save_to: Optional[str]) -> Any:
-    """Instantiate the tonic dataset named by a registry key."""
+def _dataset(
+    name: str, save_to: Optional[str], split: str = DEFAULT_SPLIT
+) -> Any:
+    """Instantiate one split of the tonic dataset named by a registry key.
+
+    The split's constructor arguments come from the registry rather than
+    from this module, because tonic spells them differently per dataset;
+    asking for a split a dataset does not declare raises
+    :class:`~spikeforge.data.event_errors.EventSplitMissingError`.
+    """
     spec = dataset_spec(name)
     if spec.modality != "event":
         raise ValueError(f"dataset {spec.name!r} is not an event dataset")
+    kwargs = dataset_split_kwargs(spec.name, split)
     cls = tonic_api.dataset_class(spec.tonic_class or "")
     if cls is None:
         raise EventsExtraMissingError(spec.name)
-    return cls(_root(spec, save_to), **spec.kwargs)
+    return cls(_root(spec, save_to), **kwargs)
 
 
 def _shape(dataset: Any) -> Tuple[int, int]:
@@ -107,13 +124,16 @@ def load_event_pair(
     index: int = 0,
     num_steps: int = DEFAULT_NUM_STEPS,
     save_to: Optional[str] = None,
+    split: str = DEFAULT_SPLIT,
 ) -> Tuple[EventSample, int]:
-    """Load registry sample ``index`` as an ``(EventSample, label)`` pair.
+    """Load sample ``index`` of ``split`` as an ``(EventSample, label)`` pair.
 
     Raises :class:`EventsExtraMissingError` when the ``events`` extra is
-    not installed.
+    not installed, and
+    :class:`~spikeforge.data.event_errors.EventSplitMissingError` when the
+    dataset declares no such split.
     """
-    dataset = _dataset(name, save_to)
+    dataset = _dataset(name, save_to, split)
     events, target = dataset[int(index)]
     sample = events_to_sample(events, _shape(dataset), num_steps)
     return sample, int(target)
@@ -124,15 +144,20 @@ def load_event_sample(
     index: int = 0,
     num_steps: int = DEFAULT_NUM_STEPS,
     save_to: Optional[str] = None,
+    split: str = DEFAULT_SPLIT,
 ) -> EventSample:
-    """Load registry sample ``index`` as a binned :class:`EventSample`."""
-    return load_event_pair(name, index, num_steps, save_to)[0]
+    """Load sample ``index`` of ``split`` as a binned :class:`EventSample`."""
+    return load_event_pair(name, index, num_steps, save_to, split)[0]
 
 
-def ensure_event_dataset(name: str, save_to: Optional[str] = None) -> None:
-    """Warm an event dataset's cache without loading a sample.
+def ensure_event_dataset(
+    name: str, save_to: Optional[str] = None, split: str = DEFAULT_SPLIT
+) -> None:
+    """Warm one split of an event dataset's cache without loading a sample.
 
     Constructing the tonic dataset triggers its cached download; the
-    isolated worker calls this so no network I/O runs inside the server.
+    isolated worker calls this once per declared split so no network I/O
+    runs inside the server, including the held-out fetch that scoring
+    would otherwise trigger mid-training.
     """
-    _dataset(name, save_to)
+    _dataset(name, save_to, split)

@@ -6,6 +6,15 @@ and checkpointing in :mod:`training_engine` are reused unchanged. Only the
 dataset step differs: image modality reads a torchvision loader, event
 modality bridges a stream of samples into ``[T, B, ...]`` spikes.
 
+The engine holds *two* sources, one per split, mirroring the way the image
+path holds a train and a test loader. ``_epoch_batches(train=...)`` picks
+between them, so held-out scoring reads the dataset's test split rather than
+the head of the training stream, and ``event_batches`` needs no split
+argument. A dataset that declares no test split — CIFAR10-DVS ships as one
+undivided pool — fails at construction with
+:class:`~spikeforge.data.event_errors.EventSplitMissingError` instead of
+training happily and reporting its own training data as a held-out score.
+
 Sensor geometry is checked up front. A conv topology needs a square,
 single/dual-channel sensor of its declared side; a feature topology needs
 ``input_size`` to equal the sensor area. A mismatch raises
@@ -40,30 +49,45 @@ class EventTrainingEngine(TrainingEngine):
     tests and demos stay network-free; otherwise a missing ``tonic`` loader
     raises :class:`EventsExtraMissingError` instead of presenting a
     synthetic stream as a recording.
+
+    :attr:`_event_source` serves the training split and
+    :attr:`_test_source` the held-out one. Both are opened up front so a
+    dataset that cannot supply held-out data says so before a single batch
+    is trained.
     """
 
     _synthetic_only: bool
     _event_source: EventSampleSource
+    _test_source: EventSampleSource
     _bridge: EventSpikeBridge
 
     def __init__(
         self, dataset: str = "n_mnist", synthetic_only: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Resolve the event source, build the engine, then check geometry."""
+        """Resolve both sources, build the engine, then check geometry."""
         self._synthetic_only = bool(synthetic_only)
         self._bridge = EventSpikeBridge()
         self._event_source = self._source(dataset, kwargs)
+        self._test_source = self._source(dataset, kwargs, split="test")
         super().__init__(dataset=dataset, **kwargs)
         self._validate_geometry()
 
     def _source(
-        self, dataset: str, kwargs: Dict[str, Any]
+        self, dataset: str, kwargs: Dict[str, Any],
+        split: str = event_source.DEFAULT_SPLIT,
     ) -> EventSampleSource:
-        """Build the event source and enforce the extra-absent honesty rule."""
+        """Build one split's source and enforce the absent-extra honesty rule.
+
+        A dataset that declares no such split raises
+        :class:`~spikeforge.data.event_errors.EventSplitMissingError` from
+        the source's own registry lookup; it propagates untouched so the
+        reason names the dataset and the split, not the engine.
+        """
         steps = int(kwargs.get("num_steps") or event_source.SYNTHETIC_STEPS)
         source = EventSampleSource(
-            dataset, synthetic_only=self._synthetic_only, num_steps=steps
+            dataset, synthetic_only=self._synthetic_only, num_steps=steps,
+            split=split,
         )
         if not self._synthetic_only and source.origin != event_source.TONIC:
             raise EventsExtraMissingError(dataset)
@@ -88,15 +112,26 @@ class EventTrainingEngine(TrainingEngine):
     def _epoch_batches(
         self, train: bool = True
     ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
-        """Return the epoch's events already bridged for the simulator."""
+        """Return one split's events already bridged for the simulator.
+
+        ``train`` selects which source is read. The two sources opened
+        different dataset splits, so the batches are different data, not the
+        same stream under a different name.
+        """
+        source = self._event_source if train else self._test_source
         return event_batches.event_batches(
-            self._event_source, self._spec, self._subset, self._batch_size
+            source, self._spec, self._subset, self._batch_size
         )
 
     def _load_test_batches(
         self,
     ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
-        """Cache a few bridged event batches for held-out scoring."""
+        """Cache the first ``EVAL_BATCHES`` batches of the held-out split.
+
+        This is a sample of the test split, matching what the image path
+        scores during training; the reference-model scripts score the
+        complete split separately.
+        """
         if self._test_batches is None:
             batches = self._epoch_batches(train=False)
             self._test_batches = batches[:EVAL_BATCHES]
@@ -112,12 +147,19 @@ class EventTrainingEngine(TrainingEngine):
         }
 
     def _meta(self) -> Dict[str, Any]:
-        """Add the event modality and provenance to the checkpoint card."""
+        """Add the event modality and both splits' provenance to the card.
+
+        The held-out source is recorded too: an accuracy on the card is only
+        as trustworthy as the stream it was measured on, so a reader can see
+        whether that stream was a recording or a generated fixture.
+        """
         meta = super()._meta()
         meta.update({
             "modality": "event",
             "event_origin": self._event_source.origin,
             "event_description": self._event_source.description,
+            "event_test_origin": self._test_source.origin,
+            "event_test_description": self._test_source.description,
         })
         return meta
 

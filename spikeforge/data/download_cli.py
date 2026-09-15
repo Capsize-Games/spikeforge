@@ -8,14 +8,26 @@ while keeping the FastAPI event loop responsive.
 import sys
 from typing import List
 
-from spikeforge.data.datasets import build_dataset, dataset_modality
+from spikeforge.data.datasets import (
+    build_dataset,
+    dataset_modality,
+    dataset_splits,
+)
 from spikeforge.data.event_loader import ensure_event_dataset
 
 
 def _ensure(dataset: str, train: bool) -> None:
-    """Prepare one dataset, routing event modality to its tonic loader."""
+    """Prepare one dataset, routing event modality to its tonic loader.
+
+    Every declared split of an event dataset is warmed, not just the
+    training one: held-out scoring runs inside the training process, so a
+    cold test split would pull from the network there rather than here in
+    the cancellable child. Image datasets keep taking their split from the
+    caller's ``train`` flag.
+    """
     if dataset_modality(dataset) == "event":
-        ensure_event_dataset(dataset)
+        for split in dataset_splits(dataset):
+            ensure_event_dataset(dataset, split=split)
     else:
         build_dataset(dataset, train=train, download=True)
 

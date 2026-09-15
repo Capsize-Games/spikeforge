@@ -110,6 +110,7 @@ nav:
   - Workstreams:
       - Interpreter spine: interpreter_spine_plan.md
       - Model hub: model_hub_plan.md
+      - Model hub expansion: hub_expansion_plan.md
       - Backend execution: backend_execution_plan.md
       - Sequence primitives: sequence_primitives_plan.md
       - Event runtime: event_runtime_plan.md

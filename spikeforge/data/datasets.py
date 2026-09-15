@@ -6,13 +6,14 @@ entry is a :class:`DatasetSpec` carrying its metadata, including the
 ``modality`` that tells the UI which encodings to offer.
 """
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torchvision.datasets as tv_datasets
 from torchvision import transforms
 
 from spikeforge.config import DATA_DIR
 from spikeforge.data.dataset_spec import DatasetSpec
+from spikeforge.data.event_errors import EventSplitMissingError
 from spikeforge.events import tonic_api
 
 _REGISTRY: Dict[str, DatasetSpec] = {
@@ -49,21 +50,27 @@ _REGISTRY: Dict[str, DatasetSpec] = {
         tv_datasets.CIFAR10, {},
     ),
     # Event modality: loaded through tonic, gated by the `events` extra.
+    # `splits` names the constructor arguments that select each split; see
+    # `dataset_split_kwargs`. CIFAR10-DVS deliberately declares only a train
+    # split, because upstream ships it as one undivided pool.
     "n_mnist": DatasetSpec(
         "n_mnist", 10, "N-MNIST neuromorphic digits (DVS events)", "event",
-        tonic_class="NMNIST", kwargs={"train": True},
+        tonic_class="NMNIST",
+        splits={"train": {"train": True}, "test": {"train": False}},
     ),
     "dvs128_gesture": DatasetSpec(
         "dvs128_gesture", 11, "DVS128 hand-gesture events (11 classes)",
-        "event", tonic_class="DVSGesture", kwargs={"train": True},
+        "event", tonic_class="DVSGesture",
+        splits={"train": {"train": True}, "test": {"train": False}},
     ),
     "cifar10_dvs": DatasetSpec(
         "cifar10_dvs", 10, "CIFAR10-DVS converted object events", "event",
-        tonic_class="CIFAR10DVS",
+        tonic_class="CIFAR10DVS", splits={"train": {}},
     ),
     "ssc": DatasetSpec(
         "ssc", 35, "Spiking Speech Commands (35 classes)", "event",
-        tonic_class="SSC", kwargs={"split": "train"},
+        tonic_class="SSC",
+        splits={"train": {"split": "train"}, "test": {"split": "test"}},
     ),
     # Sequence modality: a fully synthetic token parity task, no loader.
     "sequence_toy": DatasetSpec(
@@ -100,6 +107,28 @@ def dataset_spec(name: str) -> DatasetSpec:
 def dataset_modality(name: str) -> str:
     """Return a dataset's modality (``image`` or ``event``)."""
     return dataset_spec(name).modality
+
+
+def dataset_splits(name: str) -> List[str]:
+    """Return the split names a dataset declares, in registry order."""
+    return list(dataset_spec(name).splits)
+
+
+def dataset_split_kwargs(name: str, split: str) -> Dict[str, Any]:
+    """Return the constructor arguments that select ``split`` of a dataset.
+
+    The image path takes its split from :func:`build_dataset`'s ``train``
+    flag; this resolver serves the event path, where the split is part of
+    the tonic class's own arguments and is spelled differently per dataset.
+    A dataset that declares no such split raises
+    :class:`~spikeforge.data.event_errors.EventSplitMissingError` rather
+    than falling back to one it does declare, so a dataset with no held-out
+    partition can never have its training data scored as a test set.
+    """
+    spec = dataset_spec(name)
+    if split not in spec.splits:
+        raise EventSplitMissingError(spec.name, split, list(spec.splits))
+    return dict(spec.kwargs, **spec.splits[split])
 
 
 def dataset_info(name: str) -> Tuple[int, str]:
