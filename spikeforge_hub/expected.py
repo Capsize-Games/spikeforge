@@ -35,12 +35,22 @@ def expected_graph(name: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def expected_state(name: str) -> Optional[Dict[str, Tuple[int, ...]]]:
-    """Return a preset module's ``key -> shape`` mapping, if it can build."""
+def expected_state(
+    name: str, num_classes: Optional[int] = None
+) -> Optional[Dict[str, Tuple[int, ...]]]:
+    """Return a preset module's ``key -> shape`` mapping, if it can build.
+
+    ``num_classes`` builds the comparison preset with the class count the
+    artifact declares instead of the preset's default. Without it, every
+    checkpoint trained on a dataset that is not 10-class reports a readout
+    shape mismatch that says nothing about compatibility -- only that the
+    comparison was built against the wrong output size.
+    """
     from spikeforge.topology.registry import build_topology
 
+    params = {} if num_classes is None else {"num_classes": int(num_classes)}
     try:
-        _spec, module = build_topology(name)
+        _spec, module = build_topology(name, params)
         state = module.state_dict()
     except _ERRORS:
         return None

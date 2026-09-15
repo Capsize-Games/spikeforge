@@ -94,6 +94,25 @@ def inspect_nir(path: str) -> ArtifactReport:
     return ArtifactReport(NIR_GRAPH, path, nodes, (), edges, (note,))
 
 
+def _declared_classes(loaded: Any) -> Optional[int]:
+    """Return the class count a checkpoint's metadata card declares.
+
+    Only the card is consulted, never the tensor shapes: a count read back
+    from the shapes would agree with them by construction and so could never
+    disagree, which is the opposite of what a compatibility check is for.
+    A bare state dict has no card and returns ``None``.
+    """
+    if not isinstance(loaded, Mapping):
+        return None
+    meta = loaded.get("meta")
+    if not isinstance(meta, Mapping):
+        return None
+    declared = meta.get("num_classes")
+    if isinstance(declared, bool) or not isinstance(declared, int):
+        return None
+    return declared if declared > 0 else None
+
+
 def inspect_torch(path: str) -> ArtifactReport:
     """Describe a torch checkpoint or bare state dict by key and shape."""
     loaded = _load_torch(path)
@@ -108,7 +127,8 @@ def inspect_torch(path: str) -> ArtifactReport:
             ("torch object is not a state dict",),
         )
     return ArtifactReport(
-        STATE_DICT, path, (), _key_records(state), (), ("torch state dict",)
+        STATE_DICT, path, (), _key_records(state), (), ("torch state dict",),
+        _declared_classes(loaded),
     )
 
 

@@ -100,10 +100,12 @@ def _graph_mapping(report: ArtifactReport) -> Dict[str, str]:
 
 
 def _state_diff(
-    actual: Mapping[str, Tuple[int, ...]], name: str
+    actual: Mapping[str, Tuple[int, ...]],
+    name: str,
+    num_classes: Optional[int] = None,
 ) -> Optional[List[Record]]:
     """Return the key differences between a state dict and one preset."""
-    expected = expected_state(name)
+    expected = expected_state(name, num_classes)
     if expected is None:
         return None
     return state_mismatches(actual, expected)
@@ -166,7 +168,8 @@ def _classify_state(
     if not actual:
         return _incompatible(None, "state dict declares no keys")
     result = _resolve(
-        candidates(topology), lambda name: _state_diff(actual, name)
+        candidates(topology),
+        lambda name: _state_diff(actual, name, report.num_classes),
     )
     if result is None:
         return _incompatible(None, "no comparable preset for this state dict")
