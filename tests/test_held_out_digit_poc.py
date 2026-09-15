@@ -9,6 +9,7 @@ protocol is exercised for real accuracy numbers in
 
 import copy
 
+import pytest
 import torch
 from torch.utils.data import DataLoader
 
@@ -22,6 +23,7 @@ from spikeforge.memory.held_out_digit_poc import (
 )
 
 
+@pytest.mark.network
 def test_digit_subset_excludes_the_held_out_digit() -> None:
     """Filtering to digits 0-8 never yields a digit-9 label."""
     train_data = build_dataset("mnist", train=True)
@@ -30,6 +32,7 @@ def test_digit_subset_excludes_the_held_out_digit() -> None:
     assert HELD_OUT_DIGIT not in labels
 
 
+@pytest.mark.network
 def test_freezing_blocks_further_optimizer_steps() -> None:
     """A frozen classifier's parameters do not move under a backward pass."""
     train_data = build_dataset("mnist", train=True)
