@@ -54,10 +54,15 @@ require_client_deps() {
 cmd_setup() {
   info "Installing the core dev extra and the server distribution"
   py -m pip install -e "./packages/spikeforge[dev]"
-  # spikeforge-serve before the server: the server pins it, so installing the
-  # server alone makes pip pull that pin from PyPI instead of this checkout.
-  py -m pip install -e ./packages/spikeforge-serve
-  py -m pip install -e ./packages/spikeforge-server
+  # The server's whole local dependency closure, not just the server: pip
+  # resolves any distribution left out here from PyPI instead of this
+  # checkout, silently, so a contributor would develop against published
+  # wheels without being told.
+  py -m pip install \
+    -e ./packages/spikeforge-targets \
+    -e ./packages/spikeforge-hub \
+    -e ./packages/spikeforge-serve \
+    -e ./packages/spikeforge-server
   info "Installing client dependencies"
   (cd "$CLIENT" && npm install)
 }
