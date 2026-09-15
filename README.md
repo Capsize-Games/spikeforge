@@ -22,11 +22,14 @@ dashboard, or as a desktop app.
 
 ## Quickstart
 
-No clone, no Docker — five lines of Python:
+Install from pypi
 
 ```bash
 pip install spikeforge
 ```
+
+
+Then run the following snippet in a Python REPL or script:
 
 ```python
 from spikeforge import TrainingEngine
@@ -37,34 +40,41 @@ for metrics in engine.train():
 print(last)  # {'loss': ..., 'train_accuracy': ..., 'test_accuracy': ...}
 ```
 
-That finishes in seconds — about 3 s on a 12-thread desktop CPU, nearer 14 s
-on a laptop — and lands in the mid-80s for accuracy. The snippet sets no seed,
-so the exact figure moves between runs, and the `test_accuracy` it prints is
-the engine's fast progress probe rather than the whole test split. For numbers
-measured on the *complete* held-out split, with the command that reproduces
-each one, see [Benchmarks](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/benchmarks.md).
-The first run downloads MNIST; later runs are offline.
+That finishes in seconds: about 3 s on a 12-thread desktop CPU, 14 s on a
+laptop. Accuracy lands in the mid-80s.
 
-`TrainingEngine` is the entry point for new code — it owns the training loop,
-topology selection, encoding, checkpointing, and evaluation. (`SNNTrainer`,
-also exported, is the older MNIST rate-coding helper behind the tutorial demo;
-reach for `TrainingEngine`.) `spikeforge-verify`, `spikeforge-benchmark`, and
-the NIR/deployment/energy pieces live in
+The snippet sets no seed, so the exact number moves between runs. The
+`test_accuracy` it prints is a fast progress probe, not the whole test
+split. For numbers on the *complete* held-out split, with the command that
+reproduces each one, see [Benchmarks](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/benchmarks.md).
+
+The first run downloads MNIST. Later runs are offline.
+
+`TrainingEngine` is the entry point for new code. It owns the training loop,
+topology selection, encoding, checkpointing, and evaluation.
+
+`SNNTrainer` is also exported, but it's the older MNIST rate-coding helper
+behind the tutorial demo. Use `TrainingEngine` for anything new.
+
+The CLI tools (`spikeforge-verify`, `spikeforge-benchmark`) and the
+NIR/deployment/energy pieces are covered in
 [Usage](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/usage.md).
 
-**On a machine with no GPU**, install the CPU torch wheels *first* so pip does
-not pull the entire CUDA stack in behind them:
+**On a machine with no GPU**, install the CPU torch wheels first, so pip
+doesn't pull in the full CUDA stack behind them:
 
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install spikeforge
 ```
 
-That is a ~1.1 GB environment instead of ~5.5 GB, and it is the same flow the
-Dockerfile and CI use. The order matters: with `--extra-index-url` pip still
-prefers the CUDA build from PyPI.
+That's a ~1.1 GB environment instead of ~5.5 GB. It's the same flow the
+Dockerfile and CI use.
 
-Want the live browser dashboard instead? That's the richer, second path:
+The order matters: with `--extra-index-url` pip still prefers the CUDA
+build from PyPI.
+
+To run the live browser dashboard locally with Docker:
 
 ```bash
 git clone https://github.com/Capsize-Games/spikeforge.git
@@ -72,12 +82,11 @@ cd spikeforge
 docker compose up --build
 ```
 
-Open <http://localhost:8877> — the dashboard connects to the WebSocket on
-the same host and port. No separate backend or proxy to run.
+Open <http://localhost:8877>. The dashboard connects to the WebSocket on
+the same host and port — no separate backend or proxy to run.
 
-Don't want to run Docker? Download the
-[desktop app](https://github.com/capsize-games/spikeforge-dashboard/releases)
-instead — same dashboard, no clone, no build.
+The [desktop app](https://github.com/capsize-games/spikeforge-dashboard/releases)
+runs the same dashboard without Docker.
 
 See [Usage](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/usage.md) and [Quickstart](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/quickstart.md)
 for every path (`./install.sh`, local dev with Vite, `examples/`, and the
@@ -85,19 +94,23 @@ for every path (`./install.sh`, local dev with Vite, `examples/`, and the
 
 ## Why not just snnTorch, Norse, Lava, or SpikingJelly?
 
-spikeforge doesn't replace those — it trains through
+spikeforge doesn't replace snnTorch, Norse, or Lava. It trains through
 [snnTorch](https://snntorch.readthedocs.io/) and can deploy to Norse and
-Lava. The question is what it adds on top: a
-[NIR](https://github.com/neuromorphs/NIR)-described interpreter spine with
-an *independent* interpreter that re-executes every exported graph and
-reports numerical drift against the original model (not just export —
-snnTorch and Norse both export NIR too; Lava-DL currently only reads it,
-not writes it), a deployment-capability
-matrix that reports per-target op support and availability instead of just
-declaring support, an event-driven energy estimator, and a live training/
-introspection dashboard. None of the other libraries ship the latter two as
-part of the library itself, to our knowledge — file an issue if that's
-stale.
+Lava.
+
+Here's what it adds on top:
+
+- An independent [NIR](https://github.com/neuromorphs/NIR) interpreter that
+  re-executes every exported graph and reports numerical drift against the
+  original model. (snnTorch and Norse can also export NIR; Lava-DL only
+  reads it, not writes it.)
+- A deployment-capability matrix that reports per-target op support and
+  honest availability, not just a support claim.
+- A built-in event-driven energy estimator.
+- A live training/introspection dashboard.
+
+To our knowledge, none of the other libraries ship the last two as part of
+the library itself — file an issue if that's stale.
 
 | | snnTorch | Norse | Lava | SpikingJelly | spikeforge |
 |---|---|---|---|---|---|
@@ -174,15 +187,19 @@ reproduces it:
 | Fashion-MNIST | `fc_legacy` | **75.55%** | 62 s |
 | KMNIST | `fc_legacy` | **70.79%** | 49 s |
 
-Every figure is the **complete** held-out test split, on a 12-thread x86-64
-CPU with no GPU. The full table — epochs, time steps, hardware, seed, and the
-one command that reproduces each row — is in
+Every figure is the **complete** held-out test split, on a 12-thread
+x86-64 CPU with no GPU.
+
+The full table adds epochs, time steps, hardware, seed, and the exact
+command that reproduces each row. See
 [Benchmarks](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/benchmarks.md).
 
 These are reference configurations with stock hyperparameters and a single
-seed, **not** tuned attempts at state of the art; read them as a floor the
-shipped defaults reach, not as a ceiling. The checkpoints they produce are the
-trained entries in the model hub (`spikeforge-hub list --trained`).
+seed — not tuned attempts at state of the art. Read them as a floor the
+shipped defaults reach, not a ceiling.
+
+The checkpoints they produce are the trained entries in the model hub
+(`spikeforge-hub list --trained`).
 
 ## Packages
 
@@ -199,21 +216,29 @@ each versioned independently:
 | `spikeforge-clients` | `spikeforge_clients` | Python/TypeScript/CLI clients for `spikeforge-serve` (no torch dependency) |
 | `spikeforge-io` | `spikeforge_io` | Recorded-stream I/O adapters and windowing |
 
-The satellites sit at lower version numbers than core by design, not neglect —
-each package is versioned independently and moves only when it changes, and
-[`compatibility.json`](https://github.com/Capsize-Games/spikeforge/blob/main/compatibility.json) is the source of truth for which
-satellite versions go with which core release. If you're pinning versions by
-hand, read that file rather than assuming semver alignment across packages.
+The satellites sit at lower version numbers than core by design, not
+neglect. Each package is versioned independently and only moves when it
+changes.
+
+[`compatibility.json`](https://github.com/Capsize-Games/spikeforge/blob/main/compatibility.json)
+is the source of truth for which satellite versions go with which core
+release. If you're pinning versions by hand, read that file — don't assume
+semver alignment across packages.
 
 ## Documentation
 
-This README covers first contact and positioning; it deliberately doesn't
-go deeper. [`documentation/`](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/README.md) is the full reference — install
-paths, the CLI tools, architecture, module layout, and the dev workflow —
-written for contributors and coding agents alike. Also see
-[COOKBOOK.md](https://github.com/Capsize-Games/spikeforge/blob/main/COOKBOOK.md) for copy-pasteable recipes,
-[examples/](https://github.com/Capsize-Games/spikeforge/tree/main/examples/) for runnable end-to-end scripts, and
-[plans/](https://github.com/Capsize-Games/spikeforge/tree/main/plans/) for design documents and the roadmap.
+This README covers first contact and positioning only. For more:
+
+- [`documentation/`](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/README.md) —
+  the full reference: install paths, CLI tools, architecture, module
+  layout, and the dev workflow. Written for contributors and coding agents
+  alike.
+- [COOKBOOK.md](https://github.com/Capsize-Games/spikeforge/blob/main/COOKBOOK.md) —
+  copy-pasteable recipes.
+- [examples/](https://github.com/Capsize-Games/spikeforge/tree/main/examples/) —
+  runnable end-to-end scripts.
+- [plans/](https://github.com/Capsize-Games/spikeforge/tree/main/plans/) —
+  design documents and the roadmap.
 
 See [CONTRIBUTING.md](https://github.com/Capsize-Games/spikeforge/blob/main/CONTRIBUTING.md)
 and [rules.md](https://github.com/Capsize-Games/spikeforge/blob/main/rules.md) before opening a pull request.
