@@ -7,8 +7,8 @@ existing WebSocket protocol, so nothing needs a page reload.
 ### Screenshots
 
 The overview capture below exists
-([`images/dashboard.png`](../images/dashboard.png), also the README hero
-image); the other four are still open.
+([`images/dashboard.png`](../images/dashboard.png)); the other four are
+still open.
 
 ![spikeforge dashboard — Model & Data panel](../images/dashboard.png)
 

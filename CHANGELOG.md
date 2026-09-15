@@ -11,6 +11,32 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Changed
+
+- **The landing page no longer reads as a Capsize portfolio piece.** The hero
+  carried an eyebrow link reading "CAPSIZE / NEURAL SYSTEMS" above the
+  `spikeforge` wordmark — styled like an agency's project-credit tag, which
+  made a single open-source project's own homepage look like one entry in a
+  larger portfolio. It's removed; the `spikeforge · BSD-3-Clause ·
+  Capsize LLC` footer line still carries the attribution. The wordmark itself
+  now colors its "spike" half in the site's accent color
+  (`landing/index.html`, `landing/assets/capsize-landing.css`).
+- **The model-hub catalog page now matches the landing page's design.** It
+  was a plain light-background page with no relation to spikeforge.net's
+  look; it now shares the same dark palette, accent color, and typography
+  (linking `assets/capsize-landing.css` for the color tokens, so the two
+  cannot silently drift apart again) and carries the same wordmark and a
+  small header nav back to the site. It does not carry the landing page's
+  animated shader background (`scripts/build_hub_page.py`).
+- **The README no longer opens with a dashboard screenshot.** The dashboard
+  is one interface among several — library, CLI, dashboard, desktop app —
+  and leading with a screenshot of it read as though it were the product.
+  The screenshot stays in `documentation/dashboard.md`, where it describes
+  the dashboard specifically. The opening paragraph is shorter and states
+  plainly what spikeforge is and the four ways to use it; the Quickstart
+  section now also links the desktop app as a no-Docker way to try the
+  dashboard.
+
 ## [spikeforge-v0.5.0] - 2026-09-15
 
 Released together as one combination, recorded in

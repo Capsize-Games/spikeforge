@@ -14,6 +14,15 @@ verified?" rule from :mod:`spikeforge_hub.entry` rather than the full
 ``available()`` computation, which depends on the *viewer's* installed
 extras and can't be known ahead of time for a pre-rendered page.
 
+The page links ``../assets/capsize-landing.css`` for its color tokens (the
+``:root`` custom properties only) rather than hard-coding a second copy of
+the palette, so the two pages cannot silently drift apart on color the way
+they had before. That path is fixed by ``.github/workflows/docs-deploy.yml``,
+which assembles ``build/pages/assets/`` and ``build/pages/hub/`` as siblings;
+change one and change the other. Everything else here -- layout, the header,
+badges -- is this page's own, so an edit to the landing page's markup cannot
+break this one.
+
 Usage::
 
     python scripts/build_hub_page.py [--out build/pages/hub/index.html]
@@ -32,32 +41,71 @@ UNVERIFIED_CANDIDATE = "unverified-candidate"
 #: The one catalog source whose entries carry trained weights.
 TRAINED_SOURCE = "reference"
 
+#: The site logo, colored the same way the landing page and dashboard style
+#: the wordmark: the "spike" half in the shared accent color.
+_WORDMARK = '<span class="wordmark-spike">spike</span>forge'
+
+_HEAD = """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;\
+600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/capsize-landing.css">
+"""
+
+#: This page's own layout and components. Only ``var(--bg)`` etc. come from
+#: the linked stylesheet; nothing here depends on its selectors.
 _STYLE = """
-body { font-family: system-ui, sans-serif; max-width: 1180px; margin: 2rem
-  auto; padding: 0 1rem; color: #1a1a1a; background: #fff; }
-h1 { margin-bottom: 0.25rem; }
-.sub { color: #555; margin-top: 0; }
-.notice { background: #fff8e1; border: 1px solid #e0c46c; border-radius: 6px;
-  padding: 0.75rem 1rem; margin: 1.25rem 0; }
+* { box-sizing: border-box; }
+body { font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  max-width: 1180px; margin: 0 auto; padding: 0 20px 3rem; color: var(--text);
+  background: var(--bg); line-height: 1.55; }
+a { color: var(--accent); }
+code { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas,
+  monospace; background: var(--panel-alt); padding: 0.1rem 0.35rem;
+  border-radius: 4px; font-size: 0.92em; }
+.hub-header { display: flex; align-items: center; justify-content:
+  space-between; flex-wrap: wrap; gap: 10px; padding-block: 18px;
+  border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+.hub-brand { display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 800; font-size: 17px; color: var(--text); text-decoration:
+  none; }
+.wordmark-spike { color: var(--accent); }
+.hub-nav { display: flex; gap: 20px; font-size: 13px; flex-wrap: wrap; }
+.hub-nav a { color: var(--muted); text-decoration: none; }
+.hub-nav a:hover { color: var(--accent); }
+h1 { margin: 0 0 0.25rem; font-size: 28px; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin-top: 0; font-size: 14px; max-width: 68ch; }
+.notice { background: var(--panel); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0;
+  padding: 0.9rem 1.1rem; margin: 1.5rem 0; font-size: 13.5px;
+  color: var(--muted); }
+.notice strong { color: var(--text); }
+.notice a { color: var(--accent); }
 /* Eight columns do not fit a phone; the table scrolls inside its own box
    rather than making the whole page scroll sideways. */
-.table-scroll { overflow-x: auto; margin-top: 1.5rem; }
-table { border-collapse: collapse; width: 100%; }
-th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid
-  #ddd; vertical-align: top; font-size: 0.92rem; }
-th { background: #f5f5f5; }
-.badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px;
-  font-size: 0.78rem; font-weight: 600; }
-.badge-verified { background: #e3f6e5; color: #1b6d2f; }
-.badge-unverified { background: #fde3e3; color: #a12222; }
-.badge-trained { background: #e4edfb; color: #1d4a8f; }
-.badge-untrained { background: #f0f0f0; color: #555; }
+.table-scroll { overflow-x: auto; margin-top: 1.5rem; border: 1px solid
+  var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 0.6rem 0.7rem; border-bottom: 1px solid
+  var(--border); vertical-align: top; }
+th { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing:
+  0.04em; text-transform: uppercase; color: var(--muted); background:
+  var(--panel-head); }
+tbody tr:hover { background: var(--panel-alt); }
+tbody tr:last-child td { border-bottom: none; }
+.badge { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.badge-verified { background: rgba(63,185,80,0.16); color: #7ee2a8; }
+.badge-unverified { background: rgba(248,81,73,0.16); color: #ff9d97; }
+.badge-trained { background: rgba(165,184,255,0.18); color: var(--accent); }
+.badge-untrained { background: rgba(160,177,204,0.16); color: var(--muted); }
 .score { font-variant-numeric: tabular-nums; font-weight: 600; }
 /* The requested credit line is often a full citation; keep it legible but
    subordinate to the licence id above it. */
-.attribution { color: #555; font-size: 0.8rem; line-height: 1.4; display:
-  inline-block; margin-top: 0.15rem; }
-.muted { color: #888; }
+.attribution { color: var(--muted); font-size: 0.8rem; line-height: 1.4;
+  display: inline-block; margin-top: 0.15rem; }
+.muted { color: var(--muted); }
 /* The weights column is the one a visitor scans first; give it room so the
    score does not wrap one word per line. */
 th:nth-child(2), td:nth-child(2) { min-width: 12rem; }
@@ -65,8 +113,7 @@ td:nth-child(2) { font-size: 0.86rem; line-height: 1.45; }
 /* Training data: the citation needs width, or every row grows a tall
    one-word-per-line column. */
 th:nth-child(7), td:nth-child(7) { min-width: 13rem; }
-code { background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
-footer { margin-top: 2rem; color: #666; font-size: 0.85rem; }
+.hub-footer { margin-top: 2rem; color: var(--muted); font-size: 0.85rem; }
 """
 
 
@@ -197,6 +244,19 @@ def _notice(trained_count: int) -> str:
     )
 
 
+def _header() -> str:
+    """Return the site header: the wordmark and a link back to the site."""
+    return f"""<header class="hub-header">
+  <a class="hub-brand" href="https://spikeforge.net/">{_WORDMARK}</a>
+  <nav class="hub-nav">
+    <a href="https://spikeforge.net/">Home</a>
+    <a href="https://docs.spikeforge.net/">Documentation</a>
+    <a href="https://dash.spikeforge.net/">Dashboard</a>
+    <a href="https://github.com/Capsize-Games/spikeforge">GitHub</a>
+  </nav>
+</header>"""
+
+
 def render(entries: List[Dict[str, Any]]) -> str:
     """Return the full standalone HTML page for ``entries``."""
     rows = "\n".join(_row(entry) for entry in entries)
@@ -207,13 +267,15 @@ def render(entries: List[Dict[str, Any]]) -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>spikeforge model hub catalog</title>
+<title>spikeforge model hub</title>
 <meta name="description" content="Browsable, offline-generated listing of \
 the spikeforge model-hub catalog.">
+{_HEAD}
 <style>{_STYLE}</style>
 </head>
 <body>
-<h1>spikeforge model hub</h1>
+{_header()}
+<h1>{_WORDMARK} model hub</h1>
 <p class="sub">{len(entries)} catalog entries -- {trained_count} with trained
 weights, {verified_count} with a verified source and license. Generated from
 <code>spikeforge_hub/models.json</code> by
@@ -230,10 +292,10 @@ downloaded or cached.</p>
 </tbody>
 </table>
 </div>
-<footer>
+<footer class="hub-footer">
 Browse locally with <code>pip install spikeforge-hub &amp;&amp;
 spikeforge-hub list</code>, or from the
-<a href="https://github.com/Capsize-Games/spikeforge">spikeforge</a>
+<a href="https://dash.spikeforge.net/">spikeforge</a>
 dashboard's Hub panel.
 </footer>
 </body>

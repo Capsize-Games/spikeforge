@@ -186,8 +186,11 @@ builds, BSD-3-Clause.
   from the README, `plans/index.md`, and the MkDocs nav, and is included by the
   docs generator.
 - [x] **Dashboard screenshot — resolved.** [`images/dashboard.png`](images/dashboard.png)
-  is a real 915×925 capture of the running dashboard, embedded at the top of
-  the README.
+  is a real 915×925 capture of the running dashboard, embedded in
+  [`documentation/dashboard.md`](documentation/dashboard.md). It was removed
+  from the top of the README: the dashboard is one interface among several
+  (library, CLI, dashboard, desktop app), and leading with it made spikeforge
+  look like it was the product.
 - [x] **Link the checklist from the README.** Kept current as items close.
 
 ---

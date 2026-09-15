@@ -17,7 +17,9 @@ header.site { background: #030813eb; border-bottom: 1px solid #2b3555; backdrop-
 .hero-actions { display:flex; gap:15px; flex-wrap:wrap; margin:25px 0; }
 .hero-actions a { display:inline-flex; align-items:center; min-height:44px; padding:10px 22px; border:1px solid #869add; background:#15203fcc; color:#eef4ff; text-decoration:none; font-size:12px; }
 .hero-actions a + a { background:#040a15bb; border-color:#34486a; }
-.capsize-credit { color: #b99be9; font: 10px/1.5 monospace; letter-spacing: .22em; text-transform: uppercase; display: inline-block; margin-bottom: 24px; text-decoration: none; }
+/* The "spike" in every "spikeforge" wordmark, so the name reads as one word
+   with an accented first half rather than one flat color. */
+.wordmark-spike { color: var(--accent); }
 .motion-control { position: absolute; z-index: 2; right: 18px; bottom: 18px; color: #a9bbd6; border: 1px solid #33405b; background: #050a16cc; padding: 8px 12px; cursor: pointer; font-size: 10px; }
 .callouts { margin: 30px 0 65px; gap: 16px; }
 .callout { border-radius: 0; background: linear-gradient(135deg,#0c1529,#040813); min-height: 100px; }
