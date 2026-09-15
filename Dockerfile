@@ -23,9 +23,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy the repository so the server-chain distributions can be installed from
-# their `packages/` pyproject.toml files. The core, targets, hub, and server
-# packages all resolve their import roots (`spikeforge/`, `server/`,
+# their `packages/` pyproject.toml files. The core, targets, hub, serve, and
+# server packages all resolve their import roots (`spikeforge/`, `server/`,
 # `main*.py`) from the repo root.
+#
+# The install list below must be `spikeforge-server`'s *complete* local
+# dependency closure. A distribution left out does not fail loudly -- pip
+# quietly resolves it from PyPI instead, so the image would run a mix of this
+# checkout and whatever was last published. `test_dockerfile_installs_the_
+# server_dependency_closure` enforces the closure.
 COPY . .
 
 # Install the shared core runtime pins first (better layer caching).
@@ -39,6 +45,7 @@ RUN pip install --upgrade pip \
     && pip install ./packages/spikeforge \
         ./packages/spikeforge-targets \
         ./packages/spikeforge-hub \
+        ./packages/spikeforge-serve \
         ./packages/spikeforge-server
 
 # Built client bundle (the Dockerfile's own copy overrides client/dist).
