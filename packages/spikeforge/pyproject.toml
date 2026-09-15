@@ -15,7 +15,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge"
-version = "0.3.5"
+version = "0.4.0"
 description = "Spiking neural network toolkit: LIF training, NIR export with drift validation, neuromorphic deployment, energy estimates."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files: the distribution metadata points at the root documents while
@@ -67,8 +67,8 @@ dependencies = [
 
 [project.optional-dependencies]
 all = [
-    "spikeforge-targets~=0.1.2",
-    "spikeforge-hub~=0.2.0",
+    "spikeforge-targets~=0.1.3",
+    "spikeforge-hub~=0.3.0",
 ]
 dev = [
     "pytest>=7.0",
