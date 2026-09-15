@@ -125,9 +125,9 @@ dashboard, you may not need spikeforge on top of it — that's a fair
   numerical drift validation.
 - **Introspection** — educational-mode `U[t]`/`I[t]`/`S[t]` traces,
   trajectory metrics, and surrogate-derivative curves.
-- **Deployment** — a capability matrix, weight quantization, energy
-  accounting, and executable `reference`, `norse`, and `lava_loihi2`
-  backends.
+- **Deployment** — a capability matrix, weight quantization with a drift
+  check that can simulate activation/membrane rounding, energy accounting,
+  and executable `reference`, `norse`, and `lava_loihi2` backends.
 - **Model hub** — a curated, offline-first catalog carrying this project's
   own trained reference checkpoints (with the accuracy each scores), plus
   optional live Hugging Face search.

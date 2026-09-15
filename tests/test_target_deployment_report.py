@@ -36,6 +36,33 @@ def test_report_is_json_serialisable_with_constraints() -> None:
     assert report["validation"] is None
 
 
+def test_report_names_declared_schemes_unapplied_without_a_module() -> None:
+    """A spec-only report names both declared schemes without applying."""
+    section = deployment_report(_CONV, "lava_loihi2")["quantization"]
+    assert section["scheme"] == "weight_int8"
+    assert section["applied"] is False
+    activation = section["activation"]
+    assert activation["scheme"] == "none"
+    assert activation["applied"] is False
+    assert activation["reason"]
+
+
+def test_report_runs_a_requested_activation_scheme_with_inputs() -> None:
+    """A built module plus spikes lets the requested scheme run and report."""
+    report = deployment_report(
+        _CONV,
+        "reference",
+        module=build_module(_CONV),
+        spikes=_spikes(),
+        activation="activation_membrane_int8",
+    )
+    section = report["quantization"]
+    assert json.dumps(report)
+    assert section["activation"]["applied"] is True
+    assert section["activation"]["counts"]["steps"] == _spikes().size(0)
+    assert section["drift"]["includes"] == ["activation", "membrane"]
+
+
 def test_report_for_unavailable_target_is_produced() -> None:
     """An unavailable target still yields a marked, non-raising report."""
     report = deployment_report(_CONV, "norse")

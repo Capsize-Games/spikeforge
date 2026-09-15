@@ -38,6 +38,7 @@ from spikeforge.nir_bridge.ingest import (
 )
 from spikeforge.nir_bridge.interpreter import NirInterpreter
 from spikeforge.nir_bridge.interpreter_result import InterpreterResult
+from spikeforge.nir_bridge.post_node import PostNode
 from spikeforge.nir_bridge.roundtrip import roundtrip
 from spikeforge.nir_bridge.serialization import (
     FORMAT_NAME,
@@ -54,6 +55,7 @@ __all__ = [
     "REPORT_KEYS",
     "InterpreterResult",
     "NirInterpreter",
+    "PostNode",
     "ValidationReport",
     "capability",
     "extract",

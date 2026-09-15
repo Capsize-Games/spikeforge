@@ -7,11 +7,11 @@ external graph ingestion. Every command prints JSON. ``deploy`` and
 so they work as CI gates, and ``ingest`` surfaces the typed graph errors as a
 plain message with a non-zero exit instead of a traceback.
 
-The heavy work is delegated: :func:`~spikeforge_targets.report.
-deployment_report` classifies a graph, :func:`~spikeforge.nir_bridge.
-roundtrip` proves persistence fidelity, and :func:`~spikeforge.nir_bridge.
-interpret_file` runs an imported graph. This module only shapes CLI input and
-turns the results into exit statuses.
+The heavy work is delegated: :mod:`~spikeforge_targets.cli.deploy_cli` owns
+the deployment report, :func:`~spikeforge.nir_bridge.roundtrip` proves
+persistence fidelity, and :func:`~spikeforge.nir_bridge.interpret_file` runs
+an imported graph. This module only shapes CLI input and turns the results
+into exit statuses.
 """
 
 import argparse
@@ -26,16 +26,14 @@ from spikeforge.nir_bridge.errors import (
     UnknownNodeKindError,
     UnsupportedNodeError,
 )
-from spikeforge_targets.report import deployment_report
+from spikeforge_targets.cli.deploy_cli import (
+    BATCH,
+    SEED,
+    STEPS,
+    add_deploy_parser,
+)
 from spikeforge_targets.summary import target_summaries
 from spikeforge_targets.test_deploy import matrix_by_name
-
-#: Target used for a deployment report when the caller names none.
-DEFAULT_TARGET = "reference"
-#: Synthetic input shape shared by the round-trip and ingest commands.
-STEPS = 8
-BATCH = 2
-SEED = 0
 
 #: Graph errors ``ingest`` reports cleanly rather than letting them escape.
 GraphError = (
@@ -49,37 +47,6 @@ GraphError = (
 def targets_payload() -> Dict[str, Any]:
     """Return the availability-annotated target registry."""
     return {"targets": target_summaries()}
-
-
-def deploy_report(
-    topology: str,
-    target: str = DEFAULT_TARGET,
-    dataset: Optional[str] = None,
-    sample: int = 0,
-) -> Dict[str, Any]:
-    """Return the deployment report for ``topology`` against ``target``.
-
-    A ``dataset`` selects the sample whose spikes drive the validation and
-    substitution sections; without it a deterministic synthetic fixture is
-    used, so the report still carries the executed substitution view while
-    staying offline.
-    """
-    if dataset is None:
-        spec, module, spikes = fixture.synthetic_input(
-            topology, STEPS, BATCH, SEED
-        )
-        return deployment_report(
-            spec, target, module=module, spikes=spikes
-        )
-    from spikeforge.cli import verify
-
-    spec, module, spikes = verify.sample_input(topology, dataset, sample)
-    return deployment_report(spec, target, module=module, spikes=spikes)
-
-
-def deploy_exit(report: Dict[str, Any]) -> int:
-    """Return the process status for a deployment report."""
-    return 0 if report["deployable"] else 1
 
 
 def roundtrip_report(
@@ -161,15 +128,6 @@ def _run_targets(args: argparse.Namespace) -> int:
     return 0
 
 
-def _run_deploy(args: argparse.Namespace) -> int:
-    """Print a deployment report and return its usability status."""
-    report = deploy_report(
-        args.topology, args.target, args.dataset, args.sample
-    )
-    print(json.dumps(report, indent=2))
-    return deploy_exit(report)
-
-
 def _run_roundtrip(args: argparse.Namespace) -> int:
     """Print the NIR round-trip report and return its fidelity status."""
     report = roundtrip_report(args.topology, args.out)
@@ -200,12 +158,7 @@ def add_subcommands(subs: Any) -> None:
     listing = subs.add_parser("targets", help="list deployment targets")
     listing.set_defaults(handler=_run_targets)
 
-    deploy = subs.add_parser("deploy", help="report a topology's target fit")
-    deploy.add_argument("--topology", default="conv_net")
-    deploy.add_argument("--target", default=DEFAULT_TARGET)
-    deploy.add_argument("--dataset", default=None)
-    deploy.add_argument("--sample", type=int, default=0)
-    deploy.set_defaults(handler=_run_deploy)
+    add_deploy_parser(subs)
 
     trip = subs.add_parser("roundtrip", help="round-trip a graph via disk")
     trip.add_argument("--topology", default="conv_net")

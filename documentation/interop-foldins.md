@@ -40,11 +40,18 @@ spikeforge-targets extract --module model.pt
 
 ### Quantization
 
-[`targets/quantize.py`](../spikeforge_targets/quantize.py:103) applies a
-target's **declared** scheme (`none`, `weight_int8`, `weight_uint8`) to a
-graph's weights, reporting per-layer before/after ranges and the induced drift.
-It is **weight-level only** (no activations, no device), a `none` target is a
-reported no-op, and an unknown scheme is reported unapplied.
+[`targets/quantize.py`](../spikeforge_targets/quantize.py:1) applies a
+target's **declared** weight scheme (`none`, `weight_int8`, `weight_uint8`)
+to a graph's weights, reporting per-layer before/after ranges and the induced
+drift. The drift check can also simulate activation/membrane quantization
+(`activation_membrane_int8`, `activation_int8`, `membrane_int8`) by snapping
+the reference interpreter's node outputs and carried state onto a calibrated
+fixed-point grid
+([`activation_quant_graph.py`](../spikeforge_targets/activation_quant_graph.py:1));
+`drift.includes` names which roundings a figure covers. No shipped target
+declares an activation scheme, a `none` target is a reported no-op, an
+unknown scheme is reported unapplied, and nothing here is a device result —
+see [Implications and boundaries §3](implications-and-boundaries.md).
 
 ### Non-square geometry and `input_size`
 
