@@ -9,13 +9,13 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Capsize-Games/spikeforge/blob/main/CONTRIBUTING.md)
 [![Docs](https://img.shields.io/badge/docs-long--form%20reference-blue.svg)](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/README.md)
 
-![spikeforge dashboard](https://raw.githubusercontent.com/Capsize-Games/spikeforge/main/images/dashboard.png)
+A toolkit for building, training, and deploying spiking neural networks
+(SNNs), built on [snnTorch](https://snntorch.readthedocs.io/) and PyTorch.
 
-A spiking-neural-network (SNN) toolkit built on
-[snnTorch](https://snntorch.readthedocs.io/) and PyTorch. Loads MNIST-style
-and neuromorphic event datasets, encodes them into rate, latency, delta, and
-random spikes, and trains, validates, exports, and deploys LIF networks —
-with a live browser dashboard served over WebSockets.
+Load MNIST-style or neuromorphic event datasets, encode them into spikes,
+train LIF networks, and check what happens when you export or deploy them.
+Use it as a Python library, from the command line, through a browser
+dashboard, or as a desktop app.
 
 > **Pre-1.0.** Before trusting any number this produces, read
 > [Implications and boundaries](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/implications-and-boundaries.md).
@@ -74,6 +74,10 @@ docker compose up --build
 
 Open <http://localhost:8877> — the dashboard connects to the WebSocket on
 the same host and port. No separate backend or proxy to run.
+
+Don't want to run Docker? Download the
+[desktop app](https://github.com/capsize-games/spikeforge-dashboard/releases)
+instead — same dashboard, no clone, no build.
 
 See [Usage](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/usage.md) and [Quickstart](https://github.com/Capsize-Games/spikeforge/blob/main/documentation/quickstart.md)
 for every path (`./install.sh`, local dev with Vite, `examples/`, and the
