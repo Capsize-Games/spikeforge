@@ -9,7 +9,7 @@ that demonstrates spiking networks on the workloads that justify them — event
 vision first, then audio — without weakening a single honesty guarantee the
 project already makes.
 
-**Read first:** [`spikeforge_hub/CURATION.md`](../spikeforge_hub/CURATION.md) is
+**Read first:** [`spikeforge_hub/CURATION.md`](https://github.com/Capsize-Games/spikeforge/blob/main/spikeforge_hub/CURATION.md) is
 the policy this plan operates under and does not amend. Where this plan and
 that document disagree, that document wins and this plan is wrong.
 
@@ -30,7 +30,7 @@ the better answer. One DVS128 Gesture checkpoint changes what the hub
 demonstrates more than twenty more MNIST variants would.
 
 Keep the reference-configuration philosophy exactly as
-[`CURATION.md`](../spikeforge_hub/CURATION.md) states it: stock
+[`CURATION.md`](https://github.com/Capsize-Games/spikeforge/blob/main/spikeforge_hub/CURATION.md) states it: stock
 hyperparameters, modest epochs, one seed, honest numbers, a reproduce command,
 and explicitly not a state-of-the-art claim.
 
@@ -199,7 +199,7 @@ Then:
   [`scripts/build_hub_page.py`](../scripts/build_hub_page.py) (a Data column, or
   a line under the notes). The page is HTML-escaped already; keep it that way.
 - Backfill all six existing entries via `--publish`, not by hand.
-- Add the dataset attributions to [`NOTICE.md`](../NOTICE.md).
+- Add the dataset attributions to [`NOTICE.md`](https://github.com/Capsize-Games/spikeforge/blob/main/NOTICE.md).
 
 ### 2.4 Tests
 

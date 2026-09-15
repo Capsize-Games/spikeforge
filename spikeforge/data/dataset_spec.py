@@ -47,3 +47,9 @@ class DatasetSpec:
     kwargs: Dict[str, object] = field(default_factory=dict)
     tonic_class: Optional[str] = None
     splits: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    #: Names a reader that decodes this dataset's samples itself instead of
+    #: using tonic's ``__getitem__``. Tonic still downloads it and still
+    #: owns the cache layout; only the per-sample decode is replaced. Set
+    #: for the Heidelberg audio datasets, whose tonic decode destroys every
+    #: timestamp -- see :mod:`spikeforge.events.hsd_reader`.
+    native_reader: Optional[str] = None
