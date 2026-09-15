@@ -7,7 +7,8 @@ convolutional topology takes a flat ``[T, B, F]`` volume, reshaped to
 ``[T, B, C, H, W]`` for a spatial input; a sequence topology takes a
 ``[T, B, L, D]`` frame, or ``[T, B, L]`` integer tokens for an ``embedding``
 entry. Nothing here reads or downloads data, so every fixture is reproducible
-offline.
+offline -- weights included: the module is built under the fixture's seed, not
+merely the spikes that drive it.
 """
 
 from typing import Any, Mapping, Tuple
@@ -31,6 +32,22 @@ FEATURES = 784
 SEED = 0
 
 Fixture = Tuple[TopologySpec, StageModule, torch.Tensor]
+
+
+def _seeded_topology(
+    topology: str, seed: int
+) -> Tuple[TopologySpec, StageModule]:
+    """Return ``topology`` built with reproducible weights.
+
+    ``build_topology`` draws its initialisation from the global torch RNG, so
+    the seed has to be set before the build and not merely before the input
+    volume. Seeding only the input left every fixture with fresh weights on
+    each call, which made a deployment report's weight ranges, quantization
+    error and drift magnitudes differ from one invocation to the next while
+    presenting as a deterministic offline fixture.
+    """
+    torch.manual_seed(seed)
+    return build_topology(topology)
 
 
 def _token_frames(
@@ -73,7 +90,7 @@ def sequence_input(
 ) -> Fixture:
     """Return a ``[T, B, L, D]`` (or token) fixture for a sequence preset."""
     resolved = resolved_params(topology)
-    spec, module = build_topology(topology)
+    spec, module = _seeded_topology(topology, seed)
     if spec.stage(spec.input).kind == "embedding":
         return _token_frames(spec, module, resolved, steps, batch, seed)
     return _dense_frames(spec, module, resolved, steps, batch, seed)
@@ -88,7 +105,11 @@ def synthetic_input(
     """Return ``(spec, module, spikes)`` shaped for ``topology``."""
     if is_sequence_topology(topology):
         return sequence_input(topology, steps, batch, seed)
-    spec, module = build_topology(topology)
+    spec, module = _seeded_topology(topology, seed)
+    # Re-seed so the input volume is a function of the seed and its shape
+    # alone, never of how much RNG the initialisation above happened to
+    # consume: a preset that gains a stage must not silently change the
+    # spikes every other preset's fixture is compared on.
     torch.manual_seed(seed)
     flat = torch.rand(steps, batch, FEATURES)
     return spec, module, input_shape.to_input_shape(flat, spec)
