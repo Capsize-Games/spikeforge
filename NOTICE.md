@@ -75,13 +75,24 @@ The wording for Kuzushiji-MNIST is the attribution CODH asks for and is
 reproduced verbatim.
 
 Datasets the registry can load but no shipped checkpoint was trained on carry
-their provenance in the same table. Those confirmed from the publisher's own
-page are N-MNIST (CC BY-SA 4.0, Orchard et al. 2015), DVS128 Gesture
-(CC BY 4.0, Amir et al., CVPR 2017), and Spiking Speech Commands (CC BY 4.0,
-Cramer et al., IEEE TNNLS 2022). The remainder — CIFAR10-DVS, QMNIST, USPS,
-EMNIST, CIFAR-10 — are recorded as `unverified-candidate` until someone reads
-the publisher's terms; **verify before publishing any checkpoint trained on
-one of them.**
+their provenance in the same table. Confirmed from the publisher's own page:
+N-MNIST (CC BY-SA 4.0, Orchard et al. 2015), DVS128 Gesture (CC BY 4.0, Amir
+et al., CVPR 2017), Spiking Speech Commands (CC BY 4.0, Cramer et al., IEEE
+TNNLS 2022), and QMNIST (BSD-3-Clause, Copyright (c) Facebook, Inc.).
+
+The remaining entries carry `unverified-candidate`, and the table's `source`
+field distinguishes two quite different reasons for it:
+
+- **Checked; the publisher states no licence.** USPS, EMNIST, and CIFAR-10
+  were each read at their own distribution point, and none declares a licence
+  or terms of use — they ask only to be cited. The marker records that
+  verified absence, which a guessed SPDX id would misrepresent.
+- **Not checked, because the source will not serve.** MNIST
+  (`yann.lecun.com` refuses connections) and CIFAR10-DVS (figshare answers
+  403/202 with no body). The licences in circulation for both are secondary,
+  so neither is asserted.
+
+**Verify before publishing any checkpoint trained on one of them.**
 
 ### Curation
 
