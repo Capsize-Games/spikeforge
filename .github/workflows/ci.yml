@@ -17,7 +17,7 @@ env:
 jobs:
   lint:
     # Static checks are interpreter-version agnostic; run them once.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +45,7 @@ jobs:
 
   test:
     # The full suite across every supported interpreter (python_requires).
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     strategy:
       fail-fast: false
       matrix:
@@ -82,7 +82,7 @@ jobs:
     # SDK-backed cell must report `available: false` with a named reason — that
     # is honest reporting, not a build failure. The job asserts the command
     # exits 0 *and* that the JSON carries one cell per registered target.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
@@ -134,7 +134,7 @@ jobs:
     # The `hub` core extra is gone: the hub now ships as the `spikeforge-hub`
     # distribution (`spikeforge_hub` import root) and this job proves it installs from
     # source and its offline catalog/CLI work.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
@@ -171,7 +171,7 @@ jobs:
     # install-only here (the suite asserts the SDK-gated backends are
     # *absent*), and `docs` builds the site. `hub` is gone too: it is the
     # `spikeforge-hub` distribution, exercised by the `hub` job above.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     strategy:
       fail-fast: false
       matrix:
@@ -234,7 +234,7 @@ jobs:
     # *core* degrades without the server stack, not that the server runs while
     # its own base deps are blocked. The 18 server-dependent test files are
     # enumerated with `--ignore` below; everything else runs under the blocker.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     env:
       PYTHONPATH: ${{ github.workspace }}/scripts/blocked_deps
     steps:
@@ -303,7 +303,7 @@ jobs:
     # A broken documentation link must fail the pull request, not just a local
     # `build_docs.sh --check`. This gate covers the MkDocs tree in `docs/`;
     # the `published-surfaces` job below covers what readers actually land on.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
@@ -330,7 +330,7 @@ jobs:
     #
     # Deliberately torch-free: readme_renderer plus the stdlib is the whole
     # dependency set, so this stays one of the fastest jobs in the matrix.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
@@ -355,7 +355,7 @@ jobs:
     # in capsize-games/spikeforge-dashboard (its own CI runs `npm run build`). Core keeps
     # only the protocol-codegen guard so a schema change without regenerated
     # types is still caught here.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
@@ -383,7 +383,7 @@ jobs:
     # The static half of the core boundary: no module-level import of a
     # forbidden root, and no function-local import outside the lazy shims.
     # Pure stdlib, so no dependencies are installed.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
@@ -398,7 +398,7 @@ jobs:
     # The artifact half of the core boundary: a core wheel built with NO extras
     # must install, import, and pull in none of the thirteen forbidden
     # distributions, and must not contain `server/`.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
@@ -461,7 +461,7 @@ jobs:
   packaging-guards:
     # The three lightweight topology guards: disjoint import roots (PEP 420),
     # console-script ownership, and satellite pins == compatibility.json.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
     steps:
       - uses: actions/checkout@v4
 
