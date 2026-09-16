@@ -277,10 +277,9 @@ the spikeforge model-hub catalog.">
 {_header()}
 <h1>{_WORDMARK} model hub</h1>
 <p class="sub">{len(entries)} catalog entries -- {trained_count} with trained
-weights, {verified_count} with a verified source and license. Generated from
-<code>spikeforge_hub/models.json</code> by
-<code>scripts/build_hub_page.py</code> -- not a live view of what is
-downloaded or cached.</p>
+weights, {verified_count} with a verified source and license.</p>
+<p class="sub">This page is generated from the catalog, not a live view of
+what is downloaded or cached.</p>
 {_notice(trained_count)}
 <div class="table-scroll">
 <table>
