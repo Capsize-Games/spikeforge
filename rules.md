@@ -48,6 +48,29 @@ connected LIF network for training, inference, and matplotlib/MP4 exports.
 
 ---
 
+## Public-Facing Copy
+
+Website text, application text, documentation, and product descriptions follow
+[`COPY_POLICY.md`](COPY_POLICY.md). Read it before drafting or editing any of
+them. It governs the landing page under `landing/`, the model hub page rendered
+by `scripts/build_hub_page.py`, `README.md`, and `docs/`.
+
+Two points that bite most often here:
+
+- **Do not invent quantities or capabilities.** Check the implemented behavior.
+  A count on the landing page (walkthroughs, datasets, targets) is a claim, and
+  claims get verified before they ship.
+- **The landing page is translated into seventeen locales.** An English change
+  that is not carried into `landing/locales.js` and `landing/cta-locales.js`
+  leaves sixteen languages stating the old copy.
+
+Required disclosures stay: the pre-1.0 warning, the "Implications and
+boundaries" link, and the hub's curation, licensing, and
+"not tuned attempts at state of the art" notices. Shortening copy is not a
+reason to remove any of them.
+
+---
+
 ## Python Code Style and Quality
 
 ### Hard limits
