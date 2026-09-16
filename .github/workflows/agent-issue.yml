@@ -1,0 +1,79 @@
+name: Work an issue
+
+# Turns a labelled issue into a pull request without a person opening a
+# session. Label an issue `agent` (or comment `/agent`) and the work starts.
+#
+# Two secrets are required and the workflow fails loudly without them:
+#
+# - `ANTHROPIC_API_KEY`, which pays for the model.
+# - `AUTOMATION_TOKEN`, a PAT or GitHub App token. The pull request must be
+#   opened with it, because GitHub does not start workflow runs for events
+#   raised by the built-in `GITHUB_TOKEN`: a pull request opened with that
+#   token sits with no checks, forever, and can never satisfy auto-merge.
+#
+# The agent may not merge. It opens a pull request, and the required checks
+# decide -- which is the only reason it is safe to let it write code at all.
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  work:
+    # `issue_comment` fires for pull requests too; `.issue.pull_request` is
+    # absent on a real issue, which is how the two are told apart.
+    if: >
+      (github.event_name == 'issues' &&
+       github.event.label.name == 'agent') ||
+      (github.event_name == 'issue_comment' &&
+       !github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/agent'))
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    timeout-minutes: 60
+    steps:
+      - name: Check the secrets exist
+        shell: bash
+        run: |
+          missing=""
+          [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ] && missing="$missing ANTHROPIC_API_KEY"
+          [ -z "${{ secrets.AUTOMATION_TOKEN }}" ] && missing="$missing AUTOMATION_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "::error::missing secrets:$missing"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.AUTOMATION_TOKEN }}
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.AUTOMATION_TOKEN }}
+          prompt: |
+            Work issue #${{ github.event.issue.number }} in this repository.
+
+            Read the repository's own guidance first -- `rules.md`, and
+            `AGENTS.md` or `CLAUDE.md` if present. It is binding, including
+            the file and function length limits.
+
+            This repository is the engine that five published distributions
+            and two applications build against, so before you finish:
+            - The test suite must pass.
+            - If you changed a version, update `compatibility.json` to match.
+              The dashboard pins both its end-to-end suite and the engine
+              inside the desktop application to that file, so leaving it
+              behind ships a mismatched build.
+            - If you changed the wire protocol or a published surface, say so
+              explicitly in the pull request body and name what outside this
+              repository has to change with it.
+
+            Open a pull request against main describing what you changed and
+            exactly what you ran, including anything you skipped. Do not claim
+            tests you did not run. Do not merge it.

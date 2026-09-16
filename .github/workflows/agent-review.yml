@@ -1,0 +1,68 @@
+name: Review a pull request
+
+# Reviews every pull request. With nobody reading the diff, this is the only
+# thing that looks at a change as a change rather than as a test result.
+#
+# It posts a review. It does not approve, block, or merge: required checks
+# decide that. A reviewer that could also approve its own work would add
+# nothing to a pipeline where the author is a model too.
+#
+# Needs `ANTHROPIC_API_KEY`. Without it the job says so and stops, rather than
+# failing every pull request in the repository.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    timeout-minutes: 30
+    steps:
+      - name: Skip without a key
+        id: guard
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "ANTHROPIC_API_KEY is not set; no review will be posted."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }}.
+
+            Read the repository's own guidance first -- `rules.md`, and
+            `AGENTS.md` or `CLAUDE.md` if present. They are binding here.
+
+            Report only defects you can point at in the diff. Say plainly
+            when you find none; a review that invents work to look useful is
+            worse than a short one. Rank what you do find.
+
+            This repository is the engine five distributions are published
+            from, and a dashboard and a desktop application build against it.
+            Weigh accordingly:
+            - A change to the wire protocol, or to a published surface, that
+              nothing outside this repository has been updated for.
+            - `compatibility.json` left behind by a version change. It is the
+              authority the dashboard pins its end-to-end suite and its
+              packaged engine to, so a stale entry ships a mismatched build.
+            - A test that passes while the behaviour it names is broken.
+            - Public-facing copy asserting something the code does not do.
+
+            Post one review comment. Do not approve and do not request
+            changes; the required checks decide whether this merges.
