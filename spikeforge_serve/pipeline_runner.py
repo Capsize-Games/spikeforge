@@ -112,8 +112,14 @@ def _node_input(
     incoming: List[PipelineEdge],
     results: Dict[str, Dict[str, Any]],
     service: ServingService,
-) -> Tuple[List[float], bool]:
-    """Return the ``(frames, encoded)`` input for one node."""
+) -> Tuple[List[Any], bool]:
+    """Return the ``(frames, encoded)`` input for one node.
+
+    The first element is a list of *frames*, matching what ``frames_from``
+    yields and what ``ServingService.predict`` consumes. An upstream node
+    contributes exactly one frame, so its vector is wrapped rather than
+    spread.
+    """
     if not incoming:
         return frames_from(ctx.request), encoded_flag(ctx.request)
     edge = incoming[0]
