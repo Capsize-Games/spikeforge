@@ -21,10 +21,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No `cache: pip` anywhere in this file. This fleet's runners keep
+      # `_work` on another drive behind a symlink, and setup-python's
+      # dependency-file glob does not see through it: it reports that no
+      # pyproject.toml exists and fails the job before anything is built,
+      # while all seven of them sit in `packages/`. A self-hosted runner also
+      # keeps `~/.cache/pip` between jobs on its own, so the action's cache
+      # was buying nothing here even when it worked.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install the core dev extra
         run: |
@@ -56,7 +62,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
 
       - name: Install torch CPU wheels
         run: |
@@ -89,7 +94,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install torch CPU wheels
         run: |
@@ -141,7 +145,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install torch CPU wheels
         run: |
@@ -182,7 +185,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install torch CPU wheels
         run: |
@@ -243,7 +245,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install torch CPU wheels
         run: |
@@ -310,7 +311,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install docs dependencies
         run: |
@@ -337,7 +337,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install the renderer PyPI itself uses
         run: |
@@ -405,7 +404,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Build the core wheel with no extras
         run: |
