@@ -39,6 +39,15 @@ REQUIRED_ENTRIES = (
 #: Entries a bundle may additionally carry.
 OPTIONAL_ENTRIES = (GRAPH_NAME,)
 
+#: Refuse a bundle whose entries decompress past this many bytes in total.
+#: Checked against each entry's recorded ``file_size`` before any entry is
+#: read, so a small compressed payload declaring an enormous decompressed
+#: size (a zip bomb) is rejected rather than read into memory. Matches the
+#: community-upload single-artifact cap in
+#: ``plans/hub_accounts_plan.md`` §5.3; real artifacts today are
+#: 46 KB-414 KB (§1), so this is generous headroom, not a tight fit.
+MAX_DECOMPRESSED_BYTES = 256 * 1024 * 1024  # 256 MiB
+
 
 def checksum(payload: bytes) -> str:
     """Return the lowercase hex SHA-256 of ``payload``."""
