@@ -148,7 +148,12 @@ def test_rebuild_is_bit_exact_in_a_subprocess(tmp_path: Any) -> None:
         env=dict(os.environ, PYTHONPATH=root),
         capture_output=True,
         text=True,
-        timeout=180,
+        # Generous because this is a cold Python process importing Torch, and
+        # the runners share one workstation with every other project's CI. At
+        # 180s it timed out under load and reported a bit-exactness failure
+        # that had not happened, which is the worst kind of red: it looks like
+        # the thing the test is named after.
+        timeout=600,
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "ok"

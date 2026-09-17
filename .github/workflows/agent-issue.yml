@@ -1,18 +1,23 @@
 name: Work an issue
 
 # Turns a labelled issue into a pull request without a person opening a
-# session. Label an issue `agent` (or comment `/agent`) and the work starts.
+# session. Label an issue `agent`, or comment `/agent`, and the work starts.
 #
-# Two secrets are required and the workflow fails loudly without them:
+# The model is reached through aider, which speaks to any OpenAI-compatible
+# endpoint, so the provider is configuration rather than code:
 #
-# - `ANTHROPIC_API_KEY`, which pays for the model.
-# - `AUTOMATION_TOKEN`, a PAT or GitHub App token. The pull request must be
-#   opened with it, because GitHub does not start workflow runs for events
-#   raised by the built-in `GITHUB_TOKEN`: a pull request opened with that
-#   token sits with no checks, forever, and can never satisfy auto-merge.
+#   secret   LLM_API_KEY      the provider key
+#   secret   AUTOMATION_TOKEN a PAT or App token
+#   variable LLM_BASE_URL     e.g. https://openrouter.ai/api/v1
+#   variable LLM_MODEL        the provider's exact model slug
 #
-# The agent may not merge. It opens a pull request, and the required checks
-# decide -- which is the only reason it is safe to let it write code at all.
+# `AUTOMATION_TOKEN` is not optional. GitHub does not start workflow runs for
+# events raised by the built-in `GITHUB_TOKEN`, so a pull request opened with
+# it sits with no checks and can never satisfy auto-merge.
+#
+# The agent cannot merge, cannot approve, and cannot push to main: `main`
+# requires a pull request and its checks. That is the whole reason it is
+# reasonable to let a model write here unattended.
 
 on:
   issues:
@@ -22,6 +27,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   work:
@@ -36,14 +42,16 @@ jobs:
     runs-on: [self-hosted, linux, x64, spikeforge-ci]
     timeout-minutes: 60
     steps:
-      - name: Check the secrets exist
+      - name: Check the configuration exists
         shell: bash
         run: |
           missing=""
-          [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ] && missing="$missing ANTHROPIC_API_KEY"
+          [ -z "${{ secrets.LLM_API_KEY }}" ] && missing="$missing LLM_API_KEY"
           [ -z "${{ secrets.AUTOMATION_TOKEN }}" ] && missing="$missing AUTOMATION_TOKEN"
+          [ -z "${{ vars.LLM_BASE_URL }}" ] && missing="$missing LLM_BASE_URL"
+          [ -z "${{ vars.LLM_MODEL }}" ] && missing="$missing LLM_MODEL"
           if [ -n "$missing" ]; then
-            echo "::error::missing secrets:$missing"
+            echo "::error::missing configuration:$missing"
             exit 1
           fi
 
@@ -52,28 +60,75 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.AUTOMATION_TOKEN }}
 
-      - uses: anthropics/claude-code-action@v1
+      - uses: actions/setup-python@v5
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.AUTOMATION_TOKEN }}
-          prompt: |
-            Work issue #${{ github.event.issue.number }} in this repository.
+          python-version: "3.12"
 
-            Read the repository's own guidance first -- `rules.md`, and
-            `AGENTS.md` or `CLAUDE.md` if present. It is binding, including
-            the file and function length limits.
+      - name: Install the agent
+        run: python -m pip install --upgrade aider-chat
 
-            This repository is the engine that five published distributions
-            and two applications build against, so before you finish:
-            - The test suite must pass.
-            - If you changed a version, update `compatibility.json` to match.
-              The dashboard pins both its end-to-end suite and the engine
-              inside the desktop application to that file, so leaving it
-              behind ships a mismatched build.
-            - If you changed the wire protocol or a published surface, say so
-              explicitly in the pull request body and name what outside this
-              repository has to change with it.
+      - name: Write the instructions
+        shell: bash
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # Through a file, not an argument: an issue body is arbitrary text
+          # and interpolating it into a shell command would let its contents
+          # decide what runs.
+          {
+            echo "Work this issue."
+            echo
+            echo "Title: $ISSUE_TITLE"
+            echo
+            echo "$ISSUE_BODY"
+            echo
+            echo "Read this repository's own guidance first -- rules.md, and"
+            echo "AGENTS.md or CLAUDE.md if present. It is binding."
+            echo
+            echo "Five published distributions and two applications build"
+            echo "against this repository. If you change a version, update"
+            echo "compatibility.json to match: the dashboard pins both its"
+            echo "end-to-end suite and the engine inside the desktop"
+            echo "application to that file, so leaving it behind ships a"
+            echo "mismatched build."
+          } > /tmp/agent-instructions.txt
+          cat /tmp/agent-instructions.txt
 
-            Open a pull request against main describing what you changed and
-            exactly what you ran, including anything you skipped. Do not claim
-            tests you did not run. Do not merge it.
+      - name: Make the change
+        env:
+          OPENAI_API_KEY: ${{ secrets.LLM_API_KEY }}
+          OPENAI_API_BASE: ${{ vars.LLM_BASE_URL }}
+        run: |
+          set -euo pipefail
+          branch="agent/issue-${{ github.event.issue.number }}"
+          git config user.name "spikeforge-agent"
+          git config user.email "contact@capsizegames.com"
+          git checkout -b "$branch"
+          aider --yes --no-analytics --no-gitignore \
+            --model "openai/${{ vars.LLM_MODEL }}" \
+            --message-file /tmp/agent-instructions.txt
+          if git diff --quiet HEAD; then
+            echo "::error::the agent produced no change"
+            exit 1
+          fi
+
+      - name: Check its work
+        run: |
+          python -m pip install -e ".[dev]" || python -m pip install -e .
+          python -m pytest -x -q
+
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
+        run: |
+          set -euo pipefail
+          branch="agent/issue-${{ github.event.issue.number }}"
+          git push --set-upstream origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "${{ github.event.issue.title }}" \
+            --body "Closes #${{ github.event.issue.number }}.
+
+          Written by \`${{ vars.LLM_MODEL }}\` from the issue text. Nobody has
+          read this. The test suite passed on the runner before it was opened;
+          the required checks decide whether it merges."
