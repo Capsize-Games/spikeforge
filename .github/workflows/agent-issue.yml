@@ -1,0 +1,134 @@
+name: Work an issue
+
+# Turns a labelled issue into a pull request without a person opening a
+# session. Label an issue `agent`, or comment `/agent`, and the work starts.
+#
+# The model is reached through aider, which speaks to any OpenAI-compatible
+# endpoint, so the provider is configuration rather than code:
+#
+#   secret   LLM_API_KEY      the provider key
+#   secret   AUTOMATION_TOKEN a PAT or App token
+#   variable LLM_BASE_URL     e.g. https://openrouter.ai/api/v1
+#   variable LLM_MODEL        the provider's exact model slug
+#
+# `AUTOMATION_TOKEN` is not optional. GitHub does not start workflow runs for
+# events raised by the built-in `GITHUB_TOKEN`, so a pull request opened with
+# it sits with no checks and can never satisfy auto-merge.
+#
+# The agent cannot merge, cannot approve, and cannot push to main: `main`
+# requires a pull request and its checks. That is the whole reason it is
+# reasonable to let a model write here unattended.
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  work:
+    # `issue_comment` fires for pull requests too; `.issue.pull_request` is
+    # absent on a real issue, which is how the two are told apart.
+    if: >
+      (github.event_name == 'issues' &&
+       github.event.label.name == 'agent') ||
+      (github.event_name == 'issue_comment' &&
+       !github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/agent'))
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    timeout-minutes: 60
+    steps:
+      - name: Check the configuration exists
+        shell: bash
+        run: |
+          missing=""
+          [ -z "${{ secrets.LLM_API_KEY }}" ] && missing="$missing LLM_API_KEY"
+          [ -z "${{ secrets.AUTOMATION_TOKEN }}" ] && missing="$missing AUTOMATION_TOKEN"
+          [ -z "${{ vars.LLM_BASE_URL }}" ] && missing="$missing LLM_BASE_URL"
+          [ -z "${{ vars.LLM_MODEL }}" ] && missing="$missing LLM_MODEL"
+          if [ -n "$missing" ]; then
+            echo "::error::missing configuration:$missing"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.AUTOMATION_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the agent
+        run: python -m pip install --upgrade aider-chat
+
+      - name: Write the instructions
+        shell: bash
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # Through a file, not an argument: an issue body is arbitrary text
+          # and interpolating it into a shell command would let its contents
+          # decide what runs.
+          {
+            echo "Work this issue."
+            echo
+            echo "Title: $ISSUE_TITLE"
+            echo
+            echo "$ISSUE_BODY"
+            echo
+            echo "Read this repository's own guidance first -- rules.md, and"
+            echo "AGENTS.md or CLAUDE.md if present. It is binding."
+            echo
+            echo "Five published distributions and two applications build"
+            echo "against this repository. If you change a version, update"
+            echo "compatibility.json to match: the dashboard pins both its"
+            echo "end-to-end suite and the engine inside the desktop"
+            echo "application to that file, so leaving it behind ships a"
+            echo "mismatched build."
+          } > /tmp/agent-instructions.txt
+          cat /tmp/agent-instructions.txt
+
+      - name: Make the change
+        env:
+          OPENAI_API_KEY: ${{ secrets.LLM_API_KEY }}
+          OPENAI_API_BASE: ${{ vars.LLM_BASE_URL }}
+        run: |
+          set -euo pipefail
+          branch="agent/issue-${{ github.event.issue.number }}"
+          git config user.name "spikeforge-agent"
+          git config user.email "contact@capsizegames.com"
+          git checkout -b "$branch"
+          aider --yes --no-analytics --no-gitignore \
+            --model "openai/${{ vars.LLM_MODEL }}" \
+            --message-file /tmp/agent-instructions.txt
+          if git diff --quiet HEAD; then
+            echo "::error::the agent produced no change"
+            exit 1
+          fi
+
+      - name: Check its work
+        run: |
+          python -m pip install -e ".[dev]" || python -m pip install -e .
+          python -m pytest -x -q
+
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
+        run: |
+          set -euo pipefail
+          branch="agent/issue-${{ github.event.issue.number }}"
+          git push --set-upstream origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "${{ github.event.issue.title }}" \
+            --body "Closes #${{ github.event.issue.number }}.
+
+          Written by \`${{ vars.LLM_MODEL }}\` from the issue text. Nobody has
+          read this. The test suite passed on the runner before it was opened;
+          the required checks decide whether it merges."
