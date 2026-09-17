@@ -185,6 +185,24 @@ def _meta_input_size(meta: Mapping[str, Any]) -> Optional[Tuple[int, int]]:
     return None
 
 
+def _check_decompressed_size(
+    path: str, archive: zipfile.ZipFile, names: Any
+) -> None:
+    """Raise when ``names``' total decompressed size exceeds the cap.
+
+    Checked against each entry's recorded ``file_size`` before any entry is
+    decompressed, so a small compressed payload declaring an enormous
+    decompressed size (a zip bomb) is refused rather than read into memory.
+    """
+    total = sum(archive.getinfo(name).file_size for name in names)
+    if total > bm.MAX_DECOMPRESSED_BYTES:
+        raise BundleFormatError(
+            path,
+            f"decompressed size {total} exceeds the "
+            f"{bm.MAX_DECOMPRESSED_BYTES} byte cap",
+        )
+
+
 def _read_archive(path: str) -> Dict[str, bytes]:
     """Return every entry of the zip at ``path``, or raise a typed error."""
     if not os.path.exists(path):
@@ -197,6 +215,7 @@ def _read_archive(path: str) -> Dict[str, bytes]:
                 raise BundleFormatError(
                     path, f"missing required entries: {missing}"
                 )
+            _check_decompressed_size(path, archive, names)
             return {name: archive.read(name) for name in names}
     except zipfile.BadZipFile as error:
         raise BundleFormatError(
