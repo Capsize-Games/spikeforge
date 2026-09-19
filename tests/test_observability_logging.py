@@ -88,3 +88,28 @@ def test_reset_restores_logger_without_leaking() -> None:
     reset_logging()
     after = (_LOGGER.level, _LOGGER.propagate, len(_LOGGER.handlers))
     assert after == before
+
+
+def test_only_documented_identifier_fields_are_copied() -> None:
+    """`identifier_fields` copies the three correlation keys and nothing else.
+
+    Pins the adoption of ``capsize_commons.logging.JsonFormatter``: an
+    unrelated ``extra=`` key must not leak into the payload, and all three
+    spikeforge identifiers must be carried.
+    """
+    stream = io.StringIO()
+    configure_logging(json_mode=True, force=True, stream=stream)
+    _LOGGER.info(
+        "train.started",
+        extra={
+            "run_id": "run-1",
+            "config_id": "cfg-9",
+            "config_hash": "abc",
+            "not_a_field": "leak",
+        },
+    )
+    payload = json.loads(stream.getvalue().strip())
+    assert payload["run_id"] == "run-1"
+    assert payload["config_id"] == "cfg-9"
+    assert payload["config_hash"] == "abc"
+    assert "not_a_field" not in payload
