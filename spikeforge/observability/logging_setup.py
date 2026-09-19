@@ -12,7 +12,10 @@ import logging
 import os
 from typing import Any, Optional, Tuple
 
-from spikeforge.observability.json_formatter import JsonFormatter
+# The §14 JSON shape is owned by capsize-commons. ``message_key`` and
+# ``identifier_fields`` reproduce spikeforge's established payload — the
+# ``event`` key plus the three correlation fields — without a private copy.
+from capsize_commons.logging import JsonFormatter
 
 #: Package logger structured logging attaches to (never the root logger).
 LOGGER_NAME = "spikeforge"
@@ -21,6 +24,9 @@ DEFAULT_LEVEL = "INFO"
 #: Values that turn an environment flag off.
 _FALSEY = ("", "0", "false", "no", "off")
 _HUMAN_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
+#: Field names preserving spikeforge's JSON payload shape (see module note).
+_MESSAGE_KEY = "event"
+_IDENTIFIER_FIELDS = ("run_id", "config_id", "config_hash")
 
 _logger = logging.getLogger(LOGGER_NAME)
 _handler: Optional[logging.Handler] = None
@@ -51,7 +57,11 @@ def _handler_for(use_json: bool, stream: Any) -> logging.Handler:
     """Return a stream handler carrying the JSON or human formatter."""
     handler = logging.StreamHandler(stream)
     formatter = (
-        JsonFormatter() if use_json else logging.Formatter(_HUMAN_FORMAT)
+        JsonFormatter(
+            message_key=_MESSAGE_KEY, identifier_fields=_IDENTIFIER_FIELDS
+        )
+        if use_json
+        else logging.Formatter(_HUMAN_FORMAT)
     )
     handler.setFormatter(formatter)
     return handler

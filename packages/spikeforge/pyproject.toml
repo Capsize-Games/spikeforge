@@ -56,6 +56,10 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    # Shared §14 JSON logging. Logging is part of the capsize-commons base
+    # install — 0.1.1 defines no separate "logging" extra — so the dependency
+    # carries no bracket.
+    "capsize-commons>=0.1.1",
     "torch>=2.5",
     "torchvision>=0.20",
     "snntorch>=1.0",
