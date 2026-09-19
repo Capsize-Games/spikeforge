@@ -21,7 +21,10 @@ description = "Spiking neural network toolkit: LIF training, NIR export with dri
 # files: the distribution metadata points at the root documents while
 # setuptools' sandbox only reads files inside the project directory.
 readme = "README.md"
-requires-python = ">=3.10"
+# 3.10 support was dropped when the core adopted `capsize-commons`
+# (`requires-python >=3.11`) for §14 logging in hq#3/#52. The declared floor
+# must match what the declared dependencies actually support.
+requires-python = ">=3.11"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 authors = [
@@ -48,7 +51,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
