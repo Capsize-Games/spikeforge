@@ -6,8 +6,8 @@ import type {
   RasterPayload,
   RasterSource,
 } from "../types";
-import { HelpTip } from "./HelpTip";
 import { HiddenFramePanel } from "./HiddenFramePanel";
+import { PanelHeader } from "./PanelHeader";
 import { RasterCanvas } from "./RasterCanvas";
 
 interface Props {
@@ -67,10 +67,7 @@ export function NetworkActivity({
 
   return (
     <div className="panel activity-panel">
-      <div className="panel-title">
-        Network activity
-        <HelpTip text={HELP.activity} />
-      </div>
+      <PanelHeader title="Network activity" hint={HELP.activity} />
       <div className="raster-stack">
         <RasterCanvas
           bare

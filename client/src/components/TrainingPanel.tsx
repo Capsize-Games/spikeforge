@@ -1,6 +1,7 @@
 import type { TrainMetrics } from "../types";
 import { useI18n } from "../i18n/I18nProvider";
 import { LineChart } from "./LineChart";
+import { PanelHeader } from "./PanelHeader";
 import { CHART_COLORS } from "./chartColors";
 
 interface Props {
@@ -20,10 +21,10 @@ export function TrainingPanel({
 }: Props) {
   const { t } = useI18n();
   return (
-    <div className="panel">
-      <div className="panel-title">{t("training.title")}</div>
+    <div className="panel training-panel">
+      <PanelHeader title={t("training.title")} />
 
-      <div className="panel-title subsection">{t("training.status")}</div>
+      <PanelHeader title={t("training.status")} subsection />
       {last ? (
         <div className="metrics" data-tour="training-live">
           <div>
@@ -49,13 +50,13 @@ export function TrainingPanel({
         <div className="muted">{t("training.idle")}</div>
       )}
 
-      <div className="panel-title subsection">{t("training.loss")}</div>
+      <PanelHeader title={t("training.loss")} subsection />
       <LineChart
         bare
         series={[{ label: "loss", color: CHART_COLORS.loss, values: loss }]}
       />
 
-      <div className="panel-title subsection">{t("training.accuracy")}</div>
+      <PanelHeader title={t("training.accuracy")} subsection />
       <LineChart
         bare
         series={[

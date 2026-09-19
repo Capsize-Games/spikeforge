@@ -1,6 +1,11 @@
+import { Play, Square } from "lucide-react";
+
 import { HELP } from "../helpText";
 import { HelpTip } from "./HelpTip";
+import { IconButton } from "./IconButton";
+import { Metric } from "./Metric";
 import { SampleIndex } from "./SampleIndex";
+import { Toolbar } from "./Toolbar";
 
 interface Props {
   step: number | null;
@@ -13,7 +18,12 @@ interface Props {
   onSelectSample: (index: number) => void;
 }
 
-/** Shared time cursor: header controls, one scrubber, and a status line. */
+/**
+ * The viewer's transport strip: play/pause, the shared timestep scrubber, the
+ * current step as a tabular readout, and the sample stepper. Everything it
+ * moves (every raster, the neuron trace, the prediction bars) follows the one
+ * cursor.
+ */
 export function TimeCursor({
   step,
   numSteps,
@@ -28,37 +38,24 @@ export function TimeCursor({
   const value = Math.min(step ?? 0, last);
 
   return (
-    <div className="panel time-cursor">
-      <div className="panel-title row-title">
-        <span>
-          Time cursor
-          <HelpTip text={HELP.time_cursor} />
-        </span>
-        <span className="panel-actions">
-          <HelpTip text={HELP.sample_index} />
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={onPlay}
-            disabled={playing}
-            title="Play spike frames"
-            aria-label="Play spike frames"
-          >
-            ▶
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={onStop}
-            disabled={!playing}
-            title="Stop"
-            aria-label="Stop"
-          >
-            ■
-          </button>
-          <SampleIndex value={sampleIndex} onChange={onSelectSample} />
-        </span>
-      </div>
+    <Toolbar className="time-cursor">
+      <span className="transport-title">
+        Time cursor
+        <HelpTip text={HELP.time_cursor} />
+      </span>
+
+      <IconButton
+        icon={Play}
+        label="Play spike frames"
+        onClick={onPlay}
+        disabled={playing}
+      />
+      <IconButton
+        icon={Square}
+        label="Stop"
+        onClick={onStop}
+        disabled={!playing}
+      />
 
       <input
         className="cursor-range"
@@ -69,9 +66,12 @@ export function TimeCursor({
         onChange={(e) => onScrub(Number(e.target.value))}
         aria-label="Time step"
       />
-      <div className="cursor-readout">
-        {playing ? "live" : "paused"} · t = {value} / {last}
-      </div>
-    </div>
+
+      <Metric small label="t" value={`${value} / ${last}`} />
+      <span className="cursor-readout">{playing ? "live" : "paused"}</span>
+
+      <HelpTip text={HELP.sample_index} />
+      <SampleIndex value={sampleIndex} onChange={onSelectSample} />
+    </Toolbar>
   );
 }

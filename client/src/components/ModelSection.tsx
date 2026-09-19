@@ -1,8 +1,9 @@
 import { TRAIN_HELP } from "../helpText";
 import { useI18n } from "../i18n/I18nProvider";
 import type { TopologyParams, TrainConfig } from "../types";
+import { HelpTip } from "./HelpTip";
 import { SelectField } from "./SelectField";
-import { SliderField } from "./SliderField";
+import { NumberField } from "./NumberField";
 import { StageNeuronEditor } from "./StageNeuronEditor";
 import { Section } from "./Stepper";
 
@@ -110,7 +111,10 @@ export function ModelSection({
           set({ topology_params: withParam(params, "surrogate", v || null) })
         }
       />
-      <p className="panel-note">{t("model.stageOverrides")}</p>
+      <p className="panel-note">
+        {t("model.stageOverrides")}
+        <HelpTip text={TRAIN_HELP.stage_neurons} />
+      </p>
       <StageNeuronEditor
         value={model.stage_neurons}
         neurons={neurons}
@@ -118,7 +122,7 @@ export function ModelSection({
         onChange={(v) => set({ stage_neurons: v })}
       />
 
-      <SliderField
+      <NumberField
         label="hidden"
         value={model.hidden}
         min={16}
@@ -128,17 +132,18 @@ export function ModelSection({
         disabled={locked}
         onChange={(v) => set({ hidden: v })}
       />
-      <SliderField
+      <NumberField
         label="beta"
         value={model.beta}
         min={0.1}
         max={0.95}
         step={0.05}
+        range
         help={TRAIN_HELP.beta}
         disabled={locked}
         onChange={(v) => set({ beta: v })}
       />
-      <SliderField
+      <NumberField
         label="lr"
         value={model.lr}
         min={0.001}
@@ -147,7 +152,7 @@ export function ModelSection({
         help={TRAIN_HELP.lr}
         onChange={(v) => set({ lr: v })}
       />
-      <SliderField
+      <NumberField
         label="epochs"
         value={model.epochs}
         min={1}

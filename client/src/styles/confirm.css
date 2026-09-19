@@ -12,21 +12,20 @@
 .confirm-card {
   width: 320px;
   padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
+  border-radius: var(--radius);
+  background: var(--surface-3);
   box-shadow: var(--shadow);
 }
 
 .confirm-title {
-  font-size: 13px;
+  font-size: var(--fs-panel);
   font-weight: 700;
   color: var(--text);
 }
 
 .confirm-message {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   line-height: 1.5;
   color: var(--muted);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useTheme } from "../theme";
 
@@ -21,6 +21,10 @@ interface Props {
   bare?: boolean;
 }
 
+/** Smallest plot the chart will draw before it has a measured size. */
+const MIN_WIDTH = 160;
+const MIN_HEIGHT = 90;
+
 export function LineChart({
   series,
   title,
@@ -30,7 +34,25 @@ export function LineChart({
   bare = false,
 }: Props) {
   const { colors } = useTheme();
+  const boxRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [size, setSize] = useState({ w: width, h: height });
+
+  // Draw at the container's real pixel size rather than stretching a fixed
+  // buffer, which blurred the trace, the gridlines and the legend.
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const measure = () => {
+      const w = Math.max(MIN_WIDTH, Math.round(box.clientWidth));
+      const h = Math.max(MIN_HEIGHT, Math.round(box.clientHeight || height));
+      setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [height]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,6 +69,18 @@ export function LineChart({
     const legendH = 16;
     const w = canvas.width;
     const h = canvas.height - top - legendH;
+
+    // Extremely subtle horizontal gridlines: they orient the eye without
+    // competing with the trace. The crosshair below is the only bright mark.
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 1;
+    for (let row = 1; row < 4; row++) {
+      const y = top + (h * row) / 4;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
 
     series.forEach((s) => {
       if (s.values.length < 2) return;
@@ -85,28 +119,31 @@ export function LineChart({
       ctx.fillText(s.label, legendX + 12, canvas.height - 5);
       legendX += ctx.measureText(s.label).width + 34;
     });
-  }, [series, width, height, cursorIndex, colors]);
+  }, [series, size, cursorIndex, colors]);
+
+  const canvas = (
+    <canvas
+      ref={canvasRef}
+      className="chart-canvas"
+      width={size.w}
+      height={size.h}
+    />
+  );
 
   if (bare) {
     return (
-      <canvas
-        ref={canvasRef}
-        className="chart-canvas"
-        width={width}
-        height={height}
-      />
+      <div className="chart-fill" ref={boxRef}>
+        {canvas}
+      </div>
     );
   }
 
   return (
     <div className="panel">
       {title && <div className="panel-title">{title}</div>}
-      <canvas
-        ref={canvasRef}
-        className="chart-canvas"
-        width={width}
-        height={height}
-      />
+      <div className="chart-fill" ref={boxRef}>
+        {canvas}
+      </div>
     </div>
   );
 }

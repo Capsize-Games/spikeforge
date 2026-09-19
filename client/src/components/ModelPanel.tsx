@@ -49,9 +49,10 @@ export function ModelPanel({
   const disabled = !connected || busy || loading || readOnly;
 
   return (
-    <section className="model-panel">
+    <section className="model-panel" data-testid="model-panel">
+      {/* The pane heading already names this pane, so the row starts with the
+          state that changes: which checkpoint is loaded. */}
       <header className="model-head">
-        <span className="model-title">{t("section.model")}</span>
         <span className="model-current">
           <span className="model-current-label">{t("model.current")}</span>
           {loading ? (
@@ -61,7 +62,7 @@ export function ModelPanel({
             </span>
           ) : (
             <span className={`model-chip ${current ? "on" : ""}`}>
-              <span className="model-chip-name">
+              <span className="model-chip-name" data-testid="model-current">
                 {current ?? t("model.none")}
               </span>
               {current && (
@@ -86,6 +87,7 @@ export function ModelPanel({
           type="button"
           role="tab"
           aria-selected={tab === "load"}
+          data-testid="model-tab-load"
           className={`tab ${tab === "load" ? "active" : ""}`}
           onClick={() => setTab("load")}
           disabled={readOnly}
@@ -96,6 +98,7 @@ export function ModelPanel({
           type="button"
           role="tab"
           aria-selected={tab === "save"}
+          data-testid="model-tab-save"
           className={`tab ${tab === "save" ? "active" : ""}`}
           onClick={() => setTab("save")}
           disabled={readOnly}
@@ -106,6 +109,7 @@ export function ModelPanel({
           type="button"
           role="tab"
           aria-selected={tab === "bundle"}
+          data-testid="model-tab-bundle"
           className={`tab ${tab === "bundle" ? "active" : ""}`}
           onClick={() => setTab("bundle")}
         >
@@ -122,6 +126,7 @@ export function ModelPanel({
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
               disabled={disabled || models.length === 0}
+              data-testid="model-select"
               aria-label={t("model.saved")}
             >
               <option value="">
@@ -136,6 +141,7 @@ export function ModelPanel({
             <button
               className="apply small"
               onClick={() => selected && onLoad(selected)}
+              data-testid="model-load"
               disabled={disabled || !selected}
             >
               {t("action.load")}
@@ -152,11 +158,13 @@ export function ModelPanel({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("model.name")}
+              data-testid="model-name"
               aria-label={t("model.name")}
             />
             <button
               className="apply small"
               onClick={() => onSave(name)}
+              data-testid="model-save"
               disabled={disabled || !name.trim()}
             >
               {t("action.save")}

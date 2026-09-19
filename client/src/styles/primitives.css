@@ -1,0 +1,214 @@
+/*
+ * Control primitives. Geometry comes from the tokens in base.css so every
+ * control is the same height and every icon the same size.
+ *
+ * The read-out primitives — Metric, Badge, StatusIndicator and the fact
+ * grids — live in readouts.css beside the panels that state their numbers.
+ */
+
+/* --- Button: base, then variants ------------------------------------- */
+/* Filled accent means *primary action* only; routine actions are neutral
+   or ghost.
+
+   `.apply` / `.apply.stop` / `.apply.ghost` / `.apply.small` are the legacy
+   names for the same four tones. They are kept so the panels that have not
+   been migrated yet render identically to the ones that have. */
+.btn,
+.apply {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: var(--control-h);
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.btn:hover:not(:disabled),
+.apply:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.btn:focus-visible,
+.apply:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled,
+.apply:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.primary,
+.apply {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: var(--fw-semibold);
+}
+
+.btn.danger,
+.apply.stop {
+  background: var(--bad);
+  color: var(--on-danger);
+  font-weight: var(--fw-semibold);
+}
+
+.btn.ghost,
+.apply.ghost {
+  background: none;
+  color: var(--muted);
+}
+
+.btn.ghost:hover:not(:disabled),
+.apply.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn.sm,
+.apply.small {
+  height: var(--control-h-toolbar);
+  padding: 0 10px;
+  font-size: var(--fs-secondary);
+}
+
+.btn.block {
+  width: 100%;
+}
+
+/* --- PanelHeader ------------------------------------------------------ */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: var(--panel-header-h);
+  margin-bottom: 10px;
+}
+
+.panel-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-panel);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.panel-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-header.subsection {
+  min-height: 0;
+  margin: 16px 0 8px;
+}
+
+/* --- Field controls --------------------------------------------------- */
+/* A field is a label row plus one control. The label is 12px and the control
+   30px, so "this is a setting" and "this is its value" are two different
+   ranks rather than one run of 13px text. */
+.field-label {
+  font-size: var(--fs-label);
+}
+
+/* A slider paired with the numeric box for the same value: the track feels
+   the parameter, the box states it. Both fill the field's control cell. */
+.field-scale {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+.field-scale input[type="range"] {
+  flex: 1 1 auto;
+  align-self: center;
+  min-width: 0;
+  margin: 0 10px;
+}
+
+/* A numeric box is a value, not a form: it fills its control cell, keeps no
+   border of its own, and right-aligns so magnitudes line up. Beside a slider
+   it is narrower, and a seam — the same one the label cell uses — separates
+   it from the track. */
+.num-input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: var(--control-h);
+  padding: 0 10px;
+  border: none;
+  border-radius: 0;
+  background: var(--surface-1);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-ui);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  transition: background var(--t-fast);
+}
+
+.field-scale .num-input {
+  flex: 0 0 auto;
+  width: 72px;
+  border-left: 1px solid var(--line-soft);
+}
+
+.num-input.invalid {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 12%, var(--surface-3));
+}
+
+.num-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* No spin buttons anywhere: a stepper in this application is the arrow keys
+   on the field itself, and the native widgets are too wide for a box that has
+   to sit beside a slider or inside a 260px pane. */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* --- Toolbar ---------------------------------------------------------- */
+/* A strip of controls inside a pane: one surface step up from it, no border
+   — the surface difference is the whole edge. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+/* --- InspectorSection ------------------------------------------------- */
+.inspector-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.inspector-section-title {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+}

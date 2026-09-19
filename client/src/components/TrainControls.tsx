@@ -1,3 +1,6 @@
+import { useI18n } from "../i18n/I18nProvider";
+import { Button } from "./Button";
+
 interface Props {
   running: boolean;
   connected: boolean;
@@ -19,22 +22,31 @@ export function TrainControls({
 
   return (
     <div className="actions" data-tour="train-controls">
-      <button className="apply" onClick={onTrain} disabled={busy}>
+      <Button
+        variant="primary"
+        testId="train-start"
+        onClick={onTrain}
+        disabled={busy}
+      >
         {readOnly
           ? t("training.disabled")
           : running
             ? t("training.running")
             : t("training.train")}
-      </button>
+      </Button>
+
       {readOnly && <p className="arch-note">{t("training.demoDisabled")}</p>}
-      <button
-        className="apply stop"
+
+      {/* Stop is a routine action, so it stays neutral: a filled red button
+          sitting disabled by default reads as chrome, not as a state. The
+          filled danger tone is reserved for destructive confirmation. */}
+      <Button
+        testId="train-stop"
         onClick={onStop}
         disabled={!connected || !running}
       >
         {t("training.stop")}
-      </button>
+      </Button>
     </div>
   );
 }
-import { useI18n } from "../i18n/I18nProvider";

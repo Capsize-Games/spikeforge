@@ -1,27 +1,105 @@
-/* --- square corners on containers and controls --- */
-.panel,
-canvas,
-.model-item,
-.mismatch,
-.pred-badge,
-.pred,
-.class-bars,
-.class-bar-fill,
-.class-bar.true,
-.res-track,
-.res-fill,
-.help-popup,
-.help-tip,
-.apply,
-.apply.small,
-.step-btn,
-.text-input,
-.field select,
-.error {
-  border-radius: 0;
+/* --- viewer layout: input rows, rasters, and the transport strip --- */
+
+/* --- the viewer workspace: stage, inspector, transport ---------------- */
+
+/* The stage takes the width; the inspector is a fixed-ish column beside it;
+   the transport strip runs the full width along the bottom. The rasters are
+   the thing the app is built around, so they get the space. */
+.viewer-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 30%);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* The workspace is one screen. The stage sizes itself to the row, the
+     inspector scrolls inside its own column, and nothing here grows the tab
+     into a page scrollbar. */
+  overflow: hidden;
 }
 
-/* --- viewer rows: deterministic equal columns --- */
+.viewer-stage {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.viewer-inspector {
+  grid-column: 2;
+  grid-row: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.viewer-transport {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  /* Stacked: let content take its natural height and the workspace scroll
+     again, rather than squeezing both halves into one screen. */
+  .viewer-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    flex: 0 1 auto;
+    /* Stacked, the workspace is taller than the window again, so it has to
+       scroll through the tab rather than clip. */
+    overflow: visible;
+  }
+
+  .viewer-stage,
+  .viewer-inspector,
+  .viewer-transport {
+    grid-column: 1;
+  }
+
+  .viewer-stage {
+    grid-row: 1;
+  }
+
+  .viewer-stage .activity-panel {
+    flex: 0 1 auto;
+  }
+
+  .viewer-inspector {
+    grid-row: 2;
+    overflow: visible;
+  }
+
+  .viewer-stage .raster-row {
+    flex: 0 1 auto;
+    min-height: 220px;
+  }
+
+  .viewer-transport {
+    grid-row: 3;
+  }
+}
+
+.viewer-stage > .panel {
+  padding: 12px;
+}
+
+/* Network activity absorbs whatever height the input row doesn't use,
+   instead of stacking its 3 rasters to a fixed pixel height and forcing
+   the workspace to scroll (see RasterCanvas's measured-height resize). */
+.viewer-stage .activity-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- input rows and rasters ------------------------------------------ */
+
+/* Deterministic equal columns for a row of heatmaps. */
 .viz-row {
   display: block;
 }
@@ -45,9 +123,11 @@ canvas,
   min-width: 0;
 }
 
-/* Cap the square sample heatmaps so the row can't grow with column width. */
+/* Cap the square sample heatmaps so the row can't grow with column width.
+   Kept small enough that the stage (input + three rasters) still fits one
+   screen, which is what keeps the viewer free of a page scrollbar. */
 .viz-row .pair.grow {
-  max-width: 380px;
+  max-width: 320px;
   margin: 0 auto;
 }
 
@@ -78,15 +158,17 @@ canvas,
 .rail-label {
   position: absolute;
   right: 2px;
-  font-size: 10px;
+  font-size: var(--fs-telemetry);
   line-height: 1;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .raster-summary {
   margin-top: 4px;
-  font-size: 10px;
+  font-size: var(--fs-telemetry);
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* --- merged network-activity stack (compact rasters) --- */
@@ -99,13 +181,13 @@ canvas,
 }
 
 /* Each of the 3 layer rasters shares the stack's height equally, so the
-   whole "network activity" panel fills whatever room the tab has instead
+   whole "network activity" panel fills whatever room the stage has instead
    of stacking to a fixed pixel height and forcing the tab to scroll. */
 .raster-row {
   display: flex;
   flex-direction: column;
   flex: 1 1 0;
-  min-height: 70px;
+  min-height: 56px;
 }
 
 .raster-row-head {
@@ -117,8 +199,8 @@ canvas,
 }
 
 .raster-row-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
   color: var(--text);
 }
 
@@ -127,34 +209,9 @@ canvas,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
-  color: var(--muted);
-}
-
-.cursor-readout {
-  margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--fs-telemetry);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-}
-
-/* Hide the number-input spin buttons for the sample index. */
-input[type="number"] {
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* Rasters fill the panel width, so the track spans the full width too. */
-.cursor-range {
-  width: 100%;
-  margin: 0;
-  accent-color: var(--accent);
 }
 
 .raster-wrap {
@@ -185,3 +242,43 @@ canvas.heatmap-fluid {
   aspect-ratio: 1 / 1;
 }
 
+/* --- transport strip --- */
+
+.time-cursor {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.transport-title {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-secondary);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+/* The transport title is the one editable thing in the strip, so it sets
+   the block's own minimum; the scrubber takes the rest. */
+.cursor-range {
+  flex: 1 1 180px;
+  min-width: 120px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.cursor-readout {
+  flex: 0 0 auto;
+  font-size: var(--fs-secondary);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

@@ -25,6 +25,10 @@ export const EN = {
   "tab.pipeline.hint": "Chain saved checkpoints into a DAG and run it",
   "tab.sections": "Dashboard sections",
   "tab.running": "running",
+  "nav.expand": "Expand navigation",
+  "nav.collapse": "Collapse navigation",
+  "nav.donate": "Support the project",
+  "viewer.inspector": "Inspector",
   "theme.light": "Switch to light theme",
   "theme.dark": "Switch to dark theme",
   "theme.toggle": "Toggle color theme",
@@ -127,6 +131,34 @@ export const EN = {
   "energy.empty":
     "No energy estimate yet. Press Estimate to account the configured " +
     "topology's event-driven operations for the selected target.",
+  // --- docked panes ------------------------------------------------------
+  "pane.data": "Data & Encoding",
+  "pane.network": "Network",
+  "pane.collapse": "Collapse pane",
+  "pane.expand": "Expand pane",
+  // --- dataset metadata and the input preview ----------------------------
+  "dataset.modality": "Modality",
+  "dataset.availability": "Availability",
+  "dataset.available": "available",
+  "modality.image": "image",
+  "modality.event": "event",
+  "preview.sample": "Sample",
+  // --- architecture strip ------------------------------------------------
+  "arch.title": "Architecture",
+  "arch.input": "Input",
+  "arch.encoder": "Encoder",
+  "arch.hidden": "Hidden",
+  "arch.output": "Output",
+  "arch.neurons": "neurons",
+  "arch.classes": "classes",
+  "arch.device": "Device",
+  "arch.gpuAvailable": "GPU available",
+  "arch.gpuUnavailable": "GPU unavailable",
+  // --- loaded checkpoint summary -----------------------------------------
+  "loaded.accuracy": "accuracy",
+  "loaded.input": "input",
+  "loaded.hidden": "hidden",
+  "loaded.device": "device",
 } as const;
 
 export type TranslationKey = keyof typeof EN;

@@ -8,10 +8,9 @@
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--surface-2);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   line-height: 1;
   cursor: help;
@@ -21,103 +20,74 @@
 .help-tip:hover,
 .help-tip:focus {
   color: var(--accent);
-  border-color: var(--accent);
+  background: var(--surface-3);
   outline: none;
 }
 
+/* The popup is portalled to the body and placed in viewport coordinates (see
+   HelpTip), so a pane's own scroll container can never clip it — the failure
+   mode on the wide form columns — and it flips above the trigger when there
+   is no room below. */
 .help-popup {
-  position: absolute;
-  top: 130%;
-  right: 0;
-  z-index: 20;
-  width: 220px;
+  position: fixed;
+  z-index: 1000;
   padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--popup);
+  border-radius: var(--radius);
+  background: var(--surface-3);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   font-weight: 400;
   line-height: 1.4;
   text-align: left;
   box-shadow: var(--shadow);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 120ms ease;
   pointer-events: none;
 }
 
-.help-tip:hover .help-popup,
-.help-tip:focus .help-popup {
-  opacity: 1;
-  visibility: visible;
-}
-
+/* A picker fills the control cell of its joined field group (see .field in
+   sections.css): no border or corner of its own, the quieter surface. */
 .field select {
-  background: var(--bg);
+  width: 100%;
+  height: 100%;
+  min-height: var(--control-h);
+  padding: 0 10px;
+  background: var(--surface-1);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 6px;
+  border: none;
+  border-radius: 0;
 }
 
-.field.check {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
 
-.field.check .field-label {
-  flex: 1;
-}
-
-.field-label > span:first-child {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
+/* Legacy layout hooks for `.apply` (the tonal rules live in primitives.css,
+   beside the Button they mirror). */
 .apply {
   width: 100%;
   margin-top: 6px;
-  padding: 8px 10px;
-  background: var(--accent);
-  color: var(--on-accent);
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
-.apply:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.apply.stop {
-  background: var(--bad);
-  color: var(--on-danger);
-}
-
+/* Train and Stop sit side by side while both fit; in a narrow pane (the asset
+   browser) they wrap rather than overrun it. */
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 /* Train / stop sit side by side, each taking half the row. */
+.actions .btn,
 .actions .apply {
   width: auto;
-  flex: 1;
+  flex: 1 1 0;
   margin-top: 0;
 }
 
+/* A failure is stated by its tint and its colour; an extra edge down the
+   side is one more line the pane does not need. */
 .error {
   margin-top: 12px;
-  padding: 10px;
-  border: 1px solid var(--bad);
-  border-radius: 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
   color: var(--bad);
-  background: color-mix(in srgb, var(--bad) 10%, transparent);
 }
 
 /* --- dataset / sample-index controls --- */
@@ -134,13 +104,15 @@
 
 .step-btn {
   flex: 0 0 auto;
-  padding: 5px 9px;
-  background: var(--bg);
+  height: var(--control-h-toolbar);
+  padding: 0 10px;
+  background: var(--surface-2);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: none;
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: 12px;
+  font: inherit;
+  font-size: var(--fs-secondary);
 }
 
 .step-btn:disabled {
@@ -149,7 +121,7 @@
 }
 
 .step-btn:not(:disabled):hover {
-  border-color: var(--accent);
+  background: var(--surface-3);
   color: var(--accent);
 }
 
@@ -158,27 +130,61 @@
 }
 
 .mirror-note {
-  font-size: 11px;
+  font-size: var(--fs-micro);
   color: var(--muted);
   font-style: italic;
 }
 
-.panel-title .help-tip {
-  margin-left: 4px;
+/* The data and encoding editor stacks by default and tiles into two columns
+   once the pane is wide enough, so a wide window gets two readable columns
+   instead of one run of full-width controls. */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
 }
 
-/* Data+Encoding beside Model, instead of one long column — each column
-   takes only the height its own fields need (align-items: start), so the
-   Model & Data tab reflects its real content height exactly rather than a
-   browser column-balance estimate that can overshoot the available space. */
-.controls-cols {
+.controls-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 22px;
   align-items: start;
 }
 
 .controls-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   min-width: 0;
 }
 
+/* The sample is a fixed-size instrument reading, not a surface that stretches
+   to whatever width the pane happens to be. */
+.sample-preview {
+  max-width: 260px;
+}
+
+/* --- per-stage neuron override editor --- */
+/* Ordinary field rows, so the overrides share the form's label and control
+   columns rather than forming a second, differently-aligned grid. */
+.stage-neurons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stage-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The trailing button takes its own width; `.apply` is full-width in a
+   column, and neither it nor the remove button should grow the row. */
+.stage-row .icon-btn,
+.stage-add .apply.small {
+  flex: 0 0 auto;
+  width: auto;
+  margin-top: 0;
+}

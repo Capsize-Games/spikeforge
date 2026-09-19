@@ -11,22 +11,21 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
-  padding: 4px 7px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--overlay);
-  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: var(--radius);
+  background: var(--surface-3);
+  font-size: var(--fs-micro);
   line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow);
   pointer-events: none;
 }
 
 .pred-badge.ok {
-  border-color: color-mix(in srgb, var(--ok) 70%, transparent);
   color: var(--ok);
 }
 
 .pred-badge.bad {
-  border-color: color-mix(in srgb, var(--bad) 70%, transparent);
   color: var(--bad);
 }
 
@@ -43,11 +42,10 @@
 .mismatch {
   margin: 6px 0 10px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--warn) 60%, transparent);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
   color: var(--warn);
-  font-size: 12px;
+  font-size: var(--fs-label);
   line-height: 1.4;
 }
 
@@ -69,8 +67,7 @@
   gap: 4px;
   height: 96px;
   padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: var(--canvas-bg);
 }
 
@@ -88,7 +85,7 @@
   width: 100%;
   min-height: 1px;
   background: var(--accent);
-  border-radius: 3px 3px 0 0;
+  border-radius: 2px 2px 0 0;
 }
 
 .class-bar.pred .class-bar-fill {
@@ -98,13 +95,14 @@
 .class-bar.true {
   outline: 1px solid var(--warn);
   outline-offset: 1px;
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 .class-bar-label {
-  font-size: 9px;
+  font-size: var(--fs-telemetry);
   line-height: 1;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* --- footer resource bar (single row) --- */
@@ -114,7 +112,7 @@
   align-items: center;
   gap: 6px 18px;
   padding: 7px 12px;
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   color: var(--muted);
 }
 
@@ -124,11 +122,6 @@
   gap: 6px;
 }
 
-/* The footer sits on the viewport edge, so its help opens upward. */
-.res-bar .help-popup {
-  top: auto;
-  bottom: 130%;
-}
 
 .res-label {
   color: var(--muted);
@@ -144,14 +137,14 @@
   width: 90px;
   height: 6px;
   overflow: hidden;
-  background: var(--canvas-bg);
-  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-3);
 }
 
 .res-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--ok), var(--accent));
+  background: var(--accent);
   transition: width 400ms ease;
 }
 
@@ -162,4 +155,3 @@
 .res-warn {
   color: var(--warn);
 }
-

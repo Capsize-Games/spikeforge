@@ -3,8 +3,8 @@ import { useI18n } from "../i18n/I18nProvider";
 import type { EncodeConfig } from "../types";
 import { CheckField } from "./CheckField";
 import { InputSizeField } from "./InputSizeField";
+import { NumberField } from "./NumberField";
 import { SelectField } from "./SelectField";
-import { SliderField } from "./SliderField";
 import { Section } from "./Stepper";
 
 interface Props {
@@ -22,6 +22,10 @@ interface Props {
  * Event datasets carry their own spikes and time bins, so every coding
  * control is disabled with an explicit note rather than being silently
  * ignored; only the playback interval stays adjustable.
+ *
+ * The timestep count and the playback interval are boxes — they are exact
+ * settings, not something to sweep. `gain` is drawn as a slider beside its
+ * box, because for a rate encode the value is found by feel.
  */
 export function EncodingControls({
   config,
@@ -59,7 +63,7 @@ export function EncodingControls({
         onChange={(v) => set({ coding: v as EncodeConfig["coding"] })}
       />
 
-      <SliderField
+      <NumberField
         label="num_steps"
         value={config.num_steps}
         min={5}
@@ -69,7 +73,7 @@ export function EncodingControls({
         disabled={fixed}
         onChange={(v) => set({ num_steps: v })}
       />
-      <SliderField
+      <NumberField
         label={t("field.interval")}
         value={config.interval_ms}
         min={20}
@@ -92,12 +96,13 @@ export function EncodingControls({
       />
 
       {!eventMode && config.coding === "rate" && (
-        <SliderField
+        <NumberField
           label="gain"
           value={config.gain}
           min={0.05}
           max={1}
           step={0.05}
+          range
           help={HELP.gain}
           disabled={locked}
           onChange={(v) => set({ gain: v })}
@@ -106,7 +111,7 @@ export function EncodingControls({
 
       {!eventMode && config.coding === "latency" && (
         <>
-          <SliderField
+          <NumberField
             label="tau"
             value={config.tau}
             min={1}
@@ -116,7 +121,7 @@ export function EncodingControls({
             disabled={locked}
             onChange={(v) => set({ tau: v })}
           />
-          <SliderField
+          <NumberField
             label="threshold"
             value={config.threshold}
             min={0.005}
@@ -151,7 +156,7 @@ export function EncodingControls({
       )}
 
       {!eventMode && config.coding === "delta" && (
-        <SliderField
+        <NumberField
           label="delta_threshold"
           value={config.delta_threshold}
           min={1}
@@ -164,7 +169,7 @@ export function EncodingControls({
       )}
 
       {!eventMode && config.coding === "random" && (
-        <SliderField
+        <NumberField
           label="random_scale"
           value={config.random_scale}
           min={0.1}

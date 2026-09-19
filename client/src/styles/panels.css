@@ -1,6 +1,6 @@
 /* --- shared captions and empty-state notes for the CENTER panels --- */
 .panel-note {
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   font-style: italic;
   line-height: 1.4;
   color: var(--muted);
@@ -12,7 +12,7 @@
 
 .panel-caption {
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: var(--fs-micro);
   line-height: 1.4;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -24,19 +24,21 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   color: var(--muted);
 }
 
 .trajectory-stage select {
   flex: 1;
   min-width: 0;
-  background: var(--bg);
+  height: var(--control-h-toolbar);
+  padding: 0 6px;
+  background: var(--surface-3);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-size: 12px;
+  border: none;
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: var(--fs-secondary);
 }
 
 .trajectory-chart canvas {
@@ -58,20 +60,20 @@
 }
 
 .nir-node {
-  fill: var(--panel-alt);
-  stroke: var(--border);
+  fill: var(--surface-2);
+  stroke: var(--line-soft);
   stroke-width: 1;
 }
 
 .nir-node-name {
   fill: var(--text);
-  font-size: 10px;
-  font-weight: 600;
+  font-size: var(--fs-telemetry);
+  font-weight: var(--fw-semibold);
 }
 
 .nir-node-kind {
   fill: var(--muted);
-  font-size: 9px;
+  font-size: var(--fs-telemetry);
 }
 
 .nir-edge {
@@ -98,30 +100,28 @@
   display: inline-block;
   margin-bottom: 6px;
   padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-size: var(--fs-secondary);
+  font-weight: var(--fw-semibold);
 }
 
 .verdict.ok {
   color: var(--ok);
-  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
   background: color-mix(in srgb, var(--ok) 12%, transparent);
 }
 
 .verdict.bad {
   color: var(--bad);
-  border-color: color-mix(in srgb, var(--bad) 50%, transparent);
   background: color-mix(in srgb, var(--bad) 12%, transparent);
 }
 
 .worst {
   margin-bottom: 6px;
-  padding: 5px 7px;
-  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  font-size: var(--fs-micro);
   color: var(--warn);
   font-variant-numeric: tabular-nums;
 }
@@ -129,21 +129,20 @@
 .drift-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: var(--fs-telemetry);
   font-variant-numeric: tabular-nums;
 }
 
 .drift-table th {
   text-align: left;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--muted);
-  padding: 3px 4px;
-  border-bottom: 1px solid var(--border);
+  padding: 4px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .drift-table td {
-  padding: 3px 4px;
-  border-bottom: 1px solid var(--border);
+  padding: 4px;
   color: var(--text);
 }
 
@@ -162,7 +161,7 @@
 .notes {
   margin: 6px 0 0;
   padding-left: 16px;
-  font-size: 11px;
+  font-size: var(--fs-micro);
   line-height: 1.4;
   color: var(--muted);
 }

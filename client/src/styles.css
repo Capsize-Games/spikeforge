@@ -1,5 +1,9 @@
 @import "./styles/base.css";
+@import "./styles/primitives.css";
+@import "./styles/readouts.css";
+@import "./styles/shell.css";
 @import "./styles/tabs.css";
+@import "./styles/dock.css";
 @import "./styles/sections.css";
 @import "./styles/controls.css";
 @import "./styles/feedback.css";

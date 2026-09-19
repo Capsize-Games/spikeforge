@@ -21,6 +21,8 @@ import {
   PipelineFlowNode,
   type PipelineFlowNodeData,
 } from "./PipelineFlowNode";
+import { PipelineRunControls } from "./PipelineRunControls";
+import { sourceModels } from "./pipelineSources";
 import type { PipelineEdge, PipelineNode } from "../usePipeline";
 import type {
   PipelineGraph,
@@ -64,12 +66,6 @@ interface Props {
   ) => void;
 }
 
-const DEFAULT_INPUT = JSON.stringify(
-  { frames: [[[0]]], encoded: false },
-  null,
-  2,
-);
-
 function newId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -106,8 +102,6 @@ export function PipelinePanel({
   const [name, setName] = useState(graph.name || "my-pipeline");
   const [selected, setSelected] = useState("");
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
-  const [inputText, setInputText] = useState(DEFAULT_INPUT);
-  const [inputError, setInputError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<
     "new" | "delete" | null
   >(null);
@@ -142,6 +136,10 @@ export function PipelinePanel({
       })),
     [graph.edges, selectedEdge],
   );
+
+  // A run feeds every node with no incoming edge, so connectivity decides
+  // which checkpoints the body has to satisfy -- not position in the array.
+  const sources = sourceModels(graph, models);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -196,22 +194,8 @@ export function PipelinePanel({
     });
   };
 
-  const runWithCurrentInput = () => {
-    try {
-      const parsed = JSON.parse(inputText) as PipelineRunInput;
-      if (!Array.isArray(parsed.frames)) {
-        setInputError("input must have a 'frames' array");
-        return;
-      }
-      setInputError(null);
-      onRunPipeline(parsed);
-    } catch {
-      setInputError("input is not valid JSON");
-    }
-  };
-
   return (
-    <div className="pipeline-panel">
+    <div className="pipeline-panel" data-testid="pipeline-panel">
       <div className="pipeline-toolbar panel">
         <div className="control-row">
           <input
@@ -219,11 +203,13 @@ export function PipelinePanel({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="pipeline name…"
+            data-testid="pipeline-name"
             aria-label="Pipeline name"
           />
           <button
             className="apply small"
             onClick={() => name.trim() && onSavePipeline(name.trim())}
+            data-testid="pipeline-save"
             disabled={!name.trim()}
           >
             Save
@@ -231,6 +217,7 @@ export function PipelinePanel({
           <button
             className="apply small ghost"
             onClick={() => setConfirmAction("new")}
+            data-testid="pipeline-new"
             disabled={
               (graph.nodes?.length ?? 0) === 0 &&
               (graph.edges?.length ?? 0) === 0
@@ -243,6 +230,7 @@ export function PipelinePanel({
         <div className="control-row">
           <select
             className="text-input"
+            data-testid="pipeline-saved"
             aria-label="Saved pipelines"
             onFocus={onListPipelines}
             onChange={(e) => e.target.value && onLoadPipeline(e.target.value)}
@@ -260,6 +248,7 @@ export function PipelinePanel({
           <button
             className="apply small ghost"
             onClick={() => graph.name && setConfirmAction("delete")}
+            data-testid="pipeline-delete"
             disabled={!graph.name}
           >
             Delete
@@ -272,6 +261,7 @@ export function PipelinePanel({
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
             disabled={models.length === 0}
+            data-testid="pipeline-checkpoint"
             aria-label="Checkpoint to add"
           >
             <option value="">
@@ -286,6 +276,7 @@ export function PipelinePanel({
           <button
             className="apply small"
             onClick={addSelectedCheckpoint}
+            data-testid="pipeline-add-node"
             disabled={!selected}
           >
             Add node
@@ -338,35 +329,15 @@ export function PipelinePanel({
           </div>
         )}
 
-        <div className="panel-title row-title">
-          <span>Run</span>
-          <HelpTip text="Feeds every node with no incoming edge. {frames: [...], encoded: true|false} -- the same shape spikeforge-serve reads from stdin." />
-        </div>
-        <textarea
-          className="text-input pipeline-input"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          rows={5}
-          aria-label="Pipeline run input (JSON)"
+        <PipelineRunControls
+          sources={sources}
+          connected={connected}
+          running={running}
+          runnable={(graph.nodes?.length ?? 0) > 0}
+          status={status}
+          onRun={onRunPipeline}
+          onStop={onStopPipeline}
         />
-        {inputError && <div className="mismatch">{inputError}</div>}
-        <div className="control-row">
-          <button
-            className="apply"
-            onClick={runWithCurrentInput}
-            disabled={!connected || running || (graph.nodes?.length ?? 0) === 0}
-          >
-            {running ? "Running…" : "Run pipeline"}
-          </button>
-          <button
-            className="apply stop small"
-            onClick={onStopPipeline}
-            disabled={!running}
-          >
-            Stop
-          </button>
-        </div>
-        {status && <div className="muted">{status}</div>}
       </div>
 
       <ConfirmDialog

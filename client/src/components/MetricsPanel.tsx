@@ -1,3 +1,5 @@
+import { RotateCw } from "lucide-react";
+
 import { HELP } from "../helpText";
 import { useSelectedStage } from "../hooks/useSelectedStage";
 import type {
@@ -5,8 +7,9 @@ import type {
   TrajectoryMetricsPayload,
 } from "../introspectionTypes";
 import type { ExecutionMode } from "../types";
-import { HelpTip } from "./HelpTip";
 import { HistogramChart } from "./HistogramChart";
+import { IconButton } from "./IconButton";
+import { PanelHeader } from "./PanelHeader";
 import { TrajectoryStageSelect } from "./TrajectoryStageSelect";
 
 interface Props {
@@ -56,24 +59,18 @@ export function MetricsPanel({
 
   return (
     <div className="panel metrics-panel">
-      <div className="panel-title row-title">
-        <span>
-          Trajectory metrics
-          <HelpTip text={HELP.metrics} />
-        </span>
-        <span className="panel-actions">
-          <button
-            type="button"
-            className="icon-btn"
+      <PanelHeader
+        title="Trajectory metrics"
+        hint={HELP.metrics}
+        actions={
+          <IconButton
+            icon={RotateCw}
+            label="Capture metrics"
             onClick={onRefresh}
             disabled={!educational}
-            title="Capture metrics"
-            aria-label="Capture metrics"
-          >
-            ↻
-          </button>
-        </span>
-      </div>
+          />
+        }
+      />
 
       {!educational && (
         <div className="panel-note">
@@ -104,9 +101,7 @@ export function MetricsPanel({
           ) : (
             <>
               <MetricGrid metrics={selected} />
-              <div className="panel-title subsection">
-                Firing-rate histogram
-              </div>
+              <PanelHeader title="Firing-rate histogram" subsection />
               <HistogramChart
                 edges={selected.histogram.edges}
                 counts={selected.histogram.counts}

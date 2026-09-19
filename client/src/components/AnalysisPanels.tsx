@@ -43,7 +43,7 @@ export function AnalysisPanels({
   onSwitchMode,
 }: Props) {
   return (
-    <>
+    <div className="analysis-grid">
       <MetricsPanel
         mode={mode}
         metrics={metrics}
@@ -65,6 +65,6 @@ export function AnalysisPanels({
         loading={benchmarkLoading}
         onRun={onRunBenchmark}
       />
-    </>
+    </div>
   );
 }
