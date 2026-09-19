@@ -1,0 +1,212 @@
+/*
+ * Docked panes: the workspace vocabulary.
+ *
+ * A pane is a full-height child of the workspace. It has no margin, no
+ * corner radius, no shadow, and no card on a background — the only thing
+ * that separates it from its neighbour is a single hairline, and the only
+ * thing that separates it from the shell is its surface step. Width is
+ * either fixed (an asset browser or an inspector, which read badly when
+ * stretched) or flexible (an editor, which wants every pixel left over).
+ *
+ * The head is a fixed row and the body scrolls beneath it, so a short form
+ * does not leave a gap below itself: the pane reaches the bottom of the
+ * window and keeps the empty space inside it.
+ */
+
+.dock {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dock-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+
+/* One line between neighbours. Never a border around a pane. */
+.dock-pane + .dock-pane {
+  border-left: 1px solid var(--line-soft);
+}
+
+.dock-pane--assets {
+  flex: 0 0 260px;
+  width: 260px;
+}
+
+.dock-pane--inspector {
+  flex: 0 0 380px;
+  width: 380px;
+}
+
+/* Pane heading: one rank below the workspace title, and the only full-width
+   row inside a pane. It stays put while the body scrolls.
+   It keeps the pane's own surface, so the hairline beneath it is the pane's
+   one internal seam and the toolbar above is separated by its surface step
+   alone — no line between the two of them. */
+.pane-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-1);
+}
+
+.pane-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-pane);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.pane-head-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-helper);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The scrolling part. A pane's own padding lives here, so no child needs a
+   margin to separate itself from its neighbours. */
+.pane-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+/* --- section micro-heading ------------------------------------------- */
+
+/* A grouping label inside a pane. Sentence case, 11px, semibold: it is a
+   quiet wayfinding mark, not a bar of its own. */
+.section-micro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+}
+
+/* --- narrow desktops: narrower, then collapsed, then stacked ---------- */
+
+/* `.collapsed` is the pane's own toggle state (see DockPane.tsx), set from
+   the viewport at first paint and overridable by hand at any width. */
+.dock-pane.collapsed {
+  flex: 0 0 42px;
+  width: 42px;
+}
+
+/* A collapsed pane is a labelled strip: the heading runs down the pane so the
+   strip is still identifiable, and the toggle sits at the bottom of it. */
+.dock-pane.collapsed .pane-head {
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 0;
+  padding: 10px 0;
+  border-bottom: none;
+}
+
+.dock-pane.collapsed .pane-title {
+  writing-mode: vertical-rl;
+}
+
+.dock-pane.collapsed .pane-toggle {
+  margin-top: auto;
+  margin-left: 0;
+}
+
+.dock-pane.collapsed .pane-head-meta {
+  display: none;
+}
+
+/* Hidden, not unmounted: what is inside a collapsed pane keeps its state and
+   stays mounted while the section is on screen. */
+.dock-pane.collapsed .pane-body {
+  display: none;
+}
+
+/* Before either pane collapses, they give up width in the same order they
+   matter — the asset browser first, then the inspector. */
+@media (max-width: 1360px) {
+  .dock-pane--assets:not(.collapsed) {
+    flex-basis: 236px;
+    width: 236px;
+  }
+
+  .dock-pane--inspector:not(.collapsed) {
+    flex-basis: 340px;
+    width: 340px;
+  }
+}
+
+/* Last: stack. The pane heading and the hairline survive, the dock turns into
+   a column and grows to the height of the three panes stacked, and the
+   workspace region scrolls (see .tab-panel in tabs.css) — a stacked pane has
+   no second axis left to scroll on. Collapse is meaningless once a pane is
+   full width, so every pane is open here. */
+@media (max-width: 900px) {
+  .dock {
+    flex-direction: column;
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .dock-pane,
+  .dock-pane--assets,
+  .dock-pane--inspector,
+  .dock-pane.collapsed {
+    flex: 0 0 auto;
+    width: auto;
+    overflow: visible;
+  }
+
+  .dock-pane.collapsed .pane-head {
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: 8px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .dock-pane.collapsed .pane-title {
+    writing-mode: horizontal-tb;
+  }
+
+  .dock-pane.collapsed .pane-body {
+    display: block;
+  }
+
+  .dock-pane + .dock-pane {
+    border-left: none;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .pane-body {
+    overflow: visible;
+  }
+}

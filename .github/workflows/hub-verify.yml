@@ -1,0 +1,112 @@
+name: Hub artifact verification (sandbox)
+
+# The community-upload verification sandbox (issue #48; the design of
+# record is plans/hub_accounts_plan.md §7). Dispatched by
+# spikeforge-hub-api once a committed upload enters its `verifying`
+# state. That hub-api endpoint (spikeforge-hub-api#4) is not built as of
+# this writing, so the `hub-artifact-verify` event type and the
+# client_payload shape below are this repo's half of a contract the two
+# repositories have to agree on -- see the pull request that introduced
+# this file for the coordination note.
+#
+# SECURITY -- read before changing `runs-on` or the egress allowlist:
+#
+# This job runs `torch.load` on bytes a stranger uploaded. It MUST stay
+# on a GitHub-hosted, ephemeral runner. It must NEVER run on the
+# self-hosted `spikeforge-ci` runner that `deploy-hetzner.yml` uses --
+# that runner holds the Hetzner deploy key, and running untrusted-content
+# code on a persistent self-hosted runner is named in the plan (§7.2) as
+# the single most predictable way this whole design could be
+# compromised. This is deliberately the first workflow in this repository
+# that does not use `spikeforge-ci`.
+on:
+  repository_dispatch:
+    types: [hub-artifact-verify]
+
+permissions:
+  contents: read
+
+# One verification at a time per version; a second dispatch for the same
+# version (a retry) should not race the first, but must not cancel it
+# silently either -- a cancelled run still owes the hub API a report, or
+# the version is stuck in `verifying` forever (the exact bug
+# spikeforge-hub-api#4 exists to fix).
+concurrency:
+  group: hub-verify-${{ github.event.client_payload.version_id }}
+  cancel-in-progress: false
+
+env:
+  # CPU wheels keep this light; mirrors ci.yml's TORCH_INDEX_URL.
+  TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
+
+jobs:
+  verify:
+    # GitHub-hosted only -- see the header comment. Do not add
+    # `spikeforge-ci` or any other self-hosted label to this job.
+    runs-on: ubuntu-latest
+    # A wall-clock ceiling independent of any one step's own timeout, per
+    # plans/hub_accounts_plan.md §7.2 ("a wall-clock timeout").
+    timeout-minutes: 20
+    steps:
+      # Restricts this job's DNS/network egress to exactly what it needs:
+      # GitHub's own checkout/runner endpoints, PyPI + the CPU wheel
+      # index for installing dependencies, and the two hub-api endpoints
+      # this job talks to (the artifact CDN and the verification
+      # callback) -- plans/hub_accounts_plan.md §7.2's "no network egress
+      # beyond the two endpoints this job actually needs", extended by
+      # the toolchain-setup endpoints every job on this runner requires
+      # regardless. If this allowlist ever needs to change, flip
+      # `egress-policy` to `audit` first, read the resulting job summary
+      # for what was actually contacted, then return it to `block`.
+      - name: Harden the runner's network egress
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+            codeload.github.com:443
+            objects.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            pypi.org:443
+            files.pythonhosted.org:443
+            download.pytorch.org:443
+            hub.spikeforge.net:443
+            cdn.spikeforge.net:443
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # No `cache: pip` here, deliberately: this job's whole point is
+          # to be a disposable sandbox for untrusted content, and a pip
+          # cache is one more thing that could be poisoned across runs.
+
+      - name: Install torch CPU wheels
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision \
+            --index-url ${{ env.TORCH_INDEX_URL }}
+
+      - name: Install core + targets + hub editable
+        run: |
+          pip install -e "./packages/spikeforge[dev,nir]" \
+                      -e ./packages/spikeforge-targets \
+                      -e ./packages/spikeforge-hub
+
+      - name: Run the verification pipeline and post the signed report
+        env:
+          PYTHONPATH: ${{ github.workspace }}/scripts
+          SPIKEFORGE_HUB_VERIFY_VERSION_ID: >-
+            ${{ github.event.client_payload.version_id }}
+          SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL: >-
+            ${{ github.event.client_payload.artifact_url }}
+          # Fixed to this repository's own configuration -- never read
+          # from the dispatch payload. The callback destination must not
+          # be data a compromised or malformed dispatch could redirect;
+          # see hub_verify/cli.py's module docstring.
+          SPIKEFORGE_HUB_API_BASE_URL: ${{ vars.SPIKEFORGE_HUB_API_BASE_URL }}
+          SPIKEFORGE_HUB_VERIFICATION_SECRET: >-
+            ${{ secrets.SPIKEFORGE_HUB_VERIFICATION_SECRET }}
+        run: python -m hub_verify.cli

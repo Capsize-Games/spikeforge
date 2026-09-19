@@ -1,6 +1,7 @@
 import type { DeviceChoice, SystemStatsPayload } from "../types";
 import { useI18n } from "../i18n/I18nProvider";
 import { ResourceMonitor } from "./ResourceMonitor";
+import { StatusIndicator } from "./StatusIndicator";
 
 interface Props {
   stats: SystemStatsPayload | null;
@@ -25,10 +26,12 @@ export function StatusBar({
   return (
     <footer className="app-footer">
       <ResourceMonitor stats={stats} requested={requested} />
-      <span className={`conn ${connected ? "ok" : "bad"}`}>
-        <span className={`dot ${connected ? "ok" : "bad"}`} />
-        {label}
-      </span>
+      <StatusIndicator
+        ok={connected}
+        label={label}
+        className="conn"
+        testId="connection"
+      />
     </footer>
   );
 }

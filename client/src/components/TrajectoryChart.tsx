@@ -15,7 +15,8 @@ export function TrajectoryChart({ trace, cursorIndex, emptyNote }: Props) {
   if (!trace) {
     return <div className="panel-note">{emptyNote}</div>;
   }
-  const series = stageSeries(trace, colors.accent, colors.dot);
+  // Primary membrane trace in icy cyan, input current in violet-blue.
+  const series = stageSeries(trace, colors.accent, colors.trace);
   return (
     <div className="trajectory-chart">
       <LineChart

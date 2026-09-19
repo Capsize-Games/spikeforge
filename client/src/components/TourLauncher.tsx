@@ -1,7 +1,10 @@
+import { GraduationCap } from "lucide-react";
+
 import { HELP } from "../helpText";
 import { useI18n } from "../i18n/I18nProvider";
 import type { TourLesson } from "../tour/types";
 import { HelpTip } from "./HelpTip";
+import { IconButton } from "./IconButton";
 
 interface Props {
   lessons: TourLesson[];
@@ -15,16 +18,13 @@ export function TourLauncher({ lessons, open, onToggle, onOpen }: Props) {
   const { t } = useI18n();
   return (
     <div className="tour-launch-wrap">
-      <button
-        type="button"
-        className="icon-btn tour-launch"
+      <IconButton
+        icon={GraduationCap}
+        label={t("tour.title")}
         onClick={onToggle}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        title={t("tour.title")}
-      >
-        {t("tour.title")}
-      </button>
+        expanded={open}
+        menu
+      />
       <HelpTip text={HELP.tour} />
 
       {open && (

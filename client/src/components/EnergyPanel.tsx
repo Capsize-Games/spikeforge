@@ -3,7 +3,8 @@ import { useI18n } from "../i18n/I18nProvider";
 import { HELP } from "../helpText";
 import { useTargetSelection } from "../hooks/useTargetSelection";
 import type { TargetSummary } from "../targetTypes";
-import { HelpTip } from "./HelpTip";
+import { Button } from "./Button";
+import { PanelHeader } from "./PanelHeader";
 
 interface Props {
   payload: EnergyPayload | null;
@@ -48,7 +49,7 @@ function Report({ payload }: { payload: EnergyPayload }) {
         {report.basis}
       </div>
 
-      <div className="energy-grid">
+      <div className="energy-grid" data-testid="energy-report">
         <span className="energy-key">SOP</span>
         <span>{count(report.ops.sop)}</span>
         <span className="energy-key">MAC</span>
@@ -101,25 +102,25 @@ export function EnergyPanel({ payload, targets, loading, onRun }: Props) {
 
   return (
     <div className="panel energy-panel" data-tour="energy">
-      <div className="panel-title row-title">
-        <span>
-          {t("energy.title")}
-          <HelpTip text={HELP.energy} />
-        </span>
-        <span className="panel-actions">
-          <button
-            type="button"
-            className="apply small"
+      <PanelHeader
+        title={t("energy.title")}
+        hint={HELP.energy}
+        actions={
+          <Button
+            variant="primary"
+            small
+            testId="energy-run"
             onClick={() => onRun(target)}
             disabled={loading || names.length === 0}
           >
             {loading ? t("energy.estimating") : t("energy.estimate")}
-          </button>
-        </span>
-      </div>
+          </Button>
+        }
+      />
 
       <select
         className="energy-target"
+        data-testid="energy-target"
         value={target}
         aria-label={t("energy.target")}
         onChange={(event) => setTarget(event.target.value)}

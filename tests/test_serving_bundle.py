@@ -193,6 +193,23 @@ def test_rejects_missing_required_entry(tmp_path: Any) -> None:
         DeploymentBundle.load(out)
 
 
+def test_rejects_oversized_decompressed_bundle(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A bundle whose entries decompress past the cap is refused unread.
+
+    The cap is checked against each entry's declared size before any entry
+    is decompressed, so a normal small bundle is enough to trigger it once
+    the cap itself is lowered below the bundle's real total -- no need to
+    construct an actual multi-hundred-megabyte payload to prove the guard
+    works.
+    """
+    monkeypatch.setattr(bm, "MAX_DECOMPRESSED_BYTES", 8)
+    out = _written(tmp_path)
+    with pytest.raises(BundleFormatError, match="decompressed size"):
+        DeploymentBundle.load(out)
+
+
 def test_rejects_non_zip_payload(tmp_path: Any) -> None:
     """A file that is not a zip archive is a format error."""
     path = tmp_path / "broken.spkf"

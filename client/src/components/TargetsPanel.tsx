@@ -62,6 +62,7 @@ export function TargetsPanel({
             type="button"
             className="icon-btn"
             onClick={() => run(target)}
+            data-testid="targets-run"
             title={t("targets.run")}
             aria-label={t("targets.run")}
           >
@@ -71,6 +72,7 @@ export function TargetsPanel({
             type="button"
             className="icon-btn"
             onClick={onRefresh}
+            data-testid="targets-refresh"
             title={t("targets.refresh")}
             aria-label={t("targets.refresh")}
           >

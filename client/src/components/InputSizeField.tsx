@@ -31,10 +31,7 @@ export function InputSizeField({ value, disabled, onChange }: Props) {
   return (
     <label className="field">
       <span className="field-label">
-        <span>
-          input size <b>{text || "28x28"}</b>
-        </span>
-        <HelpTip text={HELP.input_size} />
+        input size <b>{text || "28x28"}</b>
       </span>
       <input
         key={text}
@@ -45,6 +42,7 @@ export function InputSizeField({ value, disabled, onChange }: Props) {
         disabled={disabled}
         onBlur={(e) => commit(e.target.value)}
       />
+      <HelpTip text={HELP.input_size} />
     </label>
   );
 }

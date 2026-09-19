@@ -12,12 +12,18 @@ import { STORAGE_KEYS } from "./storage";
 
 export type Theme = "dark" | "light";
 
-/** Canvas drawing colors, which cannot be driven by CSS variables. */
+/**
+ * Canvas drawing colors, which cannot be driven by CSS variables. This is the
+ * plot palette: icy cyan primary, violet-blue secondary trace, and a
+ * desaturated slate for gridlines and reference marks.
+ */
 export interface CanvasColors {
   bg: string;
   grid: string;
   text: string;
   accent: string;
+  /** Secondary trace colour, paired with `accent` in two-series plots. */
+  trace: string;
   accentSoft: string;
   dot: string;
   /** Translucent band drawn behind highlighted rows. */
@@ -26,19 +32,21 @@ export interface CanvasColors {
 
 export const CANVAS_COLORS: Record<Theme, CanvasColors> = {
   dark: {
-    bg: "#020610",
-    grid: "#2c3c55",
-    text: "#a1b2cc",
+    bg: "#05070c",
+    grid: "#1b2231",
+    text: "#93a3bd",
     accent: "#70cfff",
-    accentSoft: "rgba(88, 166, 255, 0.16)",
+    trace: "#8b95ff",
+    accentSoft: "rgba(112, 207, 255, 0.16)",
     dot: "#e3b341",
     highlight: "rgba(63, 185, 80, 0.14)",
   },
   light: {
-    bg: "#ffffff",
-    grid: "#d0d7de",
-    text: "#59636e",
+    bg: "#eef1f5",
+    grid: "#e7ebf0",
+    text: "#57606a",
     accent: "#0969da",
+    trace: "#6f5bd6",
     accentSoft: "rgba(9, 105, 218, 0.12)",
     dot: "#9a6700",
     highlight: "rgba(26, 127, 55, 0.14)",
