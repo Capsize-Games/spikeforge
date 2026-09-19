@@ -42,10 +42,14 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
             'mkdir -p /opt/spikeforge'
+          # `build/` is generated documentation output — megabytes of it,
+          # gigabytes with its datasets — and the image never reads it.
+          # Shipping it filled this host's disk and failed the sync halfway.
           rsync -rl --delete \
             --exclude='.git' \
             --exclude='.env' \
             --exclude='venv' \
+            --exclude='build' \
             --exclude='client/node_modules' \
             --exclude='client/dist' \
             --exclude='**/__pycache__' \
