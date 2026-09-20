@@ -17,9 +17,9 @@ env:
 jobs:
   changes:
     # Classify a pull request so a leaf-module edit runs a fast, deterministic
-    # check set instead of the full matrix (hq#14). Runs on a GitHub-hosted
-    # runner so it is never itself queued behind the self-hosted pool it exists
-    # to shorten; a `push` to main always takes the full path.
+    # check set instead of the full matrix (hq#14). It runs on a GitHub-hosted
+    # runner so classification never depends on workstation state; a `push` to
+    # main always takes the full path.
     runs-on: ubuntu-latest
     outputs:
       leaf: ${{ steps.classify.outputs.leaf }}
@@ -54,9 +54,8 @@ jobs:
           echo "leaf=$leaf" >> "$GITHUB_OUTPUT"
   lint:
     # Static checks are interpreter-version agnostic; run them once.
-    # GitHub-hosted on purpose: spikeforge is public, so hosted minutes are
-    # free, and this keeps the *required* checks off the three self-hosted
-    # runners whose queue was the fleet's bottleneck (hq#14).
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,9 +84,8 @@ jobs:
   test:
     # The full suite across every supported interpreter (python_requires).
     needs: changes
-    # GitHub-hosted on purpose: spikeforge is public, so hosted minutes are
-    # free, and this keeps the *required* checks off the three self-hosted
-    # runners whose queue was the fleet's bottleneck (hq#14).
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -126,7 +124,7 @@ jobs:
     # exits 0 *and* that the JSON carries one cell per registered target.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -179,7 +177,7 @@ jobs:
     # source and its offline catalog/CLI work.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -217,7 +215,7 @@ jobs:
     # `spikeforge-hub` distribution, exercised by the `hub` job above.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -281,7 +279,7 @@ jobs:
     # enumerated with `--ignore` below; everything else runs under the blocker.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     env:
       PYTHONPATH: ${{ github.workspace }}/scripts/blocked_deps
     steps:
@@ -351,7 +349,7 @@ jobs:
     # the `published-surfaces` job below covers what readers actually land on.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -377,9 +375,8 @@ jobs:
     #
     # Deliberately torch-free: readme_renderer plus the stdlib is the whole
     # dependency set, so this stays one of the fastest jobs in the matrix.
-    # GitHub-hosted on purpose: spikeforge is public, so hosted minutes are
-    # free, and this keeps the *required* checks off the three self-hosted
-    # runners whose queue was the fleet's bottleneck (hq#14).
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -406,7 +403,7 @@ jobs:
     # types is still caught here.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -432,9 +429,8 @@ jobs:
     # The static half of the core boundary: no module-level import of a
     # forbidden root, and no function-local import outside the lazy shims.
     # Pure stdlib, so no dependencies are installed.
-    # GitHub-hosted on purpose: spikeforge is public, so hosted minutes are
-    # free, and this keeps the *required* checks off the three self-hosted
-    # runners whose queue was the fleet's bottleneck (hq#14).
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -452,7 +448,7 @@ jobs:
     # distributions, and must not contain `server/`.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -514,9 +510,8 @@ jobs:
   packaging-guards:
     # The three lightweight topology guards: disjoint import roots (PEP 420),
     # console-script ownership, and satellite pins == compatibility.json.
-    # GitHub-hosted on purpose: spikeforge is public, so hosted minutes are
-    # free, and this keeps the *required* checks off the three self-hosted
-    # runners whose queue was the fleet's bottleneck (hq#14).
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
