@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Capsize-Games/capsize-ci/1a50d06c20022f9bbc44bad002add302e1dae646/schema/capsize-1.json",
+  "schema_version": 1,
+  "standards": "1.x",
+  "name": "spikeforge",
+  "type": "app",
+  "languages": ["python", "typescript", "javascript", "css", "html"],
+  "framework": "fastapi-react",
+  "databases": [],
+  "runtimes": { "python": ">=3.11", "node": ">=22" },
+  "entrypoints": {
+    "server": "server/__main__.py",
+    "client": "client/package.json",
+    "cli": "main.py"
+  },
+  "task_runner": "just",
+  "commands": {
+    "setup": "setup",
+    "build": "build",
+    "test": "test",
+    "lint": "lint",
+    "format": null,
+    "typecheck": "typecheck",
+    "run": "run",
+    "clean": null,
+    "docs": "docs",
+    "ci": "ci"
+  },
+  "dependencies": {
+    "python": "requirements.txt",
+    "node": "client/package.json",
+    "npm": "client/package-lock.json"
+  },
+  "instructions": {
+    "canonical": "AGENTS.md",
+    "rules": [
+      "capsize/base",
+      "capsize/python",
+      "capsize/web"
+    ]
+  },
+  "owner": "Capsize-Games",
+  "license": "BSD-3-Clause"
+}
