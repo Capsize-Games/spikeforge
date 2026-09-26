@@ -18,6 +18,11 @@ on:
 permissions:
   contents: read
 
+# One deploy at a time; a newer merge waits instead of racing the rsync.
+concurrency:
+  group: deploy-dashboard
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -92,7 +97,34 @@ jobs:
             "$HETZNER_USER@$HETZNER_HOST" \
             'bash /opt/spikeforge/deploy/configure-docs.sh'
 
-      - name: Verify dashboard health
+      - name: Verify the dashboard is healthy and live
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$HETZNER_USER@$HETZNER_HOST" '
+              for i in $(seq 1 30); do
+                s=$(docker inspect --format "{{.State.Health.Status}}" \
+                  spikeforge-dashboard)
+                [ "$s" = healthy ] && exit 0
+                sleep 5
+              done
+              docker logs --tail 50 spikeforge-dashboard
+              exit 1'
+          for i in $(seq 1 12); do
+            body=$(curl -fsS --max-time 10 \
+              https://dash.spikeforge.net/health || true)
+            case "$body" in *'"status":"ok"'*)
+              echo "dash.spikeforge.net/health -> $body"; exit 0;;
+            esac
+            sleep 5
+          done
+          echo "dash.spikeforge.net is not serving: $body" >&2
+          exit 1
+
+      - name: Show compose status
         if: always()
         env:
           HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
@@ -100,7 +132,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
-            'docker compose -p spikeforge --env-file /opt/spikeforge/.env -f /opt/spikeforge/docker-compose.hetzner.yml ps; docker inspect --format "{{.State.Health.Status}}" spikeforge-dashboard'
+            'docker compose -p spikeforge --env-file /opt/spikeforge/.env -f /opt/spikeforge/docker-compose.hetzner.yml ps'
 
       - name: Clean up SSH key
         if: always()
