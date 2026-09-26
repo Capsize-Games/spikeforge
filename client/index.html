@@ -6,14 +6,12 @@
     <script>
       // Analytics belongs to the public website, never the local desktop app.
       if (location.hostname === "dash.spikeforge.net") {
-        var analytics = document.createElement("script");
-        analytics.async = true;
-        analytics.src = "https://www.googletagmanager.com/gtag/js?id=G-2B31L3PSWD";
-        document.head.appendChild(analytics);
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){window.dataLayer.push(arguments);}
-        gtag("js", new Date());
-        gtag("config", "G-2B31L3PSWD");
+        var counter = document.createElement("script");
+        counter.async = true;
+        counter.dataset.goatcounter =
+          "https://spikeforge.stats.capsize.online/count";
+        counter.src = "https://spikeforge.stats.capsize.online/count.js";
+        document.head.appendChild(counter);
       }
     </script>
     <title>Spikeforge Dashboard — Explore Spiking Neural Networks</title>
