@@ -66,6 +66,7 @@ export const JA: TranslationSet = {
   "device.auto": "自動（高速な方）",
   "device.unavailable": "GPU（利用不可）",
   "status.connected": "接続済み",
+  "footer.privacy": "プライバシーポリシー",
   "status.disconnected": "未接続",
   "status.unauthorized": "未認証 — アクセストークンが無効またはありません",
   "training.title": "学習",
