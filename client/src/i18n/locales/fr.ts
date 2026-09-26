@@ -56,6 +56,7 @@ export const FR: TranslationSet = {
   "device.auto": "Auto (choisir le plus rapide)",
   "device.unavailable": "GPU (indisponible)",
   "status.connected": "connecté",
+  "footer.privacy": "Politique de confidentialité",
   "status.disconnected": "déconnecté",
   "status.unauthorized": "non autorisé — jeton d’accès absent ou invalide",
   "training.title": "Entraînement",

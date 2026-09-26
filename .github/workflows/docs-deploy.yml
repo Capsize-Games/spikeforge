@@ -44,6 +44,7 @@ jobs:
           cp landing/sitemap.xml build/pages/sitemap.xml
           cp -r landing/assets build/pages/assets
           cp landing/CNAME build/pages/CNAME
+          cp -r landing/privacy build/pages/privacy
 
       - name: Render the model-hub catalog page (stdlib-only, no core install)
         run: |

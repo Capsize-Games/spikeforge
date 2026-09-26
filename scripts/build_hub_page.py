@@ -295,6 +295,7 @@ Browse locally with <code>pip install spikeforge-hub &amp;&amp;
 spikeforge-hub list</code>, or from the
 <a href="https://dash.spikeforge.net/">spikeforge</a>
 dashboard's Hub panel.
+<a href="/privacy/">Privacy policy</a>
 </footer>
 </body>
 </html>

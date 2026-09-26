@@ -26,6 +26,14 @@ export function StatusBar({
   return (
     <footer className="app-footer">
       <ResourceMonitor stats={stats} requested={requested} />
+      <a
+        className="privacy-link"
+        href="https://spikeforge.net/privacy/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {t("footer.privacy")}
+      </a>
       <StatusIndicator
         ok={connected}
         label={label}
