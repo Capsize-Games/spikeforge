@@ -17,7 +17,12 @@ from server.session import Session
 from server.web import mount_client
 from spikeforge.runtime import device as device_mod
 
-app = FastAPI(title="spikeforge server")
+app = FastAPI(
+    title="spikeforge server",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 # Warm the CUDA context once at startup so training/benchmarks don't stall.
 device_mod.prime()

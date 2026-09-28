@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "client/**"
+      - "server/app.py"
       - "server/**"
       - "spikeforge/**"
       - "packages/**"
@@ -69,6 +70,18 @@ jobs:
           printf '%s' "$ENV_CONTENT" | ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=yes "$HETZNER_USER@$HETZNER_HOST" \
             'cat > /opt/spikeforge/.env && chmod 600 /opt/spikeforge/.env'
+
+      - name: Require dashboard access token
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+          DASHBOARD_TOKEN: ${{ secrets.SPIKEFORGE_DASHBOARD_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$DASHBOARD_TOKEN"
+          printf '%s' "$DASHBOARD_TOKEN" | ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes "$HETZNER_USER@$HETZNER_HOST" \
+            'python3 -c '\''import pathlib,sys; p=pathlib.Path("/opt/spikeforge/.env"); key="SPIKEFORGE_DASHBOARD_TOKEN"; value=sys.stdin.read(); lines=[line for line in p.read_text().splitlines() if not line.startswith(key+"=")]; lines.append(key+"="+value); p.write_text("\n".join(lines)+"\n"); p.chmod(0o600)'\'''
 
       - name: Report disk capacity without deleting other services' images
         env:

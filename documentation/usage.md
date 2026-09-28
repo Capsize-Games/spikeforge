@@ -33,10 +33,9 @@ restarts.
 
 ### Access control & rate limiting
 
-By default the dashboard's WebSocket (`/ws`) and bundle download
-(`GET /api/bundle/<name>`) are open to anyone who can reach the server --
-fine for `docker compose up` on localhost, not fine once a deployment (e.g.
-a demo box) is reachable beyond that.
+During local development, the dashboard's WebSocket (`/ws`) and bundle
+download (`GET /api/bundle/<name>`) are open when the token is unset. The
+production deployment requires a token.
 
 Set `SPIKEFORGE_DASHBOARD_TOKEN` to require a shared secret on both routes:
 
@@ -56,7 +55,9 @@ WebSocket handshake) and to the bundle download link (same reason: it's a
 plain `<a download>`, not a `fetch`). A connection or download without a
 valid token gets a `401`/handshake rejection instead of the model
 weights or spike stream; leaving the variable unset disables the gate
-entirely, so a plain `docker compose up` on localhost is unaffected.
+entirely, so a plain `docker compose up` on localhost is unaffected. The
+production compose file fails to start when this secret is missing. The
+dashboard removes the token from the address bar after reading it.
 
 `SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS` caps how many training-or-pipeline
 jobs may run at once, server-wide (default `2`). `TrainingService` and

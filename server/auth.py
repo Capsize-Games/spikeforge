@@ -1,9 +1,8 @@
-"""Optional bearer-token gate shared by the WebSocket and bundle routes.
+"""Bearer-token gate shared by the WebSocket and bundle routes.
 
-Mirrors ``spikeforge_serve``'s ``/metrics`` token: unset leaves every route
-open, exactly as today, so a plain ``docker compose up`` on localhost is
-unaffected. Setting ``SPIKEFORGE_DASHBOARD_TOKEN`` requires a caller to
-present it. Browsers can't attach a custom header to a WebSocket handshake,
+Mirrors ``spikeforge_serve``'s ``/metrics`` token. Production deployment
+requires ``SPIKEFORGE_DASHBOARD_TOKEN``; local development may leave it unset.
+Browsers can't attach a custom header to a WebSocket handshake,
 and the bundle download is a plain ``<a download>`` link that can't attach
 one either, so both routes also accept the token as a query parameter.
 """
@@ -13,7 +12,7 @@ import os
 from typing import Optional
 
 #: Environment variable gating ``/ws`` and ``/api/bundle/<name>``. An empty
-#: or unset value leaves both routes open.
+#: or unset value leaves both routes open for local development.
 DASHBOARD_TOKEN_ENV = "SPIKEFORGE_DASHBOARD_TOKEN"
 
 
@@ -27,7 +26,7 @@ def authorized(
 ) -> bool:
     """Return True when a caller presents the configured token.
 
-    Always True when no token is configured. Otherwise True when either
+    Always True when no token is configured (local development). Otherwise True when either
     ``query_token`` or an ``Authorization: Bearer <token>`` ``header``
     matches, compared with ``hmac.compare_digest`` to avoid a timing leak.
     """
