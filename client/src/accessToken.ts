@@ -4,14 +4,20 @@
  * link like `https://host/?token=...`. The token is removed from the address
  * bar immediately after it is read. Undefined when unset for local development.
  */
+let cachedToken: string | null | undefined;
+
 export function accessToken(): string | null {
+  if (cachedToken !== undefined) {
+    return cachedToken;
+  }
   const params = new URLSearchParams(location.search);
-  const token = params.get("token");
-  if (token) {
+  cachedToken = params.get("token");
+  if (cachedToken) {
     params.delete("token");
     const query = params.toString();
-    const cleanUrl = `${location.pathname}${query ? `?${query}` : ""}${location.hash}`;
+    const cleanUrl = `${location.pathname}`
+      + `${query ? `?${query}` : ""}${location.hash}`;
     history.replaceState(null, "", cleanUrl);
   }
-  return token;
+  return cachedToken;
 }
