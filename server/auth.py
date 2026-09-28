@@ -26,7 +26,8 @@ def authorized(
 ) -> bool:
     """Return True when a caller presents the configured token.
 
-    Always True when no token is configured (local development). Otherwise True when either
+    Always True when no token is configured (local development). Otherwise
+    True when either
     ``query_token`` or an ``Authorization: Bearer <token>`` ``header``
     matches, compared with ``hmac.compare_digest`` to avoid a timing leak.
     """
