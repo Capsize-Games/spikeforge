@@ -1,0 +1,59 @@
+name: Review a pull request
+
+# Reviews every pull request. With nobody reading the diff, this is the only
+# thing that looks at a change as a change rather than as a test result.
+#
+# It talks to any OpenAI-compatible chat-completions endpoint -- OpenRouter,
+# DeepInfra, or anything else speaking that protocol -- so the provider and
+# model are configuration, not code:
+#
+#   secret   LLM_API_KEY    the provider key
+#   variable LLM_BASE_URL   e.g. https://openrouter.ai/api/v1
+#   variable LLM_MODEL      the provider's exact model slug
+#
+# It posts a comment. It cannot approve, block, or merge: the required checks
+# decide that.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    timeout-minutes: 20
+    steps:
+      - name: Skip without a provider
+        id: guard
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.LLM_API_KEY }}" ] \
+            || [ -z "${{ vars.LLM_BASE_URL }}" ] \
+            || [ -z "${{ vars.LLM_MODEL }}" ]; then
+            echo "LLM_API_KEY, LLM_BASE_URL or LLM_MODEL is unset;"
+            echo "no review will be posted."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.skip != 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          node-version: "22"
+
+      - name: Post the review
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/llm_review.mjs
