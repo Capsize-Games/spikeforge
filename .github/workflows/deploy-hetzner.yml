@@ -27,24 +27,43 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      HETZNER_HOST: 10.77.220.1
+      HETZNER_USER: ${{ secrets.HETZNER_USER }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install rsync
-        run: sudo apt-get update && sudo apt-get install -y rsync
+      - name: Connect to the private deployment network
+        env:
+          WIREGUARD_CONFIG: ${{ secrets.HETZNER_WIREGUARD_CONFIG }}
+        run: |
+          set -euo pipefail
+          test -n "$WIREGUARD_CONFIG"
+          sudo apt-get update
+          sudo apt-get install -y rsync wireguard-tools
+          umask 077
+          printf '%s\n' "$WIREGUARD_CONFIG" > "$RUNNER_TEMP/wg-hq.conf"
+          sudo wg-quick up "$RUNNER_TEMP/wg-hq.conf"
+          for attempt in $(seq 1 12); do
+            if ping -c 1 -W 2 "$HETZNER_HOST"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Private deployment connection did not become ready' >&2
+          exit 1
 
       - name: Sync source to Hetzner
         env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
-          HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          HETZNER_SSH_KEY: ${{ secrets.HETZNER_PRIVATE_SSH_KEY }}
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh
+          install -d -m 700 ~/.ssh
+          umask 077
           printf '%s\n' "$HETZNER_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$HETZNER_HOST" >> ~/.ssh/known_hosts
+          cat deploy/hetzner_known_hosts >> ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
             'mkdir -p /opt/spikeforge'
@@ -61,9 +80,7 @@ jobs:
 
       - name: Write production environment
         env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
-          HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          HETZNER_SSH_KEY: ${{ secrets.HETZNER_PRIVATE_SSH_KEY }}
           ENV_CONTENT: ${{ secrets.SPIKEFORGE_ENV_FILE }}
         run: |
           set -euo pipefail
@@ -73,8 +90,6 @@ jobs:
 
       - name: Require dashboard access token
         env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
           DASHBOARD_TOKEN: ${{ secrets.SPIKEFORGE_DASHBOARD_TOKEN }}
         run: |
           set -euo pipefail
@@ -84,36 +99,24 @@ jobs:
             'python3 -c '\''import pathlib,sys; p=pathlib.Path("/opt/spikeforge/.env"); key="SPIKEFORGE_DASHBOARD_TOKEN"; value=sys.stdin.read(); lines=[line for line in p.read_text().splitlines() if not line.startswith(key+"=")]; lines.append(key+"="+value); p.write_text("\n".join(lines)+"\n"); p.chmod(0o600)'\'''
 
       - name: Report disk capacity without deleting other services' images
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
             'df -h /'
 
       - name: Build and restart dashboard
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
             'cd /opt/spikeforge && docker compose -p spikeforge --env-file .env -f docker-compose.hetzner.yml up -d --build --remove-orphans'
 
       - name: Configure the documentation hostname
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
             'bash /opt/spikeforge/deploy/configure-docs.sh'
 
       - name: Verify the dashboard is healthy and live
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
@@ -139,14 +142,15 @@ jobs:
 
       - name: Show compose status
         if: always()
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$HETZNER_USER@$HETZNER_HOST" \
             'docker compose -p spikeforge --env-file /opt/spikeforge/.env -f /opt/spikeforge/docker-compose.hetzner.yml ps'
 
-      - name: Clean up SSH key
+      - name: Clean up deployment credentials and connection
         if: always()
-        run: rm -f ~/.ssh/deploy_key
+        run: |
+          if sudo wg show wg-hq >/dev/null 2>&1; then
+            sudo wg-quick down "$RUNNER_TEMP/wg-hq.conf"
+          fi
+          rm -f ~/.ssh/deploy_key "$RUNNER_TEMP/wg-hq.conf"
