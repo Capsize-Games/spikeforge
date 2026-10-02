@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Capsize project manifest",
+  "description": "Capsize 1.x project identity and task contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "standards",
+    "name",
+    "type",
+    "languages",
+    "framework",
+    "databases",
+    "runtimes",
+    "entrypoints",
+    "task_runner",
+    "commands",
+    "dependencies",
+    "instructions",
+    "owner",
+    "license"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "standards": {
+      "type": "string",
+      "pattern": "^1\\.(x|[0-9]+)$"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "app",
+        "service",
+        "library",
+        "tool"
+      ]
+    },
+    "languages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "python",
+          "typescript",
+          "javascript",
+          "c",
+          "cpp",
+          "html",
+          "css",
+          "bash",
+          "powershell"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "framework": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "fastapi",
+        "django",
+        "react",
+        "vite",
+        null,
+        "fastapi-react"
+      ]
+    },
+    "databases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "postgresql",
+          "sqlite"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "runtimes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "entrypoints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "task_runner": {
+      "const": "just"
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "required": [
+        "setup",
+        "build",
+        "test",
+        "lint",
+        "format",
+        "typecheck",
+        "run",
+        "clean",
+        "docs",
+        "ci"
+      ]
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "instructions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical",
+        "rules"
+      ],
+      "properties": {
+        "canonical": {
+          "const": "AGENTS.md"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
