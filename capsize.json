@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/Capsize-Games/capsize-ci/1a50d06c20022f9bbc44bad002add302e1dae646/schema/capsize-1.json",
+  "$schema": "./schema/capsize-1.json",
   "schema_version": 1,
   "standards": "1.x",
   "name": "spikeforge",
