@@ -13,6 +13,10 @@ that and describe the local source tree only.
 
 ### Changed
 
+- **The Hetzner docs deploy reloads its validated Caddyfile.** The shared
+  Caddyfile can be replaced while the running container still has its old
+  bind-mounted inode. The deploy now reloads the current host file from a
+  container-visible candidate and guards `docs.spikeforge.net` at the origin.
 - **The landing page no longer reads as a Capsize portfolio piece.** The hero
   carried an eyebrow link reading "CAPSIZE / NEURAL SYSTEMS" above the
   `spikeforge` wordmark — styled like an agency's project-credit tag, which
