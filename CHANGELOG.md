@@ -11,6 +11,11 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Fixed
+
+- Target wheels and source distributions include all six energy cost tables,
+  so installed artifacts report the same declared estimates as a checkout.
+
 ### Changed
 
 - **The Hetzner docs deploy reloads its validated Caddyfile.** The shared
