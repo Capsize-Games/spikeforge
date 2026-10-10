@@ -41,6 +41,22 @@ that and describe the local source tree only.
   section now also links the desktop app as a no-Docker way to try the
   dashboard.
 
+## [spikeforge-v0.5.1] - 2026-10-10
+
+This patch combination records `spikeforge` 0.5.1, `spikeforge-targets` 0.2.1,
+`spikeforge-hub` 0.3.2, `spikeforge-server` 0.3.4, `spikeforge-serve` 0.2.4,
+and `spikeforge-io` 0.1.4 in the compatibility matrix. The core-free client
+remains at 0.1.1 and the WebSocket protocol remains at 1.0.
+
+- Raw-sample inference runs every encoded timestep, preserves batch and
+  recurrent state shapes, and reports timestep counts.
+- Unsigned weight quantization retains constant and near-constant layers.
+- Hub inspection resolves complete Hugging Face snapshot directories.
+- Target artifacts include all six energy cost tables.
+- Server, serve and I/O patch versions update their core dependency pins to
+  the same tested combination; core's `all` extra and the server's satellite
+  requirements select the updated targets, hub and serve distributions.
+
 ## [spikeforge-v0.5.0] - 2026-09-15
 
 Released together as one combination, recorded in
