@@ -11,6 +11,11 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Fixed
+
+- Unsigned weight quantization preserves constant and near-constant tensors
+  and their reported ranges instead of replacing nonzero layers with zeros.
+
 ### Changed
 
 - **The Hetzner docs deploy reloads its validated Caddyfile.** The shared

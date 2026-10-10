@@ -92,6 +92,19 @@ def test_uint8_scheme_is_asymmetric() -> None:
     assert float(quantized.max()) <= 1.0 + 1e-6
 
 
+@pytest.mark.parametrize("level", [2.5, -2.5])
+def test_uint8_constant_graph_weights_are_preserved(level: float) -> None:
+    """Xylo quantization preserves constant layers and reports their range."""
+    weight = np.full((2, 3), level, np.float32)
+    graph = _affine_graph(weight)
+    result = quantize(graph, "xylo")
+    assert result.applied() is True
+    np.testing.assert_array_equal(result.graph.nodes["fc"].weight, weight)
+    np.testing.assert_array_equal(graph.nodes["fc"].weight, weight)
+    layer = result.report.layers[0]
+    assert layer["before"] == layer["after"] == [level, level]
+
+
 def test_none_target_reports_a_no_op() -> None:
     """A target declaring no quantization leaves the graph untouched."""
     graph = _affine_graph(np.ones((1, 2), np.float32))
