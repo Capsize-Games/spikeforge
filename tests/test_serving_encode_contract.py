@@ -189,25 +189,25 @@ def test_build_prefers_an_explicit_encode_config() -> None:
 # --- acceptance: the session composes encode and step -------------------
 
 
-def test_step_sample_equals_encode_then_step() -> None:
-    """``step_sample`` is exactly ``step(encode(sample))``."""
+def test_step_sample_equals_encode_then_stream() -> None:
+    """A raw sample runs every encoded frame through the same session."""
     spec, module = registry.build_topology("recurrent_net", _RECURRENT)
     encode_config = EncodeSpec(coding="latency", num_steps=5).to_dict()
     bundle = _in_memory_bundle(spec, module, encode_config)
     sample = torch.rand(1, 28, 28)
     composed = InferenceSession.load(bundle).step_sample(sample)
     fresh = InferenceSession.load(bundle)
-    manual = fresh.step(fresh.encode(sample))
-    assert composed.steps == manual.steps == 1
+    manual = list(fresh.run_stream(fresh.encode(sample)))[-1]
+    assert composed.steps == manual.steps == 5
     assert torch.equal(composed.logits, manual.logits)
 
 
 def test_run_samples_yields_one_prediction_per_sample() -> None:
-    """A raw sample stream advances the session once per sample."""
+    """A raw sample stream counts every encoded step in each prediction."""
     spec, module = registry.build_topology("recurrent_net", _RECURRENT)
     encode_config = EncodeSpec(coding="latency", num_steps=5).to_dict()
     bundle = _in_memory_bundle(spec, module, encode_config)
     session = InferenceSession.load(bundle)
     samples = [torch.rand(1, 28, 28) for _ in range(3)]
     predictions = list(session.run_samples(samples))
-    assert [prediction.steps for prediction in predictions] == [1, 2, 3]
+    assert [prediction.steps for prediction in predictions] == [5, 10, 15]

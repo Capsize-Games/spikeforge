@@ -92,7 +92,7 @@ def _timed_call(session: InferenceSession, sample: torch.Tensor) -> float:
 def _prepare(
     config: ServingBenchmarkConfig, device: torch.device
 ) -> Tuple[DeploymentBundle, InferenceSession, torch.Tensor, int, float]:
-    """Load the bundle/session and time the cold start through one step."""
+    """Load the bundle/session and time cold start through one sample."""
     start = time.perf_counter()
     bundle = DeploymentBundle.load(config.bundle, strict=True)
     session = InferenceSession.load(bundle, device=device)
