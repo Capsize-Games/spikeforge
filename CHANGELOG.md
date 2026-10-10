@@ -11,6 +11,12 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Fixed
+
+- Hub inspection resolves Hugging Face entries to their complete cached
+  snapshot directory, including nested files, instead of selecting the first
+  top-level file or rejecting a snapshot with only nested weights.
+
 ### Changed
 
 - **The Hetzner docs deploy reloads its validated Caddyfile.** The shared
