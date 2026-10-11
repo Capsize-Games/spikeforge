@@ -13,6 +13,9 @@ that and describe the local source tree only.
 
 ### Fixed
 
+- Dashboard deployments build the CPU image on the GitHub-hosted runner,
+  transfer it over the pinned private connection, and verify the loaded
+  revision before starting it without builds or pulls on the shared host.
 - Documentation edge updates hold the shared Caddyfile lock while reading,
   validating and reloading, preserving routes added by a concurrent deploy.
 - Target wheels and source distributions include all six energy cost tables,

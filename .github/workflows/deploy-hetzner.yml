@@ -10,9 +10,11 @@ on:
       - "spikeforge/**"
       - "packages/**"
       - "Dockerfile"
+      - ".dockerignore"
       - "docker-compose.hetzner.yml"
       - "deploy/docs.Caddyfile"
       - "deploy/configure-docs.sh"
+      - "scripts/*dashboard*"
       - ".github/workflows/deploy-hetzner.yml"
   workflow_dispatch:
 
@@ -26,6 +28,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       HETZNER_HOST: 10.77.220.1
@@ -33,6 +36,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Require current main before building
+        run: bash scripts/check-dashboard-source.sh
+
+      - name: Build the immutable CPU dashboard image on this runner
+        id: build
+        run: bash scripts/build-dashboard-image.sh
 
       - name: Connect to the private deployment network
         env:
@@ -59,24 +69,41 @@ jobs:
           HETZNER_SSH_KEY: ${{ secrets.HETZNER_PRIVATE_SSH_KEY }}
         run: |
           set -euo pipefail
+          bash scripts/check-dashboard-source.sh
           install -d -m 700 ~/.ssh
           umask 077
           printf '%s\n' "$HETZNER_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           cat deploy/hetzner_known_hosts >> ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
             'mkdir -p /opt/spikeforge'
           rsync -rl --delete \
             --exclude='.git' \
             --exclude='.env' \
             --exclude='venv' \
+            --exclude='.venv' \
             --exclude='client/node_modules' \
             --exclude='client/dist' \
             --exclude='**/__pycache__' \
             --exclude='*.egg-info' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ConnectTimeout=15" \
             ./ "$HETZNER_USER@$HETZNER_HOST:/opt/spikeforge/"
+
+      - name: Check image capacity and transfer the prebuilt image
+        run: |
+          set -euo pipefail
+          bash scripts/check-dashboard-source.sh
+          image="spikeforge-dashboard:$GITHUB_SHA"
+          size="$(docker image inspect --format '{{.Size}}' "$image")"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 "$HETZNER_USER@$HETZNER_HOST" \
+            "python3 /opt/spikeforge/scripts/check-dashboard-capacity.py '$size'"
+          docker image save "$image" | \
+            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              -o ConnectTimeout=15 "$HETZNER_USER@$HETZNER_HOST" \
+              'docker image load'
 
       - name: Write production environment
         env:
@@ -85,8 +112,9 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$ENV_CONTENT" | ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes "$HETZNER_USER@$HETZNER_HOST" \
-            'cat > /opt/spikeforge/.env && chmod 600 /opt/spikeforge/.env'
+            -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            "python3 /opt/spikeforge/scripts/write-dashboard-env.py /opt/spikeforge/.env '$GITHUB_SHA'"
 
       - name: Require dashboard access token
         env:
@@ -95,24 +123,32 @@ jobs:
           set -euo pipefail
           test -n "$DASHBOARD_TOKEN"
           printf '%s' "$DASHBOARD_TOKEN" | ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes "$HETZNER_USER@$HETZNER_HOST" \
+            -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "$HETZNER_USER@$HETZNER_HOST" \
             'python3 -c '\''import pathlib,sys; p=pathlib.Path("/opt/spikeforge/.env"); key="SPIKEFORGE_DASHBOARD_TOKEN"; value=sys.stdin.read(); lines=[line for line in p.read_text().splitlines() if not line.startswith(key+"=")]; lines.append(key+"="+value); p.write_text("\n".join(lines)+"\n"); p.chmod(0o600)'\'''
 
       - name: Report disk capacity without deleting other services' images
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
             'df -h /'
 
-      - name: Build and restart dashboard
+      - name: Start and verify the preloaded dashboard revision
+        env:
+          BUILDER_CONFIG_DIGEST: ${{ steps.build.outputs.config_digest }}
         run: |
+          set -euo pipefail
+          bash scripts/check-dashboard-source.sh
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
-            'cd /opt/spikeforge && docker compose -p spikeforge --env-file .env -f docker-compose.hetzner.yml up -d --build --remove-orphans'
+            "bash /opt/spikeforge/scripts/start-dashboard-image.sh '$GITHUB_SHA' '$BUILDER_CONFIG_DIGEST'"
 
       - name: Configure the documentation hostname
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
             'bash /opt/spikeforge/deploy/configure-docs.sh'
 
@@ -120,6 +156,7 @@ jobs:
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" '
               for i in $(seq 1 30); do
                 s=$(docker inspect --format "{{.State.Health.Status}}" \
@@ -144,6 +181,7 @@ jobs:
         if: always()
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
             'docker compose -p spikeforge --env-file /opt/spikeforge/.env -f /opt/spikeforge/docker-compose.hetzner.yml ps'
 
