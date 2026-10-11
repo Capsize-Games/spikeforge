@@ -13,6 +13,8 @@ that and describe the local source tree only.
 
 ### Fixed
 
+- Documentation edge updates hold the shared Caddyfile lock while reading,
+  validating and reloading, preserving routes added by a concurrent deploy.
 - Target wheels and source distributions include all six energy cost tables,
   so installed artifacts report the same declared estimates as a checkout.
 - Hub inspection resolves Hugging Face entries to their complete cached
