@@ -131,11 +131,19 @@ class InferenceSession:
         )
 
     def step_sample(self, sample: Any) -> Prediction:
-        """Encode one raw sample and advance one step over its spike train."""
-        return self.step(self.encode(sample))
+        """Encode a raw sample and return its final timestep prediction.
+
+        Every encoded frame advances the carried state, so ``steps`` counts
+        timesteps and ``mean_logits`` agrees with whole-tensor simulation.
+        """
+        predictions = self.run_stream(self.encode(sample))
+        final = next(predictions)
+        for prediction in predictions:
+            final = prediction
+        return final
 
     def run_samples(self, samples: Iterable[Any]) -> Iterator[Prediction]:
-        """Yield one :class:`Prediction` per raw sample, carrying state."""
+        """Yield each raw sample's final prediction, carrying neuron state."""
         for sample in samples:
             yield self.step_sample(sample)
 
@@ -143,7 +151,7 @@ class InferenceSession:
         """Return the session's serializable carried state."""
         return {
             "steps": self._steps,
-            "totals": _encode_optional(self._totals),
+            "totals": tensor_codec.encode(self._totals),
             "state": StateTree(self._state).to_dict(),
         }
 
@@ -158,7 +166,7 @@ class InferenceSession:
         tree = StateTree.from_dict(state.get("state") or {}).to(self._device)
         self._validate(tree.raw())
         self._state = dict(tree.raw()) or None
-        self._totals = _decode_optional(state.get("totals"), self._device)
+        self._totals = tensor_codec.decode(state.get("totals"), self._device)
         self._steps = int(state.get("steps", 0) or 0)
 
     def _step_once(
@@ -229,17 +237,3 @@ def _resolve_bundle(
     if isinstance(bundle, str):
         return DeploymentBundle.load(bundle, strict=strict)
     return bundle
-
-
-def _encode_optional(value: Optional[torch.Tensor]) -> Any:
-    """Return ``value`` encoded for JSON, or None when unset."""
-    return None if value is None else tensor_codec.encode(value)
-
-
-def _decode_optional(
-    value: Any, device: torch.device
-) -> Optional[torch.Tensor]:
-    """Return the tensor encoded by :func:`_encode_optional`, or None."""
-    if value is None:
-        return None
-    return tensor_codec.decode(value, device)
