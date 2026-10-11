@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
+import tarfile
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -83,3 +85,17 @@ def run_script(name: str, *arguments: str) -> subprocess.CompletedProcess[str]:
         ["bash", str(ROOT / "scripts" / name), *arguments],
         text=True, capture_output=True, timeout=120,
     )
+
+
+def saved_config_digest(tag: str, path: Path) -> str:
+    """Hash the actual archived configuration using independent tar access."""
+    docker("image", "save", "--output", str(path), tag)
+    with tarfile.open(path) as archive:
+        manifest = archive.extractfile("manifest.json")
+        assert manifest is not None
+        with manifest:
+            config = json.load(manifest)[0]["Config"]
+        payload = archive.extractfile(config)
+        assert payload is not None
+        with payload:
+            return "sha256:" + hashlib.sha256(payload.read()).hexdigest()

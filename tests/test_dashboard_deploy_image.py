@@ -2,7 +2,12 @@
 
 from pathlib import Path
 
-from dashboard_deploy_docker import docker, resources, run_script
+from dashboard_deploy_docker import (
+    docker,
+    resources,
+    run_script,
+    saved_config_digest,
+)
 
 
 def test_missing_image_fails_before_compose_can_build(tmp_path: Path) -> None:
@@ -63,3 +68,15 @@ def test_builder_image_identity_cannot_be_substituted(tmp_path: Path) -> None:
                             container, wrong)
         assert result.returncode != 0
         assert "Dashboard image ID mismatch" in result.stderr
+
+
+def test_configuration_identity_is_portable_across_docker_stores(
+    tmp_path: Path,
+) -> None:
+    """Accept actual saved config identity even when native image ID differs."""
+    with resources(tmp_path) as (revision, project, _):
+        identity = saved_config_digest(f"spikeforge-dashboard:{revision}",
+                                       tmp_path / "saved-image.tar")
+        result = run_script("start-dashboard-image.sh", revision, identity,
+                            str(tmp_path), project)
+        assert result.returncode == 0, result.stdout + result.stderr
