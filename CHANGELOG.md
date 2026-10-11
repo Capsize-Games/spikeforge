@@ -16,6 +16,8 @@ that and describe the local source tree only.
 - Hub inspection resolves Hugging Face entries to their complete cached
   snapshot directory, including nested files, instead of selecting the first
   top-level file or rejecting a snapshot with only nested weights.
+- Unsigned weight quantization preserves constant and near-constant tensors
+  and their reported ranges instead of replacing nonzero layers with zeros.
 - Raw-sample inference now advances every encoded timestep before returning
   its final prediction. `InferenceSession.step_sample()` and `run_samples()`
   preserve batch shape and recurrent state for FC and spatial topologies;
