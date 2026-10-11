@@ -48,11 +48,13 @@ __all__ = [
 _DIGEST_BLOCK = 1 << 20
 
 
-def _cached_artifact(entry_id: str) -> Optional[str]:
-    """Return the first cached artifact file for ``entry_id``, if any."""
-    root = os.path.join(cache.cache_root(), cache.slug(entry_id))
+def _cached_artifact(entry: HubEntry) -> Optional[str]:
+    """Return a cached snapshot directory or direct artifact file."""
+    root = os.path.join(cache.cache_root(), cache.slug(entry.id))
     if not os.path.isdir(root):
         return None
+    if entry.source == "hf_repo":
+        return root if any(files for _, _, files in os.walk(root)) else None
     for name in sorted(os.listdir(root)):
         path = os.path.join(root, name)
         if os.path.isfile(path):
@@ -129,7 +131,7 @@ def resolve_path(entry: HubEntry) -> str:
         return _materialize(entry)
     if entry.source == "reference":
         return reference_path(entry)
-    found = _cached_artifact(entry.id)
+    found = _cached_artifact(entry)
     if found is None:
         raise HubArtifactError(entry.id, "no cached artifact; download first")
     return found

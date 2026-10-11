@@ -98,3 +98,4 @@ exclude = ["spikeforge", "server*", "tests*"]
 # symbol in this distribution as ``Any`` even though the source is fully
 # annotated.
 spikeforge_targets = ["py.typed"]
+"spikeforge_targets.energy" = ["costs/*.json"]
