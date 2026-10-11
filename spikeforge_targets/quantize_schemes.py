@@ -53,7 +53,7 @@ def weight_uint8(weights: np.ndarray) -> Quantized:
     value = np.asarray(weights, dtype=np.float32)
     low, high = _range(value)
     if high - low <= _EPS:
-        return np.zeros_like(value), (low, high), (0.0, 0.0)
+        return value.copy(), (low, high), (low, high)
     scale = (high - low) / UINT8_LEVELS
     zero = float(np.round(-low / scale))
     code = np.clip(np.round(value / scale) + zero, 0.0, UINT8_LEVELS)

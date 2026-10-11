@@ -15,6 +15,8 @@ that and describe the local source tree only.
 
 - Target wheels and source distributions include all six energy cost tables,
   so installed artifacts report the same declared estimates as a checkout.
+- Unsigned weight quantization preserves constant and near-constant tensors
+  and their reported ranges instead of replacing nonzero layers with zeros.
 - Raw-sample inference now advances every encoded timestep before returning
   its final prediction. `InferenceSession.step_sample()` and `run_samples()`
   preserve batch shape and recurrent state for FC and spatial topologies;
