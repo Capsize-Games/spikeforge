@@ -29,8 +29,10 @@ def test_preloaded_image_starts_with_verified_identity(tmp_path: Path) -> None:
     with resources(tmp_path) as (revision, project, path):
         expected = docker("image", "inspect", "--format", "{{.Id}}",
                           f"spikeforge-dashboard:{revision}")
+        identity = saved_config_digest(f"spikeforge-dashboard:{revision}",
+                                       tmp_path / "saved-image.tar")
         result = run_script(
-            "start-dashboard-image.sh", revision, expected, str(tmp_path),
+            "start-dashboard-image.sh", revision, identity, str(tmp_path),
             project,
         )
         assert result.returncode == 0, result.stdout + result.stderr
@@ -56,8 +58,10 @@ def test_wrong_running_revision_is_rejected(tmp_path: Path) -> None:
         assert "Dashboard revision mismatch" in result.stderr
 
 
-def test_builder_image_identity_cannot_be_substituted(tmp_path: Path) -> None:
-    """The checked container must match the builder's exact image ID."""
+def test_verified_local_image_identity_cannot_be_substituted(
+    tmp_path: Path,
+) -> None:
+    """The container must match the loaded image verified on this host."""
     with resources(tmp_path) as (revision, project, path):
         docker("compose", "-p", project, "-f", str(path), "up", "-d",
                "--no-build", "--pull", "never", "--wait")
@@ -73,7 +77,7 @@ def test_builder_image_identity_cannot_be_substituted(tmp_path: Path) -> None:
 def test_configuration_identity_is_portable_across_docker_stores(
     tmp_path: Path,
 ) -> None:
-    """Accept actual saved config identity even when native image ID differs."""
+    """Accept saved configuration identity when Docker's native ID differs."""
     with resources(tmp_path) as (revision, project, _):
         identity = saved_config_digest(f"spikeforge-dashboard:{revision}",
                                        tmp_path / "saved-image.tar")

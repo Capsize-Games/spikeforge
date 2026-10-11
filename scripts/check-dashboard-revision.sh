@@ -3,10 +3,10 @@
 set -euo pipefail
 revision="${1:?Deployment revision is required}"
 container="${2:?Container ID is required}"
-expected="${3:?Builder image ID is required}"
+expected="${3:?Verified local image ID is required}"
 if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]] || \
    [[ ! "$expected" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-  echo "Invalid deployment revision or builder image ID." >&2
+  echo "Invalid deployment revision or verified local image ID." >&2
   exit 1
 fi
 label='{{index .Config.Labels "org.opencontainers.image.revision"}}'

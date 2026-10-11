@@ -136,14 +136,14 @@ jobs:
 
       - name: Start and verify the preloaded dashboard revision
         env:
-          BUILDER_IMAGE_ID: ${{ steps.build.outputs.image_id }}
+          BUILDER_CONFIG_DIGEST: ${{ steps.build.outputs.config_digest }}
         run: |
           set -euo pipefail
           bash scripts/check-dashboard-source.sh
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
-            "bash /opt/spikeforge/scripts/start-dashboard-image.sh '$GITHUB_SHA' '$BUILDER_IMAGE_ID'"
+            "bash /opt/spikeforge/scripts/start-dashboard-image.sh '$GITHUB_SHA' '$BUILDER_CONFIG_DIGEST'"
 
       - name: Configure the documentation hostname
         run: |

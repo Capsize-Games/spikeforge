@@ -12,7 +12,9 @@ docker build \
   --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu \
   --label "org.opencontainers.image.revision=$revision" \
   --tag "spikeforge-dashboard:$revision" .
-image_id="$(docker image inspect --format '{{.Id}}' "spikeforge-dashboard:$revision")"
+config_digest="$(docker image save "spikeforge-dashboard:$revision" | \
+  python3 scripts/dashboard-image-digest.py)"
+echo "Built dashboard configuration $config_digest for $revision."
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-  printf 'image_id=%s\n' "$image_id" >> "$GITHUB_OUTPUT"
+  printf 'config_digest=%s\n' "$config_digest" >> "$GITHUB_OUTPUT"
 fi

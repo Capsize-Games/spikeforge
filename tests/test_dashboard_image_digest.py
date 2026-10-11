@@ -23,7 +23,9 @@ def archive(entries: list[tuple[str, bytes]]) -> bytes:
     return stream.getvalue()
 
 
-def digest(entries: list[tuple[str, bytes]]) -> subprocess.CompletedProcess:
+def digest(
+    entries: list[tuple[str, bytes]],
+) -> subprocess.CompletedProcess[bytes]:
     """Feed the actual command a byte stream, retaining failure details."""
     return subprocess.run(
         [sys.executable, str(ROOT / "scripts/dashboard-image-digest.py")],

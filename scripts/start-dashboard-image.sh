@@ -2,13 +2,14 @@
 # Start only a preloaded dashboard image; no production dependency build.
 set -euo pipefail
 revision="${1:?Deployment revision is required}"
-expected="${2:?Builder image ID is required}"
+expected="${2:?Builder configuration digest is required}"
 directory="${3:-/opt/spikeforge}"
 project="${4:-spikeforge}"
 helper="$(cd "$(dirname "$0")" && pwd)/check-dashboard-revision.sh"
+digest_helper="$(dirname "$helper")/dashboard-image-digest.py"
 if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]] || \
    [[ ! "$expected" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-  echo "Invalid deployment revision or builder image ID." >&2
+  echo "Invalid deployment revision or builder configuration digest." >&2
   exit 1
 fi
 export SPIKEFORGE_DASHBOARD_IMAGE="spikeforge-dashboard:$revision"
@@ -23,8 +24,10 @@ if [[ "$actual" != "$revision" ]]; then
   exit 1
 fi
 loaded="$(docker image inspect --format '{{.Id}}' "$SPIKEFORGE_DASHBOARD_IMAGE")"
-if [[ "$loaded" != "$expected" ]]; then
-  echo "Loaded dashboard image ID mismatch: expected $expected, found $loaded." >&2
+configuration="$(docker image save "$SPIKEFORGE_DASHBOARD_IMAGE" | \
+  python3 "$digest_helper")"
+if [[ "$configuration" != "$expected" ]]; then
+  echo "Dashboard configuration digest mismatch: expected $expected, found $configuration." >&2
   exit 1
 fi
 cd "$directory"
@@ -34,4 +37,4 @@ compose=(docker compose -p "$project" --env-file .env \
   --remove-orphans spikeforge-dashboard
 container="$("${compose[@]}" ps -q spikeforge-dashboard)"
 test -n "$container"
-bash "$helper" "$revision" "$container" "$expected"
+bash "$helper" "$revision" "$container" "$loaded"
