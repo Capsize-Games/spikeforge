@@ -11,6 +11,13 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Fixed
+
+- Raw-sample inference now advances every encoded timestep before returning
+  its final prediction. `InferenceSession.step_sample()` and `run_samples()`
+  preserve batch shape and recurrent state for FC and spatial topologies;
+  their `steps` field counts encoded timesteps rather than raw samples.
+
 ### Changed
 
 - **The Hetzner docs deploy reloads its validated Caddyfile.** The shared
