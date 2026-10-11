@@ -14,7 +14,9 @@ def test_environment_replaces_stale_image_and_preserves_secrets(
     path = tmp_path / ".env"
     revision = "a" * 40
     body = ("SECRET=keep-this\nSPIKEFORGE_DASHBOARD_IMAGE=old\n"
-            "export SPIKEFORGE_DASHBOARD_IMAGE=older\n")
+            "export SPIKEFORGE_DASHBOARD_IMAGE=older\n"
+            "SPIKEFORGE_DASHBOARD_IMAGE = spaced\n"
+            "export  SPIKEFORGE_DASHBOARD_IMAGE=exported\n")
     result = subprocess.run(
         [os.sys.executable, str(ROOT / "scripts/write-dashboard-env.py"),
          str(path), revision], input=body, text=True, capture_output=True,

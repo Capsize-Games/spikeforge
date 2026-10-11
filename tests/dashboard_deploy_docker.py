@@ -64,13 +64,17 @@ def resources(directory: Path) -> Iterator[tuple[str, str, Path]]:
     revision = uuid.uuid4().hex + uuid.uuid4().hex[:8]
     project = f"dashboard-deploy-{uuid.uuid4().hex}"
     tag = image(directory, revision)
-    path = compose_file(directory, tag)
     try:
+        path = compose_file(directory, tag)
         yield revision, project, path
     finally:
-        docker("compose", "-p", project, "-f", str(path),
-               "down", "--volumes", "--remove-orphans")
-        docker("image", "rm", tag)
+        path = directory / "docker-compose.hetzner.yml"
+        try:
+            if path.exists():
+                docker("compose", "-p", project, "-f", str(path),
+                       "down", "--volumes", "--remove-orphans")
+        finally:
+            docker("image", "rm", tag)
 
 
 def run_script(name: str, *arguments: str) -> subprocess.CompletedProcess[str]:

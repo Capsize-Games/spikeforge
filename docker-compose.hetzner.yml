@@ -3,6 +3,7 @@
 # public hostname; this service intentionally publishes no host port.
 services:
   spikeforge-dashboard:
+    image: ${SPIKEFORGE_DASHBOARD_IMAGE:-spikeforge-dashboard:local}
     build:
       context: .
       args:
