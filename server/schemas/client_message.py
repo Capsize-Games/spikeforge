@@ -26,7 +26,8 @@ class ClientMessage(BaseModel):
         "targets", "deployment_report", "deploy_run", "energy_report",
         "model_search", "model_diff",
         "hub_list", "hub_search", "hub_download", "hub_cancel",
-        "hub_inspect", "hub_import",
+        "hub_inspect", "hub_import", "hub_pull",
+        "bundle_build",
         "list_pipelines", "save_pipeline", "load_pipeline",
         "delete_pipeline", "run_pipeline", "stop_pipeline",
     ] = "configure"

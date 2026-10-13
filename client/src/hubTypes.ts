@@ -2,7 +2,7 @@
 
 import type { NirValidationPayload } from "./nirTypes";
 
-/** Frameworks the curated catalog may declare. */
+/** Frameworks the catalog may declare (`spikeforge` is the community index). */
 export const HUB_FRAMEWORKS: string[] = [
   "snntorch",
   "nir",
@@ -10,13 +10,15 @@ export const HUB_FRAMEWORKS: string[] = [
   "norse",
   "lava",
   "hf",
+  "spikeforge",
 ];
 
-/** Artifact kinds a catalog entry may describe. */
+/** Artifact kinds a catalog entry may describe (`bundle` is a `.spkf`). */
 export const HUB_KINDS: string[] = [
   "nir_graph",
   "state_dict",
   "framework_weights",
+  "bundle",
 ];
 
 /** One availability-annotated catalog entry card. */
@@ -71,6 +73,17 @@ export interface HubDownloadState {
   bytes: number;
   total_bytes: number | null;
   verified: boolean;
+}
+
+/** Progress streamed while the `hub_pull` action runs (same shape). */
+export type HubPullState = HubDownloadState;
+
+/** Identity of a `.spkf` the `bundle_build` action just built. */
+export interface HubBundleBuiltPayload {
+  name: string;
+  path: string;
+  size_bytes: number;
+  sha256: string;
 }
 
 /** One node in an inspected artifact's structure. */
@@ -164,4 +177,6 @@ export type HubServerMsg =
   | { type: "hub_search"; payload: HubSearchPayload }
   | { type: "hub_download_state"; payload: HubDownloadState }
   | { type: "hub_inspect"; payload: HubInspectPayload }
-  | { type: "hub_import"; payload: HubImportPayload };
+  | { type: "hub_import"; payload: HubImportPayload }
+  | { type: "hub_pull_state"; payload: HubPullState }
+  | { type: "bundle_built"; payload: HubBundleBuiltPayload };

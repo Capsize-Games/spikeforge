@@ -28,7 +28,8 @@ PROTOCOL_ACTIONS = frozenset({
     "targets", "deployment_report", "deploy_run", "energy_report",
     "model_search", "model_diff",
     "hub_list", "hub_search", "hub_download", "hub_cancel",
-    "hub_inspect", "hub_import",
+    "hub_inspect", "hub_import", "hub_pull",
+    "bundle_build",
 }) | PIPELINE_ACTIONS
 
 
@@ -36,7 +37,7 @@ async def dispatch_protocol(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
     """Route a NIR, target, registry, hub, or pipeline action."""
-    if message.type.startswith("hub_"):
+    if message.type.startswith("hub_") or message.type == "bundle_build":
         await dispatch_hub(ws, session, message)
     elif message.type in ("nir_export", "nir_validate"):
         await dispatch_nir(ws, session, message)

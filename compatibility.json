@@ -1,5 +1,5 @@
 {
-  "protocol_version": "1.0",
+  "protocol_version": "1.1",
   "releases": [
     { "spikeforge": "0.3.0", "spikeforge-server": "0.1.0",
       "spikeforge-serve": "0.1.0", "spikeforge-clients": "0.1.0",

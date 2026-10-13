@@ -1,9 +1,10 @@
-"""Load, validate, and query the bundled curated model-hub catalog.
+"""Load, validate, and query the model-hub catalog.
 
-The catalog renders fully offline. Every entry is validated on load and any
-malformed record is reported through :func:`issues` rather than dropped, so a
-bad entry is visible in ``spikeforge-hub list`` output instead of
-vanishing. The additive ``available`` flag is computed from
+The catalog renders fully offline: the bundled curated entries plus the
+cached hosted community index, both validated on load. Any malformed
+record is reported through :func:`issues` rather than dropped, so a bad
+entry is visible in ``spikeforge-hub list`` output instead of vanishing.
+The additive ``available`` flag is computed from
 :mod:`spikeforge_hub.probe`, exactly as the dataset catalog gates event
 datasets on the ``events`` extra.
 """
@@ -82,22 +83,40 @@ def _ensure() -> None:
     _LOADED = True
 
 
+def _community() -> Tuple[List[HubEntry], List[str]]:
+    """Return the cached community namespace, reporting cache trouble.
+
+    The hosted index is read fresh on every call rather than pinned by
+    :func:`_ensure`, so a refresh is visible without restarting the
+    process. A corrupt cache is reported as an issue, never raised: an
+    unreadable community file must not take the curated catalog down.
+    """
+    from spikeforge_hub import community
+
+    try:
+        return community.load_cached()
+    except (HubCatalogError, OSError) as exc:
+        return [], [f"community index unavailable: {exc}"]
+
+
 def entries() -> List[HubEntry]:
-    """Return every validated catalog entry."""
+    """Return every validated catalog entry, curated and community."""
     _ensure()
-    return list(_ENTRIES)
+    found, _problems = _community()
+    return list(_ENTRIES) + found
 
 
 def issues() -> List[str]:
     """Return the validation problems found while loading the catalog."""
     _ensure()
-    return list(_ISSUES)
+    _found, problems = _community()
+    return list(_ISSUES) + problems
 
 
 def get(entry_id: str) -> Optional[HubEntry]:
     """Return the entry with ``entry_id``, or ``None`` when absent."""
     _ensure()
-    for entry in _ENTRIES:
+    for entry in list(_ENTRIES) + _community()[0]:
         if entry.id == entry_id:
             return entry
     return None

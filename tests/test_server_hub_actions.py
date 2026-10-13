@@ -25,6 +25,8 @@ _HUB_ACTIONS = {
     "hub_cancel",
     "hub_inspect",
     "hub_import",
+    "hub_pull",
+    "bundle_build",
 }
 
 

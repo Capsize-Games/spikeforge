@@ -36,7 +36,7 @@ export interface ProtocolContract {
  * Inbound (browser to server) envelope. Additive-by-default: unknown fields are ignored.
  */
 export interface ClientMessage {
-  protocol_version: "1.0";
+  protocol_version: "1.1";
   type:
     | "configure"
     | "run"
@@ -73,6 +73,8 @@ export interface ClientMessage {
     | "hub_cancel"
     | "hub_inspect"
     | "hub_import"
+    | "hub_pull"
+    | "bundle_build"
     | "list_pipelines"
     | "save_pipeline"
     | "load_pipeline"
@@ -314,7 +316,7 @@ export interface StreamMessage {
  * Outbound (server to browser) envelope. Additive-by-default: unknown fields are ignored.
  */
 export interface ServerMessage {
-  protocol_version: "1.0";
+  protocol_version: "1.1";
   type:
     | "status"
     | "image"
@@ -352,6 +354,8 @@ export interface ServerMessage {
     | "hub_download_state"
     | "hub_inspect"
     | "hub_import"
+    | "hub_pull_state"
+    | "bundle_built"
     | "pipeline_list"
     | "pipeline_saved"
     | "pipeline_loaded"
@@ -365,4 +369,4 @@ export interface ServerMessage {
 }
 
 /** The protocol version every outbound message must stamp. */
-export const PROTOCOL_VERSION = "1.0" as const;
+export const PROTOCOL_VERSION = "1.1" as const;

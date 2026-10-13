@@ -11,6 +11,16 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Added
+
+- **The model hub accepts community uploads.** Entries with `"source":
+  "community"` validate, with `@handle/slug` ids rendering alongside the
+  curated catalog; the hosted index (`GET /v1/index.json`, ETag-cached under
+  the hub cache dir) loads through the existing catalog validator, and
+  community downloads verify like direct-URL ones. New WebSocket pairs
+  `hub_pull`/`hub_pull_state` and `bundle_build`/`bundle_built` pull a
+  community version and build a saved model into a `.spkf` (protocol 1.1).
+
 ### Fixed
 
 - Dashboard deployments build the CPU image on the GitHub-hosted runner,
