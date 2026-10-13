@@ -114,8 +114,20 @@ jobs:
           fi
 
       - name: Check its work
+        env:
+          TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
         run: |
-          python -m pip install -e ".[dev]" || python -m pip install -e .
+          # Same install set as ci.yml's test job: CPU torch plus every local
+          # distribution editable. There is no root package, so `pip install
+          # -e .` can never work here.
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url "$TORCH_INDEX_URL"
+          pip install -e "./packages/spikeforge[dev,nir]" \
+            -e ./packages/spikeforge-targets \
+            -e ./packages/spikeforge-hub \
+            -e ./packages/spikeforge-serve \
+            -e ./packages/spikeforge-server \
+            -e ./packages/spikeforge-io
           python -m pytest -x -q
 
       - name: Open the pull request
