@@ -11,9 +11,10 @@ from typing import Any, Dict, List
 from fastapi import WebSocketDisconnect
 
 from server.app import VERSION_MISMATCH, _serve, _version_error
+from server.protocol_version import PROTOCOL_VERSION
 from server.session import Session
 
-_GOOD: Dict[str, Any] = {"protocol_version": "1.0", "type": "stats"}
+_GOOD: Dict[str, Any] = {"protocol_version": PROTOCOL_VERSION, "type": "stats"}
 _MINOR: Dict[str, Any] = {"protocol_version": "1.4", "type": "stats"}
 _MISSING: Dict[str, Any] = {"type": "stats"}
 _WRONG_MAJOR: Dict[str, Any] = {"protocol_version": "2.0", "type": "stats"}
@@ -31,7 +32,7 @@ def test_a_missing_version_is_a_mismatch() -> None:
     assert error is not None
     assert error["code"] == VERSION_MISMATCH
     assert error["client"] is None
-    assert error["server"] == "1.0"
+    assert error["server"] == PROTOCOL_VERSION
 
 
 def test_a_mismatched_major_is_a_mismatch() -> None:
@@ -81,6 +82,6 @@ def test_serve_rejects_a_missing_version_with_an_error_frame() -> None:
 
 
 def test_serve_accepts_a_current_version() -> None:
-    """A version-1.0 frame is queued, not rejected."""
+    """A current-version frame is queued, not rejected."""
     sent = _pump([dict(_GOOD)])
     assert sent == []

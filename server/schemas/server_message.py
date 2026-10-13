@@ -23,7 +23,8 @@ class ServerMessage(BaseModel):
         "target_list", "deployment_report", "backend_run",
         "energy_report", "animation_state",
         "hub_list", "hub_search", "hub_download_state",
-        "hub_inspect", "hub_import",
+        "hub_inspect", "hub_import", "hub_pull_state",
+        "bundle_built",
         "pipeline_list", "pipeline_saved", "pipeline_loaded",
         "pipeline_deleted", "pipeline_node_result", "pipeline_run_state",
     ]

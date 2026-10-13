@@ -9,7 +9,7 @@ absent, for example in a wheel that did not ship the contract directory.
 from pathlib import Path
 
 #: Used when the contract file is missing or empty.
-_DEFAULT = "1.0"
+_DEFAULT = "1.1"
 
 _VERSION_FILE = (
     Path(__file__).resolve().parent.parent
@@ -19,7 +19,7 @@ _VERSION_FILE = (
 
 
 def _read_version() -> str:
-    """Return the protocol version, falling back to ``1.0`` when absent."""
+    """Return the protocol version, falling back to ``1.1`` when absent."""
     try:
         value = _VERSION_FILE.read_text(encoding="utf-8").strip()
     except OSError:
@@ -27,7 +27,7 @@ def _read_version() -> str:
     return value or _DEFAULT
 
 
-#: The full protocol version string, for example ``"1.0"``.
+#: The full protocol version string, for example ``"1.1"``.
 PROTOCOL_VERSION: str = _read_version()
 
 #: The MAJOR component, compared during inbound negotiation.

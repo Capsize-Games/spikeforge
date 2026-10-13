@@ -43,6 +43,8 @@ def download_entry(entry: HubEntry, dest: str) -> Dict[str, Any]:
         return _report(entry, dest, _bundled_result())
     if entry.source == "hf_repo":
         return _download_repo(entry, dest)
+    if entry.source == "community":
+        return _download_community(entry, dest)
     return _download_url(entry, dest)
 
 
@@ -50,6 +52,17 @@ def _download_repo(entry: HubEntry, dest: str) -> Dict[str, Any]:
     """Download a Hugging Face snapshot and verify its summed size."""
     hf_api.download_repo(entry.hf_repo or "", dest)
     return _report(entry, dest, verify.verify_dir(dest, entry.size_bytes))
+
+
+def _download_community(entry: HubEntry, dest: str) -> Dict[str, Any]:
+    """Download a hosted community upload through its index URL.
+
+    The index resolves the entry to content-addressed bytes; from there
+    the fetch and the checksum/size verification are exactly a direct-URL
+    download. The trust question is answered by the entry's own label
+    (see ``CURATION.md``), not by this function.
+    """
+    return _download_url(entry, dest)
 
 
 def _download_url(entry: HubEntry, dest: str) -> Dict[str, Any]:

@@ -37,6 +37,16 @@ HUB_CACHE_DIR = (
     or os.path.join(DATA_DIR, "hub")
 )
 
+# Community hub API: the service whose GET /v1/index.json renders the
+# published community namespace in this project's own catalog schema.
+# Browsing and downloading need no account; publishing does. Override with
+# SPIKEFORGE_HUB_API (for example a staging host or a local checkout).
+HUB_API_BASE = (
+    os.environ.get("SPIKEFORGE_HUB_API")
+    or os.environ.get("SNN_HUB_API")
+    or "https://hub.spikeforge.net"
+)
+
 # Registry governance (PT-W7): the signable promotion registry that records
 # stage (dev/staging/prod), approver, and lineage for an artifact. Kept
 # separate from the model store and the hub cache so a promotion ledger is
