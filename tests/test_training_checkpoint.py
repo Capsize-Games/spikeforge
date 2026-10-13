@@ -23,6 +23,12 @@ def _engine(**kwargs: Any) -> TrainingEngine:
     return TrainingEngine(**defaults)
 
 
+def _output_width(engine: TrainingEngine) -> int:
+    """Return the out_features of the spec's last linear stage."""
+    linears = [s for s in engine.spec.stages if s.kind == "linear"]
+    return int(linears[-1].params["out_features"])
+
+
 def test_conv_checkpoint_rebuilds_topology() -> None:
     """A saved non-default topology is restored from its checkpoint meta."""
     torch.manual_seed(0)
@@ -61,3 +67,35 @@ def test_describe_surfaces_topology() -> None:
     engine.save("conv_listed")
     listed = {item["name"]: item for item in model_store.list_models()}
     assert listed["conv_listed"]["topology"] == "conv_net"
+
+
+def test_num_classes_override_wins_everywhere() -> None:
+    """An override agrees across engine, spec, net, meta, and restore."""
+    torch.manual_seed(0)
+    engine = _engine(hidden=8, topology_params={"num_classes": 4})
+    assert engine.num_classes == 4
+    assert _output_width(engine) == 4
+    assert engine.net.state_dict()["_fc2.weight"].shape == (4, 8)
+    metrics = engine._train_batch(
+        torch.rand(2, 1, 28, 28), torch.randint(0, 4, (2,))
+    )
+    assert metrics["loss"] > 0.0
+    engine.save("override_round_trip")
+    meta = model_store.load("override_round_trip")["meta"]
+    assert meta["num_classes"] == 4
+    restored = _engine(checkpoint="override_round_trip")
+    assert restored.num_classes == 4
+    assert _output_width(restored) == 4
+
+
+def test_restore_heals_stale_num_classes_meta() -> None:
+    """A pre-fix checkpoint restores the resolved width, not stale meta."""
+    torch.manual_seed(0)
+    engine = _engine(hidden=8, topology_params={"num_classes": 4})
+    engine.save("override_stale")
+    stale = model_store.load("override_stale")
+    stale["meta"]["num_classes"] = 10
+    model_store.save("override_stale", engine.net, stale["meta"])
+    restored = _engine(checkpoint="override_stale")
+    assert restored.num_classes == 4
+    assert _output_width(restored) == 4

@@ -49,6 +49,11 @@ that and describe the local source tree only.
   dataset's own figshare record (doi:10.6084/m9.figshare.4724671.v2) rather
   than asserted from secondary sources. MNIST stays unverified: its
   publisher page now serves an empty index with the data files gone.
+- A `topology_params` `num_classes` override now wins everywhere. The
+  resolved width is mirrored onto the engine, so `engine.num_classes`,
+  the checkpoint meta card, and the built network agree with each other.
+  Restoring a checkpoint adopts the stored resolved width, which also
+  heals pre-fix cards whose top-level value was stale.
 
 ### Changed
 
