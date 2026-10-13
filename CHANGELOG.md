@@ -98,6 +98,22 @@ that and describe the local source tree only.
   `spikeforge_hub/entry_checks.py`. Every resulting file is within the
   250-line limit; import paths and behavior are unchanged.
 
+## [spikeforge-v0.6.0] - 2026-10-13
+
+Community hub namespace and account CLI. `spikeforge-hub` 0.4.0 accepts
+`source: "community"` entries with `@handle/slug` ids, consumes the hosted
+`index.json` with ETag caching, and ships `login`/`whoami`/`push`/`pull`/
+`quota`; `spikeforge-server` 0.4.0 adds the `hub_pull`/`hub_pull_state` and
+`bundle_build`/`bundle_built` WebSocket pairs (protocol 1.1; negotiation is
+major-only so 1.0 clients keep working). Core 0.6.0 carries the hub API base
+setting, the `topology_params` num_classes override fix, and the client
+fork provenance record with a first `@capsizellc/commons` adoption.
+Serve, clients, targets, and io keep their versions and move their core
+pins to the same tested combination. CI automation (issue worker and PR
+review workflows, inert until their secrets are set) lands alongside.
+
+Changes: #45, #81, #82, #88, #89, #90.
+
 ## [spikeforge-v0.5.2] - 2026-10-13
 
 This patch records `spikeforge` 0.5.2 in the compatibility matrix; the
