@@ -109,6 +109,19 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
         ),
         source="github.com/facebookresearch/qmnist LICENSE (3-clause BSD)",
     ),
+    "cifar10_dvs": DatasetProvenance(
+        license="CC-BY-4.0",
+        attribution=(
+            "CIFAR10-DVS: Li, H., Liu, H., Ji, X., Li, G., and Shi, L. "
+            '"CIFAR10-DVS: An Event-Stream Dataset for Object '
+            'Classification", Frontiers in Neuroscience 11:309 (2017).'
+        ),
+        source=(
+            "figshare item 4724671 record "
+            "(doi:10.6084/m9.figshare.4724671.v2), licence CC BY 4.0, "
+            "read 2026-10-13"
+        ),
+    ),
     # --- this project's own synthetic data -------------------------------
     "sequence_toy": DatasetProvenance(
         license="BSD-3-Clause",
@@ -133,24 +146,12 @@ _PROVENANCE: Dict[str, DatasetProvenance] = {
         ),
         source=(
             "UNCHECKED: yann.lecun.com/exdb/mnist refused connection on "
-            "every attempt (2026-09-14, 2026-09-15). The original "
+            "every attempt (2026-09-14, 2026-09-15); on 2026-10-13 the "
+            "host served again but the directory is an empty index with "
+            "no licence text and the data files 404. The original "
             "distribution is widely reported to state no explicit licence "
             "and the cited CC-BY-SA-3.0 is secondary, so neither is "
-            "asserted here. Retry from another network."
-        ),
-    ),
-    "cifar10_dvs": DatasetProvenance(
-        license=UNVERIFIED,
-        attribution=(
-            "CIFAR10-DVS: Li, H., Liu, H., Ji, X., Li, G., and Shi, L. "
-            '"CIFAR10-DVS: An Event-Stream Dataset for Object '
-            'Classification", Frontiers in Neuroscience 11:309 (2017).'
-        ),
-        source=(
-            "UNCHECKED: figshare item 4724671 returned HTTP 403 and the "
-            "dataset's download endpoints answer HTTP 202 with no body; the "
-            "CC-BY-4.0 in circulation is secondary, so it is not asserted "
-            "here. Retry from another network."
+            "asserted here."
         ),
     ),
     "usps": DatasetProvenance(
