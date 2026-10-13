@@ -1,5 +1,11 @@
 # N-MNIST download URL returns 404 (dataset cannot be fetched)
 
+> Status 2026-10-13: not filed — both pinned URLs serve again
+> (`Train.zip`, 1011893601 bytes, and `Test.zip`, 169674850 bytes, each
+> verified with `Content-Disposition: attachment` and correct archive
+> magic). The 404s observed 2026-09-14 were transient. Kept as the
+> record of what was seen then.
+
 **Affects:** `tonic.datasets.NMNIST`
 **Confirmed on:** tonic 1.4.3 and 1.6.0
 **Severity:** dataset unobtainable through tonic

@@ -10,8 +10,8 @@ that produced it does not have to be reconstructed later.
 
 | Draft | Upstream | Status |
 |---|---|---|
-| [`tonic-hsd-float16-timestamps.md`](tonic-hsd-float16-timestamps.md) | [tonic](https://github.com/neuromorphs/tonic) | not filed |
-| [`tonic-nmnist-dead-download-url.md`](tonic-nmnist-dead-download-url.md) | [tonic](https://github.com/neuromorphs/tonic) | not filed |
+| [`tonic-hsd-float16-timestamps.md`](tonic-hsd-float16-timestamps.md) | [tonic](https://github.com/neuromorphs/tonic) | already reported as [tonic#321](https://github.com/neuromorphs/tonic/issues/321); draft evidence added there 2026-10-13 |
+| [`tonic-nmnist-dead-download-url.md`](tonic-nmnist-dead-download-url.md) | [tonic](https://github.com/neuromorphs/tonic) | not filed — re-checked 2026-10-13: both URLs serve again |
 
 Both were found while adding an audio reference checkpoint; the float16 one is
 the serious one — it silently destroys every timestamp in SHD and SSC, so a
