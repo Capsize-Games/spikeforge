@@ -6,8 +6,8 @@
 # The FastAPI server stack (fastapi/uvicorn/websockets/pydantic) is intentionally
 # absent: it is now the base dependency set of the `spikeforge-server`
 # distribution, so core stays headless.
-torch>=2.5
-torchvision>=0.20
+torch>=2.14.1
+torchvision>=0.29.1
 snntorch>=1.0
 matplotlib>=3.8
 Pillow>=10.0
