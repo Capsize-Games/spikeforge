@@ -40,11 +40,13 @@ class TopologyMixin:
         return params
 
     def _apply_effective(self) -> None:
-        """Mirror resolved hidden/beta back onto the engine accessors."""
+        """Mirror the resolved hidden/beta/num_classes onto the engine."""
         if "hidden" in self._architecture:
             self._hidden = int(self._architecture["hidden"])
         if "beta" in self._architecture:
             self._beta = float(self._architecture["beta"])
+        if "num_classes" in self._architecture:
+            self._num_classes = int(self._architecture["num_classes"])
 
     def _dummy_spikes(self) -> torch.Tensor:
         """Return a correctly-shaped zero spike train for CUDA warmup."""
