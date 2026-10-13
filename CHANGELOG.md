@@ -27,6 +27,14 @@ that and describe the local source tree only.
   inspect/compat/promote funnel, which now reads `.spkf` bundles exactly as
   it reads the checkpoints they were built from.
 
+### Changed
+
+- The dashboard client's pipeline input helper now uses `isPlainObject`
+  from `@capsizellc/commons` instead of its local object guard; behavior
+  is unchanged. The client-fork provenance and diff classification are
+  recorded in `plans/snn_interpreter_provenance.md` and
+  `plans/client_diff_classification.md`.
+
 ### Fixed
 
 - Dashboard deployments build the CPU image on the GitHub-hosted runner,
