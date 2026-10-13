@@ -4,9 +4,11 @@ Classifies every difference between the canonical client
 (`client/src` on `origin/main` at 20345e3) and the unversioned mirror
 (sibling `snn_interpreter/client/src`) for Capsize-Games/spikeforge#57.
 Basis: `diff -qr` over both trees plus inspection of the differing
-files. The manifests are byte-identical (`client/package.json`); of
-165 files under canonical `client/src`, 68 are identical and 58 differ,
-with 30 canonical-only entries and 2 mirror-only files.
+files. The manifests are byte-identical (`client/package.json`) at the
+compared revisions; the adopting pull request then adds one line to the
+canonical manifest (the `@capsizellc/commons` dependency). Of 165 files
+under canonical `client/src`, 68 are identical and 58 differ, with 30
+canonical-only entries and 2 mirror-only files.
 
 Classes: **upstreamable** (moves to a shared package), **product-specific**
 (stays in the canonical client), **generated** (regenerated, never

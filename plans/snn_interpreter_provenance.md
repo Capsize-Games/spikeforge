@@ -15,9 +15,12 @@ request.
   copy of an earlier tree, not a second maintained tree.
 - At the time of writing the two manifests are byte-identical
   (`client/package.json` on `origin/main` versus the mirror's copy), and
-  `client/src` shares 68 identical files. The remaining differences are
-  classified per file group in `plans/client_diff_classification.md`;
-  nothing in the mirror is silently dropped by that classification.
+  `client/src` shares 68 identical files. The adopting pull request adds
+  one line to the canonical manifest (the `@capsizellc/commons`
+  dependency); that is the only post-note divergence. The remaining
+  differences are classified per file group in
+  `plans/client_diff_classification.md`; nothing in the mirror is
+  silently dropped by that classification.
 
 ## Migration and rollback
 
