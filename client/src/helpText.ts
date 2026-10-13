@@ -211,6 +211,10 @@ export const TRAIN_HELP: Record<string, string> = {
     "Surrogate gradient used to backprop through spikes. Default uses " +
     "snnTorch's built-in Fast Sigmoid; the other names are snnTorch's " +
     "surrogate factories and affect training only, never inference.",
+  stage_neurons:
+    "Override the neuron model for one named stage of the selected " +
+    "topology, for example lif1 or lif2. Stage names come from the " +
+    "topology; leave a stage out to use the Neuron setting above for it.",
   resources:
     "Live CPU RAM and GPU VRAM for the machine running the server. CPU RAM " +
     "covers the whole host; VRAM is the GPU's memory. 'active' shows the " +

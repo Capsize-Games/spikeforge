@@ -15,13 +15,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge"
-version = "0.5.0"
+version = "0.5.1"
 description = "Spiking neural network toolkit: LIF training, NIR export with drift validation, neuromorphic deployment, energy estimates."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files: the distribution metadata points at the root documents while
 # setuptools' sandbox only reads files inside the project directory.
 readme = "README.md"
-requires-python = ">=3.10"
+# 3.10 support was dropped when the core adopted `capsize-commons`
+# (`requires-python >=3.11`) for §14 logging in hq#3/#52. The declared floor
+# must match what the declared dependencies actually support.
+requires-python = ">=3.11"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 authors = [
@@ -48,7 +51,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -56,6 +58,10 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    # Shared §14 JSON logging. Logging is part of the capsize-commons base
+    # install — 0.1.1 defines no separate "logging" extra — so the dependency
+    # carries no bracket.
+    "capsize-commons>=0.1.1",
     "torch>=2.5",
     "torchvision>=0.20",
     "snntorch>=1.0",
@@ -67,13 +73,14 @@ dependencies = [
 
 [project.optional-dependencies]
 all = [
-    "spikeforge-targets~=0.2.0",
-    "spikeforge-hub~=0.3.1",
+    "spikeforge-targets~=0.2.1",
+    "spikeforge-hub~=0.3.2",
 ]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.0.280",
+    "uv>=0.8",
     "jsonschema>=4",
     # stdlib ``tomllib`` only lands in 3.11; the packaging-profile tests read
     # the PEP 621 files, so 3.10 development and CI pull in the backport.

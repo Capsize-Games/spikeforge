@@ -1,0 +1,202 @@
+/*
+ * Read-out primitives: the small labelled facts a panel states about the
+ * session — a metric, a badge, a status line, a fact grid, the architecture
+ * strip, a telemetry note.
+ *
+ * They share one rule: a number is stated, aligned and quiet. None of them
+ * is a surface of its own, and none is decorated.
+ */
+
+/* --- Metric ----------------------------------------------------------- */
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metric-label {
+  font-size: var(--fs-helper);
+  color: var(--muted);
+}
+
+.metric-value {
+  font-size: var(--fs-metric);
+  font-weight: var(--fw-semibold);
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.metric.sm .metric-value {
+  font-size: var(--fs-major);
+}
+
+/* --- Badge ------------------------------------------------------------ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--fs-telemetry);
+  white-space: nowrap;
+}
+
+.badge.ok {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  color: var(--ok);
+}
+
+.badge.warn {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  color: var(--warn);
+}
+
+.badge.bad {
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+  color: var(--bad);
+}
+
+/* --- StatusIndicator -------------------------------------------------- */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-label);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.status-indicator.ok {
+  color: var(--ok);
+}
+
+.status-indicator.bad {
+  color: var(--bad);
+}
+
+/* --- Fact grid -------------------------------------------------------- */
+/* The properties of one thing, as a label above its value. A fact the
+   application does not hold is simply absent from the grid. */
+.fact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.fact dt {
+  font-size: var(--fs-helper);
+  color: var(--muted);
+}
+
+.fact dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-label);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- architecture strip ----------------------------------------------- */
+/* Input → Encoder → Hidden → Output, as the product actually configures it.
+   The arrow is a pseudo-element, so it is decoration rather than content. */
+.arch-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.arch-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.arch-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.arch-node + .arch-node::before {
+  content: "→";
+  position: absolute;
+  top: 50%;
+  left: -11px;
+  transform: translateY(-50%);
+  color: var(--line);
+  font-size: var(--fs-helper);
+  line-height: 1;
+}
+
+.arch-node-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-helper);
+  color: var(--muted);
+}
+
+.arch-node-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-ui);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.arch-node-unit {
+  font-size: var(--fs-helper);
+  color: var(--muted);
+}
+
+/* --- sample preview --------------------------------------------------- */
+/* The heatmap brings its own panel chrome for the viewer's stage; inside a
+   pane the canvas and its label are all that is wanted. */
+.sample-preview .panel {
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.sample-preview .panel-title {
+  min-height: 0;
+  margin-bottom: 6px;
+  font-size: var(--fs-helper);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* --- telemetry note --------------------------------------------------- */
+/* Uppercase microtype is for real telemetry; this one is a sentence, so it
+   stays sentence case and only its figures are tabular. */
+.capture-note {
+  font-size: var(--fs-helper);
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

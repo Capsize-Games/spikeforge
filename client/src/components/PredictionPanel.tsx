@@ -8,6 +8,7 @@ import type {
 import { HELP, TRAIN_HELP } from "../helpText";
 import { ClassSpikeBarsFromInference } from "./ClassSpikeBarsFromInference";
 import { HelpTip } from "./HelpTip";
+import { PanelHeader } from "./PanelHeader";
 import { confidenceSeries } from "./readoutMath";
 
 interface Props {
@@ -59,7 +60,7 @@ function PredictionReadout({
     inference.true_label === null ||
     inference.true_label === inference.predicted;
   return (
-    <div className="pred-row">
+    <div className="pred-row" data-testid="prediction-readout">
       <span
         className={`pred-mark ${correct ? "ok" : "bad"}`}
         title={correct ? "match" : "mismatch"}
@@ -70,7 +71,7 @@ function PredictionReadout({
         Input: <b>{inference.true_label ?? "—"}</b>
       </span>
       <span>
-        Prediction: <b>{inference.predicted}</b>
+        Prediction: <b data-testid="prediction-value">{inference.predicted}</b>
       </span>
       <span>
         Confidence: <b>{confidencePct.toFixed(1)}%</b>
@@ -117,22 +118,26 @@ export function PredictionPanel({
         <MismatchBanner compatibility={compatibility} />
       )}
 
-      <div className="panel displayed-sample">
-        <div className="panel-title row-title">
-          <span>Prediction (displayed sample)</span>
-          <span className="panel-actions">
-            <HelpTip text={HELP.inference} />
-            <label className="toggle" title="Auto-predict the displayed sample">
+      <div className="panel displayed-sample" data-testid="prediction-panel">
+        <PanelHeader
+          title="Prediction (displayed sample)"
+          hint={HELP.inference}
+          actions={
+            <label
+              className="toggle"
+              title="Auto-predict the displayed sample"
+            >
               <input
                 type="checkbox"
                 checked={autoPredict}
                 onChange={onToggleAutoPredict}
+                data-testid="auto-predict"
                 aria-label="Auto-predict the displayed sample"
               />
               <span className="toggle-track" aria-hidden="true" />
             </label>
-          </span>
-        </div>
+          }
+        />
         {autoPredict && inference ? (
           <>
             <PredictionReadout

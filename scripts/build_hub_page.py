@@ -46,10 +46,9 @@ TRAINED_SOURCE = "reference"
 _WORDMARK = '<span class="wordmark-spike">spike</span>forge'
 
 _HEAD = """
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;\
-600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/fonts/inter.css">
+<script data-goatcounter="https://stats.capsize.online/spikeforge/count"
+  async src="https://stats.capsize.online/count.js"></script>
 <link rel="stylesheet" href="../assets/capsize-landing.css">
 """
 
@@ -296,6 +295,7 @@ Browse locally with <code>pip install spikeforge-hub &amp;&amp;
 spikeforge-hub list</code>, or from the
 <a href="https://dash.spikeforge.net/">spikeforge</a>
 dashboard's Hub panel.
+<a href="/privacy/">Privacy policy</a>
 </footer>
 </body>
 </html>

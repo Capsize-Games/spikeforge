@@ -12,6 +12,7 @@
   .pipeline-panel {
     grid-template-columns: minmax(0, 1fr);
   }
+
   .pipeline-canvas {
     min-height: 320px;
   }
@@ -27,23 +28,23 @@
 .pipeline-canvas {
   min-width: 0;
   min-height: 400px;
-  border: 1px solid var(--border);
-  background: var(--panel-alt);
+  border-radius: var(--radius);
+  background: var(--surface-2);
 }
 
 /* React Flow's own theme vars, mapped onto the app's tokens so the canvas
    doesn't look like a foreign widget dropped into the dashboard. */
 .pipeline-canvas .react-flow {
-  --xy-background-color: var(--panel-alt);
-  --xy-node-background-color: var(--panel);
-  --xy-node-border-default: 1px solid var(--border);
+  --xy-background-color: var(--surface-2);
+  --xy-node-background-color: var(--surface-1);
+  --xy-node-border-default: 1px solid var(--line-soft);
   --xy-node-color-default: var(--text);
   --xy-edge-stroke-default: var(--muted);
   --xy-edge-stroke-selected-default: var(--accent);
-  --xy-minimap-background-color: var(--panel);
-  --xy-controls-button-background-color: var(--panel);
+  --xy-minimap-background-color: var(--surface-1);
+  --xy-controls-button-background-color: var(--surface-1);
   --xy-controls-button-color: var(--text);
-  --xy-controls-button-border-color: var(--border);
+  --xy-controls-button-border-color: var(--line-soft);
 }
 
 .pipeline-side {
@@ -57,13 +58,12 @@
 .pipeline-input {
   width: 100%;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   resize: vertical;
 }
 
 .pipeline-edge-inspector {
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
 }
 
 /* --- one node in the canvas --- */
@@ -71,10 +71,11 @@
 .pipeline-node {
   min-width: 150px;
   padding: 8px 12px;
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--surface-1);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-panel);
 }
 
 .pipeline-node.selected {
@@ -82,7 +83,7 @@
 }
 
 .pipeline-node-name {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   margin-bottom: 4px;
   word-break: break-word;
 }
@@ -91,7 +92,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--fs-micro);
   color: var(--muted);
 }
 
@@ -121,8 +122,14 @@
 }
 
 @keyframes pipeline-node-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -11,8 +11,31 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Fixed
+
+- Dashboard deployments build the CPU image on the GitHub-hosted runner,
+  transfer it over the pinned private connection, and verify the loaded
+  revision before starting it without builds or pulls on the shared host.
+- Documentation edge updates hold the shared Caddyfile lock while reading,
+  validating and reloading, preserving routes added by a concurrent deploy.
+- Target wheels and source distributions include all six energy cost tables,
+  so installed artifacts report the same declared estimates as a checkout.
+- Hub inspection resolves Hugging Face entries to their complete cached
+  snapshot directory, including nested files, instead of selecting the first
+  top-level file or rejecting a snapshot with only nested weights.
+- Unsigned weight quantization preserves constant and near-constant tensors
+  and their reported ranges instead of replacing nonzero layers with zeros.
+- Raw-sample inference now advances every encoded timestep before returning
+  its final prediction. `InferenceSession.step_sample()` and `run_samples()`
+  preserve batch shape and recurrent state for FC and spatial topologies;
+  their `steps` field counts encoded timesteps rather than raw samples.
+
 ### Changed
 
+- **The Hetzner docs deploy reloads its validated Caddyfile.** The shared
+  Caddyfile can be replaced while the running container still has its old
+  bind-mounted inode. The deploy now reloads the current host file from a
+  container-visible candidate and guards `docs.spikeforge.net` at the origin.
 - **The landing page no longer reads as a Capsize portfolio piece.** The hero
   carried an eyebrow link reading "CAPSIZE / NEURAL SYSTEMS" above the
   `spikeforge` wordmark — styled like an agency's project-credit tag, which
@@ -36,6 +59,22 @@ that and describe the local source tree only.
   plainly what spikeforge is and the four ways to use it; the Quickstart
   section now also links the desktop app as a no-Docker way to try the
   dashboard.
+
+## [spikeforge-v0.5.1] - 2026-10-10
+
+This patch combination records `spikeforge` 0.5.1, `spikeforge-targets` 0.2.1,
+`spikeforge-hub` 0.3.2, `spikeforge-server` 0.3.4, `spikeforge-serve` 0.2.4,
+and `spikeforge-io` 0.1.4 in the compatibility matrix. The core-free client
+remains at 0.1.1 and the WebSocket protocol remains at 1.0.
+
+- Raw-sample inference runs every encoded timestep, preserves batch and
+  recurrent state shapes, and reports timestep counts.
+- Unsigned weight quantization retains constant and near-constant layers.
+- Hub inspection resolves complete Hugging Face snapshot directories.
+- Target artifacts include all six energy cost tables.
+- Server, serve and I/O patch versions update their core dependency pins to
+  the same tested combination; core's `all` extra and the server's satellite
+  requirements select the updated targets, hub and serve distributions.
 
 ## [spikeforge-v0.5.0] - 2026-09-15
 

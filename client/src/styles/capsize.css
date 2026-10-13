@@ -1,13 +1,10 @@
-/* A quiet instrument surface: brand light stays away from plots and data. */
-:root:not([data-theme="light"]) .app-header {
-  background: linear-gradient(110deg,#030815,#11172e 65%,#061b2b);
-  border-bottom: 1px solid #426593;
-  box-shadow: 0 1px 16px #316bf426;
-}
-:root:not([data-theme="light"]) .app-header .brand {
-  letter-spacing: .025em;
-  color: #e2edff;
-}
+/*
+ * Dark-theme refinements to the studio surface: the focus ring.
+ *
+ * The illuminated header gradient and glow this file used to carry are gone.
+ * Accent light is reserved for selected / navigation / live-data / action
+ * states, never for chrome (see the tokens in base.css).
+ */
 :root:not([data-theme="light"]) button:focus-visible,
 :root:not([data-theme="light"]) select:focus-visible,
 :root:not([data-theme="light"]) input:focus-visible {

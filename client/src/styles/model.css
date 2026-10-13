@@ -1,36 +1,33 @@
 /* --- model manager --- */
+/* Inside the asset-browser pane the pane body already owns the padding, the
+   spacing and the surface, so the panel drops the card chrome it needs when
+   it is dropped into a tab on its own. */
+.pane-body .model-panel {
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
 .model-panel {
   display: flex;
   flex-direction: column;
   gap: 0;
   padding: 0;
-  border: 1px solid var(--border);
-  background: var(--panel-alt);
+  background: none;
+  overflow: visible;
 }
 
 .model-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background: var(--panel-head);
-  border-bottom: 1px solid var(--border);
-}
-
-.model-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
 }
 
 .model-current {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   color: var(--muted);
 }
 
@@ -40,8 +37,9 @@
   gap: 4px;
   max-width: 170px;
   padding: 2px 4px 2px 8px;
-  border: 1px solid var(--border);
-  font-size: 11px;
+  border-radius: var(--radius);
+  background: var(--surface-3);
+  font-size: var(--fs-micro);
   color: var(--muted);
 }
 
@@ -62,7 +60,7 @@
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--fs-telemetry);
   line-height: 1;
   cursor: pointer;
 }
@@ -78,7 +76,7 @@
 
 .model-chip.on {
   color: var(--ok);
-  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+  background: color-mix(in srgb, var(--ok) 14%, var(--surface-3));
 }
 
 .model-loading {
@@ -92,7 +90,7 @@
   display: inline-block;
   width: 10px;
   height: 10px;
-  border: 1.5px solid var(--border);
+  border: 1.5px solid var(--line);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -104,37 +102,39 @@
   }
 }
 
+/* The action tabs are a quiet segmented row: the selected one is a raised
+   surface, not an underline, so they add no line to the pane. */
 .tabs {
   display: flex;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border);
+  gap: 4px;
 }
 
 .tab {
   flex: 1;
-  padding: 7px 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
   background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
   color: var(--muted);
-  font-size: 12px;
+  font: inherit;
+  font-size: var(--fs-label);
   cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
 }
 
-.tab:hover {
+.tab:hover:not(.active) {
   color: var(--text);
 }
 
 .tab.active {
+  background: var(--surface-3);
   color: var(--text);
-  border-bottom-color: var(--accent);
+  font-weight: var(--fw-semibold);
 }
 
 .model-block {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 14px 12px;
 }
 
 .control-row {
@@ -146,15 +146,14 @@
 .control-row .text-input {
   flex: 1;
   min-width: 0;
-  height: 30px;
-  padding: 0 8px;
 }
 
+/* `.apply` is a full-width button in a column; in a row beside a picker it
+   takes its own width, or the two of them together overrun a narrow pane. */
 .control-row .apply.small {
   flex: 0 0 auto;
+  width: auto;
   margin-top: 0;
-  height: 30px;
-  padding: 0 14px;
 }
 
 /* An <a> styled as .apply needs what a <button> gets for free. */
@@ -171,32 +170,23 @@ a.apply.disabled {
   pointer-events: none;
 }
 
-/* --- compact loaded-model summary row --- */
-/* Sits under the tab strip, in the fixed header, so it stays visible on
-   every tab instead of only the one that happened to render it. */
-.loaded-model-bar {
-  margin-top: 10px;
-}
-
+/* --- loaded-checkpoint summary (network inspector) --- */
+/* The checkpoint's own record, as a fact grid: the pane body owns the
+   padding, so this only has to hold its name and its numbers apart. */
 .loaded-model {
-  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.loaded-model-row {
+.loaded-model-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
 }
 
 .loaded-model-name {
-  font-weight: 600;
+  font-size: var(--fs-pane);
+  font-weight: var(--fw-semibold);
   color: var(--text);
 }
-
-.loaded-model-sep {
-  color: var(--border);
-}
-

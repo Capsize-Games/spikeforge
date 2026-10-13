@@ -19,17 +19,15 @@ export function CheckField({
   return (
     <label className="field check">
       <span className="field-label">
-        <span>
-          <input
-            type="checkbox"
-            checked={checked}
-            disabled={disabled}
-            onChange={(e) => onChange(e.target.checked)}
-          />
-          {label}
-        </span>
-        <HelpTip text={help} />
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        {label}
       </span>
+      <HelpTip text={help} />
     </label>
   );
 }

@@ -1,0 +1,259 @@
+/*
+ * The Studio shell: the left navigation rail and the product / session
+ * context header. Both are pure composition — they change nothing about what
+ * each panel does or when it is mounted.
+ */
+
+/* --- left navigation rail --------------------------------------------- */
+
+/* The rail is told apart from the workspace by its surface step, not by a
+   rule down the window: a line here would be ink spent on a boundary the
+   two surfaces already draw. */
+.nav-rail {
+  display: flex;
+  flex-direction: column;
+  width: var(--rail-collapsed);
+  min-width: var(--rail-collapsed);
+  background: var(--surface-2);
+  overflow: hidden;
+  transition: width var(--t-fast);
+}
+
+.nav-rail.expanded {
+  width: var(--rail-expanded);
+  min-width: var(--rail-expanded);
+}
+
+/* The product mark sits above the navigation at the toolbar's own height, so
+   the first nav row starts level with the workspace rather than the toolbar. */
+.nav-rail-mark {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  color: var(--accent);
+}
+
+.nav-rail.expanded .nav-rail-mark {
+  justify-content: flex-start;
+  padding: 0 13px;
+}
+
+.nav-rail-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 7px;
+}
+
+/* One nav row: a 42px hit area holding an 18px icon and a label, with a
+   raised surface plus an accent strip when it is the active workspace.
+   Two groups — the workspaces that build a model, and the ones that fetch,
+   ship or chain one — separated by spacing alone, so the navigation adds no
+   line to the window. */
+.rail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: var(--nav-row-h);
+  padding: 0 11px;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-ui);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.rail-item.group-start {
+  margin-top: 10px;
+}
+
+.rail-item:hover {
+  background: var(--surface-1);
+  color: var(--text);
+}
+
+.rail-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.rail-item.active {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.rail-item.active::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.rail-item-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon);
+  height: var(--icon);
+}
+
+.rail-item-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsed: icon only, centred, with the native title as the tooltip. */
+.nav-rail:not(.expanded) .rail-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.nav-rail:not(.expanded) .rail-item-label {
+  display: none;
+}
+
+/* The shell's own settings, anchored at the bottom of the rail: the theme,
+   and the control that expands the labels. Stacked, because two 28px buttons
+   do not fit across a 54px rail. */
+.nav-rail-foot {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0 10px;
+}
+
+/* Marks a section whose background work (training, download) is running. */
+.shell-tab-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: shell-tab-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes shell-tab-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-tab-dot {
+    animation: none;
+  }
+}
+
+/* --- product + session context header --------------------------------- */
+
+/* One surface step above the workspace below it, and that is the seam. */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 52px;
+  padding: 0 18px;
+  background: var(--surface-2);
+}
+
+.topbar-product {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+/* The workspace title: the top rank of the type scale, and the only thing in
+   the toolbar at it. */
+.topbar-workspace {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-workspace);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.session-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.session-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-label);
+  color: var(--muted);
+}
+
+.session-chip-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.session-chip-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.topbar-utils {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+/* --- shared compact controls in the header ---------------------------- */
+
+.language-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+
+.language-select select {
+  height: var(--control-h-toolbar);
+  min-height: var(--control-h-toolbar);
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--surface-3);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-secondary);
+}

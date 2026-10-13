@@ -10,7 +10,15 @@ interface Props {
 
 const MODES: ExecutionMode[] = ["educational", "production"];
 
-/** Segmented execution-mode control; the selected mode lives in the hook. */
+/**
+ * Segmented execution-mode control; the selected mode lives in the hook.
+ *
+ * The selected option is a quiet state — a raised surface and a brighter
+ * label — not a saturated fill, because which mode is on is a fact about the
+ * session rather than an action being taken. What the mode *does* (whether
+ * training captures activity) is reported by the viewer, where the captured
+ * frames are.
+ */
 export function ModeToggle({ mode, onChange }: Props) {
   const { t } = useI18n();
   return (
@@ -39,9 +47,6 @@ export function ModeToggle({ mode, onChange }: Props) {
           );
         })}
       </div>
-      <span className="mode-note">
-        {mode === "educational" ? t("mode.captureOn") : t("mode.captureOff")}
-      </span>
     </div>
   );
 }

@@ -12,14 +12,15 @@
 .download-card {
   width: 320px;
   padding: 16px;
-  border: 1px solid var(--border);
-  background: var(--panel);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  box-shadow: var(--shadow);
 }
 
 .download-title {
   margin-bottom: 10px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-panel);
+  font-weight: var(--fw-semibold);
   color: var(--text);
 }
 
@@ -27,8 +28,8 @@
   position: relative;
   height: 6px;
   overflow: hidden;
-  background: var(--canvas-bg);
-  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-3);
 }
 
 .download-bar-fill {
@@ -56,6 +57,6 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   color: var(--muted);
 }

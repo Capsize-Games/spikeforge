@@ -1,20 +1,16 @@
 import { lazy, Suspense, useCallback, useRef } from "react";
 
 import { AnalysisPanels } from "./components/AnalysisPanels";
-import { Controls } from "./components/Controls";
+import { AppHeader } from "./components/AppHeader";
 import { DownloadProgress } from "./components/DownloadProgress";
 import { EnergyPanel } from "./components/EnergyPanel";
 import { HubPanel } from "./components/HubPanel";
-import { LoadedModelPanel } from "./components/LoadedModelPanel";
-import { ModelPanel } from "./components/ModelPanel";
-import { Section } from "./components/Stepper";
+import { ModelWorkspace } from "./components/ModelWorkspace";
+import { NavRail } from "./components/NavRail";
 import { StatusBar } from "./components/StatusBar";
-import { TabBar } from "./components/TabBar";
 import { TabPanel } from "./components/TabPanel";
 import { TargetsPanel } from "./components/TargetsPanel";
-import { TopBar } from "./components/TopBar";
 import { TourCard } from "./components/TourCard";
-import { TrainControls } from "./components/TrainControls";
 import { TrainingPanel } from "./components/TrainingPanel";
 import { ViewerPanels } from "./components/ViewerPanels";
 import { useEncodeConfig } from "./hooks/useEncodeConfig";
@@ -122,78 +118,53 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <TopBar
-          mode={training.state.config.mode}
-          onModeChange={(mode) => training.patch({ mode })}
-          lessons={LESSONS}
-          tourOpen={tour.menuOpen}
-          onToggleTours={tour.toggleMenu}
-          onOpenTour={tour.openLesson}
-        />
+      <NavRail
+        tabs={TABS}
+        active={tabs.active}
+        busy={busy}
+        onSelect={tabs.select}
+      />
 
-        <TabBar
-          tabs={TABS}
-          active={tabs.active}
-          busy={busy}
-          onSelect={tabs.select}
-        />
-
-        {training.state.loaded && (
-          <div className="loaded-model-bar">
-            <LoadedModelPanel loaded={training.state.loaded} />
-          </div>
-        )}
-      </header>
+      <AppHeader
+        mode={training.state.config.mode}
+        onModeChange={(mode) => training.patch({ mode })}
+        active={tabs.active}
+        loaded={training.state.loaded}
+        dataset={config.dataset}
+        tourOpen={tour.menuOpen}
+        onToggleTours={tour.toggleMenu}
+        onOpenTour={tour.openLesson}
+      />
 
       <main className="app-main">
         <TabPanel id="model" active={tabs.active}>
-          <div className="tab-cols tab-cols-model">
-            <div className="tab-col">
-              <ModelPanel
-                models={training.state.models}
-                current={training.state.loaded?.name ?? null}
-                connected={ws.connected}
-                busy={training.state.running}
-                loading={viewer.modelLoading}
-                readOnly={readOnly}
-                onNew={actions.newModel}
-                onLoad={actions.loadModel}
-                onSave={actions.saveModel}
-              />
-
-              <div className="panel">
-                <Section
-                  title={t("section.train")}
-                  hint={t("section.train.hint")}
-                >
-                  <TrainControls
-                    running={training.state.running}
-                    connected={ws.connected}
-                    readOnly={readOnly}
-                    onTrain={actions.train}
-                    onStop={actions.stopTrain}
-                  />
-                </Section>
-              </div>
-            </div>
-
-            <div className="tab-col">
-              <Controls
-                config={config}
-                model={training.state.config}
-                datasets={training.state.datasets}
-                gpuAvailable={viewer.gpuAvailable}
-                topologies={training.state.topologies}
-                neurons={training.state.neurons}
-                surrogates={training.state.surrogates}
-                locked={viewer.locked}
-                onChange={patchConfig}
-                onModelChange={training.patch}
-                onSelectSample={actions.selectSample}
-              />
-            </div>
-          </div>
+          <ModelWorkspace
+            config={config}
+            model={training.state.config}
+            datasets={training.state.datasets}
+            models={training.state.models}
+            currentModel={training.state.loaded?.name ?? null}
+            loaded={training.state.loaded}
+            sample={viewer.state.sample}
+            eventFrame={viewer.state.eventFrame}
+            topologies={training.state.topologies}
+            neurons={training.state.neurons}
+            surrogates={training.state.surrogates}
+            gpuAvailable={viewer.gpuAvailable}
+            connected={ws.connected}
+            busy={training.state.running}
+            loading={viewer.modelLoading}
+            readOnly={readOnly}
+            locked={viewer.locked}
+            onPatchConfig={patchConfig}
+            onModelChange={training.patch}
+            onSelectSample={actions.selectSample}
+            onNew={actions.newModel}
+            onLoad={actions.loadModel}
+            onSave={actions.saveModel}
+            onTrain={actions.train}
+            onStopTrain={actions.stopTrain}
+          />
         </TabPanel>
 
         <TabPanel id="viewer" active={tabs.active}>
@@ -236,7 +207,7 @@ export default function App() {
         </TabPanel>
 
         <TabPanel id="training" active={tabs.active}>
-          <div className="tab-cols">
+          <div className="tab-cols tab-cols-training">
             <div className="tab-col">
               <TrainingPanel
                 loss={training.state.loss}
@@ -268,13 +239,13 @@ export default function App() {
         </TabPanel>
 
         <TabPanel id="hub" active={tabs.active}>
-          <div className="tab-col narrow">
+          <div className="tab-col hub-col">
             <HubPanel hub={hub} />
           </div>
         </TabPanel>
 
         <TabPanel id="deploy" active={tabs.active}>
-          <div className="tab-cols">
+          <div className="tab-cols tab-cols-deploy">
             <div className="tab-col">
               <TargetsPanel
                 list={viewer.state.targetList}

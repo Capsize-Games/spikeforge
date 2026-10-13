@@ -5,103 +5,190 @@ on:
     branches: [main]
     paths:
       - "client/**"
+      - "server/app.py"
       - "server/**"
       - "spikeforge/**"
       - "packages/**"
       - "Dockerfile"
+      - ".dockerignore"
       - "docker-compose.hetzner.yml"
       - "deploy/docs.Caddyfile"
       - "deploy/configure-docs.sh"
+      - "scripts/*dashboard*"
       - ".github/workflows/deploy-hetzner.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# One deploy at a time; a newer merge waits instead of racing the rsync.
+concurrency:
+  group: deploy-dashboard
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      HETZNER_HOST: 10.77.220.1
+      HETZNER_USER: ${{ secrets.HETZNER_USER }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install rsync
-        run: sudo apt-get update && sudo apt-get install -y rsync
+      - name: Require current main before building
+        run: bash scripts/check-dashboard-source.sh
+
+      - name: Build the immutable CPU dashboard image on this runner
+        id: build
+        run: bash scripts/build-dashboard-image.sh
+
+      - name: Connect to the private deployment network
+        env:
+          WIREGUARD_CONFIG: ${{ secrets.HETZNER_WIREGUARD_CONFIG }}
+        run: |
+          set -euo pipefail
+          test -n "$WIREGUARD_CONFIG"
+          sudo apt-get update
+          sudo apt-get install -y rsync wireguard-tools
+          umask 077
+          printf '%s\n' "$WIREGUARD_CONFIG" > "$RUNNER_TEMP/wg-hq.conf"
+          sudo wg-quick up "$RUNNER_TEMP/wg-hq.conf"
+          for attempt in $(seq 1 12); do
+            if ping -c 1 -W 2 "$HETZNER_HOST"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Private deployment connection did not become ready' >&2
+          exit 1
 
       - name: Sync source to Hetzner
         env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
-          HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          HETZNER_SSH_KEY: ${{ secrets.HETZNER_PRIVATE_SSH_KEY }}
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh
+          bash scripts/check-dashboard-source.sh
+          install -d -m 700 ~/.ssh
+          umask 077
           printf '%s\n' "$HETZNER_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$HETZNER_HOST" >> ~/.ssh/known_hosts
+          cat deploy/hetzner_known_hosts >> ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
             'mkdir -p /opt/spikeforge'
           rsync -rl --delete \
             --exclude='.git' \
             --exclude='.env' \
             --exclude='venv' \
+            --exclude='.venv' \
             --exclude='client/node_modules' \
             --exclude='client/dist' \
             --exclude='**/__pycache__' \
             --exclude='*.egg-info' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ConnectTimeout=15" \
             ./ "$HETZNER_USER@$HETZNER_HOST:/opt/spikeforge/"
+
+      - name: Check image capacity and transfer the prebuilt image
+        run: |
+          set -euo pipefail
+          bash scripts/check-dashboard-source.sh
+          image="spikeforge-dashboard:$GITHUB_SHA"
+          size="$(docker image inspect --format '{{.Size}}' "$image")"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 "$HETZNER_USER@$HETZNER_HOST" \
+            "python3 /opt/spikeforge/scripts/check-dashboard-capacity.py '$size'"
+          docker image save "$image" | \
+            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              -o ConnectTimeout=15 "$HETZNER_USER@$HETZNER_HOST" \
+              'docker image load'
 
       - name: Write production environment
         env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
-          HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          HETZNER_SSH_KEY: ${{ secrets.HETZNER_PRIVATE_SSH_KEY }}
           ENV_CONTENT: ${{ secrets.SPIKEFORGE_ENV_FILE }}
         run: |
           set -euo pipefail
           printf '%s' "$ENV_CONTENT" | ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes "$HETZNER_USER@$HETZNER_HOST" \
-            'cat > /opt/spikeforge/.env && chmod 600 /opt/spikeforge/.env'
+            -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            "python3 /opt/spikeforge/scripts/write-dashboard-env.py /opt/spikeforge/.env '$GITHUB_SHA'"
+
+      - name: Require dashboard access token
+        env:
+          DASHBOARD_TOKEN: ${{ secrets.SPIKEFORGE_DASHBOARD_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$DASHBOARD_TOKEN"
+          printf '%s' "$DASHBOARD_TOKEN" | ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "$HETZNER_USER@$HETZNER_HOST" \
+            'python3 -c '\''import pathlib,sys; p=pathlib.Path("/opt/spikeforge/.env"); key="SPIKEFORGE_DASHBOARD_TOKEN"; value=sys.stdin.read(); lines=[line for line in p.read_text().splitlines() if not line.startswith(key+"=")]; lines.append(key+"="+value); p.write_text("\n".join(lines)+"\n"); p.chmod(0o600)'\'''
 
       - name: Report disk capacity without deleting other services' images
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
             'df -h /'
 
-      - name: Build and restart dashboard
+      - name: Start and verify the preloaded dashboard revision
         env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+          BUILDER_CONFIG_DIGEST: ${{ steps.build.outputs.config_digest }}
         run: |
+          set -euo pipefail
+          bash scripts/check-dashboard-source.sh
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
-            'cd /opt/spikeforge && docker compose -p spikeforge --env-file .env -f docker-compose.hetzner.yml up -d --build --remove-orphans'
+            "bash /opt/spikeforge/scripts/start-dashboard-image.sh '$GITHUB_SHA' '$BUILDER_CONFIG_DIGEST'"
 
       - name: Configure the documentation hostname
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
             'bash /opt/spikeforge/deploy/configure-docs.sh'
 
-      - name: Verify dashboard health
+      - name: Verify the dashboard is healthy and live
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            "$HETZNER_USER@$HETZNER_HOST" '
+              for i in $(seq 1 30); do
+                s=$(docker inspect --format "{{.State.Health.Status}}" \
+                  spikeforge-dashboard)
+                [ "$s" = healthy ] && exit 0
+                sleep 5
+              done
+              docker logs --tail 50 spikeforge-dashboard
+              exit 1'
+          for i in $(seq 1 12); do
+            body=$(curl -fsS --max-time 10 \
+              https://dash.spikeforge.net/health || true)
+            case "$body" in *'"status":"ok"'*)
+              echo "dash.spikeforge.net/health -> $body"; exit 0;;
+            esac
+            sleep 5
+          done
+          echo "dash.spikeforge.net is not serving: $body" >&2
+          exit 1
+
+      - name: Show compose status
         if: always()
-        env:
-          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
-          HETZNER_USER: ${{ secrets.HETZNER_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
-            'docker compose -p spikeforge --env-file /opt/spikeforge/.env -f /opt/spikeforge/docker-compose.hetzner.yml ps; docker inspect --format "{{.State.Health.Status}}" spikeforge-dashboard'
+            'docker compose -p spikeforge --env-file /opt/spikeforge/.env -f /opt/spikeforge/docker-compose.hetzner.yml ps'
 
-      - name: Clean up SSH key
+      - name: Clean up deployment credentials and connection
         if: always()
-        run: rm -f ~/.ssh/deploy_key
+        run: |
+          if sudo wg show wg-hq >/dev/null 2>&1; then
+            sudo wg-quick down "$RUNNER_TEMP/wg-hq.conf"
+          fi
+          rm -f ~/.ssh/deploy_key "$RUNNER_TEMP/wg-hq.conf"

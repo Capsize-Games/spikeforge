@@ -3,74 +3,72 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
-}
-
-/* The mode group takes the free space, so the theme button no longer does. */
-.topbar .theme-toggle {
-  margin-left: 0;
 }
 
 .mode-label {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--fs-secondary);
   color: var(--muted);
 }
 
+/* A recessed track with a raised selected option. The selected mode is a
+   quiet state — surface and label, never a saturated fill — because which
+   mode is on is a fact about the session, not an action being taken. */
 .mode-options {
   display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius);
+  background: var(--surface-1);
 }
 
 .mode-option {
-  padding: 4px 10px;
+  height: calc(var(--control-h-toolbar) - 4px);
+  padding: 0 11px;
   border: none;
-  background: var(--bg);
+  border-radius: 2px;
+  background: none;
   color: var(--muted);
-  font-size: 12px;
+  font: inherit;
+  font-size: var(--fs-label);
   cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
 }
 
-.mode-option:hover {
+.mode-option:hover:not(.active) {
   color: var(--text);
 }
 
 .mode-option.active {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.mode-note {
-  font-size: 11px;
-  font-style: italic;
-  color: var(--muted);
+  background: var(--surface-3);
+  color: var(--text);
+  font-weight: var(--fw-semibold);
 }
 
 /* --- architecture note in the Model section --- */
 .arch-note {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-micro);
   font-style: italic;
   line-height: 1.4;
   color: var(--muted);
 }
 
 /* --- dataset modality note (encoder-neutral for event datasets) --- */
+/* The tint carries the note; a second edge down its side would be one more
+   line in a pane that is trying to stay quiet. */
 .modality-note {
   margin: 0 0 8px;
   padding: 6px 8px;
-  border-left: 2px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--fs-helper);
   line-height: 1.4;
 }
 
 .modality-note.warn {
-  border-left-color: var(--warn);
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
 }

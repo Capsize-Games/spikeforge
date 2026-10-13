@@ -11,7 +11,7 @@
   gap: 2px;
   height: 64px;
   padding: 0 1px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .histogram-bar {
@@ -25,7 +25,7 @@
   justify-content: space-between;
   gap: 6px;
   margin-top: 3px;
-  font-size: 10px;
+  font-size: var(--fs-telemetry);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -45,22 +45,21 @@
 .readout-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: var(--fs-telemetry);
   font-variant-numeric: tabular-nums;
 }
 
 .readout-table th {
   text-align: left;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--muted);
-  padding: 3px 4px;
-  border-bottom: 1px solid var(--border);
+  padding: 4px;
+  border-bottom: 1px solid var(--line-soft);
   white-space: nowrap;
 }
 
 .readout-table td {
-  padding: 3px 4px;
-  border-bottom: 1px solid var(--border);
+  padding: 4px;
   color: var(--text);
   white-space: nowrap;
 }
@@ -75,7 +74,11 @@
   text-overflow: ellipsis;
 }
 
-/* --- benchmark header button sits inline with the help tip --- */
-.benchmark-panel .panel-title {
-  margin-bottom: 6px;
+/* The analysis stack tiles into as many columns as fit, so the Training tab
+   uses its width instead of stacking four short panels down one column. */
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  align-content: start;
 }

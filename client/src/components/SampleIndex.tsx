@@ -1,4 +1,7 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+import { IconButton } from "./IconButton";
 
 interface Props {
   value: number;
@@ -34,16 +37,12 @@ export function SampleIndex({ value, onChange }: Props) {
 
   return (
     <span className="sample-index" data-tour="sample-index">
-      <button
-        type="button"
-        className="icon-btn"
+      <IconButton
+        icon={ChevronLeft}
+        label="Previous sample"
         onClick={() => onChange(Math.max(0, value - 1))}
         disabled={value <= 0}
-        aria-label="Previous sample"
-        title="Previous sample"
-      >
-        ◀
-      </button>
+      />
       <input
         className="text-input index-input"
         type="number"
@@ -52,15 +51,11 @@ export function SampleIndex({ value, onChange }: Props) {
         onChange={(e) => onInput(e.target.value)}
         aria-label="Sample index"
       />
-      <button
-        type="button"
-        className="icon-btn"
+      <IconButton
+        icon={ChevronRight}
+        label="Next sample"
         onClick={() => onChange(value + 1)}
-        aria-label="Next sample"
-        title="Next sample"
-      >
-        ▶
-      </button>
+      />
     </span>
   );
 }

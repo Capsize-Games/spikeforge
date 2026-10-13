@@ -48,6 +48,7 @@ export function HubPanel({ hub }: Props) {
             type="button"
             className="icon-btn"
             onClick={() => hub.refresh()}
+            data-testid="hub-refresh"
             title={t("hub.refresh")}
             aria-label={t("hub.refresh")}
           >
@@ -61,10 +62,15 @@ export function HubPanel({ hub }: Props) {
           className="hub-search-input"
           value={query}
           placeholder={t("hub.searchPlaceholder")}
+          data-testid="hub-search-input"
           aria-label={t("hub.search")}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <button type="button" onClick={() => hub.runSearch(query)}>
+        <button
+          type="button"
+          data-testid="hub-search"
+          onClick={() => hub.runSearch(query)}
+        >
           {t("hub.search")}
         </button>
         <select
@@ -112,7 +118,7 @@ export function HubPanel({ hub }: Props) {
       {entries.length === 0 ? (
         <div className="panel-note">{t("hub.empty")}</div>
       ) : (
-        <ul className="hub-list">
+        <ul className="hub-list" data-testid="hub-list">
           {entries.map((entry) => (
             <HubEntryCard
               key={entry.id}

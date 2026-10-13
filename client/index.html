@@ -3,14 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2B31L3PSWD"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-2B31L3PSWD');
+      // Analytics belongs to the public website, never the local desktop app.
+      if (location.hostname === "dash.spikeforge.net") {
+        var counter = document.createElement("script");
+        counter.async = true;
+        counter.dataset.goatcounter =
+          "https://stats.capsize.online/spikeforge/count";
+        counter.src = "https://stats.capsize.online/count.js";
+        document.head.appendChild(counter);
+      }
     </script>
     <title>Spikeforge Dashboard — Explore Spiking Neural Networks</title>
     <meta name="description" content="Explore spiking neural networks in the Spikeforge browser dashboard with live model introspection and visualization.">
