@@ -87,6 +87,11 @@ that and describe the local source tree only.
   plainly what spikeforge is and the four ways to use it; the Quickstart
   section now also links the desktop app as a no-Docker way to try the
   dashboard.
+- **The hub entry module is split along its seams.** `spikeforge_hub/entry.py`
+  (411 lines) now holds the `HubEntry` dataclass and re-exports, with the
+  schema constants in `spikeforge_hub/entry_schema.py` and the validators in
+  `spikeforge_hub/entry_checks.py`. Every resulting file is within the
+  250-line limit; import paths and behavior are unchanged.
 
 ## [spikeforge-v0.5.2] - 2026-10-13
 
