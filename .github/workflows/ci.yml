@@ -14,6 +14,12 @@ env:
   # CPU wheels keep CI light; mirrors the Dockerfile TORCH_INDEX_URL flow.
   TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
 
+# Dependency caches are off on these runners. actions/setup-python and
+# actions/setup-node resolve their cache globs against the checkout, and the
+# self-hosted runner's `_work` is a symlink onto another drive, so the action
+# cannot follow the dependency files and fails the job before any step runs
+# ("No file ... matched to [**/pyproject.toml]", "Some specified paths were
+# not resolved"). The desktop workflow carries the same note for its pip cache.
 jobs:
   changes:
     # Classify a pull request so a leaf-module edit runs a fast, deterministic
