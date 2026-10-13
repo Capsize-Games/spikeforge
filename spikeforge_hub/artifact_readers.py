@@ -12,6 +12,7 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 import torch
 
 from spikeforge_hub.artifact_report import (
+    BUNDLE_SUFFIXES,
     FRAMEWORK_WEIGHTS,
     NIR_GRAPH,
     NIR_SUFFIXES,
@@ -59,11 +60,66 @@ def _key_records(state: Mapping[str, Any]) -> Tuple[Dict[str, Any], ...]:
 
 
 def read_state_dict(path: str) -> Dict[str, Any]:
-    """Return the tensor mapping stored in the torch artifact at ``path``."""
+    """Return the tensor mapping stored in the artifact at ``path``."""
+    if os.path.splitext(path)[1].lower() in BUNDLE_SUFFIXES:
+        return read_bundle_state_dict(path)
     state = _state_dict(_load_torch(path))
     if state is None:
         raise HubArtifactError(path, "torch object carries no state dict")
     return dict(state)
+
+
+def _load_bundle(path: str) -> Any:
+    """Load and integrity-check the ``.spkf`` bundle at ``path``."""
+    from spikeforge.serving.bundle import DeploymentBundle
+
+    try:
+        return DeploymentBundle.load(path)
+    except Exception as exc:  # integrity errors must not escape untagged
+        raise HubArtifactError(path, f"unreadable bundle: {exc}") from exc
+
+
+def read_bundle_state_dict(path: str) -> Dict[str, Any]:
+    """Return the float tensor mapping stored in the bundle at ``path``."""
+    try:
+        return dict(_load_bundle(path).resolved_weights())
+    except HubArtifactError:
+        raise
+    except Exception as exc:  # undecodable payloads must not escape untagged
+        raise HubArtifactError(
+            path, f"bundle weights do not decode: {exc}"
+        ) from exc
+
+
+def _bundle_classes(manifest: Any) -> Optional[int]:
+    """Return the class count the bundle manifest declares, if any.
+
+    Only the manifest card is consulted, never the tensor shapes, for the
+    same reason :func:`_declared_classes` never reads shapes back: a count
+    derived from the weights could never disagree with them.
+    """
+    if not isinstance(manifest, Mapping):
+        return None
+    declared = manifest.get("num_classes")
+    if isinstance(declared, bool) or not isinstance(declared, int):
+        return None
+    return declared if declared > 0 else None
+
+
+def inspect_bundle(path: str) -> ArtifactReport:
+    """Describe a ``.spkf`` bundle by its manifest and weight shapes."""
+    bundle = _load_bundle(path)
+    try:
+        weights = bundle.resolved_weights()
+    except Exception as exc:  # undecodable payloads must not escape untagged
+        raise HubArtifactError(
+            path, f"bundle weights do not decode: {exc}"
+        ) from exc
+    note = "spkf bundle, integrity-checked against its manifest"
+    return ArtifactReport(
+        STATE_DICT, path, (), _key_records(weights), (), (note,),
+        _bundle_classes(bundle.manifest),
+    )
 
 
 def _read_graph(path: str) -> Any:
@@ -172,4 +228,6 @@ def inspect_file(path: str) -> ArtifactReport:
         return inspect_torch(path)
     if suffix in WEIGHT_SUFFIXES:
         return inspect_weights(path)
+    if suffix in BUNDLE_SUFFIXES:
+        return inspect_bundle(path)
     raise HubArtifactError(path, f"unrecognized artifact extension {suffix!r}")
