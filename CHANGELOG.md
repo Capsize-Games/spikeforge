@@ -39,6 +39,10 @@ that and describe the local source tree only.
   its final prediction. `InferenceSession.step_sample()` and `run_samples()`
   preserve batch shape and recurrent state for FC and spatial topologies;
   their `steps` field counts encoded timesteps rather than raw samples.
+- CIFAR10-DVS's upstream licence is verified as CC-BY-4.0, read from the
+  dataset's own figshare record (doi:10.6084/m9.figshare.4724671.v2) rather
+  than asserted from secondary sources. MNIST stays unverified: its
+  publisher page now serves an empty index with the data files gone.
 
 ### Changed
 
