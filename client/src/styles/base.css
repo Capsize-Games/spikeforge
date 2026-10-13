@@ -284,3 +284,9 @@ body {
   color: var(--muted);
   font-size: var(--fs-ui);
 }
+
+.app-footer .privacy-link {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}

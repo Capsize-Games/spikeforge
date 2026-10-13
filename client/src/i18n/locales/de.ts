@@ -65,6 +65,7 @@ export const DE: TranslationSet = {
   "device.auto": "Auto (das schnellere wählen)",
   "device.unavailable": "GPU (nicht verfügbar)",
   "status.connected": "verbunden",
+  "footer.privacy": "Datenschutzerklärung",
   "status.disconnected": "getrennt",
   "status.unauthorized":
     "nicht autorisiert — Zugriffstoken fehlt oder ist ungültig",

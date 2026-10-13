@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *.egg-info/
 venv/
+.venv/
+.env
+.env.*
 build/
 .pytest_cache/
 .ruff_cache/

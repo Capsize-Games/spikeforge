@@ -77,6 +77,7 @@ export const EN = {
   "device.auto": "Auto (pick the faster)",
   "device.unavailable": "GPU (unavailable)",
   "status.connected": "connected",
+  "footer.privacy": "Privacy policy",
   "status.disconnected": "disconnected",
   "status.unauthorized": "unauthorized — missing or invalid access token",
   "training.title": "Training",

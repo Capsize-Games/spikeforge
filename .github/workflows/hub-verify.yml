@@ -13,9 +13,8 @@ name: Hub artifact verification (sandbox)
 #
 # This job runs `torch.load` on bytes a stranger uploaded. It MUST stay
 # on a GitHub-hosted, ephemeral runner. It must NEVER run on the
-# self-hosted `spikeforge-ci` runner that `deploy-hetzner.yml` uses --
-# that runner holds the Hetzner deploy key, and running untrusted-content
-# code on a persistent self-hosted runner is named in the plan (§7.2) as
+# persistent workstation runner -- any such runner could hold deployment
+# credentials, and running untrusted-content code on it is named in the plan (§7.2) as
 # the single most predictable way this whole design could be
 # compromised. This is deliberately the first workflow in this repository
 # that does not use `spikeforge-ci`.
@@ -42,7 +41,7 @@ env:
 jobs:
   verify:
     # GitHub-hosted only -- see the header comment. Do not add
-    # `spikeforge-ci` or any other self-hosted label to this job.
+    # any self-hosted label to this job.
     runs-on: ubuntu-latest
     # A wall-clock ceiling independent of any one step's own timeout, per
     # plans/hub_accounts_plan.md §7.2 ("a wall-clock timeout").

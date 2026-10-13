@@ -98,8 +98,8 @@ spikeforge/
     cli.py                   save / list / compare CLI (spikeforge-benchmark)
     __main__.py              python -m spikeforge.benchmark
   observability/             Opt-in structured logging + metrics
-    logging_setup.py         configure_logging / reset_logging (reversible)
-    json_formatter.py        JsonFormatter: one JSON object per log line
+    logging_setup.py         configure_logging / reset_logging (reversible);
+                             JSON shape via capsize_commons.logging.JsonFormatter
     registry.py              MetricsRegistry: counters/gauges/timers
     timer.py                 Context-manager timer recording into a registry
     metrics.py               Shared registry + snapshot/JSON helpers

@@ -18,7 +18,7 @@ jobs:
     # job start and cannot see another step's outputs in the same job,
     # only a prior job's via `needs.*.outputs`.
     name: Parse ${{ github.ref_name }}
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     outputs:
       distribution: ${{ steps.parse.outputs.distribution }}
       version: ${{ steps.parse.outputs.version }}
@@ -44,7 +44,7 @@ jobs:
   release:
     name: Publish ${{ github.ref_name }}
     needs: parse
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    runs-on: ubuntu-latest
     # Named after the distribution (e.g. "spikeforge-hub") so it matches
     # that PyPI project's trusted-publisher "Environment name" -- required
     # because every distribution shares this same repo + workflow file,

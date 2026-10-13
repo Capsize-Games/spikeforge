@@ -1,6 +1,9 @@
 
 # Managed by the Spikeforge deployment workflow.
 docs.spikeforge.net {
+	import cf_origin_only
 	encode zstd gzip
-	redir https://github.com/Capsize-Games/spikeforge/wiki{uri} 308
+	handle {
+		redir https://github.com/Capsize-Games/spikeforge/wiki{uri} 308
+	}
 }

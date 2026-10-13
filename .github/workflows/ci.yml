@@ -21,9 +21,48 @@ env:
 # ("No file ... matched to [**/pyproject.toml]", "Some specified paths were
 # not resolved"). The desktop workflow carries the same note for its pip cache.
 jobs:
+  changes:
+    # Classify a pull request so a leaf-module edit runs a fast, deterministic
+    # check set instead of the full matrix (hq#14). It runs on a GitHub-hosted
+    # runner so classification never depends on workstation state; a `push` to
+    # main always takes the full path.
+    runs-on: ubuntu-latest
+    outputs:
+      leaf: ${{ steps.classify.outputs.leaf }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: classify
+        name: Classify the changed paths
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          set -eu
+          leaf=false
+          if [ "$EVENT" = "pull_request" ] && [ -n "${BASE:-}" ]; then
+            git fetch --no-tags origin "$BASE"
+            changed="$(git diff --name-only "origin/$BASE...HEAD")"
+            echo "changed files:"
+            echo "$changed"
+            if [ -n "$changed" ]; then
+              leaf=true
+              while IFS= read -r path; do
+                case "$path" in
+                  spikeforge/observability/*|tests/test_observability_*.py) ;;
+                  *) leaf=false; break ;;
+                esac
+              done <<< "$changed"
+            fi
+          fi
+          echo "leaf=$leaf" >> "$GITHUB_OUTPUT"
   lint:
     # Static checks are interpreter-version agnostic; run them once.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -50,11 +89,14 @@ jobs:
 
   test:
     # The full suite across every supported interpreter (python_requires).
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    needs: changes
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ${{ fromJSON(needs.changes.outputs.leaf == 'true' && '["3.12"]' || '["3.11", "3.12", "3.13"]') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -86,7 +128,9 @@ jobs:
     # SDK-backed cell must report `available: false` with a named reason — that
     # is honest reporting, not a build failure. The job asserts the command
     # exits 0 *and* that the JSON carries one cell per registered target.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    needs: changes
+    if: needs.changes.outputs.leaf != 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -137,7 +181,9 @@ jobs:
     # The `hub` core extra is gone: the hub now ships as the `spikeforge-hub`
     # distribution (`spikeforge_hub` import root) and this job proves it installs from
     # source and its offline catalog/CLI work.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    needs: changes
+    if: needs.changes.outputs.leaf != 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -173,7 +219,9 @@ jobs:
     # install-only here (the suite asserts the SDK-gated backends are
     # *absent*), and `docs` builds the site. `hub` is gone too: it is the
     # `spikeforge-hub` distribution, exercised by the `hub` job above.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    needs: changes
+    if: needs.changes.outputs.leaf != 'true'
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -235,7 +283,9 @@ jobs:
     # *core* degrades without the server stack, not that the server runs while
     # its own base deps are blocked. The 18 server-dependent test files are
     # enumerated with `--ignore` below; everything else runs under the blocker.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    needs: changes
+    if: needs.changes.outputs.leaf != 'true'
+    runs-on: ubuntu-latest
     env:
       PYTHONPATH: ${{ github.workspace }}/scripts/blocked_deps
     steps:
@@ -303,7 +353,9 @@ jobs:
     # A broken documentation link must fail the pull request, not just a local
     # `build_docs.sh --check`. This gate covers the MkDocs tree in `docs/`;
     # the `published-surfaces` job below covers what readers actually land on.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    needs: changes
+    if: needs.changes.outputs.leaf != 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -329,7 +381,9 @@ jobs:
     #
     # Deliberately torch-free: readme_renderer plus the stdlib is the whole
     # dependency set, so this stays one of the fastest jobs in the matrix.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -353,7 +407,9 @@ jobs:
     # in capsize-games/spikeforge-dashboard (its own CI runs `npm run build`). Core keeps
     # only the protocol-codegen guard so a schema change without regenerated
     # types is still caught here.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    needs: changes
+    if: needs.changes.outputs.leaf != 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -379,7 +435,9 @@ jobs:
     # The static half of the core boundary: no module-level import of a
     # forbidden root, and no function-local import outside the lazy shims.
     # Pure stdlib, so no dependencies are installed.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -394,7 +452,9 @@ jobs:
     # The artifact half of the core boundary: a core wheel built with NO extras
     # must install, import, and pull in none of the thirteen forbidden
     # distributions, and must not contain `server/`.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    needs: changes
+    if: needs.changes.outputs.leaf != 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -456,7 +516,9 @@ jobs:
   packaging-guards:
     # The three lightweight topology guards: disjoint import roots (PEP 420),
     # console-script ownership, and satellite pins == compatibility.json.
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -485,3 +547,36 @@ jobs:
             --targets-wheel packages/spikeforge-targets/dist/spikeforge_targets-*.whl \
             --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl \
             --io-wheel packages/spikeforge-io/dist/spikeforge_io-*.whl
+
+  leaf:
+    # The fast lane. The leaf paths above cannot reach torch, the server stack
+    # or the satellite distributions, so this covers the touched module without
+    # the matrix. Deliberately torch-free: the package is imported from source
+    # via PYTHONPATH, so no ML wheel is installed.
+    needs: changes
+    if: needs.changes.outputs.leaf == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the leaf toolchain (no torch)
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov ruff mypy "capsize-commons>=0.1.1"
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Type-check the core package
+        run: mypy spikeforge/
+
+      - name: Leaf tests
+        run: PYTHONPATH=. pytest tests/test_observability_logging.py
+
+      - name: The logging surface must import without the ML stack
+        run: |
+          python -c "import sys; import spikeforge.observability.logging_setup as m; assert 'torch' not in sys.modules; print('torch-free OK:', m.LOGGER_NAME)"

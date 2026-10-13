@@ -65,6 +65,7 @@ export const KO: TranslationSet = {
   "device.auto": "자동 (더 빠른 장치)",
   "device.unavailable": "GPU (사용 불가)",
   "status.connected": "연결됨",
+  "footer.privacy": "개인정보 처리방침",
   "status.disconnected": "연결 끊김",
   "status.unauthorized": "인증되지 않음 — 액세스 토큰이 없거나 잘못됨",
   "training.title": "학습",
