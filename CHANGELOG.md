@@ -64,6 +64,21 @@ that and describe the local source tree only.
   section now also links the desktop app as a no-Docker way to try the
   dashboard.
 
+## [spikeforge-v0.5.2] - 2026-10-13
+
+This patch records `spikeforge` 0.5.2 in the compatibility matrix; the
+satellites keep their versions and move their core pins to the same tested
+combination. The core wheel carries no code changes since 0.5.1 — this
+release covers the day's repository changes:
+
+- Upstream dataset notes: the tonic HSD float16-timestamp report and the
+  N-MNIST download-URL re-verification, plus CIFAR10-DVS's CC-BY-4.0
+  verification from its own figshare record.
+- The dashboard ships without the CI queue via
+  `scripts/deploy_dashboard_local.sh`, and the Hetzner deploy stops
+  syncing generated `build/` output.
+- The client lockfile takes the `source-map-js` 1.2.2 security update.
+
 ## [spikeforge-v0.5.1] - 2026-10-10
 
 This patch combination records `spikeforge` 0.5.1, `spikeforge-targets` 0.2.1,
