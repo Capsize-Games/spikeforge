@@ -35,7 +35,7 @@ jobs:
       HETZNER_USER: ${{ secrets.HETZNER_USER }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Require current main before building
         run: bash scripts/check-dashboard-source.sh

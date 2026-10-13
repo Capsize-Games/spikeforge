@@ -30,7 +30,7 @@ jobs:
     outputs:
       leaf: ${{ steps.classify.outputs.leaf }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -64,7 +64,7 @@ jobs:
     # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # No `cache: pip` anywhere in this file. This fleet's runners keep
       # `_work` on another drive behind a symlink, and setup-python's
@@ -73,7 +73,7 @@ jobs:
       # while all seven of them sit in `packages/`. A self-hosted runner also
       # keeps `~/.cache/pip` between jobs on its own, so the action's cache
       # was buying nothing here even when it worked.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -105,9 +105,9 @@ jobs:
       matrix:
         python-version: ${{ fromJSON(needs.changes.outputs.leaf == 'true' && '["3.12"]' || '["3.11", "3.12", "3.13"]') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -139,9 +139,9 @@ jobs:
     if: needs.changes.outputs.leaf != 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -192,9 +192,9 @@ jobs:
     if: needs.changes.outputs.leaf != 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -234,9 +234,9 @@ jobs:
       matrix:
         extra: ["events", "onnx", "norse", "tracking", "docs"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -296,9 +296,9 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}/scripts/blocked_deps
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -365,9 +365,9 @@ jobs:
     if: needs.changes.outputs.leaf != 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -393,9 +393,9 @@ jobs:
     # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -419,9 +419,9 @@ jobs:
     if: needs.changes.outputs.leaf != 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
 
@@ -447,9 +447,9 @@ jobs:
     # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -464,9 +464,9 @@ jobs:
     if: needs.changes.outputs.leaf != 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -528,9 +528,9 @@ jobs:
     # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -565,9 +565,9 @@ jobs:
     if: needs.changes.outputs.leaf == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
