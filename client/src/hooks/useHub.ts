@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
 import type {
+  HubBundleBuiltPayload,
   HubDownloadState,
   HubImportPayload,
   HubInspectPayload,
   HubListPayload,
+  HubPullState,
   HubQueryInput,
   HubSearchPayload,
 } from "../hubTypes";
@@ -26,6 +28,8 @@ export function useHub({ ws, connected }: Options) {
   const [download, setDownload] = useState<HubDownloadState | null>(null);
   const [inspect, setInspect] = useState<HubInspectPayload | null>(null);
   const [imported, setImported] = useState<HubImportPayload | null>(null);
+  const [pull, setPull] = useState<HubPullState | null>(null);
+  const [built, setBuilt] = useState<HubBundleBuiltPayload | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
   /** Fold one server message into the hub state; other types pass through. */
@@ -45,6 +49,12 @@ export function useHub({ ws, connected }: Options) {
         break;
       case "hub_import":
         setImported(msg.payload);
+        break;
+      case "hub_pull_state":
+        setPull(msg.payload);
+        break;
+      case "bundle_built":
+        setBuilt(msg.payload);
         break;
       default:
         break;
@@ -108,6 +118,26 @@ export function useHub({ ws, connected }: Options) {
     [sendHub],
   );
 
+  const pullEntry = useCallback(
+    (id: string) => {
+      select(id);
+      setPull({
+        id,
+        status: "downloading",
+        bytes: 0,
+        total_bytes: null,
+        verified: false,
+      });
+      sendHub("hub_pull", {}, id);
+    },
+    [select, sendHub],
+  );
+
+  const buildBundle = useCallback(
+    (name: string) => sendHub("bundle_build", {}, name),
+    [sendHub],
+  );
+
   useEffect(() => {
     if (!connected) return;
     sendHub("hub_list", {});
@@ -119,6 +149,8 @@ export function useHub({ ws, connected }: Options) {
     download,
     inspect,
     imported,
+    pull,
+    built,
     selected,
     onMessage,
     refresh,
@@ -128,5 +160,7 @@ export function useHub({ ws, connected }: Options) {
     cancelDownload,
     inspectEntry,
     importEntry,
+    pullEntry,
+    buildBundle,
   };
 }

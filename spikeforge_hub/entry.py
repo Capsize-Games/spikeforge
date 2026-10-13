@@ -14,6 +14,10 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 from spikeforge_hub.errors import HubCatalogError
 
 #: Frameworks the curated catalog may declare.
+#:
+#: ``spikeforge`` is the community index's framework: a hosted entry is a
+#: ``.spkf`` bundle built from a saved model of this project's own
+#: topologies, so it belongs to no third-party framework.
 FRAMEWORKS: Tuple[str, ...] = (
     "snntorch",
     "nir",
@@ -21,9 +25,18 @@ FRAMEWORKS: Tuple[str, ...] = (
     "norse",
     "lava",
     "hf",
+    "spikeforge",
 )
 #: Artifact kinds an entry may describe.
-KINDS: Tuple[str, ...] = ("nir_graph", "state_dict", "framework_weights")
+#:
+#: ``bundle`` is a portable ``.spkf`` archive: manifest, weights, and frozen
+#: encode config in one file. Only community entries use it.
+KINDS: Tuple[str, ...] = (
+    "nir_graph",
+    "state_dict",
+    "framework_weights",
+    "bundle",
+)
 #: Where an entry's artifact comes from.
 #:
 #: ``bundled`` renders a shipped topology preset to a NIR graph -- structure
@@ -32,7 +45,15 @@ KINDS: Tuple[str, ...] = ("nir_graph", "state_dict", "framework_weights")
 #: inside the distribution and named by :attr:`HubEntry.weights`. The
 #: distinction matters because a catalog of untrained shapes and a catalog of
 #: trained models are different products, and the entry has to say which it is.
-SOURCES: Tuple[str, ...] = ("bundled", "reference", "url", "hf_repo")
+#: ``community`` is a hosted upload, served by the hub API's index and never
+#: hand-added to the shipped catalog; see ``CURATION.md``.
+SOURCES: Tuple[str, ...] = (
+    "bundled",
+    "reference",
+    "url",
+    "hf_repo",
+    "community",
+)
 
 #: Directory inside this package holding the shipped reference checkpoints.
 WEIGHTS_DIR = "weights"
@@ -102,7 +123,12 @@ _FIELDS: Tuple[str, ...] = _REQUIRED + (
 )
 #: A packaged weights filename: one path segment, no directory traversal.
 _WEIGHTS_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.pt$")
-_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
+#: A catalog id. Curated ids look like ``reference/mnist-fc``; a community
+#: id is ``@handle/slug``, and the leading ``@`` is what keeps the two
+#: unambiguous in a list, a URL, and a command-line argument. The hub API
+#: reserves every curated prefix as a handle, so this repo renders both
+#: shapes without re-validating the split.
+_ID = re.compile(r"^@?[A-Za-z0-9][A-Za-z0-9._/-]*$")
 
 
 @dataclass(frozen=True)
@@ -187,7 +213,7 @@ def _check_id(data: Mapping[str, Any]) -> None:
     entry_id = str(data.get("id", ""))
     if not _ID.match(entry_id):
         raise HubCatalogError(
-            _label(data), "id must match [A-Za-z0-9][A-Za-z0-9._/-]*"
+            _label(data), "id must match @?[A-Za-z0-9][A-Za-z0-9._/-]*"
         )
     if ".." in entry_id:
         raise HubCatalogError(_label(data), "id must not contain '..'")
@@ -264,8 +290,10 @@ def _check_dataset_license(data: Mapping[str, Any]) -> None:
 def _check_source(data: Mapping[str, Any]) -> None:
     """Reject a source whose required locator field is missing."""
     source = data.get("source")
-    if source == "url" and not _text(data.get("url")):
-        raise HubCatalogError(_label(data), "source 'url' needs a 'url'")
+    if source in ("url", "community") and not _text(data.get("url")):
+        raise HubCatalogError(
+            _label(data), f"source {source!r} needs a 'url'"
+        )
     if source == "hf_repo" and not _text(data.get("hf_repo")):
         raise HubCatalogError(
             _label(data), "source 'hf_repo' needs an 'hf_repo'"

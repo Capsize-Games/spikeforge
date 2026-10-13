@@ -105,6 +105,38 @@ somewhere else. To add one **you must verify the source first**:
    source publishes no checksum, it is honest to omit it — the download then
    reports as `unverified`, never as verified.
 
+## Community entries are hosted, never curated
+
+A community entry (`"source": "community"`) is an upload somebody else
+published to the hub API. It is **never** hand-added to `models.json` and
+never ships in the wheel: it arrives over the network, as one record in
+the hosted index (`GET /v1/index.json`), and is validated by the same
+[`catalog.load_catalog()`](catalog.py:42) as everything else. A record that
+fails validation is reported through `catalog.issues()`, not dropped.
+
+Community ids live at `@handle/slug`, and the leading `@` is what keeps
+them unambiguous next to curated ids (`reference/...`, `nir/...`). Every
+curated prefix is a reserved handle on the service side, so no account can
+publish something that reads like a curated entry; this repo renders both
+id shapes without re-validating the split.
+
+Trust vocabulary, deliberately modest — these are the only labels a
+community entry may carry, stated in its own `notes`:
+
+- `machine-checked` — the bundle's checksums matched, it loaded with
+  weights-only deserialisation, it produced a NIR graph, the drift check
+  passed, and an energy report was generated. It does **not** mean the
+  accuracy claim was reproduced, the licence was read by a human, or the
+  model is any good.
+- `unchecked` — stored and checksummed on arrival, and nothing more.
+
+There is no `verified` label: the hosting service cannot earn that word,
+and interface copy must not imply otherwise. The curated catalog's value
+is that every claim in it has been checked; a community upload is, by
+definition, claims nobody here has checked. See the
+[hub API's trust documentation](https://github.com/capsize-games/spikeforge-hub-api#trust-labels)
+for the service side of this vocabulary.
+
 ## Unverified candidates must not be presented as ready
 
 If a candidate is known-but-not-yet-verified, it may be recorded **only** with

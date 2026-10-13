@@ -37,6 +37,24 @@ async def send_hub_download_state(
     })
 
 
+async def send_hub_pull_state(
+    ws: WebSocket, session: Session, state: Dict[str, Any]
+) -> None:
+    """Send a community-pull progress snapshot to the client."""
+    await send_locked(ws, session, {
+        "type": "hub_pull_state", "payload": state,
+    })
+
+
+async def send_bundle_built(
+    ws: WebSocket, session: Session, payload: Dict[str, Any]
+) -> None:
+    """Send a built ``.spkf`` bundle's identity to the client."""
+    await send_locked(ws, session, {
+        "type": "bundle_built", "payload": payload,
+    })
+
+
 async def send_hub_inspect(
     ws: WebSocket, session: Session, payload: Dict[str, Any]
 ) -> None:

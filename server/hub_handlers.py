@@ -11,15 +11,23 @@ surface a message rather than a traceback or a silent partial load.
 
 from fastapi import WebSocket
 
-from server.hub_downloads import ensure_hub_download, manager
+from server.hub_downloads import (
+    ensure_hub_download,
+    ensure_hub_pull,
+    manager,
+    pull_manager,
+)
 from server.hub_messages import (
+    send_bundle_built,
     send_hub_download_state,
     send_hub_import,
     send_hub_inspect,
     send_hub_list,
+    send_hub_pull_state,
     send_hub_search,
 )
 from server.hub_payloads import (
+    bundle_payload,
     import_payload,
     inspect_payload,
     list_payload,
@@ -70,9 +78,13 @@ async def handle_hub_download(
 async def handle_hub_cancel(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
-    """Terminate the in-flight download and report the terminal state."""
+    """Terminate the in-flight download or pull and report its state."""
+    pull_active = pull_manager.snapshot()["status"] == "downloading"
     manager.cancel()
+    pull_manager.cancel()
     await send_hub_download_state(ws, session, manager.snapshot())
+    if pull_active:
+        await send_hub_pull_state(ws, session, pull_manager.snapshot())
 
 
 async def handle_hub_inspect(
@@ -99,10 +111,40 @@ async def handle_hub_import(
     await send_hub_import(ws, session, payload)
 
 
+async def handle_hub_pull(
+    ws: WebSocket, session: Session, message: ClientMessage
+) -> None:
+    """Pull a community entry, streaming progress until it resolves."""
+    entry_id = message.name or ""
+    if not entry_id:
+        await _error(ws, session, "hub_pull requires a model name")
+        return
+    try:
+        await ensure_hub_pull(ws, session, entry_id)
+    except HubError as error:
+        await _error(ws, session, str(error))
+
+
+async def handle_bundle_build(
+    ws: WebSocket, session: Session, message: ClientMessage
+) -> None:
+    """Build a saved model into a ``.spkf`` and report its identity."""
+    name = message.name or ""
+    if not name:
+        await _error(ws, session, "bundle_build requires a model name")
+        return
+    try:
+        payload = bundle_payload(name)
+    except HubError as error:
+        await _error(ws, session, str(error))
+        return
+    await send_bundle_built(ws, session, payload)
+
+
 async def dispatch_hub(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
-    """Route the hub list/search/download/cancel/inspect/import actions."""
+    """Route the hub and bundle-build actions."""
     if message.type == "hub_list":
         await handle_hub_list(ws, session, message)
     elif message.type == "hub_search":
@@ -111,6 +153,10 @@ async def dispatch_hub(
         await handle_hub_download(ws, session, message)
     elif message.type == "hub_cancel":
         await handle_hub_cancel(ws, session, message)
+    elif message.type == "hub_pull":
+        await handle_hub_pull(ws, session, message)
+    elif message.type == "bundle_build":
+        await handle_bundle_build(ws, session, message)
     elif message.type == "hub_inspect":
         await handle_hub_inspect(ws, session, message)
     else:
