@@ -98,6 +98,8 @@ nav:
       - Ecosystem listings: ecosystem_listings.md
   - Architecture:
       - Repo topology and split: repo_topology_plan.md
+      - Client fork provenance: snn_interpreter_provenance.md
+      - Client diff classification: client_diff_classification.md
       - ARCH-0001 phased repo split:
           - "ADR repository topology": arch-0001-adr-repo-topology.md
           - Target topology: arch-0001-target-topology.md
