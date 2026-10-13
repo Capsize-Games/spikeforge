@@ -13,6 +13,11 @@ that and describe the local source tree only.
 
 ### Fixed
 
+- Dashboard deployments build the CPU image on the GitHub-hosted runner,
+  transfer it over the pinned private connection, and verify the loaded
+  revision before starting it without builds or pulls on the shared host.
+- Documentation edge updates hold the shared Caddyfile lock while reading,
+  validating and reloading, preserving routes added by a concurrent deploy.
 - Target wheels and source distributions include all six energy cost tables,
   so installed artifacts report the same declared estimates as a checkout.
 - Hub inspection resolves Hugging Face entries to their complete cached
@@ -54,6 +59,22 @@ that and describe the local source tree only.
   plainly what spikeforge is and the four ways to use it; the Quickstart
   section now also links the desktop app as a no-Docker way to try the
   dashboard.
+
+## [spikeforge-v0.5.1] - 2026-10-10
+
+This patch combination records `spikeforge` 0.5.1, `spikeforge-targets` 0.2.1,
+`spikeforge-hub` 0.3.2, `spikeforge-server` 0.3.4, `spikeforge-serve` 0.2.4,
+and `spikeforge-io` 0.1.4 in the compatibility matrix. The core-free client
+remains at 0.1.1 and the WebSocket protocol remains at 1.0.
+
+- Raw-sample inference runs every encoded timestep, preserves batch and
+  recurrent state shapes, and reports timestep counts.
+- Unsigned weight quantization retains constant and near-constant layers.
+- Hub inspection resolves complete Hugging Face snapshot directories.
+- Target artifacts include all six energy cost tables.
+- Server, serve and I/O patch versions update their core dependency pins to
+  the same tested combination; core's `all` extra and the server's satellite
+  requirements select the updated targets, hub and serve distributions.
 
 ## [spikeforge-v0.5.0] - 2026-09-15
 

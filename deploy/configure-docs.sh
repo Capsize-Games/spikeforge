@@ -5,6 +5,10 @@ caddy_container=$(docker ps --filter label=com.docker.compose.service=caddy --fo
 test -n "$caddy_container"
 config_path=$(docker inspect "$caddy_container" --format '{{range .Mounts}}{{if eq .Destination "/etc/caddy/Caddyfile"}}{{.Source}}{{end}}{{end}}')
 test -f "$config_path"
+# Share the edge writers' lock before reading a candidate, and hold it
+# through reload so a waiting deployment cannot publish an older snapshot.
+exec 9>"$(dirname "$config_path")/Caddyfile.lock"
+flock -x 9
 candidate=$(mktemp /tmp/spikeforge-docs-caddy.XXXXXX)
 trap 'rm -f "$candidate"' EXIT
 if ! grep -q 'docs.spikeforge.net' "$config_path"; then
