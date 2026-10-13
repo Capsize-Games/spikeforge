@@ -1,5 +1,9 @@
 # SHD and SSC: every timestamp becomes INT64_MIN under NumPy 2 (all timing lost, silently)
 
+> Upstream: [neuromorphs/tonic#321](https://github.com/neuromorphs/tonic/issues/321)
+> ("SHD dataset float16 overflow", already open). Not filed separately; the
+> reproduction evidence from this draft was posted there on 2026-10-13.
+
 **Affects:** `tonic.datasets.SHD`, `tonic.datasets.SSC` (both via `HSD`)
 **Confirmed on:** tonic 1.4.3 with NumPy 2.5.2 / Python 3.13 / Linux, against
 the real SSC and SHD files. `hsd.py` carries the same conversion verbatim in

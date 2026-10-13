@@ -20,6 +20,7 @@ from spikeforge_hub.errors import HubCatalogError
 
 #: Licences read from the publisher's own page while writing this table.
 _VERIFIED = {
+    "cifar10_dvs": "CC-BY-4.0",
     "fashion": "MIT",
     "kmnist": "CC-BY-SA-4.0",
     "n_mnist": "CC-BY-SA-4.0",
@@ -52,9 +53,8 @@ def test_verified_licences_are_recorded_concretely(
 
 
 def test_unconfirmed_licences_carry_the_marker_not_a_guess() -> None:
-    """MNIST and CIFAR10-DVS could not be confirmed, and say so."""
-    for name in ("mnist", "cifar10_dvs"):
-        assert dataset_provenance(name).license == UNVERIFIED
+    """MNIST could not be confirmed, and says so."""
+    assert dataset_provenance("mnist").license == UNVERIFIED
 
 
 def test_every_dataset_carries_a_credit_and_an_audit_trail() -> None:
