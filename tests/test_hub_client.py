@@ -153,6 +153,29 @@ def test_refusal_surfaces_the_server_detail(
     assert "this token was revoked" in str(caught.value)
 
 
+def test_refusal_prefers_lowercase_rfc9457_detail(
+    sandbox: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The hub API's lowercase `detail` wins over the short `title`."""
+
+    def refuse(request: Any) -> Any:
+        body = json.dumps({
+            "title": "unauthorized",
+            "status": 401,
+            "detail": "this token was revoked",
+        }).encode("utf-8")
+        raise urllib.error.HTTPError(
+            "https://hub.test/v1/me", 401, "Unauthorized", {},
+            io.BytesIO(body),
+        )
+
+    _serve(monkeypatch, refuse)
+    with pytest.raises(HubApiError) as caught:
+        HubClient(base="https://hub.test", token="pat").me()
+    assert caught.value.status == 401
+    assert "this token was revoked" in str(caught.value)
+
+
 def test_unreachable_server_names_the_url(
     sandbox: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
