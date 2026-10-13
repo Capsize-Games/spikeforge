@@ -20,6 +20,12 @@ that and describe the local source tree only.
   community downloads verify like direct-URL ones. New WebSocket pairs
   `hub_pull`/`hub_pull_state` and `bundle_build`/`bundle_built` pull a
   community version and build a saved model into a `.spkf` (protocol 1.1).
+- **`spikeforge-hub` manages community accounts and transfers.**
+  `login`/`whoami`/`quota` handle the hub token and account position, `push`
+  builds a saved model and publishes it through the two-phase upload, and
+  `pull` downloads a community id (optionally pinned) through the existing
+  inspect/compat/promote funnel, which now reads `.spkf` bundles exactly as
+  it reads the checkpoints they were built from.
 
 ### Fixed
 
