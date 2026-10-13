@@ -22,15 +22,12 @@
  * repeat itself once per step.
  */
 
+import { isPlainObject } from "@capsizellc/commons/object";
+
 import type { SavedModel } from "../types";
 
 /** Input geometry assumed when a checkpoint recorded none (MNIST-shaped). */
 const DEFAULT_GEOMETRY: readonly [number, number] = [28, 28];
-
-/** Metadata a checkpoint may record about the input it expects. */
-interface GeometrySource {
-  input_size?: unknown;
-}
 
 /** Return `value` as a positive integer, or `fallback` when it is not one. */
 function positiveInt(value: unknown, fallback: number): number {
@@ -42,8 +39,8 @@ function positiveInt(value: unknown, fallback: number): number {
 
 /** Read `input_size` off a metadata block that may be absent or malformed. */
 function geometryFrom(block: unknown): readonly [number, number] | null {
-  if (typeof block !== "object" || block === null) return null;
-  const value = (block as GeometrySource).input_size;
+  if (!isPlainObject(block)) return null;
+  const value = block.input_size;
   if (!Array.isArray(value) || value.length !== 2) return null;
   const [height, width] = value;
   if (typeof height !== "number" || typeof width !== "number") return null;
