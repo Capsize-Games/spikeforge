@@ -1,8 +1,10 @@
 """The ``spikeforge-hub`` console script.
 
-Supports ``list``, ``search``, ``download``, ``inspect``, and ``import``;
-mirrors the argparse style of :mod:`spikeforge_targets.cli.target_cli`. Every
-command prints JSON. ``import`` exits non-zero when the verdict is
+Supports ``list``, ``search``, ``download``, ``inspect``, and ``import``,
+plus the account commands (``login``, ``whoami``, ``push``, ``pull``,
+``quota``) wired in from :mod:`spikeforge_hub.account_cli`, mirroring the
+argparse style of :mod:`spikeforge_targets.cli.target_cli`. Every command
+prints JSON. ``import`` exits non-zero when the verdict is
 ``incompatible``, but still prints the named mismatches, so the command doubles
 as a CI gate without hiding *why* an artifact was rejected.
 """
@@ -12,8 +14,8 @@ import json
 from typing import Any, Dict, List, Optional
 
 from spikeforge.version import add_version_flag
+from spikeforge_hub import account_cli, probe
 from spikeforge_hub import download as hub_download
-from spikeforge_hub import probe
 from spikeforge_hub.catalog import get, issues, list_entries, search
 from spikeforge_hub.errors import HubArtifactError, HubError
 from spikeforge_hub.import_model import import_model
@@ -149,6 +151,7 @@ def add_subcommands(subs: Any) -> None:
     """Register every hub subcommand on ``subs``."""
     _add_listing(subs)
     _add_actions(subs)
+    account_cli.add_subcommands(subs)
 
 
 def main(argv: Optional[List[str]] = None) -> int:

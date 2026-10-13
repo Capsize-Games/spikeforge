@@ -20,6 +20,8 @@ FRAMEWORK_WEIGHTS = "framework_weights"
 NIR_SUFFIXES = (".json",)
 TORCH_SUFFIXES = (".pt", ".pth", ".ckpt")
 WEIGHT_SUFFIXES = (".bin", ".safetensors", ".npz", ".h5", ".hdf5")
+#: A portable ``.spkf`` archive: manifest, weights, frozen encode config.
+BUNDLE_SUFFIXES = (".spkf",)
 
 
 @dataclass(frozen=True)

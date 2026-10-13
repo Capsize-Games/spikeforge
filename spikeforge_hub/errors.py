@@ -6,6 +6,8 @@ react to is a named type, so an unavailable capability or a failed
 verification is reported rather than guessed at.
 """
 
+from typing import Optional
+
 
 class HubError(Exception):
     """Base class for every typed hub failure."""
@@ -52,6 +54,25 @@ class HubDownloadError(HubError):
         super().__init__(f"hub download failed for {subject!r}: {detail}")
         self.subject: str = subject
         self.detail: str = detail
+
+
+class HubApiError(HubError):
+    """Raised when the community hub API refuses or cannot be reached.
+
+    The offending ``subject`` (the action attempted) and a human
+    ``detail`` are stored as attributes; ``status`` carries the HTTP
+    status when the server answered, and is ``None`` when it could not
+    be reached at all.
+    """
+
+    def __init__(
+        self, subject: str, detail: str, status: Optional[int] = None
+    ) -> None:
+        """Record ``subject``, ``detail``, and the HTTP ``status``."""
+        super().__init__(f"hub API failed for {subject!r}: {detail}")
+        self.subject: str = subject
+        self.detail: str = detail
+        self.status: Optional[int] = status
 
 
 class HubDownloadCancelledError(HubError):

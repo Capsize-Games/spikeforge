@@ -21,6 +21,7 @@ from spikeforge_hub.catalog import (
 from spikeforge_hub.download_cli import download_entry
 from spikeforge_hub.entry import HubEntry
 from spikeforge_hub.errors import (
+    HubApiError,
     HubArtifactError,
     HubCatalogError,
     HubDownloadCancelledError,
@@ -66,6 +67,7 @@ __all__ = [
     "REGISTRY_SCHEMA_VERSION",
     "STAGES",
     "STATUSES",
+    "HubApiError",
     "HubArtifactError",
     "HubCatalogError",
     "HubDownloadCancelledError",
