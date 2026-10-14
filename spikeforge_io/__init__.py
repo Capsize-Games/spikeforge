@@ -8,7 +8,9 @@ replays it into ``spikeforge-serve``'s ``/v1/stream``.
 The windowing *implementation* stays in core
 (:mod:`spikeforge.streaming.window_spec`) because core must never depend on a
 satellite; :mod:`spikeforge_io.windowing` re-exports that one canonical
-contract. No pandas, no fastapi, no client SDK is imported here.
+contract. No pandas, no fastapi, no client SDK is imported here. The windowing
+names below resolve lazily (PEP 562) because they are the one surface that
+needs torch installed; everything else imports torch-free.
 
     from spikeforge_io import CsvAdapter, replay_to_stream
 
@@ -19,6 +21,7 @@ contract. No pandas, no fastapi, no client SDK is imported here.
 
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _distribution_version
+from typing import Any, FrozenSet
 
 from spikeforge_io.adapters import (
     DATASET_METHODS,
@@ -31,6 +34,7 @@ from spikeforge_io.adapters import (
     StreamAdapter,
     adapter_for,
     as_stream,
+    as_stream_numpy,
 )
 from spikeforge_io.errors import (
     AdapterDependencyError,
@@ -46,17 +50,32 @@ from spikeforge_io.replay import (
     replay_to_stream,
     stream_messages,
 )
-from spikeforge_io.windowing import (
-    WINDOW_SPEC_VERSION,
-    WindowSpec,
-    delta_over_window,
-    encode_windows,
-    fit_window_spec,
-    normalize_windows,
-    window_spec_from_bundle,
-    window_stream,
-    windows,
+
+#: The torch-backed windowing names, resolved lazily (see :func:`__getattr__`
+#: below) so adapter ingestion works without torch installed.
+_WINDOWING_EXPORTS: FrozenSet[str] = frozenset(
+    {
+        "WINDOW_SPEC_VERSION",
+        "WindowSpec",
+        "delta_over_window",
+        "encode_windows",
+        "fit_window_spec",
+        "normalize_windows",
+        "window_spec_from_bundle",
+        "window_stream",
+        "windows",
+    }
 )
+
+
+def __getattr__(name: str) -> Any:
+    """Return a lazily imported windowing re-export (PEP 562)."""
+    if name in _WINDOWING_EXPORTS:
+        from spikeforge_io import windowing
+
+        return getattr(windowing, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 try:
     #: Read from installed metadata so it cannot drift from the wheel.
@@ -85,6 +104,7 @@ __all__ = [
     "WindowSpec",
     "adapter_for",
     "as_stream",
+    "as_stream_numpy",
     "delta_over_window",
     "encode_windows",
     "fit_window_spec",

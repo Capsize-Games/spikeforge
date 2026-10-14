@@ -5,10 +5,19 @@ own file. numpy is imported lazily; its absence is a typed
 :class:`~spikeforge_io.errors.AdapterDependencyError`.
 """
 
-import torch
+from typing import TYPE_CHECKING
 
-from spikeforge_io.adapters.base import StreamAdapter, as_stream
-from spikeforge_io.errors import AdapterDependencyError, AdapterFormatError
+from spikeforge_io.adapters.base import (
+    StreamAdapter,
+    _require_numpy,
+    as_stream,
+    as_stream_numpy,
+)
+from spikeforge_io.errors import AdapterFormatError
+
+if TYPE_CHECKING:
+    import numpy as np
+    import torch
 
 
 class NpyAdapter(StreamAdapter):
@@ -18,16 +27,20 @@ class NpyAdapter(StreamAdapter):
         """Record the ``path`` to the ``.npy`` file."""
         self.source = path
 
-    def stream(self) -> torch.Tensor:
-        """Return the array as a ``[N, D]`` tensor, or report numpy absent."""
+    def _array(self) -> "np.ndarray":
+        """Return the file's array, or report numpy absent/unreadable."""
+        numpy = _require_numpy("a .npy stream")
         try:
-            import numpy as np
-        except ImportError:
-            raise AdapterDependencyError("numpy", "a .npy stream") from None
-        try:
-            payload = np.load(self.source, allow_pickle=False)
+            return numpy.load(self.source, allow_pickle=False)
         except (OSError, ValueError) as error:
             raise AdapterFormatError(
                 self.source, f"cannot read .npy: {error}"
             ) from None
-        return as_stream(payload, self.source)
+
+    def stream(self) -> "torch.Tensor":
+        """Return the array as a ``[N, D]`` tensor, or report numpy absent."""
+        return as_stream(self._array(), self.source)
+
+    def stream_numpy(self) -> "np.ndarray":
+        """Return the array as a ``[N, D]`` array, or report numpy absent."""
+        return as_stream_numpy(self._array(), self.source)

@@ -5,12 +5,18 @@ own file.
 """
 
 import json
-from typing import Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple
 
-import torch
-
-from spikeforge_io.adapters.base import StreamAdapter, as_stream
+from spikeforge_io.adapters.base import (
+    StreamAdapter,
+    as_stream,
+    as_stream_numpy,
+)
 from spikeforge_io.errors import AdapterFormatError
+
+if TYPE_CHECKING:
+    import numpy as np
+    import torch
 
 #: Keys a JSON object may use to carry the stream payload.
 JSON_KEYS: Tuple[str, ...] = ("data", "stream", "values")
@@ -50,20 +56,31 @@ class JsonAdapter(StreamAdapter):
                 self.source, f"malformed JSON: {error}"
             ) from None
 
-    def stream(self) -> torch.Tensor:
-        """Return the JSON stream as a ``[N, D]`` tensor."""
+    def _payload(self) -> Any:
+        """Return the selected stream payload, or a typed error."""
         payload = self._load()
         if self._key is not None:
             if not isinstance(payload, dict) or self._key not in payload:
                 raise AdapterFormatError(
                     self.source, f"JSON object has no {self._key!r} key"
                 )
-            payload = payload[self._key]
-        else:
-            payload = _json_payload(payload, self.source)
+            return payload[self._key]
+        return _json_payload(payload, self.source)
+
+    def _adapt(self, coerce: Callable[[Any, str], Any]) -> Any:
+        """Coerce the payload, blaming ragged rows on the JSON shape."""
+        payload = self._payload()
         try:
-            return as_stream(payload, self.source)
+            return coerce(payload, self.source)
         except AdapterFormatError as error:
             raise AdapterFormatError(
                 self.source, f"JSON rows are not rectangular: {error.detail}"
             ) from None
+
+    def stream(self) -> "torch.Tensor":
+        """Return the JSON stream as a ``[N, D]`` tensor."""
+        return self._adapt(as_stream)
+
+    def stream_numpy(self) -> "np.ndarray":
+        """Return the JSON stream as a ``[N, D]`` array."""
+        return self._adapt(as_stream_numpy)
