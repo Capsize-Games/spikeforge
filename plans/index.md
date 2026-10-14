@@ -128,7 +128,8 @@ memory, not a scoped production feature.
 ## Reference
 
 - [Project rules](rules.md) — the style and architecture contract.
-- [Integration plan](INTEGRATION_PLAN.md) — the original integration notes.
+- [Integration plan](integration_plan_historical.md) — the original
+  integration notes (historical — superseded, kept for rationale).
 
 ## Building these docs
 

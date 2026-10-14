@@ -15,13 +15,13 @@ import type {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { ConfirmDialog } from "./ConfirmDialog";
-import { HelpTip } from "./HelpTip";
+import { PipelineEdgeInspector } from "./PipelineEdgeInspector";
 import {
   PipelineFlowNode,
   type PipelineFlowNodeData,
 } from "./PipelineFlowNode";
 import { PipelineRunControls } from "./PipelineRunControls";
+import { PipelineToolbar } from "./PipelineToolbar";
 import { sourceModels } from "./pipelineSources";
 import type { PipelineEdge, PipelineNode } from "../usePipeline";
 import type {
@@ -99,12 +99,7 @@ export function PipelinePanel({
   onRemoveEdge,
   onSetEdgeExtract,
 }: Props) {
-  const [name, setName] = useState(graph.name || "my-pipeline");
-  const [selected, setSelected] = useState("");
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<
-    "new" | "delete" | null
-  >(null);
 
   const nodes: Node[] = useMemo(
     () =>
@@ -181,12 +176,11 @@ export function PipelinePanel({
     [onAddEdge],
   );
 
-  const addSelectedCheckpoint = () => {
-    if (!selected) return;
+  const addCheckpoint = (checkpoint: string) => {
     const count = graph.nodes?.length ?? 0;
     onAddNode({
       id: newId("n"),
-      checkpoint: selected,
+      checkpoint,
       position: {
         x: 60 + (count % 4) * 260,
         y: 60 + Math.floor(count / 4) * 160,
@@ -196,93 +190,20 @@ export function PipelinePanel({
 
   return (
     <div className="pipeline-panel" data-testid="pipeline-panel">
-      <div className="pipeline-toolbar panel">
-        <div className="control-row">
-          <input
-            className="text-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="pipeline name…"
-            data-testid="pipeline-name"
-            aria-label="Pipeline name"
-          />
-          <button
-            className="apply small"
-            onClick={() => name.trim() && onSavePipeline(name.trim())}
-            data-testid="pipeline-save"
-            disabled={!name.trim()}
-          >
-            Save
-          </button>
-          <button
-            className="apply small ghost"
-            onClick={() => setConfirmAction("new")}
-            data-testid="pipeline-new"
-            disabled={
-              (graph.nodes?.length ?? 0) === 0 &&
-              (graph.edges?.length ?? 0) === 0
-            }
-          >
-            New
-          </button>
-        </div>
-
-        <div className="control-row">
-          <select
-            className="text-input"
-            data-testid="pipeline-saved"
-            aria-label="Saved pipelines"
-            onFocus={onListPipelines}
-            onChange={(e) => e.target.value && onLoadPipeline(e.target.value)}
-            value=""
-          >
-            <option value="">
-              {pipelines.length ? "load a saved pipeline…" : "no saved pipelines"}
-            </option>
-            {pipelines.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.name} ({p.node_count} nodes)
-              </option>
-            ))}
-          </select>
-          <button
-            className="apply small ghost"
-            onClick={() => graph.name && setConfirmAction("delete")}
-            data-testid="pipeline-delete"
-            disabled={!graph.name}
-          >
-            Delete
-          </button>
-        </div>
-
-        <div className="control-row">
-          <select
-            className="text-input"
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            disabled={models.length === 0}
-            data-testid="pipeline-checkpoint"
-            aria-label="Checkpoint to add"
-          >
-            <option value="">
-              {models.length ? "choose a saved model…" : "no saved models"}
-            </option>
-            {models.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          <button
-            className="apply small"
-            onClick={addSelectedCheckpoint}
-            data-testid="pipeline-add-node"
-            disabled={!selected}
-          >
-            Add node
-          </button>
-        </div>
-      </div>
+      <PipelineToolbar
+        models={models}
+        pipelines={pipelines}
+        graphName={graph.name}
+        nodeCount={graph.nodes?.length ?? 0}
+        edgeCount={graph.edges?.length ?? 0}
+        initialName={graph.name || "my-pipeline"}
+        onListPipelines={onListPipelines}
+        onSavePipeline={onSavePipeline}
+        onLoadPipeline={onLoadPipeline}
+        onDeletePipeline={onDeletePipeline}
+        onSetGraph={onSetGraph}
+        onAddCheckpoint={addCheckpoint}
+      />
 
       <div className="pipeline-canvas">
         <ReactFlowProvider>
@@ -304,29 +225,14 @@ export function PipelinePanel({
 
       <div className="pipeline-side panel">
         {selectedEdge && (
-          <div className="pipeline-edge-inspector">
-            <div className="panel-title row-title">
-              <span>Edge</span>
-              <HelpTip text="How the source node's output is shaped into the target node's next input." />
-            </div>
-            <select
-              className="text-input"
-              value={
-                graph.edges?.find((e) => e.id === selectedEdge)?.extract ??
-                "mean_logits"
-              }
-              onChange={(e) =>
-                onSetEdgeExtract(
-                  selectedEdge,
-                  e.target.value as NonNullable<PipelineEdge["extract"]>,
-                )
-              }
-            >
-              <option value="mean_logits">mean logits vector</option>
-              <option value="predicted_class">predicted class (scalar)</option>
-              <option value="one_hot">one-hot of predicted class</option>
-            </select>
-          </div>
+          <PipelineEdgeInspector
+            selectedEdge={selectedEdge}
+            extract={
+              graph.edges?.find((e) => e.id === selectedEdge)?.extract ??
+              "mean_logits"
+            }
+            onSetEdgeExtract={onSetEdgeExtract}
+          />
         )}
 
         <PipelineRunControls
@@ -339,29 +245,6 @@ export function PipelinePanel({
           onStop={onStopPipeline}
         />
       </div>
-
-      <ConfirmDialog
-        open={confirmAction === "new"}
-        title="Discard this pipeline?"
-        message="This clears the current graph. Save it first if you want to keep it."
-        confirmLabel="Discard"
-        onConfirm={() => {
-          onSetGraph({ version: 1, name: "", nodes: [], edges: [] });
-          setConfirmAction(null);
-        }}
-        onCancel={() => setConfirmAction(null)}
-      />
-      <ConfirmDialog
-        open={confirmAction === "delete"}
-        title={`Delete "${graph.name}"?`}
-        message="This permanently removes the saved pipeline. This can't be undone."
-        confirmLabel="Delete"
-        onConfirm={() => {
-          if (graph.name) onDeletePipeline(graph.name);
-          setConfirmAction(null);
-        }}
-        onCancel={() => setConfirmAction(null)}
-      />
     </div>
   );
 }

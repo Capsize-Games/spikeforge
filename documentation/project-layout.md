@@ -174,7 +174,11 @@ spikeforge_targets/                 Deployment targets, energy, event runtime
                              and run the drift check (optionally under a
                              simulated activation/membrane scheme)
   quantize_schemes.py        none / weight_int8 / weight_uint8 schemes
-  activation_quant.py        Serving-side activation/membrane quantizer
+  activation_quant/          Serving-side activation/membrane quantizer
+    __init__.py              Re-exported ActivationQuantizer surface
+    quantizer.py             The fixed-point grid transform
+    scheme.py                Grid scheme definitions
+    calibration.py           Per-tensor range calibration
   activation_quant_graph.py  The same grid as an interpreter post_node hook
   activation_quant_keys.py   Which node tensors quantize, under what key
   activation_quant_records.py Per-tensor range/error records
@@ -187,6 +191,12 @@ spikeforge_targets/                 Deployment targets, energy, event runtime
     norse_backend.py         Norse PyTorch simulator (norse extra)
     lava_backend.py          Lava / Loihi 2 path (lava extra)
     compare.py               Backend result vs. reference comparison
+    api/                     Isolated SDK probes behind one import root
+      __init__.py            Re-exported probe surface
+      probes.py              module_available() degradation probes
+      norse.py               Norse neuron factories
+      lava.py                Lava execution touch-point
+      vendors.py             Vendor simulator wrappers
   energy/                    Declared cost tables + energy accounting
     cost_table.py            Load/validate a target's declared costs
     target_costs.py          Bundled per-target cost-table lookup

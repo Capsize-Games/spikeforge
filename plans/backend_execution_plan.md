@@ -280,7 +280,7 @@ styling and [`DeploymentBuckets.tsx`](client/src/components/DeploymentBuckets.ts
 
 ## 7. Risks and deferred items
 
-- **SDK API drift:** isolated in `backends/api.py`; each backend's `compile`
+- **SDK API drift:** isolated in `backends/api/`; each backend's `compile`
   begins with a probe, mirroring [`api.py`](spikeforge/nir_bridge/api.py:1).
 - **Lava build weight:** `lava-nc` is heavy and platform-sensitive — it stays an
   optional extra and the reference/Norse paths remain the always-available

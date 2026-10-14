@@ -125,8 +125,31 @@ jobs:
                       -e ./packages/spikeforge-server \
                       -e ./packages/spikeforge-io
 
+      - name: Install the spikeplot runtime (pandas)
+        # snntorch.spikeplot imports pandas unconditionally, but core
+        # packaging does not declare it; the encodings exporter tests
+        # need it. Follow-up: declare pandas or drop spikeplot.
+        run: pip install pandas
+
       - name: Test (pytest)
         run: pytest
+
+      - name: Report per-root coverage
+        # One TOTAL line per measured root (issue #115), so a drop in a
+        # single distribution is visible without scrolling the per-file
+        # table pytest already printed.
+        run: |
+          for root in spikeforge server spikeforge_targets spikeforge_hub spikeforge_io spikeforge_serve spikeforge_clients scripts; do
+            printf '%-20s ' "$root"
+            coverage report --include="$root/*" | tail -n 1
+          done
+
+      - name: Enforce the coverage ratchet
+        # Total coverage must not fall below the pinned floor. Raise it
+        # deliberately (measure, then bump) rather than lowering it to
+        # fit a regression. Started at 85 from the 2026-10-14 baseline
+        # of 85.9% with ~1pp of margin for interpreter variance.
+        run: coverage report --fail-under=85
 
   test-deploy:
     # The simulator-backed test-deploy matrix for the linear `fc_legacy`
@@ -269,6 +292,11 @@ jobs:
               -e ./packages/spikeforge-server
           fi
 
+      - name: Install the spikeplot runtime (pandas)
+        # The extras cells run the full suite, which includes the
+        # encodings exporter tests; see the test job for the follow-up.
+        run: pip install pandas
+
       - name: Exercise the ${{ matrix.extra }} extra
         run: |
           if [ "${{ matrix.extra }}" = "norse" ]; then
@@ -316,6 +344,12 @@ jobs:
             -e ./packages/spikeforge-serve \
             -e ./packages/spikeforge-server
 
+      - name: Install the spikeplot runtime (pandas)
+        # pandas is not in the blocked set; the encodings exporter
+        # tests run in this job too and need it. See the test job for
+        # the packaging follow-up.
+        run: pip install pandas
+
       - name: Test with the optional extras and the server stack blocked
         run: |
           pytest \
@@ -356,6 +390,7 @@ jobs:
             --ignore=tests/test_serve_metrics.py \
             --ignore=tests/test_serve_modules.py \
             --ignore=tests/test_serve_payload_bounds.py \
+            --ignore=tests/test_serve_stream_bounds.py \
             --ignore=tests/test_serving_encode_contract.py \
             --ignore=tests/test_train_config_stage_overrides.py \
             --ignore=tests/test_train_config_topology.py \

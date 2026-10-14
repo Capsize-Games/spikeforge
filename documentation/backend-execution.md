@@ -28,7 +28,7 @@ reference interpreter — returning a `BackendResult` whose `status` is `ok`,
 
 An absent SDK yields `status: "unavailable"` with a note naming the extra. SDK
 imports are confined to
-[`backends/api.py`](../spikeforge_targets/backends/api.py:1).
+[`backends/api/`](../spikeforge_targets/backends/api/__init__.py:1).
 
 ### `deploy` / `rewrite` / `run`
 

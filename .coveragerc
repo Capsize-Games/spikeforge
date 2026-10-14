@@ -1,0 +1,22 @@
+# Coverage policy for the eight measured import roots (issue #115).
+#
+# ``pytest.ini`` passes one ``--cov`` flag per root; this file holds the
+# explicit omit policy instead of letting exclusions happen by accident:
+#
+# - ``main.py`` / ``main_encodings.py`` are excluded by construction: no
+#   ``--cov`` root covers the repository root, so the thin console-script
+#   entry points never dilute the number.
+# - ``__main__.py`` files *are* measured: they ship inside the
+#   distributions and several are imported by the suite.
+# - ``scripts/blocked_deps/`` is CI scaffolding, not product code: its
+#   ``sitecustomize`` loads via PYTHONPATH only in the blocked-deps job.
+# - The ``if __name__ == "__main__":`` guard is conventional dead weight
+#   under pytest and is excluded everywhere.
+[run]
+omit =
+    scripts/blocked_deps/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:

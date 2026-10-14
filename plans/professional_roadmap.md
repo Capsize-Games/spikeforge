@@ -95,7 +95,7 @@ Every row is grounded in the current source. "Gap" is what this program closes.
 | 17 | Third-party `nirtorch` extraction | Deferred, absent | [`api.py`](spikeforge/nir_bridge/api.py:63) | F |
 | 18 | Quantization applied | Declared in constraints only | [`target_spec.py`](spikeforge_targets/target_spec.py:28) | F |
 | 19 | Non-square sensor geometry | Hardcoded 28x28 / square conv math | [`presets.py`](spikeforge/topology/presets.py:128) | F |
-| 20 | Per-step hidden animation | Raster snapshots only | [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md:21) | F |
+| 20 | Per-step hidden animation | Raster snapshots only | [`integration_plan_historical.md`](integration_plan_historical.md:21) | F |
 
 ### 3.1 Invariants that must not break (all workstreams)
 
@@ -323,7 +323,7 @@ verifiable. Order is priority-first (hub) but B/C can be parallelized.
 | Phase | Task | Key files | New tests | Acceptance command |
 |---|---|---|---|---|
 | B1 | Substitution executor | [`targets/rewrite.py`](spikeforge_targets/rewrite.py), [`targets/rewrite_report.py`](spikeforge_targets/rewrite_report.py), [`targets/substitute_ops.py`](spikeforge_targets/substitute_ops.py) | `test_substitution_rewrite.py`, `test_rewrite_report.py` | `python -m spikeforge.cli.verify rewrite --topology conv_net --target norse` |
-| B2 | Norse simulator backend | [`targets/backends/norse_backend.py`](spikeforge_targets/backends/norse_backend.py), [`targets/backends/api.py`](spikeforge_targets/backends/api.py), [`targets/backends/result.py`](spikeforge_targets/backends/result.py) | `test_norse_backend.py`, `test_backend_drift.py` | `python -m spikeforge.cli.verify backend run --topology conv_net --target norse` |
+| B2 | Norse simulator backend | [`targets/backends/norse_backend.py`](spikeforge_targets/backends/norse_backend.py), [`targets/backends/api/`](spikeforge_targets/backends/api/__init__.py), [`targets/backends/result.py`](spikeforge_targets/backends/result.py) | `test_norse_backend.py`, `test_backend_drift.py` | `python -m spikeforge.cli.verify backend run --topology conv_net --target norse` |
 | B3 | Lava hardware path | [`targets/backends/lava_backend.py`](spikeforge_targets/backends/lava_backend.py) | `test_lava_backend.py` | `python -m spikeforge.cli.verify backend run --target lava_loihi2` |
 | B4 | Deploy wiring + surfaces | [`server/backend_handlers.py`](server/backend_handlers.py), [`client/src/components/BackendRunPanel.tsx`](client/src/components/BackendRunPanel.tsx) | `test_server_backend_actions.py` | `pytest tests/test_server_backend_actions.py` |
 
@@ -419,7 +419,7 @@ identical outputs, exactly as
   become executed substitutions *with* a rewrite report and a drift check.
 - **Out of scope:** multi-user sessions and auth are explicitly deferred (see
   [`interpreter_spine_plan.md`](plans/interpreter_spine_plan.md:1) precedent and
-  [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md:23)).
+  [`integration_plan_historical.md`](integration_plan_historical.md:23)).
 
 ---
 
