@@ -32,7 +32,10 @@ import numpy as np
 from spikeforge.neurons import contract
 from spikeforge.neurons.registry import NEURONS, handler
 from spikeforge.nir_bridge import node_names
-from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.nir_bridge.errors import (
+    UNMAPPABLE_DECISIONS,
+    UnsupportedStageError,
+)
 from spikeforge.nir_bridge.mapped_node import MappedNode
 from spikeforge.nir_bridge.neuron_kwargs import (
     cuba_kwargs,
@@ -170,5 +173,7 @@ def neuron_mapping(stage: Stage) -> StageMapping:
     if builder is not None:
         return builder(stage)
     if stage.kind in UNMAPPABLE_KINDS:
-        raise UnsupportedStageError(stage.kind, UNMAPPABLE_KINDS[stage.kind])
+        raise UnsupportedStageError(
+            stage.kind, UNMAPPABLE_KINDS[stage.kind], UNMAPPABLE_DECISIONS
+        )
     raise UnsupportedStageError(stage.kind)

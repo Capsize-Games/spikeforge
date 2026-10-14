@@ -81,6 +81,8 @@ nav:
       - Dashboard: dashboard.md
       - Event datasets: event-datasets.md
       - Targets and interoperability: targets-and-interop.md
+      - NIR C-runtime export profile: nir-c-runtime-profile.md
+      - NIR-unmappable stage decisions: nir-unmappable-decisions.md
       - Production workflows: production-workflows.md
       - Model hub: model-hub.md
       - Backend execution: backend-execution.md

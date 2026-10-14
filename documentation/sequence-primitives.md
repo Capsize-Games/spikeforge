@@ -16,6 +16,13 @@ before, and `fc_legacy` keeps its `_fc1/_lif1/_fc2/_lif2` contract.
 module factory and an explicit NIR contract — `mapped`, `passthrough`
 (`dropout` is identity at inference), or `unexportable`.
 
+Of the new kinds, `conv1d` is mapped and the rest except `dropout` are
+simulation-only: `maxpool1d`, `maxpool2d`, `embedding`, `layer_norm`,
+`batch_norm`, `positional_encoding`, `attention`, and
+`multihead_attention` each raise `UnsupportedStageError` at export, as
+does the `alpha` neuron. The per-kind verdicts live in the
+[NIR-unmappable stage decisions](../plans/nir-unmappable-decisions.md).
+
 ### `sequence_mlp` and `sequence_attn`
 
 - `sequence_mlp` is built only from NIR-mappable kinds over a `[T, B, L, D]`

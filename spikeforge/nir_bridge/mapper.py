@@ -1,13 +1,16 @@
 """Translate a single topology stage into its NIR node rendering."""
 
-from typing import Any, Callable, Dict, Mapping, Optional
+from typing import Any, Callable, Dict, Mapping, NoReturn, Optional
 
 from spikeforge.nir_bridge import (
     node_builders,
     stage_builders,
     stages_unmappable,
 )
-from spikeforge.nir_bridge.errors import UnsupportedStageError
+from spikeforge.nir_bridge.errors import (
+    UNMAPPABLE_DECISIONS,
+    UnsupportedStageError,
+)
 from spikeforge.nir_bridge.mapped_node import MappedNode
 from spikeforge.nir_bridge.neuron_nodes import (
     is_neuron_kind,
@@ -45,6 +48,19 @@ def _submodule(module: Optional[Any], name: str) -> Optional[Any]:
         return None
 
 
+def _decision_hint(kind: str) -> str:
+    """Return the decision-record pointer for an unmappable kind."""
+    if kind in stages_unmappable.UNMAPPABLE_STAGES:
+        return UNMAPPABLE_DECISIONS
+    return ""
+
+
+def _reject(stage: Stage) -> NoReturn:
+    """Raise the typed error for a stage with no NIR rendering."""
+    reason = stages_unmappable.UNMAPPABLE_STAGES.get(stage.kind, "")
+    raise UnsupportedStageError(stage.kind, reason, _decision_hint(stage.kind))
+
+
 def map_stage(stage: Stage, module: Optional[Any] = None) -> StageMapping:
     """Return the NIR rendering of ``stage``.
 
@@ -63,5 +79,4 @@ def map_stage(stage: Stage, module: Optional[Any] = None) -> StageMapping:
         return _PASSTHROUGH
     if is_neuron_kind(stage.kind):
         return neuron_mapping(stage)
-    reason = stages_unmappable.UNMAPPABLE_STAGES.get(stage.kind, "")
-    raise UnsupportedStageError(stage.kind, reason)
+    _reject(stage)
