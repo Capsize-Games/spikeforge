@@ -28,25 +28,37 @@ WORKDIR /app
 # `main*.py`) from the repo root.
 #
 # The install list below must be `spikeforge-server`'s *complete* local
-# dependency closure. A distribution left out does not fail loudly -- pip
-# quietly resolves it from PyPI instead, so the image would run a mix of this
-# checkout and whatever was last published. `test_dockerfile_installs_the_
-# server_dependency_closure` enforces the closure.
+# dependency closure. The local distributions install with `--no-deps`,
+# so a distribution left out cannot be quietly resolved from PyPI;
+# instead `pip check` fails the build on the missing dependency, and the
+# image never runs a mix of this checkout and whatever was last
+# published. `test_install_lists_cover_the_server_dependency_closure`
+# enforces the closure statically.
 COPY . .
 
-# Install the shared core runtime pins first (better layer caching).
-# PyTorch build selector: default CUDA so the GPU device option works.
-# For a smaller CPU-only image:
-#   docker compose build --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
+# Third-party closure: installed from a hashed lockfile, never floating
+# pins, so two image builds install byte-identical versions. LOCKFILE
+# must match TORCH_INDEX_URL (server.cpu.lock for the CPU index,
+# server.cu132.lock for cu132): torch/torchvision carry a +cpu/+cu132
+# local version segment, and the grep below fails the build on a
+# mismatched pair instead of installing the wrong torch. For a smaller
+# CPU-only image:
+#   docker compose --profile cpu build
+#
+# Lockfile cadence: recompile monthly and on any CVE in the closure
+# (see requirements/server.cpu.in), then copy the public versions back
+# into requirements.txt so dev installs track the image.
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu132
+ARG LOCKFILE=requirements/server.cu132.lock
 RUN pip install --upgrade pip \
-    && pip install --index-url ${TORCH_INDEX_URL} torch torchvision \
-    && pip install -r requirements.txt \
-    && pip install ./packages/spikeforge \
+    && grep -qF -- "--index-url ${TORCH_INDEX_URL}" ${LOCKFILE} \
+    && pip install --require-hashes -r ${LOCKFILE} \
+    && pip install --no-deps ./packages/spikeforge \
         ./packages/spikeforge-targets \
         ./packages/spikeforge-hub \
         ./packages/spikeforge-serve \
-        ./packages/spikeforge-server
+        ./packages/spikeforge-server \
+    && pip check
 
 # Built client bundle (the Dockerfile's own copy overrides client/dist).
 COPY --from=client-build /build/dist /app/client/dist
