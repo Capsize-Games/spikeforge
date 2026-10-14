@@ -13,6 +13,13 @@ that and describe the local source tree only.
 
 ### Added
 
+- `embedding` stages export to NIR as a one-hot ingest plus an `Affine`
+  node carrying the transposed lookup table, bit-exact against the stage
+  module; graph inputs are one-hot float, never token ids (#169).
+- 2D eval-mode `batch_norm` stages export to NIR as one `Affine` node
+  folding the frozen running statistics, within float32 fold rounding of
+  the stage module. Training-mode, `BatchNorm2d`, and running-stat-less
+  stages stay simulation-only with a typed refusal (#170).
 - **The model hub accepts community uploads.** Entries with `"source":
   "community"` validate, with `@handle/slug` ids rendering alongside the
   curated catalog; the hosted index (`GET /v1/index.json`, ETag-cached under
@@ -91,6 +98,10 @@ that and describe the local source tree only.
 
 ### Changed
 
+- `export_c_package` gates against the single-sourced `nir-c-runtime`
+  profile instead of its local kind table, so shape violations (missing
+  Affine bias, scalar grids, partial Flatten, unbroken cycles) refuse
+  early with per-node names in `CExportError.violations` (#173).
 - The dashboard client's pipeline input helper now uses `isPlainObject`
   from `@capsizellc/commons` instead of its local object guard; behavior
   is unchanged. The client-fork provenance and diff classification are
