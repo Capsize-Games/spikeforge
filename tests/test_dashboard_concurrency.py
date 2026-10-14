@@ -135,6 +135,7 @@ async def _drain_train_state(session: Session) -> None:
             return
 
 
+@pytest.mark.network
 def test_a_real_training_run_releases_its_slot_when_it_finishes() -> None:
     """The job cap doesn't leak: a finished run frees its slot for reuse."""
     cfg = TrainConfig(

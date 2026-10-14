@@ -13,6 +13,7 @@ class SessionMixin:
     """Store the run's plain settings, session, and seeding policy."""
 
     _dataset: str
+    _download: bool
     _num_classes: int
     _hidden: int
     _beta: float
@@ -35,10 +36,11 @@ class SessionMixin:
     def _store_settings(
         self, dataset: str, hidden: int, beta: float, lr: float,
         weight_decay: float, epochs: int, num_steps: int, subset: int,
-        batch_size: int,
+        batch_size: int, download: bool = True,
     ) -> None:
         """Store the plain training settings on the instance."""
         self._dataset = dataset
+        self._download = bool(download)
         self._num_classes, _ = dataset_info(dataset)
         self._hidden = hidden
         self._beta = beta

@@ -6,11 +6,14 @@ generalisation numbers come from
 ``examples/12_few_shot_character_generalization.py``.
 """
 
+import pytest
+
 from spikeforge.memory.few_shot_generalization_poc import (
     run_few_shot_generalization_poc,
 )
 
 
+@pytest.mark.network
 def test_run_reports_accuracy_within_bounds() -> None:
     """The protocol yields an accuracy between chance and perfect."""
     result = run_few_shot_generalization_poc(

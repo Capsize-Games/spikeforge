@@ -21,7 +21,9 @@ class SampleSource:
         """Load the registry dataset at ``size`` (default 28x28)."""
         self._dataset = dataset
         self._size = as_size(size) if size is not None else (28, 28)
-        self._data = build_dataset(dataset, train=train, size=self._size)
+        self._data = build_dataset(
+            dataset, train=train, download=download, size=self._size
+        )
 
     def clamp(self, index: int) -> int:
         """Wrap an index into the valid range [0, len)."""
