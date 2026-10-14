@@ -26,7 +26,7 @@ resolved by the implemented split:
   and core no longer ships `server/`.
 - Every optional SDK was already confined to a lazy, degrading module
   (`nir_bridge/api.py`, `onnx_bridge/api.py`,
-  `spikeforge_targets/backends/api.py`, `events/tonic_api.py`,
+  `spikeforge_targets/backends/api/__init__.py`, `events/tonic_api.py`,
   `spikeforge_hub/probe.py`, `spikeforge_targets/probe.py`, `tracking/*_sink.py`),
   so a headless core install was a packaging change, not a rewrite.
 
