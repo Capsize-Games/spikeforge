@@ -1,5 +1,8 @@
 """Typed errors raised while mapping or interpreting NIR."""
 
+#: Per-kind verdicts for stages with no NIR rendering, linked from errors.
+UNMAPPABLE_DECISIONS = "plans/nir-unmappable-decisions.md"
+
 
 class UnsupportedNodeError(Exception):
     """Raised when the reference interpreter meets an unimplemented node.
@@ -23,16 +26,20 @@ class UnsupportedStageError(Exception):
     """Raised when a stage kind has no mapping in the installed ``nir``.
 
     The offending ``kind`` is stored as an attribute so callers can react
-    without having to parse the message.
+    without having to parse the message. ``hint`` names a follow-up
+    pointer, such as the unmappable-kinds decision record.
     """
 
-    def __init__(self, kind: str, detail: str = "") -> None:
-        """Record ``kind`` and fold ``detail`` into the message."""
+    def __init__(self, kind: str, detail: str = "", hint: str = "") -> None:
+        """Record ``kind`` and fold ``detail`` and ``hint`` in."""
         message = f"stage kind {kind!r} cannot be mapped to NIR"
         if detail:
             message = f"{message}: {detail}"
+        if hint:
+            message = f"{message} (see {hint})"
         super().__init__(message)
         self.kind: str = kind
+        self.hint: str = hint
 
 
 class ExtractionExtraMissingError(Exception):
