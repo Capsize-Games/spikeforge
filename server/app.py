@@ -5,11 +5,11 @@ from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from server.auth import authorized
+from server.auth import TOKEN_COOKIE, origin_allowed, request_authorized
+from server.auth_routes import router as auth_router
 from server.bundle_routes import router as bundle_router
-from server.downloads import manager
 from server.handlers import dispatch
-from server.hub_downloads import manager as hub_manager
+from server.hub_handlers import cancel_hub_activity
 from server.messages import send_locked
 from server.protocol_version import PROTOCOL_MAJOR, PROTOCOL_VERSION
 from server.schemas import ClientMessage
@@ -28,6 +28,7 @@ app = FastAPI(
 device_mod.prime()
 
 app.include_router(bundle_router)
+app.include_router(auth_router)
 
 # Serve the built React app (no-op when client/dist is absent).
 mount_client(app)
@@ -140,12 +141,13 @@ async def _parse_or_reject(
 
 
 async def _handle_hub_cancel(ws: WebSocket, session: Session) -> None:
-    """Cancel the in-flight hub download and report its new state."""
-    hub_manager.cancel()
-    await send_locked(ws, session, {
-        "type": "hub_download_state",
-        "payload": hub_manager.snapshot(),
-    })
+    """Cancel the session's in-flight hub download or pull.
+
+    Shares :func:`server.hub_handlers.cancel_hub_activity` with the
+    dispatched ``hub_cancel`` branch so the socket fast path terminates
+    pulls too, not just curated downloads.
+    """
+    await cancel_hub_activity(ws, session)
 
 
 async def _serve(ws: WebSocket, session: Session) -> None:
@@ -160,12 +162,17 @@ async def _serve(ws: WebSocket, session: Session) -> None:
         # Cancels must bypass the queue so they land while a download blocks
         # the dispatcher on its progress stream.
         if message.type == "cancel_download":
-            manager.cancel()
+            session.downloads.cancel()
             continue
         if message.type == "hub_cancel":
             await _handle_hub_cancel(ws, session)
             continue
-        await session.inbox.put(message)
+        dropped = session.offer(message)
+        if dropped is not None:
+            await send_locked(ws, session, {
+                "type": "error",
+                "payload": f"inbound message dropped: inbox {dropped}",
+            })
 
 
 async def _spawn_workers(
@@ -203,8 +210,13 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     A token-gated connection is rejected before ``accept()`` so the
     handshake fails outright rather than opening then closing.
     """
-    if not authorized(
-        ws.query_params.get("token"), ws.headers.get("authorization")
+    if not origin_allowed(
+        ws.headers.get("origin")
+    ) or not request_authorized(
+        server=ws.scope.get("server"),
+        query_token=ws.query_params.get("token"),
+        header=ws.headers.get("authorization"),
+        cookie=ws.cookies.get(TOKEN_COOKIE),
     ):
         await ws.close(code=1008)
         return

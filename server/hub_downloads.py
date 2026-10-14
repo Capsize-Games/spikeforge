@@ -1,11 +1,13 @@
-"""Hub download wiring: the shared manager and its progress emitter.
+"""Hub download wiring: per-session managers and their progress emitters.
 
-Mirrors :mod:`server.downloads` for datasets. The manager runs the isolated
-hub worker off the event loop, so a download never blocks the socket and can be
-terminated to cancel. It keeps its own state type (``hub_download_state``); the
-dataset ``download_state`` payload is untouched. Community pulls get their own
-manager instance with the same progress/cancel shape under ``hub_pull_state``,
-so a pull never clobbers an in-flight curated download's snapshots.
+Mirrors :mod:`server.downloads` for datasets. Each session owns its
+managers (see :class:`server.session.Session`), so a download never
+blocks the socket, can be terminated to cancel, and never shares
+progress or terminal state with another session. Managers keep their
+own state type (``hub_download_state``); the dataset ``download_state``
+payload is untouched. Community pulls get their own manager instance
+with the same progress/cancel shape under ``hub_pull_state``, so a pull
+never clobbers an in-flight curated download's snapshots.
 """
 
 import asyncio
@@ -17,13 +19,7 @@ from server.hub_messages import send_hub_download_state, send_hub_pull_state
 from server.session import Session
 from spikeforge_hub import community
 from spikeforge_hub.catalog import get as catalog_get
-from spikeforge_hub.downloads import HubDownloadManager
 from spikeforge_hub.errors import HubDownloadCancelledError, HubDownloadError
-
-#: Hub download manager singleton, reached directly by a cancelling client.
-manager = HubDownloadManager()
-#: Community-pull manager singleton, cancelled through ``hub_cancel`` too.
-pull_manager = HubDownloadManager()
 
 
 async def _emit(
@@ -45,7 +41,7 @@ async def ensure_hub_download(
 ) -> bool:
     """Download ``entry_id``; return False when the user cancelled it."""
     try:
-        await manager.ensure(
+        await session.hub_downloads.ensure(
             entry_id, lambda state: _emit(ws, session, state)
         )
     except HubDownloadCancelledError:
@@ -67,7 +63,7 @@ async def ensure_hub_pull(
     await loop.run_in_executor(None, community.fetch_index)
     _require_community(entry_id)
     try:
-        await pull_manager.ensure(
+        await session.hub_pulls.ensure(
             entry_id, lambda state: _emit_pull(ws, session, state)
         )
     except HubDownloadCancelledError:

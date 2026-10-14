@@ -34,8 +34,11 @@ restarts.
 ### Access control & rate limiting
 
 During local development, the dashboard's WebSocket (`/ws`) and bundle
-download (`GET /api/bundle/<name>`) are open when the token is unset. The
-production deployment requires a token.
+download (`GET /api/bundle/<name>`) are open when the token is unset --
+but only on loopback binds. A server bound to a non-loopback address
+with no token configured refuses both routes, unless the operator opts
+out explicitly with `SPIKEFORGE_DASHBOARD_OPEN=1`. The production
+deployment requires a token.
 
 Set `SPIKEFORGE_DASHBOARD_TOKEN` to require a shared secret on both routes:
 
@@ -48,16 +51,45 @@ services:
       - SPIKEFORGE_DASHBOARD_TOKEN=some-long-random-secret
 ```
 
-Share the dashboard as `https://host:port/?token=some-long-random-secret` --
-the client reads `token` off its own URL and attaches it to the WebSocket
-connection (`?token=...`, since browsers can't set a custom header on a
-WebSocket handshake) and to the bundle download link (same reason: it's a
-plain `<a download>`, not a `fetch`). A connection or download without a
-valid token gets a `401`/handshake rejection instead of the model
-weights or spike stream; leaving the variable unset disables the gate
-entirely, so a plain `docker compose up` on localhost is unaffected. The
-production compose file fails to start when this secret is missing. The
-dashboard removes the token from the address bar after reading it.
+A connection or download without a valid token gets a `401`/handshake
+rejection instead of the model weights or spike stream, so a plain
+`docker compose up` on localhost is unaffected while an exposed deploy
+stays closed. The production compose file fails to start when this
+secret is missing.
+
+Present the token as an `Authorization: Bearer <token>` header when the
+client can set one. Browsers can't attach a header to a WebSocket
+handshake, so `POST /api/auth/login` trades a `{"token": ...}` body for
+an `HttpOnly` cookie both routes accept -- the body never lands in
+access logs. The `?token=...` query parameter still works (the dashboard
+reads `token` off its own URL for the WebSocket connection and the plain
+`<a download>` bundle link, then removes it from the address bar), but it
+leaks into proxy logs, browser history, and referers, so prefer the
+header or the login cookie where you can.
+
+When the dashboard is served from a fixed origin, set
+`SPIKEFORGE_DASHBOARD_ORIGINS` to a comma-separated allowlist (e.g.
+`https://dash.example`); requests carrying a foreign `Origin` are refused
+while native clients that send no `Origin` header are unaffected. Leaving
+it unset accepts any origin.
+
+#### Token rotation & entropy
+
+Rotate the token by setting `SPIKEFORGE_DASHBOARD_TOKEN` to the new value
+and restarting the server (or redeploying the container). The login cookie
+holds the token itself and the server keeps no session state, so the old
+token stops working immediately: browsers must log in again and API clients
+must swap the header value. There is nothing else to flush.
+
+Use at least 128 bits of randomness. The server accepts any non-empty value
+as the token and login attempts are not rate-limited, so a short token is
+guessable. Generate one with:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+which prints 64 hex characters (256 bits).
 
 `SPIKEFORGE_DASHBOARD_MAX_CONCURRENT_JOBS` caps how many training-or-pipeline
 jobs may run at once, server-wide (default `2`). `TrainingService` and

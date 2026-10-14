@@ -110,6 +110,7 @@ _FIELDS: Tuple[str, ...] = _REQUIRED + (
     "hf_repo",
     "sha256",
     "size_bytes",
+    "max_bytes",
     "topology",
     "input_shape",
     "weights",

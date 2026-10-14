@@ -7,10 +7,10 @@ from fastapi import WebSocket
 
 from server import animation
 from server.concurrency import SERVER_BUSY_MESSAGE
-from server.demo import read_only
 from server.engine_factory import build_encoder, ensure_dataset
 from server.messages import (
     emit_frame,
+    reject_if_read_only,
     send_activity,
     send_inference,
     send_initial,
@@ -105,16 +105,6 @@ async def handle_infer(
     await send_activity(ws, session, result)
 
 
-async def _reject_if_read_only(
-    ws: WebSocket, session: Session, message: str
-) -> bool:
-    """Send a read-only error and return True when writes are disabled."""
-    if not read_only():
-        return False
-    await send_locked(ws, session, {"type": "error", "payload": message})
-    return True
-
-
 def _infer_blocker(session: Session, cfg: EncodeConfig) -> Optional[str]:
     """Return why inference cannot run, or None when it can."""
     if session.engine is None:
@@ -141,7 +131,7 @@ async def handle_train(
     encode: Optional[EncodeConfig] = None,
 ) -> None:
     """Start training in a worker thread and stream its metrics."""
-    if await _reject_if_read_only(
+    if await reject_if_read_only(
         ws, session, "training is disabled on the public demo"
     ):
         return
@@ -166,7 +156,7 @@ async def handle_stop_train(ws: WebSocket, session: Session) -> None:
 
 async def handle_new_model(ws: WebSocket, session: Session) -> None:
     """Unload the current model so the next run starts from scratch."""
-    if await _reject_if_read_only(
+    if await reject_if_read_only(
         ws, session, "model changes are disabled on the public demo"
     ):
         return
@@ -178,7 +168,7 @@ async def handle_save_model(
     ws: WebSocket, session: Session, name: Optional[str]
 ) -> None:
     """Persist the current trained model to disk."""
-    if await _reject_if_read_only(
+    if await reject_if_read_only(
         ws, session, "model changes are disabled on the public demo"
     ):
         return
@@ -220,7 +210,7 @@ async def handle_load_model(
     ws: WebSocket, session: Session, name: Optional[str], cfg: TrainConfig
 ) -> None:
     """Load a checkpoint and make it the active training engine."""
-    if await _reject_if_read_only(
+    if await reject_if_read_only(
         ws, session, "model loading is disabled on the public demo"
     ):
         return
@@ -241,7 +231,7 @@ async def handle_delete_model(
     ws: WebSocket, session: Session, name: Optional[str]
 ) -> None:
     """Delete a saved checkpoint."""
-    if await _reject_if_read_only(
+    if await reject_if_read_only(
         ws, session, "model changes are disabled on the public demo"
     ):
         return

@@ -4,12 +4,11 @@ import asyncio
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import pytest
 import torch
 
-import server.hub_downloads as hub_downloads
 import server.hub_payloads as hub_payloads
 from server.handlers import dispatch
 from server.protocol_handlers import PROTOCOL_ACTIONS
@@ -46,11 +45,13 @@ class FakeWS:
         self.sent.append(message)
 
 
-async def _dispatch(message: ClientMessage) -> List[Dict[str, Any]]:
-    """Dispatch one client message against a fresh in-memory session."""
-    session = Session(asyncio.get_running_loop())
+async def _dispatch(
+    message: ClientMessage, session: Optional[Session] = None
+) -> List[Dict[str, Any]]:
+    """Dispatch one client message against an in-memory session."""
+    owned = session or Session(asyncio.get_running_loop())
     ws = FakeWS()
-    await dispatch(ws, session, message)
+    await dispatch(ws, owned, message)
     return ws.sent
 
 
@@ -92,14 +93,20 @@ class _FakePullManager:
         })
 
 
-def _fake_pull(monkeypatch: pytest.MonkeyPatch) -> _FakePullManager:
-    """Replace the pull manager and index refresh with fakes."""
-    fake = _FakePullManager()
-    monkeypatch.setattr(hub_downloads, "pull_manager", fake)
+def _fake_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replace the hosted-index refresh with a no-op."""
     monkeypatch.setattr(
         "spikeforge_hub.community.fetch_index", lambda: None
     )
-    return fake
+
+
+async def _dispatch_pull(
+    message: ClientMessage, fake: _FakePullManager
+) -> List[Dict[str, Any]]:
+    """Dispatch against a session owned by the fake pull manager."""
+    session = Session(asyncio.get_running_loop())
+    session.hub_pulls = fake  # type: ignore[assignment]
+    return await _dispatch(message, session)
 
 
 def _save_checkpoint() -> None:
@@ -125,9 +132,10 @@ def test_hub_pull_streams_pull_state(
 ) -> None:
     """A community id pulls with hub_pull_state progress snapshots."""
     _seed_community(sandbox)
-    fake = _fake_pull(monkeypatch)
+    _fake_index(monkeypatch)
+    fake = _FakePullManager()
     message = ClientMessage(type="hub_pull", name="@ada/mnist-fc")
-    sent = asyncio.run(_dispatch(message))
+    sent = asyncio.run(_dispatch_pull(message, fake))
     assert fake.entry_id == "@ada/mnist-fc"
     assert [item["type"] for item in sent] == ["hub_pull_state"]
     payload = sent[0]["payload"]
@@ -139,9 +147,10 @@ def test_hub_pull_curated_id_reports_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A curated id sent to hub_pull is redirected, not pulled."""
-    _fake_pull(monkeypatch)
+    _fake_index(monkeypatch)
+    fake = _FakePullManager()
     message = ClientMessage(type="hub_pull", name="nir/fc_small")
-    sent = asyncio.run(_dispatch(message))
+    sent = asyncio.run(_dispatch_pull(message, fake))
     assert [item["type"] for item in sent] == ["error"]
     assert "use hub_download" in sent[0]["payload"]
 

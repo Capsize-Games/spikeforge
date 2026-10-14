@@ -136,6 +136,12 @@ def _check_source(data: Mapping[str, Any]) -> None:
         raise HubCatalogError(
             _label(data), "source 'hf_repo' needs an 'hf_repo'"
         )
+    if source == "url" and not _text(data.get("sha256")):
+        raise HubCatalogError(
+            _label(data),
+            "source 'url' needs a 'sha256' checksum; a download "
+            "without a pinned checksum cannot be verified at import",
+        )
     if source == "reference":
         _check_reference(data)
     _check_optional(data)
@@ -215,10 +221,19 @@ def _check_scores(data: Mapping[str, Any]) -> None:
 
 
 def _check_optional(data: Mapping[str, Any]) -> None:
-    """Reject malformed optional checksum and size fields."""
+    """Reject a malformed optional checksum, size, or byte cap."""
     size = data.get("size_bytes")
     if size is not None and not isinstance(size, int):
         raise HubCatalogError(_label(data), "size_bytes must be an integer")
+    limit = data.get("max_bytes")
+    if limit is not None and (
+        isinstance(limit, bool)
+        or not isinstance(limit, int)
+        or limit <= 0
+    ):
+        raise HubCatalogError(
+            _label(data), "max_bytes must be a positive integer"
+        )
     sha = data.get("sha256")
     if sha is not None and not _text(sha):
         raise HubCatalogError(

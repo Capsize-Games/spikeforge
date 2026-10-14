@@ -58,6 +58,9 @@ class HubEntry:
     hf_repo: Optional[str] = None
     sha256: Optional[str] = None
     size_bytes: Optional[int] = None
+    #: Ceiling for one fetched artifact or snapshot, in bytes. ``None``
+    #: means the worker default (2 GiB); a catalog may only narrow it.
+    max_bytes: Optional[int] = None
     topology: Optional[str] = None
     input_shape: Optional[str] = None
     #: For ``source: "reference"``: the checkpoint filename inside

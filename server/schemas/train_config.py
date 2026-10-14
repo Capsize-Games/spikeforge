@@ -11,13 +11,13 @@ class TrainConfig(BaseModel):
     """User-adjustable parameters for a training run."""
 
     dataset: str = "mnist"
-    hidden: int = 256
+    hidden: int = Field(default=256, ge=1, le=16384)
     beta: float = 0.9
     lr: float = 5e-3
-    epochs: int = 3
-    num_steps: int = 25
-    subset: int = 10
-    batch_size: int = 64
+    epochs: int = Field(default=3, ge=1, le=10000)
+    num_steps: int = Field(default=25, ge=1, le=100000)
+    subset: int = Field(default=10, ge=1, le=1000000)
+    batch_size: int = Field(default=64, ge=1, le=8192)
     checkpoint: Optional[str] = None  # load this model to continue
     device: Literal["auto", "cpu", "gpu"] = "auto"
     # Execution mode: production skips trajectory capture, educational
@@ -37,7 +37,7 @@ class TrainConfig(BaseModel):
     # runs stay numerically identical. ``bptt_steps`` None means full BPTT.
     amp: bool = False
     grad_checkpoint: bool = False
-    bptt_steps: Optional[int] = None
+    bptt_steps: Optional[int] = Field(default=None, ge=1, le=100000)
     multi_gpu: bool = False
     # External tracking sink, additive and default-off: the local manifest is
     # always written first and an absent backend becomes a recorded reason.

@@ -20,6 +20,19 @@ that and describe the local source tree only.
   community downloads verify like direct-URL ones. New WebSocket pairs
   `hub_pull`/`hub_pull_state` and `bundle_build`/`bundle_built` pull a
   community version and build a saved model into a `.spkf` (protocol 1.1).
+- **`spikeforge-hub push` publishes reference checkpoints and records
+  accuracy claims.** A `reference/*` catalog id pushes its packaged weights
+  with the catalog's licence, dataset declarations, and measured scores;
+  `--checkpoint` pushes an outside `.pt` file; `--test-accuracy` /
+  `--test-samples` / `--test-dataset` record an uploader-claimed score into
+  the bundle manifest (validated like the catalog, `{}` when unstated);
+  and `--description` / `--description-file` sets the model-card body.
+  `pull` surfaces the recorded metrics labeled uploader-claimed. The
+  reference release runbook is `plans/hub_accounts_plan.md` §8.4.
+- The verification report now carries the runner-measured model identity:
+  top-level `framework`, `kind`, `topology`, and `input_shape`, pinned in
+  `plans/hub_accounts_plan.md` §7.3. The hub side already renders these
+  keys, so machine-checked uploads show their real topology and kind.
 - **`spikeforge-hub` manages community accounts and transfers.**
   `login`/`whoami`/`quota` handle the hub token and account position, `push`
   builds a saved model and publishes it through the two-phase upload, and
@@ -37,6 +50,13 @@ that and describe the local source tree only.
 
 ### Fixed
 
+- `hub_import` (and `spikeforge-hub import`) now verifies fetched bytes
+  before anything is loaded: a checksum mismatch raises a typed integrity
+  error and writes nothing, and checksum-less bytes are refused unless
+  `--allow-unverified` (or `SPIKEFORGE_HUB_ALLOW_UNVERIFIED=1`) opts in.
+  The verification outcome is recorded in the promoted checkpoint `meta`
+  and the import report, and `source: url` catalog entries must pin a
+  `sha256` like reference entries already do.
 - Dashboard deployments build the CPU image on the GitHub-hosted runner,
   transfer it over the pinned private connection, and verify the loaded
   revision before starting it without builds or pulls on the shared host.
@@ -97,6 +117,15 @@ that and describe the local source tree only.
   schema constants in `spikeforge_hub/entry_schema.py` and the validators in
   `spikeforge_hub/entry_checks.py`. Every resulting file is within the
   250-line limit; import paths and behavior are unchanged.
+
+## [co-installable 0.6.0 combination] - 2026-10-14
+
+Patch-release serve 0.2.5, targets 0.2.2, and io 0.1.5 with no code
+changes: their `spikeforge~=0.5.x` pins excluded core 0.6.0, so the
+combination the 0.6.0 row first recorded could not be installed
+together (caught by the dashboard e2e backend install). The row now
+records the installable set; core, hub, and server versions are
+unchanged.
 
 ## [spikeforge-v0.6.0] - 2026-10-13
 
