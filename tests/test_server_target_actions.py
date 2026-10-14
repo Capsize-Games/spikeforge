@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 import torch
+from _fakes import FakeModel, FakeSample, FakeWS
 
 from server.handlers import dispatch
 from server.schemas import ClientMessage, TrainConfig
@@ -18,37 +19,10 @@ pytest.importorskip("nir")
 _CONV = {"channels": 2, "num_classes": 3}
 
 
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
-class FakeSample:
-    """A minimal stand-in for the configured encoder engine."""
-
-    def __init__(self, steps: int = 4) -> None:
-        """Hold a fixed [T,1,784] spike volume."""
-        self._spikes = torch.rand(steps, 1, 784)
-
-    def spike_input(self) -> torch.Tensor:
-        """Return the [T,1,784] spike volume."""
-        return self._spikes
 
 
-class FakeModel:
-    """A minimal stand-in for the active training engine."""
-
-    def __init__(self, spec: Any, net: Any) -> None:
-        """Store the topology spec and module."""
-        self.spec = spec
-        self.net = net
 
 
 def _conv_model() -> FakeModel:

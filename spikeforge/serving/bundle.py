@@ -70,7 +70,7 @@ def _load_weights(path: str, payload: bytes) -> Mapping[str, torch.Tensor]:
         weights = torch.load(
             io.BytesIO(payload), map_location="cpu", weights_only=True
         )
-    except Exception as error:  # noqa: BLE001 - any load failure is a format error
+    except Exception as error:
         raise BundleFormatError(
             path, f"weights are not loadable: {error}"
         ) from None

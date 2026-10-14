@@ -11,6 +11,7 @@ import asyncio
 import contextlib
 from typing import Any, Dict, List
 
+from _fakes import FakeWS
 from fastapi import WebSocketDisconnect
 
 from server.app import _serve
@@ -37,23 +38,6 @@ class _FakeManager:
             self.status = "cancelled"
 
 
-class _SocketWS:
-    """Enough of a WebSocket to drive ``_serve`` with queued frames."""
-
-    def __init__(self, incoming: List[Dict[str, Any]]) -> None:
-        """Queue ``incoming`` frames and start with an empty send log."""
-        self._incoming = list(incoming)
-        self.sent: List[Dict[str, Any]] = []
-
-    async def receive_json(self) -> Dict[str, Any]:
-        """Yield the next queued frame, then drop the connection."""
-        if not self._incoming:
-            raise WebSocketDisconnect()
-        return self._incoming.pop(0)
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 def _frame(message_type: str) -> Dict[str, Any]:
@@ -65,9 +49,9 @@ async def _run(
     frames: List[Dict[str, Any]], session: Session
 ) -> List[Dict[str, Any]]:
     """Serve ``frames`` against ``session`` until the socket drops."""
-    ws = _SocketWS(frames)
+    ws = FakeWS(frames)
     with contextlib.suppress(WebSocketDisconnect):
-        await _serve(ws, session)  # type: ignore[arg-type]
+        await _serve(ws, session)
     return ws.sent
 
 
@@ -79,9 +63,9 @@ def test_cancel_download_is_scoped_to_its_session() -> None:
         own_a = _FakeManager("downloading")
         own_b = _FakeManager("idle")
         session_a = Session(loop)
-        session_a.downloads = own_a  # type: ignore[assignment]
+        session_a.downloads = own_a
         session_b = Session(loop)
-        session_b.downloads = own_b  # type: ignore[assignment]
+        session_b.downloads = own_b
         await _run([_frame("cancel_download")], session_b)
         assert not own_a.cancelled
         assert own_a.status == "downloading"
@@ -98,8 +82,8 @@ def test_hub_cancel_is_scoped_to_its_session() -> None:
         download_a = _FakeManager("downloading")
         pull_a = _FakeManager("downloading")
         session_a = Session(loop)
-        session_a.hub_downloads = download_a  # type: ignore[assignment]
-        session_a.hub_pulls = pull_a  # type: ignore[assignment]
+        session_a.hub_downloads = download_a
+        session_a.hub_pulls = pull_a
         session_b = Session(loop)
         await _run([_frame("hub_cancel")], session_b)
         assert not download_a.cancelled
@@ -116,7 +100,7 @@ def test_socket_hub_cancel_terminates_own_pull() -> None:
     async def scenario() -> List[Dict[str, Any]]:
         session = Session(asyncio.get_running_loop())
         pull = _FakeManager("downloading")
-        session.hub_pulls = pull  # type: ignore[assignment]
+        session.hub_pulls = pull
         sent = await _run([_frame("hub_cancel")], session)
         assert pull.cancelled
         return sent
