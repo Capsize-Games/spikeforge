@@ -24,11 +24,17 @@ _NAME = "auth_route_ckpt"
 
 
 class _FakeRequest:
-    """Duck-types the one attribute ``download_bundle`` reads off Request."""
+    """Duck-type the handshake attributes ``download_bundle`` reads."""
 
-    def __init__(self, headers: Optional[Dict[str, str]] = None) -> None:
-        """Store a plain header dict standing in for Starlette's."""
+    def __init__(
+        self, headers: Optional[Dict[str, str]] = None,
+        cookies: Optional[Dict[str, str]] = None,
+        scope: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Store plain maps standing in for Starlette's request."""
         self.headers: Dict[str, str] = headers or {}
+        self.cookies: Dict[str, str] = cookies or {}
+        self.scope: Dict[str, Any] = scope or {}
 
 
 @pytest.fixture(autouse=True)

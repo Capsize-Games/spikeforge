@@ -5,7 +5,8 @@ from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from server.auth import authorized
+from server.auth import TOKEN_COOKIE, origin_allowed, request_authorized
+from server.auth_routes import router as auth_router
 from server.bundle_routes import router as bundle_router
 from server.handlers import dispatch
 from server.hub_handlers import cancel_hub_activity
@@ -27,6 +28,7 @@ app = FastAPI(
 device_mod.prime()
 
 app.include_router(bundle_router)
+app.include_router(auth_router)
 
 # Serve the built React app (no-op when client/dist is absent).
 mount_client(app)
@@ -208,8 +210,13 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     A token-gated connection is rejected before ``accept()`` so the
     handshake fails outright rather than opening then closing.
     """
-    if not authorized(
-        ws.query_params.get("token"), ws.headers.get("authorization")
+    if not origin_allowed(
+        ws.headers.get("origin")
+    ) or not request_authorized(
+        server=ws.scope.get("server"),
+        query_token=ws.query_params.get("token"),
+        header=ws.headers.get("authorization"),
+        cookie=ws.cookies.get(TOKEN_COOKIE),
     ):
         await ws.close(code=1008)
         return
