@@ -4,9 +4,11 @@ import asyncio
 import contextlib
 from typing import Any, Coroutine, Optional
 
+from server.downloads import DownloadManager
 from server.pipeline_service import PipelineService
 from server.schemas import EncodeConfig
 from server.training import TrainingService
+from spikeforge_hub.downloads import HubDownloadManager
 
 
 class Session:
@@ -22,6 +24,11 @@ class Session:
         self.pipeline = PipelineService(loop)
         self.inbox: asyncio.Queue = asyncio.Queue()
         self.lock = asyncio.Lock()
+        # Each session owns its download managers, so one client's
+        # cancel can never terminate another session's download.
+        self.downloads = DownloadManager()
+        self.hub_downloads = HubDownloadManager()
+        self.hub_pulls = HubDownloadManager()
 
     @property
     def engine(self) -> Any:

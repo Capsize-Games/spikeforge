@@ -11,12 +11,7 @@ surface a message rather than a traceback or a silent partial load.
 
 from fastapi import WebSocket
 
-from server.hub_downloads import (
-    ensure_hub_download,
-    ensure_hub_pull,
-    manager,
-    pull_manager,
-)
+from server.hub_downloads import ensure_hub_download, ensure_hub_pull
 from server.hub_messages import (
     send_bundle_built,
     send_hub_download_state,
@@ -75,16 +70,32 @@ async def handle_hub_download(
         await _error(ws, session, str(error))
 
 
+async def cancel_hub_activity(ws: WebSocket, session: Session) -> None:
+    """Terminate the session's in-flight hub download or pull.
+
+    Shared by the dispatched ``hub_cancel`` branch and the socket fast
+    path in :mod:`server.app`, so a pull cancelled over a real socket is
+    terminated exactly like one cancelled through ``dispatch``.
+    """
+    pull_active = (
+        session.hub_pulls.snapshot()["status"] == "downloading"
+    )
+    session.hub_downloads.cancel()
+    session.hub_pulls.cancel()
+    await send_hub_download_state(
+        ws, session, session.hub_downloads.snapshot()
+    )
+    if pull_active:
+        await send_hub_pull_state(
+            ws, session, session.hub_pulls.snapshot()
+        )
+
+
 async def handle_hub_cancel(
-    ws: WebSocket, session: Session, message: ClientMessage
+    ws: WebSocket, session: Session, _message: ClientMessage
 ) -> None:
     """Terminate the in-flight download or pull and report its state."""
-    pull_active = pull_manager.snapshot()["status"] == "downloading"
-    manager.cancel()
-    pull_manager.cancel()
-    await send_hub_download_state(ws, session, manager.snapshot())
-    if pull_active:
-        await send_hub_pull_state(ws, session, pull_manager.snapshot())
+    await cancel_hub_activity(ws, session)
 
 
 async def handle_hub_inspect(
