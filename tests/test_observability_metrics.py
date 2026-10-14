@@ -47,6 +47,7 @@ def test_snapshot_is_json_dumpable_and_resettable() -> None:
     }
 
 
+@pytest.mark.network
 def test_training_and_validation_increment_metrics() -> None:
     """A short training run records the expected counters and timers."""
     engine = TrainingEngine(

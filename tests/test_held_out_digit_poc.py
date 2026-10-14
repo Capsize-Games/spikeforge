@@ -50,6 +50,7 @@ def test_freezing_blocks_further_optimizer_steps() -> None:
     )
 
 
+@pytest.mark.network
 def test_run_held_out_digit_poc_reports_both_numbers() -> None:
     """The end-to-end protocol yields two accuracy percentages."""
     result = run_held_out_digit_poc(

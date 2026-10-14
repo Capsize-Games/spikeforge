@@ -18,11 +18,15 @@ class EvalMixin:
     """Score held-out batches periodically during training."""
 
     _test_batches: Optional[List[_Batch]]
+    _download: bool
 
     def _load_test_batches(self) -> List[_Batch]:
         """Cache a few held-out batches for scoring."""
         if self._test_batches is None:
-            loader = build_loader(self._dataset, 1, 1000, train=False)
+            loader = build_loader(
+                self._dataset, 1, 1000, train=False,
+                download=self._download,
+            )
             self._test_batches = list(islice(loader, EVAL_BATCHES))
         return self._test_batches
 

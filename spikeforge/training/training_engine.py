@@ -53,6 +53,7 @@ class TrainingEngine(
     _tracking: Optional[str]
     _deterministic: bool
     _determinism_report: Optional[Dict[str, Any]]
+    _download: bool
 
     def __init__(
         self, dataset: str = "mnist", hidden: int = 128, beta: float = 0.5,
@@ -66,11 +67,12 @@ class TrainingEngine(
         amp: bool = False, grad_checkpoint: bool = False,
         bptt_steps: Optional[int] = None, multi_gpu: bool = False,
         tracking: Optional[str] = None, deterministic: bool = False,
+        download: bool = True,
     ) -> None:
         """Resolve inputs, build the topology, and optionally restore it."""
         self._store_settings(
             dataset, hidden, beta, lr, weight_decay, epochs, num_steps,
-            subset, batch_size,
+            subset, batch_size, download,
         )
         self._configure_session(
             mode, seed, tracking, deterministic, encode, topology,
@@ -101,10 +103,11 @@ class TrainingEngine(
     def _store_settings(
         self, dataset: str, hidden: int, beta: float, lr: float,
         weight_decay: float, epochs: int, num_steps: int, subset: int,
-        batch_size: int,
+        batch_size: int, download: bool = True,
     ) -> None:
         """Store the plain training settings on the instance."""
         self._dataset = dataset
+        self._download = bool(download)
         self._num_classes, _ = dataset_info(dataset)
         self._hidden = hidden
         self._beta = beta
@@ -182,7 +185,8 @@ class TrainingEngine(
         overrides this to bridge an event stream into the same contract.
         """
         return build_loader(
-            self._dataset, self._subset, self._batch_size, train=train
+            self._dataset, self._subset, self._batch_size, train=train,
+            download=self._download,
         )
 
     def train(
@@ -205,7 +209,9 @@ class TrainingEngine(
 
     def predict_sample(self) -> Dict[str, List[int]]:
         """Return digits/labels for one held-out batch."""
-        loader = build_loader(self._dataset, 1, 32, train=False)
+        loader = build_loader(
+            self._dataset, 1, 32, train=False, download=self._download
+        )
         inputs, targets = next(iter(loader))
         preds = self.predict(inputs)
         return {

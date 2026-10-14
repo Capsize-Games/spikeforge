@@ -6,6 +6,9 @@ entry is a :class:`DatasetSpec` carrying its metadata, including the
 ``modality`` that tells the UI which encodings to offer.
 """
 
+import http.client
+import time
+import urllib.error
 from typing import Any, Dict, List, Tuple
 
 import torchvision.datasets as tv_datasets
@@ -15,6 +18,20 @@ from spikeforge.config import DATA_DIR
 from spikeforge.data.dataset_spec import DatasetSpec
 from spikeforge.data.event_errors import EventSplitMissingError
 from spikeforge.events import hsd_reader, tonic_api
+
+#: Mirror failures worth another attempt: torchvision wraps its own
+#: download errors in RuntimeError, while resets and disconnects leak
+#: through as connection errors (issue #87).
+_RETRYABLE = (
+    RuntimeError,
+    urllib.error.URLError,
+    ConnectionError,
+    TimeoutError,
+    http.client.HTTPException,
+)
+
+#: Download attempts before a mirror failure becomes the caller's error.
+_DOWNLOAD_ATTEMPTS = 3
 
 _REGISTRY: Dict[str, DatasetSpec] = {
     "mnist": DatasetSpec(
@@ -145,8 +162,17 @@ def build_dataset(
     """Instantiate a dataset, optionally downloading it into the data dir.
 
     ``size`` is the sample geometry the transform resizes to; the default
-    28x28 keeps every existing caller byte-identical.
+    28x28 keeps every existing caller byte-identical. A transient mirror
+    failure is retried with backoff instead of failing the caller.
     """
+    cls, kwargs = _image_loader(name)
+    return _instantiate(
+        cls, kwargs, train=train, download=download, size=size
+    )
+
+
+def _image_loader(name: str) -> Tuple[type, Dict[str, object]]:
+    """Return the torchvision class and kwargs for an image dataset."""
     spec = dataset_spec(name)
     if spec.cls is None and spec.modality == "event":
         raise ValueError(
@@ -155,13 +181,28 @@ def build_dataset(
         )
     if spec.cls is None:
         raise ValueError(f"dataset {spec.name!r} has no image loader")
-    return spec.cls(
-        DATA_DIR,
-        train=train,
-        download=download,
-        transform=transform(size),
-        **spec.kwargs,
-    )
+    return spec.cls, spec.kwargs
+
+
+def _instantiate(
+    cls: type, kwargs: Dict[str, object], train: bool, download: bool,
+    size: Tuple[int, int],
+) -> tv_datasets.VisionDataset:
+    """Build the torchvision dataset, retrying transient mirror flakes."""
+    for attempt in range(_DOWNLOAD_ATTEMPTS):
+        try:
+            return cls(
+                DATA_DIR,
+                train=train,
+                download=download,
+                transform=transform(size),
+                **kwargs,
+            )
+        except _RETRYABLE:
+            if not download or attempt + 1 == _DOWNLOAD_ATTEMPTS:
+                raise
+            time.sleep(2 ** attempt)
+    raise AssertionError("unreachable download loop")
 
 
 def _resolve(name: str) -> str:
