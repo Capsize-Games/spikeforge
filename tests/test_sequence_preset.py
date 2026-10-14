@@ -56,12 +56,12 @@ def test_sequence_attn_simulates() -> None:
     assert tuple(trajectory.logits.shape) == (2, 8, 4)
 
 
-def test_sequence_attn_export_names_embedding() -> None:
+def test_sequence_attn_export_names_positional_encoding() -> None:
     """Export fails loudly, naming the first unexportable stage."""
     spec, module = registry.build_topology("sequence_attn")
     with pytest.raises(UnsupportedStageError) as excinfo:
         to_nir(spec, module)
-    assert excinfo.value.kind == "embedding"
+    assert excinfo.value.kind == "positional_encoding"
 
 
 def test_sequence_attn_mixes_per_stage_neurons() -> None:
@@ -86,7 +86,7 @@ def test_verify_export_cli_reports_unexportable(
     code = verify.main(["export", "--topology", "sequence_attn"])
     out = capsys.readouterr().out
     assert code == 1
-    assert "embedding" in out
+    assert "positional_encoding" in out
 
 
 def test_verify_validate_cli_reports_unexportable(
@@ -96,4 +96,4 @@ def test_verify_validate_cli_reports_unexportable(
     code = verify.main(["validate", "--topology", "sequence_attn"])
     out = capsys.readouterr().out
     assert code == 1
-    assert "embedding" in out
+    assert "positional_encoding" in out

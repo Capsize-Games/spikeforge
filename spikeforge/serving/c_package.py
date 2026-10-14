@@ -7,17 +7,19 @@ graph in :func:`graph_summary` shape with the bundle's real weights, plus
 a manifest recording the source bundle's identity. The ``.spkf`` format
 itself is unchanged; the package is a derived artifact.
 
-Graphs using node kinds the C runtime does not implement are refused with
-:class:`CExportError` naming the kinds, so an unloadable package is never
-written silently.
+The gate is the single-sourced ``nir-c-runtime`` profile owned by
+:mod:`spikeforge_targets.c_runtime`: a graph the C runtime cannot load is
+refused with :class:`CExportError` naming each offending node and kind,
+so an unloadable package is never written silently.
 """
 
 import os
 import time
-from typing import TYPE_CHECKING, Any, Dict, FrozenSet, List, Mapping
+from typing import TYPE_CHECKING, Any, Dict, Mapping
 
 from spikeforge.serving import bundle_manifest as bm
 from spikeforge.serving.errors import BundleFormatError, CExportError
+from spikeforge.targets_extra import require
 
 if TYPE_CHECKING:
     from spikeforge.serving.bundle_types import DeploymentBundle
@@ -31,23 +33,21 @@ GRAPH_FILENAME = "graph.json"
 #: The package manifest recording the source bundle's identity.
 MANIFEST_FILENAME = "manifest.json"
 
-#: Node kinds ``nir_graph_load`` implements. Mirrors ``KIND_TABLE`` in
-#: ``nir-c-runtime``'s ``src/graph.c``; the conformance tests pin the pair.
-SUPPORTED_NODE_KINDS: FrozenSet[str] = frozenset(
-    {
-        "Input",
-        "Output",
-        "Conv2d",
-        "Affine",
-        "Flatten",
-        "AvgPool2d",
-        "SumPool2d",
-        "LI",
-        "Threshold",
-        "Scale",
-        "Delay",
-    }
-)
+
+def __getattr__(name: str) -> Any:
+    """Resolve ``SUPPORTED_NODE_KINDS`` from the C runtime profile.
+
+    Backward-compatible alias for the single-sourced kind set owned by
+    :mod:`spikeforge_targets.c_runtime`, imported lazily (PEP 562) so
+    this module stays importable on a headless core install.
+    """
+    if name != "SUPPORTED_NODE_KINDS":
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {name!r}"
+        )
+    kinds = require("spikeforge_targets.c_runtime").SUPPORTED
+    globals()[name] = kinds
+    return kinds
 
 
 def _summary_with_real_weights(
@@ -66,10 +66,22 @@ def _summary_with_real_weights(
     return dict(graph_summary(to_nir(bundle.spec, module)))
 
 
-def _unsupported(summary: Mapping[str, Any]) -> List[str]:
-    """Return the sorted node kinds the C runtime does not implement."""
-    kinds = {node["kind"] for node in summary["nodes"]}
-    return sorted(kinds - SUPPORTED_NODE_KINDS)
+def _refuse_unloadable(path: str, summary: Mapping[str, Any]) -> None:
+    """Raise :class:`CExportError` unless the C runtime loads ``summary``.
+
+    The check runs by node kind and by every structural C-loader
+    assumption, so a package the C loader rejects is never written.
+    """
+    validator = require("spikeforge_targets.c_runtime_validate")
+    refusal = require("spikeforge_targets.c_runtime_errors")
+    try:
+        validator.check_for_c_runtime(summary)
+    except refusal.CRuntimeUnsupportedError as exc:
+        found = [
+            (item.name, item.kind, item.reason)
+            for item in exc.violations
+        ]
+        raise CExportError(path, exc.kinds, found) from exc
 
 
 def _bundle_checksum(bundle: "DeploymentBundle") -> Any:
@@ -117,13 +129,12 @@ def write_c_package(bundle: "DeploymentBundle", path: str) -> str:
 
     ``path`` is created when missing. The graph carries the bundle's
     real (dequantized, when compressed) weights as plain float arrays;
-    a graph with C-unsupported node kinds raises :class:`CExportError`
-    naming them instead of writing a package the C loader rejects.
+    a graph the C runtime cannot load raises :class:`CExportError`
+    naming the offending nodes and kinds instead of writing a package
+    the C loader rejects.
     """
     summary = _summary_with_real_weights(bundle)
-    rejected = _unsupported(summary)
-    if rejected:
-        raise CExportError(bundle.path or "<memory>", rejected)
+    _refuse_unloadable(bundle.path or "<memory>", summary)
     os.makedirs(path, exist_ok=True)
     with open(os.path.join(path, GRAPH_FILENAME), "wb") as handle:
         handle.write(bm.dump_json(summary))

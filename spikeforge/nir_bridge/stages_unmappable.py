@@ -14,14 +14,9 @@ _NO_MAXPOOL = "the installed nir pooling primitives are average and sum only"
 
 #: Kind -> reason it cannot be mapped to the installed ``nir``.
 UNMAPPABLE_STAGES: Dict[str, str] = {
-    "embedding": (
-        "the installed nir has no Embedding primitive, so a token lookup "
-        "table cannot be represented; the stage is simulation-only"
-    ),
     "maxpool1d": _NO_MAXPOOL,
     "maxpool2d": _NO_MAXPOOL,
     "layer_norm": _NO_NORM,
-    "batch_norm": _NO_NORM,
     "positional_encoding": (
         "the installed nir has no constant node to carry a fixed sinusoidal "
         "encoding; the stage is simulation-only"

@@ -28,7 +28,9 @@ Top level `{"nodes": [...], "edges": [...]}`. A node is
 `{name, kind, params}`; an edge is `{source, target, delayed}` (the C loader
 reads `source`/`target` and ignores `delayed`). Eleven node kinds load;
 anything else fails in C with a named error, and `export_c_package` refuses
-it first with `CExportError` naming the kinds:
+it first with `CExportError` naming the offending nodes and kinds (shape
+violations refuse the same way, through the single-sourced
+`nir-c-runtime` profile):
 
 `Input`, `Output`, `Conv2d`, `Affine`, `Flatten`, `AvgPool2d`, `SumPool2d`,
 `LI`, `Threshold`, `Scale`, `Delay`.

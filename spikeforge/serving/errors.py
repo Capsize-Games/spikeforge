@@ -73,21 +73,43 @@ class BundleCompatibilityError(BundleError):
         super().__init__(path, f"incompatible bundle: {detail}")
 
 
+def _refusal_detail(
+    kinds: Tuple[str, ...], violations: Sequence[Tuple[str, str, str]]
+) -> str:
+    """Return the refusal message for ``kinds`` and ``violations``."""
+    listed = ", ".join(repr(kind) for kind in kinds)
+    if not violations:
+        return f"graph uses node kinds the C runtime rejects: {listed}"
+    details = "; ".join(
+        f"{name!r} ({kind}): {reason}"
+        for name, kind, reason in violations
+    )
+    return f"graph the C runtime rejects (kinds {listed}): {details}"
+
+
 class CExportError(BundleError):
     """Raised when a bundle cannot be exported as a C-loadable package.
 
     The offending node ``kinds`` are stored as an attribute so a caller can
     name exactly which topology nodes the C runtime does not implement,
-    without parsing the message text.
+    without parsing the message text. When the gate reports per-node
+    ``violations`` -- ``(name, kind, reason)`` triples -- they are stored
+    too, and the message names each node alongside its reason.
     """
 
-    def __init__(self, path: str, kinds: Sequence[str]) -> None:
-        """Record the unsupported ``kinds`` and build a clear message."""
-        names = ", ".join(repr(kind) for kind in sorted(kinds))
-        super().__init__(
-            path, f"graph uses node kinds the C runtime rejects: {names}"
+    def __init__(
+        self,
+        path: str,
+        kinds: Sequence[str],
+        violations: Sequence[Tuple[str, str, str]] = (),
+    ) -> None:
+        """Record ``kinds`` and per-node ``violations`` truthfully."""
+        ordered = tuple(sorted(kinds))
+        super().__init__(path, _refusal_detail(ordered, violations))
+        self.kinds: Tuple[str, ...] = ordered
+        self.violations: Tuple[Tuple[str, str, str], ...] = tuple(
+            violations
         )
-        self.kinds: Tuple[str, ...] = tuple(sorted(kinds))
 
 
 class BackendError(ServingError):

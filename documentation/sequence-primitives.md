@@ -16,9 +16,11 @@ before, and `fc_legacy` keeps its `_fc1/_lif1/_fc2/_lif2` contract.
 module factory and an explicit NIR contract — `mapped`, `passthrough`
 (`dropout` is identity at inference), or `unexportable`.
 
-Of the new kinds, `conv1d` is mapped and the rest except `dropout` are
-simulation-only: `maxpool1d`, `maxpool2d`, `embedding`, `layer_norm`,
-`batch_norm`, `positional_encoding`, `attention`, and
+Of the new kinds, `conv1d` is mapped and `embedding` and `batch_norm`
+decompose into the `Affine` primitive (a one-hot ingest plus the lookup
+table for `embedding`; an eval-mode statistics fold for 2D `batch_norm`).
+The rest except `dropout` are simulation-only: `maxpool1d`, `maxpool2d`,
+`layer_norm`, `positional_encoding`, `attention`, and
 `multihead_attention` each raise `UnsupportedStageError` at export, as
 does the `alpha` neuron. The per-kind verdicts live in the
 [NIR-unmappable stage decisions](../plans/nir-unmappable-decisions.md).
@@ -31,10 +33,12 @@ does the `alpha` neuron. The per-kind verdicts live in the
   target too.
 - `sequence_attn` is the spiking-transformer-shaped demo (`embedding` →
   `positional_encoding` → `multihead_attention` → `layer_norm` → `linear` →
-  neuron). The installed `nir` has no embedding, attention, or normalisation
-  primitive, so export raises the typed `UnsupportedStageError` naming the
-  first unexportable stage. It stays available for simulation and
-  introspection — the honest `alpha` precedent, applied to stages.
+  neuron). The `embedding` stage decomposes into a one-hot ingest plus
+  `Affine`, but the installed `nir` has no positional-encoding, attention,
+  or normalisation primitive, so export raises the typed
+  `UnsupportedStageError` naming the first remaining unexportable stage.
+  It stays available for simulation and introspection — the honest `alpha`
+  precedent, applied to stages.
 
 The toy token task
 ([`data/sequence_source.py`](../spikeforge/data/sequence_source.py:1))

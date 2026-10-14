@@ -9,10 +9,12 @@ node and is runnable by the Norse simulator target.
 
 ``sequence_attn`` is a spiking-transformer-shaped stack
 (``embedding`` -> ``positional_encoding`` -> ``multihead_attention`` ->
-``layer_norm`` -> ``linear`` -> neuron). The installed ``nir`` has no
-embedding, attention, or normalisation primitive, so export raises the typed
-``UnsupportedStageError`` naming the first unexportable stage; it stays
-available for simulation and introspection.
+``layer_norm`` -> ``linear`` -> neuron). The embedding stage decomposes
+into a one-hot ingest plus ``Affine``, but the installed ``nir`` has no
+positional-encoding, attention, or normalisation primitive, so export
+raises the typed ``UnsupportedStageError`` naming the first remaining
+unexportable stage; the preset stays available for simulation and
+introspection.
 """
 
 from typing import List, Optional
@@ -114,8 +116,8 @@ def sequence_attn(
 ) -> TopologySpec:
     """Simulation-only spiking-transformer-shaped preset (unexportable).
 
-    ``nir`` lacks embedding/attention/normalisation primitives, so export
-    fails loudly, naming the first unexportable stage.
+    ``nir`` lacks positional-encoding/attention/normalisation primitives,
+    so export fails loudly, naming the first unexportable stage.
     """
     overrides = _merged_params(stage_params, ("out",), threshold, reset)
     stage = _stage_factory(neurons, overrides)
