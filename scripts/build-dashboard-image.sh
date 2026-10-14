@@ -10,6 +10,7 @@ if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]] || \
 fi
 docker build \
   --build-arg TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu \
+  --build-arg LOCKFILE=requirements/server.cpu.lock \
   --label "org.opencontainers.image.revision=$revision" \
   --tag "spikeforge-dashboard:$revision" .
 config_digest="$(docker image save "spikeforge-dashboard:$revision" | \
