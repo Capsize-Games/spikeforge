@@ -153,7 +153,7 @@ flowchart LR
 ### 4.6 Compression option
 - Pruning ([`pruning.py`](spikeforge/compression/pruning.py:1)) to fit a wearable
   budget plus weight-only/activation quantization
-  ([`activation_quant.py`](spikeforge_targets/activation_quant.py:1),
+  ([`activation_quant/`](spikeforge_targets/activation_quant/__init__.py:1),
   [`quantize.py`](spikeforge_targets/quantize.py:103)); any sensitivity drift is
   recorded and a regression beyond tolerance **fails the release gate**.
 

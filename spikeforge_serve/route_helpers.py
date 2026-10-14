@@ -13,6 +13,7 @@ from fastapi import HTTPException, Request
 from spikeforge.serving.bundle import DeploymentBundle
 from spikeforge_serve.payloads import (
     encoded_flag,
+    frame_from,
     frames_from,
     prediction_json,
     session_id_from,
@@ -114,8 +115,9 @@ def _predict_stream_reply(
 ) -> Dict[str, Any]:
     """Return the prediction reply for a ``frame`` stream message."""
     encoded = encoded_flag(message)
+    frame = frame_from(message)
     prediction = serving.predict(
-        [message["frame"]], session_id=session_id, encoded=encoded
+        [frame], session_id=session_id, encoded=encoded
     )[0]
     payload = prediction_json(prediction)
     payload["session_id"] = session_id

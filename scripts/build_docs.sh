@@ -38,7 +38,7 @@ cp plans/*.md "$DOCS"/
 cp README.md "$DOCS/readme.md"
 # Root documents that plan pages link to as sibling pages, plus the
 # user-facing cookbook, the examples index, and the readiness checklist.
-cp rules.md COPY_POLICY.md INTEGRATION_PLAN.md COOKBOOK.md \
+cp rules.md COPY_POLICY.md COOKBOOK.md \
    OPEN_SOURCE_CHECKLIST.md "$DOCS"/
 cp examples/README.md "$DOCS/examples.md"
 # Long-form reference pages (see documentation/README.md). The documentation

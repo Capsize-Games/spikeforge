@@ -4,12 +4,41 @@ from typing import Any, Dict, Optional, Tuple
 
 import torch
 
+from spikeforge.encoding.spike_encoder import SpikeEncoder
 from spikeforge.serving import preprocess
+from spikeforge.serving.encode_spec import EncodeSpec
 from spikeforge.simulator import input_shape
 
 
 class EncodingMixin:
     """Turn a batch of images into spikes shaped for the active topology."""
+
+    _encoder: Optional[SpikeEncoder]
+    _encode_spec: EncodeSpec
+    _explicit_mode: Optional[str]
+    _input_mode: str
+    _num_classes: int
+    _hidden: int
+    _num_steps: int
+    _batch_size: int
+
+    def _setup_input(
+        self, encode: Any, input_mode: Optional[str], device: Optional[str]
+    ) -> None:
+        """Resolve the encoder, effective input mode, and compute device."""
+        self._encoder = (
+            SpikeEncoder.from_encode_config(encode)
+            if encode is not None
+            else None
+        )
+        self._encode_spec = EncodeSpec.from_mapping(encode)
+        self._explicit_mode = input_mode
+        coding = encode.coding if encode is not None else "raw"
+        self._input_mode = input_mode or coding
+        self._set_device(device or "auto", encoder=self._encoder,
+                         hidden=self._hidden, num_classes=self._num_classes,
+                         num_steps=self._num_steps,
+                         batch_size=self._batch_size)
 
     def _encode_batch(self, inputs: torch.Tensor) -> torch.Tensor:
         """Return [T,B,F] or [T,B,1,H,W] spikes per input stage."""

@@ -4,11 +4,20 @@ Every ``_check_*`` function rejects one class of malformed record with a
 typed :class:`~spikeforge_hub.errors.HubCatalogError`, so a bad entry is
 reported instead of silently skipped. The schema constants they check
 against live in :mod:`spikeforge_hub.entry_schema`; :class:`HubEntry
-<spikeforge_hub.entry.HubEntry>` calls these from ``from_dict``.
+<spikeforge_hub.entry.HubEntry>` calls these from ``from_dict``. The
+required-field, id, and projection primitives are shared with the
+governed registry through :mod:`spikeforge_hub._validation`.
 """
 
 from typing import Any, Dict, Mapping, Sequence, Tuple
 
+from spikeforge_hub._validation import (
+    check_id,
+    check_required,
+    project_fields,
+)
+from spikeforge_hub._validation import label as _label
+from spikeforge_hub._validation import text as _text
 from spikeforge_hub.entry_schema import (
     _FIELDS,
     _ID,
@@ -26,35 +35,16 @@ from spikeforge_hub.entry_schema import (
 from spikeforge_hub.errors import HubCatalogError
 
 
-def _label(data: Mapping[str, Any]) -> str:
-    """Return the entry id for messages, falling back to ``(unnamed)``."""
-    value = data.get("id")
-    return value if isinstance(value, str) and value else "(unnamed)"
-
-
-def _text(value: Any) -> bool:
-    """Return True when ``value`` is a non-empty string."""
-    return isinstance(value, str) and bool(value.strip())
-
-
 def _check_required(data: Mapping[str, Any]) -> None:
     """Reject an entry that omits or blanks a required text field."""
-    missing = [key for key in _REQUIRED if not _text(data.get(key))]
-    if missing:
-        raise HubCatalogError(
-            _label(data), f"missing required fields: {', '.join(missing)}"
-        )
+    check_required(data, _REQUIRED, HubCatalogError)
 
 
 def _check_id(data: Mapping[str, Any]) -> None:
     """Reject an id that could escape or confuse the cache layout."""
-    entry_id = str(data.get("id", ""))
-    if not _ID.match(entry_id):
-        raise HubCatalogError(
-            _label(data), "id must match @?[A-Za-z0-9][A-Za-z0-9._/-]*"
-        )
-    if ".." in entry_id:
-        raise HubCatalogError(_label(data), "id must not contain '..'")
+    check_id(
+        data, _ID, "@?[A-Za-z0-9][A-Za-z0-9._/-]*", HubCatalogError
+    )
 
 
 def _check_allowed(data: Mapping[str, Any]) -> None:
@@ -125,6 +115,16 @@ def _check_dataset_license(data: Mapping[str, Any]) -> None:
     )
 
 
+def _check_url_checksum(data: Mapping[str, Any]) -> None:
+    """Reject a ``url`` source without a pinned ``sha256`` checksum."""
+    if data.get("source") == "url" and not _text(data.get("sha256")):
+        raise HubCatalogError(
+            _label(data),
+            "source 'url' needs a 'sha256' checksum; a download "
+            "without a pinned checksum cannot be verified at import",
+        )
+
+
 def _check_source(data: Mapping[str, Any]) -> None:
     """Reject a source whose required locator field is missing."""
     source = data.get("source")
@@ -136,12 +136,7 @@ def _check_source(data: Mapping[str, Any]) -> None:
         raise HubCatalogError(
             _label(data), "source 'hf_repo' needs an 'hf_repo'"
         )
-    if source == "url" and not _text(data.get("sha256")):
-        raise HubCatalogError(
-            _label(data),
-            "source 'url' needs a 'sha256' checksum; a download "
-            "without a pinned checksum cannot be verified at import",
-        )
+    _check_url_checksum(data)
     if source == "reference":
         _check_reference(data)
     _check_optional(data)
@@ -243,4 +238,4 @@ def _check_optional(data: Mapping[str, Any]) -> None:
 
 def _fields(data: Mapping[str, Any]) -> Dict[str, Any]:
     """Project ``data`` onto the declared schema fields."""
-    return {name: data.get(name) for name in _FIELDS}
+    return project_fields(data, _FIELDS)

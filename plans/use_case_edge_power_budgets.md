@@ -93,7 +93,7 @@ flowchart LR
     achieved-vs-target [`PruningReport`](spikeforge/compression/pruning.py:48);
   - weight-only **and** activation/membrane quantization via
     [`quantize_schemes.py`](spikeforge_targets/quantize_schemes.py:1) and
-    [`activation_quant.py`](spikeforge_targets/activation_quant.py:1);
+    [`activation_quant/`](spikeforge_targets/activation_quant/__init__.py:1);
   - export via [`quantize.py`](spikeforge_targets/quantize.py:103) and NIR
     ([`serialization.py`](spikeforge/nir_bridge/serialization.py:52)).
 - **Reuse:** [`TrainingEngine`](spikeforge/training/training_engine.py:1),
