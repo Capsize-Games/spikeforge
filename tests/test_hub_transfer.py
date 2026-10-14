@@ -346,6 +346,8 @@ def test_pull_downloads_and_imports_through_the_funnel(
     """Pull fetches the index URL, then the funnel judges the bytes."""
     _save_checkpoint()
     blob = _spkf_bytes("transfer_ckpt", sandbox)
+    # The hosted index pins the digest it measured on arrival, so the
+    # pulled bytes verify at import; the seed mirrors that contract.
     _seed(sandbox, [{
         **_ENTRY,
         "size_bytes": len(blob),
@@ -422,7 +424,7 @@ def test_pull_non_community_source_is_refused(
     sandbox: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An at-id entry that is not community-owned is refused, not pulled."""
-    _seed(sandbox, [{**_ENTRY, "source": "url"}])
+    _seed(sandbox, [{**_ENTRY, "source": "url", "sha256": "0" * 64}])
     _fake_index(monkeypatch)
     with pytest.raises(HubDownloadError, match="community id"):
         transfer.pull_model("@ada/mnist-fc")

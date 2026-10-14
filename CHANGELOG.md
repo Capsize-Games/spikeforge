@@ -46,6 +46,13 @@ that and describe the local source tree only.
 
 ### Fixed
 
+- `hub_import` (and `spikeforge-hub import`) now verifies fetched bytes
+  before anything is loaded: a checksum mismatch raises a typed integrity
+  error and writes nothing, and checksum-less bytes are refused unless
+  `--allow-unverified` (or `SPIKEFORGE_HUB_ALLOW_UNVERIFIED=1`) opts in.
+  The verification outcome is recorded in the promoted checkpoint `meta`
+  and the import report, and `source: url` catalog entries must pin a
+  `sha256` like reference entries already do.
 - Dashboard deployments build the CPU image on the GitHub-hosted runner,
   transfer it over the pinned private connection, and verify the loaded
   revision before starting it without builds or pulls on the shared host.
