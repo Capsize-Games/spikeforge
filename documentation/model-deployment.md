@@ -46,6 +46,50 @@ The one-shot `run` path and the HTTP `/v1/predict` route go through the same
 [`ServingService`](../spikeforge_serve/service.py), so a bundle behaves
 identically served or run standalone.
 
+## Serving through the C runtime
+
+Both paths step through an inference backend: `torch` (the default) runs
+the bundle's torch module, and `nir-c` runs the bundle's NIR graph in the
+[`nir-c-runtime`](https://github.com/Capsize-Games/nir-c-runtime) C
+library instead, one frame per step with neuron state carrying across
+steps inside C:
+
+```bash
+# Build the shared library once from the nir-c-runtime sources:
+cc -shared -fPIC -O2 -std=c11 \
+  -I<nir-c-runtime>/include <nir-c-runtime>/src/*.c \
+  -o libnir_c_runtime.so -lm
+export NIR_C_RUNTIME_LIB=$PWD/libnir_c_runtime.so
+
+# One-shot and HTTP take the same switch (--c-lib overrides the env var):
+spikeforge-serve run my_model.spkf --backend nir-c --file frame.json
+spikeforge-serve serve --bundle my_model.spkf --backend nir-c
+```
+
+The HTTP service takes the same switch as an argument:
+`ServingService(bundle, backend="nir-c")` or
+`create_app(bundle, backend="nir-c")`. From Python,
+`InferenceSession.load(bundle, backend="nir-c", c_lib="...")` opens a
+stateful C session with the same `step`/`reset` streaming contract.
+
+What matches and what does not:
+
+- Per-step logits, cumulative totals, and labels match the torch path
+  bit-exactly on the committed conv-net fixture (acceptance bar: 1e-3
+  readout max-abs, the same bar `nir-c-runtime` uses in its own
+  end-to-end test).
+- A bundle whose topology the C runtime rejects fails before serving
+  with the typed `CExportError` naming the unsupported node kinds —
+  never a crash or a silent mismatch.
+- The C runtime steps one sample at a time on CPU: frames keep the
+  leading batch dimension but the batch must be 1, and `device` only
+  places the returned readout.
+- Per-stage spikes are not observable through the C API, so C-backed
+  predictions report no spikes; carried-state capture is refused for
+  the same reason.
+- Loading the `.spkf` and exporting its graph still needs Python with
+  torch and the `nir` extra — only the per-step inference runs in C.
+
 ## Installing a bundle as a module
 
 Think of a module the way a small Unix tool or a Linux kernel module works:

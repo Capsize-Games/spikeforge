@@ -20,6 +20,10 @@ from typing import Optional, Sequence
 
 import uvicorn
 
+from spikeforge.serving.inference_backend import (
+    NIR_C_BACKEND,
+    TORCH_BACKEND,
+)
 from spikeforge.version import add_version_flag
 from spikeforge_serve import modules
 from spikeforge_serve.app import create_app
@@ -28,6 +32,25 @@ from spikeforge_serve.module_runner import run as run_module
 #: Default bind address and port for the serving API.
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8899
+
+
+def _add_backend_args(parser: argparse.ArgumentParser) -> None:
+    """Add the ``--backend``/``--c-lib`` inference-path flags."""
+    parser.add_argument(
+        "--backend", default=TORCH_BACKEND,
+        choices=(TORCH_BACKEND, NIR_C_BACKEND),
+        help=(
+            f"inference path: {TORCH_BACKEND} (default) steps the "
+            f"torch module, {NIR_C_BACKEND} the C runtime"
+        ),
+    )
+    parser.add_argument(
+        "--c-lib", default=None,
+        help=(
+            "path to libnir_c_runtime.so for --backend nir-c "
+            "(else NIR_C_RUNTIME_LIB)"
+        ),
+    )
 
 
 def _add_serve_parser(subparsers: "argparse._SubParsersAction") -> None:
@@ -48,6 +71,7 @@ def _add_serve_parser(subparsers: "argparse._SubParsersAction") -> None:
     parser.add_argument(
         "--device", default="cpu", help="torch device the sessions run on"
     )
+    _add_backend_args(parser)
     _add_metrics_token_arg(parser)
 
 
@@ -82,6 +106,7 @@ def _add_run_parser(subparsers: "argparse._SubParsersAction") -> None:
     parser.add_argument(
         "--device", default="cpu", help="torch device to run on (default: cpu)"
     )
+    _add_backend_args(parser)
 
 
 def _add_install_parser(subparsers: "argparse._SubParsersAction") -> None:
@@ -135,7 +160,8 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
 def _cmd_serve(args: argparse.Namespace) -> int:
     """Build the app for ``--bundle`` and run it under uvicorn."""
     app = create_app(
-        args.bundle, device=args.device, metrics_token=args.metrics_token
+        args.bundle, device=args.device, metrics_token=args.metrics_token,
+        backend=args.backend, c_lib=args.c_lib,
     )
     uvicorn.run(app, host=args.host, port=args.port)
     return 0
@@ -144,7 +170,8 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 def _cmd_run(args: argparse.Namespace) -> int:
     """Run one request through a module or bundle path."""
     return run_module(
-        args.name_or_path, input_file=args.input_file, device=args.device
+        args.name_or_path, input_file=args.input_file, device=args.device,
+        backend=args.backend, c_lib=args.c_lib,
     )
 
 

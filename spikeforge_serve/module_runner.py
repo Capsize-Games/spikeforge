@@ -12,6 +12,7 @@ import json
 import sys
 from typing import IO, Any, Dict, Optional
 
+from spikeforge.serving.inference_backend import TORCH_BACKEND
 from spikeforge_serve import modules
 from spikeforge_serve.payloads import (
     encoded_flag,
@@ -52,6 +53,8 @@ def run(
     input_file: Optional[str] = None,
     device: str = "cpu",
     out: IO[str] = sys.stdout,
+    backend: str = TORCH_BACKEND,
+    c_lib: Optional[str] = None,
 ) -> int:
     """Run one request through ``name_or_path``; print the result as JSON.
 
@@ -59,7 +62,10 @@ def run(
     forward it directly.
     """
     payload = _load_payload(input_file)
-    service = ServingService(resolve_bundle(name_or_path), device=device)
+    service = ServingService(
+        resolve_bundle(name_or_path), device=device, backend=backend,
+        c_lib=c_lib,
+    )
     result = _run_request(service, payload)
     json.dump(result, out)
     out.write("\n")

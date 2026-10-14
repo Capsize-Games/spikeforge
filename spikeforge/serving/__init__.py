@@ -8,15 +8,23 @@ stack, the hub, or any backend SDK.
 from spikeforge.serving.bundle import DeploymentBundle, build
 from spikeforge.serving.encode_spec import EncodeSpec
 from spikeforge.serving.errors import (
+    BackendError,
     BundleCompatibilityError,
     BundleError,
     BundleFormatError,
     BundleIntegrityError,
     BundleNotFoundError,
     CExportError,
+    CRuntimeExecutionError,
+    CRuntimeLibraryError,
     EncodeSpecError,
     ServingError,
     StateError,
+)
+from spikeforge.serving.inference_backend import (
+    NIR_C_BACKEND,
+    TORCH_BACKEND,
+    InferenceBackend,
 )
 from spikeforge.serving.prediction import Prediction
 from spikeforge.serving.preprocess import encode, encoder_for
@@ -24,20 +32,26 @@ from spikeforge.serving.session import InferenceSession
 from spikeforge.serving.state_tree import StateTree
 
 __all__ = [
+    "BackendError",
     "BundleCompatibilityError",
     "BundleError",
     "BundleFormatError",
     "BundleIntegrityError",
     "BundleNotFoundError",
     "CExportError",
+    "CRuntimeExecutionError",
+    "CRuntimeLibraryError",
     "DeploymentBundle",
     "EncodeSpec",
     "EncodeSpecError",
+    "InferenceBackend",
     "InferenceSession",
+    "NIR_C_BACKEND",
     "Prediction",
     "ServingError",
     "StateError",
     "StateTree",
+    "TORCH_BACKEND",
     "build",
     "encode",
     "encoder_for",

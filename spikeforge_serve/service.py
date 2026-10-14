@@ -14,6 +14,7 @@ import torch
 
 from spikeforge.runtime.execution_mode import ExecutionMode
 from spikeforge.serving.bundle import DeploymentBundle
+from spikeforge.serving.inference_backend import TORCH_BACKEND
 from spikeforge.serving.prediction import Prediction
 from spikeforge.serving.session import InferenceSession
 from spikeforge_serve import metrics as serve_metrics
@@ -41,10 +42,20 @@ class ServingService:
         bundle: BundleSource,
         device: Union[str, torch.device] = "cpu",
         mode: ExecutionMode = ExecutionMode.PRODUCTION,
+        backend: str = TORCH_BACKEND,
+        c_lib: Optional[str] = None,
     ) -> None:
-        """Remember the ``bundle`` source and the execution settings."""
+        """Remember the ``bundle`` source and the execution settings.
+
+        ``backend`` selects the inference path every session steps
+        through (``torch`` by default, ``nir-c`` for the C runtime);
+        ``c_lib`` names the C shared library the ``nir-c`` backend
+        loads, defaulting to ``NIR_C_RUNTIME_LIB``.
+        """
         self._device = device
         self._mode = mode
+        self._backend = backend
+        self._c_lib = c_lib
         self._bundle: Optional[DeploymentBundle] = (
             bundle if isinstance(bundle, DeploymentBundle) else None
         )
@@ -60,6 +71,11 @@ class ServingService:
         with self._lock:
             return self._ensure_bundle()
 
+    @property
+    def backend(self) -> str:
+        """Return the inference backend sessions step through."""
+        return self._backend
+
     def session(self, session_id: str = DEFAULT_SESSION) -> InferenceSession:
         """Return the session for ``session_id``, creating it on first use."""
         with self._lock:
@@ -70,6 +86,8 @@ class ServingService:
                     self._ensure_bundle(),
                     device=self._device,
                     mode=self._mode,
+                    backend=self._backend,
+                    c_lib=self._c_lib,
                 )
                 self._sessions[sid] = existing
             return existing

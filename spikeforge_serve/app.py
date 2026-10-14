@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from spikeforge.runtime.execution_mode import ExecutionMode
 from spikeforge.serving.bundle import DeploymentBundle
 from spikeforge.serving.errors import ServingError
+from spikeforge.serving.inference_backend import TORCH_BACKEND
 from spikeforge_serve import metrics as serve_metrics
 from spikeforge_serve.errors import error_body, status_for
 from spikeforge_serve.routes import install_routes
@@ -91,6 +92,8 @@ def create_app(
     title: str = "spikeforge-serve",
     version: str = SERVE_VERSION,
     metrics_token: Optional[str] = None,
+    backend: str = TORCH_BACKEND,
+    c_lib: Optional[str] = None,
 ) -> FastAPI:
     """Build the ASGI app that serves ``bundle`` without binding a port.
 
@@ -98,10 +101,12 @@ def create_app(
     error rather than a crash before the first request. When
     ``metrics_token`` (or ``SPIKEFORGE_SERVE_METRICS_TOKEN``) is set,
     ``/metrics`` requires a matching bearer header; with no token it is
-    open.
+    open. ``backend`` selects the inference path (``torch`` by default,
+    ``nir-c`` for the C runtime); ``c_lib`` names its shared library.
     """
     return _build_app(
-        bundle, device, mode, service, title, version, metrics_token
+        bundle, device, mode, service, title, version, metrics_token,
+        backend, c_lib,
     )
 
 
@@ -113,9 +118,13 @@ def _build_app(
     title: str,
     version: str,
     metrics_token: Optional[str],
+    backend: str,
+    c_lib: Optional[str],
 ) -> FastAPI:
     """Construct the FastAPI app once every argument is resolved."""
-    serving = service or ServingService(bundle, device=device, mode=mode)
+    serving = service or ServingService(
+        bundle, device=device, mode=mode, backend=backend, c_lib=c_lib
+    )
     app = FastAPI(title=title, version=version)
     app.state.serving = serving
     app.state.metrics_token = _resolve_token(metrics_token)
