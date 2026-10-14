@@ -288,7 +288,7 @@ jobs:
     # Reconciliation: `server/` itself imports fastapi/pydantic, so the tests
     # that exercise the server must be deselected here — this job proves the
     # *core* degrades without the server stack, not that the server runs while
-    # its own base deps are blocked. The 37 server-dependent test files are
+    # its own base deps are blocked. The 38 server-dependent test files are
     # enumerated with `--ignore` below; everything else runs under the blocker.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
@@ -338,6 +338,7 @@ jobs:
             --ignore=tests/test_protocol_schema_parity.py \
             --ignore=tests/test_server_backend_actions.py \
             --ignore=tests/test_server_bundle_route.py \
+            --ignore=tests/test_server_download_ownership.py \
             --ignore=tests/test_server_energy_action.py \
             --ignore=tests/test_server_hub_actions.py \
             --ignore=tests/test_server_hub_pull.py \
