@@ -1,0 +1,43 @@
+{
+  "name": "window_normalize",
+  "description": "Z-scoring of one [1, 4, 2] window batch with a frozen spec.",
+  "generator": {
+    "script": "scripts/generate_encoding_goldens.py",
+    "spikeforge_commit": "b611c2559fd8357c2a35c4016614dfa4769609d5",
+    "torch": "2.14.1+cpu",
+    "snntorch": "1.0.0",
+    "python": "3.12.13"
+  },
+  "spec": {
+    "length": 4,
+    "stride": 2,
+    "channels": 2,
+    "channel_names": [
+      "a",
+      "b"
+    ],
+    "mean": [
+      0.5,
+      -1.0
+    ],
+    "std": [
+      0.25,
+      2.0
+    ],
+    "spec_version": 1
+  },
+  "spec_digest": "d85c25576a9c9e9d1e65e99f1a22f399fda1e86b97c6e2b01709c377b4d27b8f",
+  "procedure": "WindowSpec.normalize; deterministic, no RNG is consumed.",
+  "input": {
+    "shape": [1, 4, 2],
+    "values": [
+      0.5, -1.0, 0.75, 1.0, 1.0, 3.0, 0.0, -5.0
+    ]
+  },
+  "output": {
+    "shape": [1, 4, 2],
+    "values": [
+      0.0, 0.0, 1.0, 1.0, 2.0, 2.0, -2.0, -2.0
+    ]
+  }
+}
