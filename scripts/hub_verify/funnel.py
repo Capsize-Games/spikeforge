@@ -55,6 +55,36 @@ def _drift_check(bundle: DeploymentBundle, module: Any) -> Dict[str, Any]:
     return dict(result)
 
 
+def _input_shape(bundle: DeploymentBundle) -> str:
+    """Return the probe layout the drift check consumed, as ``CxHxW``.
+
+    This is the trailing dimensions of the exact tensor the drift and
+    energy checks run the module over -- a measurement of what the
+    bundle's spec accepts, not a restatement of any uploader claim.
+    """
+    spikes = probe_spikes(bundle.spec)
+    return "x".join(str(dim) for dim in spikes.shape[2:])
+
+
+def _identity(
+    bundle: DeploymentBundle, kind: str
+) -> Dict[str, Any]:
+    """Return the runner-measured identity block for the report.
+
+    The framework is this runner's own assertion: it only ever verifies
+    ``.spkf`` bundles, whose load enforces the spikeforge format, so a
+    measured bundle is by construction a spikeforge artifact. The
+    topology names the spec the runner loaded, built, and drift-checked
+    -- proven executable, not merely claimed.
+    """
+    return {
+        "framework": "spikeforge",
+        "kind": kind,
+        "topology": bundle.manifest.get("topology"),
+        "input_shape": _input_shape(bundle),
+    }
+
+
 def run_funnel(
     bundle: DeploymentBundle, module: Any, tmp_dir: str
 ) -> Dict[str, Any]:
@@ -66,4 +96,5 @@ def run_funnel(
         "inspect": {"kind": report.kind},
         "compat": verdict.to_dict(),
         "drift": _drift_check(bundle, module),
+        "identity": _identity(bundle, report.kind),
     }
