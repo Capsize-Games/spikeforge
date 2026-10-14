@@ -185,6 +185,46 @@ that and describe the local source tree only.
   `spikeforge_hub/entry_checks.py`. Every resulting file is within the
   250-line limit; import paths and behavior are unchanged.
 
+## [spikeforge-v0.6.3] - 2026-10-14
+
+Patch. Inference can now run through the nir-c-runtime C backend:
+`InferenceSession` selects between torch and nir-c backends, with a
+ctypes ABI layer (graph, runtime, tensor) loading `libnir_c_runtime`
+(#155). Bundles export to C-loadable float packages and
+`{data, dtype, scale, zero_point}` quantized envelopes (#156, #157).
+`embedding` renders as one-hot ingest plus Affine and 2D eval-mode
+`batch_norm` as an Affine fold; the C-package gate consumes the
+single-sourced runtime profile (#169, #170, #173). Committed encoding
+golden vectors pin RNG semantics as the oracle for the C port (#160).
+
+## [spikeforge-server-v0.5.2] - 2026-10-14
+
+Patch. Core-pin alignment with the 0.6.3 matrix row only; no code change.
+
+## [spikeforge-serve-v0.2.7] - 2026-10-14
+
+Patch. New `--backend torch|nir-c` and `--c-lib` flags thread the C
+inference path through the serve CLI and service (#155).
+
+## [spikeforge-targets-v0.2.4] - 2026-10-14
+
+Patch. New nir-c-runtime capability profile with
+`validate_for_c_runtime` / `check_for_c_runtime`, refusing unsupported
+ops and structural violations with per-node names (#158); quantized-summary
+export (#157); per-kind decision record for NIR-unmappable stages (#159).
+
+## [spikeforge-hub-v0.5.2] - 2026-10-14
+
+Patch. All hub HTTP call sites send a `spikeforge-hub` User-Agent, which
+the edge requires — the default urllib agent was answered 403, so `pull`
+could never refresh a fresh cache and every authenticated call failed
+before reaching the API (#174, contributes to #163).
+
+## [spikeforge-io-v0.1.7] - 2026-10-14
+
+Patch. New numpy / torch-optional ingest path: streaming no longer
+requires torch tensors (#161).
+
 ## [spikeforge-v0.6.2] - 2026-10-14
 
 Patch. Over-long modules are split along their seams with import paths and
