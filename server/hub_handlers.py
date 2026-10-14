@@ -28,7 +28,7 @@ from server.hub_payloads import (
     list_payload,
     search_payload,
 )
-from server.messages import send_locked
+from server.messages import reject_if_read_only, send_locked
 from server.schemas import ClientMessage
 from server.session import Session
 from spikeforge_hub.errors import HubError
@@ -60,6 +60,10 @@ async def handle_hub_download(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
     """Download an entry, streaming progress until it resolves."""
+    if await reject_if_read_only(
+        ws, session, "hub downloads are disabled on the public demo"
+    ):
+        return
     entry_id = message.name or ""
     if not entry_id:
         await _error(ws, session, "hub_download requires a model name")
@@ -102,6 +106,10 @@ async def handle_hub_inspect(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
     """Emit the structural report for an entry's artifact."""
+    if await reject_if_read_only(
+        ws, session, "hub inspection is disabled on the public demo"
+    ):
+        return
     try:
         payload = inspect_payload(message.name or "")
     except HubError as error:
@@ -114,6 +122,10 @@ async def handle_hub_import(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
     """Run the funnel and emit the verdict even when incompatible."""
+    if await reject_if_read_only(
+        ws, session, "hub imports are disabled on the public demo"
+    ):
+        return
     try:
         payload = import_payload(message.name or "", message.hub.topology)
     except HubError as error:
@@ -126,6 +138,10 @@ async def handle_hub_pull(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
     """Pull a community entry, streaming progress until it resolves."""
+    if await reject_if_read_only(
+        ws, session, "hub downloads are disabled on the public demo"
+    ):
+        return
     entry_id = message.name or ""
     if not entry_id:
         await _error(ws, session, "hub_pull requires a model name")

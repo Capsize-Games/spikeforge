@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import WebSocket
 
 from server.concurrency import SERVER_BUSY_MESSAGE
-from server.messages import send_locked
+from server.messages import reject_if_read_only, send_locked
 from server.schemas import ClientMessage
 from server.session import Session
 from spikeforge_serve import pipeline_store
@@ -50,6 +50,10 @@ async def handle_save_pipeline(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
     """Validate and persist the current graph under the given name."""
+    if await reject_if_read_only(
+        ws, session, "pipeline changes are disabled on the public demo"
+    ):
+        return
     name = message.name or message.pipeline.name
     if not name:
         await send_locked(ws, session, {
@@ -90,6 +94,10 @@ async def handle_delete_pipeline(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
     """Remove one saved pipeline; report whether it existed."""
+    if await reject_if_read_only(
+        ws, session, "pipeline changes are disabled on the public demo"
+    ):
+        return
     if not message.name:
         await send_locked(ws, session, {
             "type": "error", "payload": "delete_pipeline requires a name",
@@ -106,6 +114,10 @@ async def handle_run_pipeline(
     ws: WebSocket, session: Session, message: ClientMessage
 ) -> None:
     """Start the pipeline worker unless one is already running."""
+    if await reject_if_read_only(
+        ws, session, "pipeline runs are disabled on the public demo"
+    ):
+        return
     if session.pipeline.is_running:
         return
     if not session.pipeline.start(message.pipeline, message.pipeline_input):
