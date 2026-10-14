@@ -1,0 +1,93 @@
+name: examples
+
+# Every numbered example under examples/ is a runnable claim: the PoC
+# numbers (issues #22/#24/#26) live in 11/12/13, and the other scripts
+# are the documented end-to-end journeys. This job executes each one on
+# CPU and fails on any exception or non-zero exit (issue #122).
+#
+# The covered list is explicit below, and the job refuses to pass when a
+# numbered example exists that the list does not name -- so a new
+# examples/15_* without coverage fails loudly instead of rotting
+# silently. Full budgets everywhere: no example needs a --smoke flag
+# (measured 2026-10-14, ~2.5 min total on the CI-class workstation;
+# slowest is 13_relational_reversal_task at ~85s).
+#
+# The `onnx` extra is installed so 09_onnx_roundtrip executes its real
+# round-trip instead of its graceful skip. MNIST/EMNIST/KMNIST download
+# on a cold SPIKEFORGE_DATA_DIR (default build/) and are reused after.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: examples-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # CPU wheels keep CI light; mirrors the Dockerfile TORCH_INDEX_URL flow.
+  TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
+
+jobs:
+  examples:
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install torch CPU wheels
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
+
+      - name: Install the distributions with the onnx extra
+        run: |
+          # Same local closure as the CI test job (see the packaging
+          # closure test) plus `onnx`, so example 09 runs for real.
+          pip install -e "./packages/spikeforge[dev,nir,onnx]" \
+                      -e ./packages/spikeforge-targets \
+                      -e ./packages/spikeforge-hub \
+                      -e ./packages/spikeforge-serve \
+                      -e ./packages/spikeforge-server \
+                      -e ./packages/spikeforge-io
+
+      - name: Run every covered example end to end
+        run: |
+          covered="01_train_image_model \
+            02_train_event_model \
+            03_encode_and_inspect \
+            04_nir_export_validate \
+            05_hub_browse_import \
+            06_deploy_and_run_backend \
+            07_energy_sparse_dense \
+            08_sequence_experiments \
+            09_onnx_roundtrip \
+            10_reproducibility_benchmark \
+            11_held_out_digit_memory \
+            11_streaming_timeseries \
+            12_few_shot_character_generalization \
+            13_relational_reversal_task \
+            14_stdp_learning_window"
+          for path in examples/[0-9]*.py; do
+            name=$(basename "$path" .py)
+            case " $covered " in
+              *" $name "*) ;;
+              *)
+                echo "examples/$name.py is not in the covered list;"
+                echo "add it to this step or remove the script."
+                exit 1
+                ;;
+            esac
+          done
+          for name in $covered; do
+            echo "--- examples/$name.py"
+            start=$SECONDS
+            python "examples/$name.py"
+            echo "ok in $((SECONDS - start))s"
+          done

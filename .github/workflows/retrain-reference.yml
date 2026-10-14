@@ -1,0 +1,112 @@
+name: retrain-reference
+
+# The reference catalog (spikeforge_hub/models.json) prints a reproduce
+# command and a measured accuracy per row, but nothing ever re-ran those
+# commands: an engine, topology, or data-loader change could silently
+# make the published numbers unreproducible (issue #113). This workflow
+# retrains one cheap row from scratch and compares against the catalog.
+#
+# Frugality: one row (mnist-fc-small, 109 KB checkpoint), CPU, weekly.
+# Measured 2026-10-14 at ~43s of training on the CI-class workstation,
+# reproducing the catalog's 92.16% exactly. A full-table nightly is
+# explicitly out of scope.
+#
+# Tolerance policy: the measured held-out accuracy must land within
+# ±1.0 percentage points of the catalog value. The band absorbs
+# torch/BLAS patch drift; a genuine numerics break (wrong math, broken
+# loader) moves tens of points or crashes, so it still fails loudly. A
+# deliberate numerics change re-baselines the catalog through the
+# script's --publish path, which stays a human decision -- this workflow
+# never publishes. (Follow-up: record this policy beside the catalog
+# itself; models.json is owned outside this change.)
+#
+# On mismatch the job prints both numbers plus the recent engine /
+# topology commits as suspect-range pointers, then fails.
+
+on:
+  schedule:
+    # Mondays 06:00 UTC: the numbers are re-measured weekly, not trusted
+    # from the day they were trained.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+env:
+  # CPU wheels keep CI light; mirrors the Dockerfile TORCH_INDEX_URL flow.
+  TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
+
+jobs:
+  retrain:
+    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The mismatch report points at recent engine commits, which
+          # needs history beyond the default shallow checkout.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install torch CPU wheels
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url ${{ env.TORCH_INDEX_URL }}
+
+      - name: Install the core distribution
+        run: |
+          # Minimal closure: the retrain script needs spikeforge plus
+          # torch only (TrainingEngine, data loader, datasets).
+          pip install -e ./packages/spikeforge
+
+      - name: Retrain the mnist-fc-small reference row
+        run: |
+          python scripts/train_reference_models.py \
+            --only mnist-fc-small
+
+      - name: Compare the re-measured accuracy against the catalog
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          import sys
+
+          results_path = "build/reference/results.json"
+          catalog_path = "spikeforge_hub/models.json"
+          entry_id = "reference/mnist-fc-small"
+          band = 1.0
+
+          with open(results_path, encoding="utf-8") as handle:
+              measured = json.load(handle)["results"][0]["test_accuracy"]
+          with open(catalog_path, encoding="utf-8") as handle:
+              entries = {
+                  entry["id"]: entry
+                  for entry in json.load(handle)["entries"]
+              }
+          claimed = entries[entry_id]["test_accuracy"]
+          print(f"measured={measured} catalog={claimed} band=+-{band}")
+          if abs(measured - claimed) <= band:
+              print("within band: the catalog value reproduces")
+              sys.exit(0)
+
+          print(
+              f"MISMATCH: retrained {measured} vs catalog {claimed} "
+              f"(band +-{band}); the catalog value no longer reproduces."
+          )
+          print("Republishing is a human decision, never automatic.")
+          log = subprocess.run(
+              [
+                  "git", "log", "--oneline", "-8", "--",
+                  "spikeforge/training", "spikeforge/topology",
+                  "spikeforge/data", "spikeforge/encoding",
+                  "scripts/train_reference_models.py",
+              ],
+              capture_output=True,
+              text=True,
+              check=False,
+          )
+          print("Suspect-range pointers (recent engine commits):")
+          print(log.stdout or "(no engine commits found)")
+          sys.exit(1)
+          PY
