@@ -118,6 +118,45 @@ that and describe the local source tree only.
   `spikeforge_hub/entry_checks.py`. Every resulting file is within the
   250-line limit; import paths and behavior are unchanged.
 
+## [spikeforge-v0.6.1] - 2026-10-14
+
+Security-hardening patch. Checkpoint loads are fail-closed:
+`torch.load` runs with `weights_only=True` everywhere, and a file that
+is not plain tensors and containers raises `CheckpointError` instead of
+unpickling (#99). `build_topology` validates every size-bearing
+parameter after defaults merge and before any allocation (#103). The
+Docker image installs from hashed lockfiles (`requirements/server.*.lock`,
+CI-replayed) with `--no-deps` local distributions and a `pip check`
+gate, so an image can never mix the checkout with PyPI (#106).
+
+## [spikeforge-hub-v0.5.0] - 2026-10-14
+
+- `hub_import` refuses `FAILED` bytes unconditionally and `UNVERIFIED`
+  bytes without an explicit operator opt-in; `source: url` catalog
+  entries must pin `sha256`, and promotion records the verification
+  outcome in checkpoint `meta` (#101).
+- The `hub_verify` report carries the runner-measured model identity
+  (`framework`, `kind`, `topology`, `input_shape`), so machine-checked
+  uploads render their real topology and kind (#107).
+- `push` publishes reference checkpoints and records uploader-claimed
+  accuracy plus the model-card body; `pull` surfaces recorded metrics
+  labeled uploader-claimed (#108, #111).
+- Hub fetches are guarded: https-only, 30s timeout, `Content-Length`
+  plus streaming size caps (#104).
+
+## [spikeforge-server-v0.5.0] - 2026-10-14
+
+- Download managers are scoped per session, so one client's cancel can
+  never terminate another session's download; the socket `hub_cancel`
+  fast path shares its logic with the dispatched handler (#96, #105).
+- Hub and pipeline writes are gated on read-only demo mode (#102).
+- Client-controlled training/encoding sizes are bounded and the socket
+  inbox has backpressure (#103).
+- Auth fails closed on non-loopback binds without a token; browser auth
+  moved off the query string onto a login cookie plus header, with a
+  WebSocket origin allowlist; token rotation and entropy are documented
+  (#100).
+
 ## [co-installable 0.6.0 combination] - 2026-10-14
 
 Patch-release serve 0.2.5, targets 0.2.2, and io 0.1.5 with no code
