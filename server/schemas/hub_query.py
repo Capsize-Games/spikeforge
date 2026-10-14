@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HubQuery(BaseModel):
@@ -13,7 +13,7 @@ class HubQuery(BaseModel):
     """
 
     query: str = ""
-    limit: int = 20
+    limit: int = Field(default=20, ge=1, le=200)
     framework: Optional[str] = None
     kind: Optional[str] = None
     available: Optional[bool] = None
