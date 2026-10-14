@@ -25,7 +25,10 @@ permissions:
 jobs:
   review:
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: [self-hosted, linux, x64, spikeforge-ci]
+    # GitHub-hosted: no spikeforge-ci runner is registered (issue #133),
+    # and the "Skip without a provider" guard below succeeds fast until
+    # LLM_API_KEY / LLM_BASE_URL / LLM_MODEL are configured.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Skip without a provider
