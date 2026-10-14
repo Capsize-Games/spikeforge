@@ -3,6 +3,8 @@
 import asyncio
 from typing import Any, Dict, List, Optional
 
+from _fakes import FakeWS
+
 from server import engine_factory
 from server.encoder import EncoderEngine
 from server.event_engine import EventEngine
@@ -13,18 +15,6 @@ from server.schemas import ClientMessage, EncodeConfig
 from server.session import Session
 from spikeforge.events import event_source
 from spikeforge.events.event_source import EventSampleSource
-
-
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 class FakeImageEngine:

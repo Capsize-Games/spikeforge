@@ -23,205 +23,21 @@ otherwise. Each report line is ``path:line: kind import of forbidden root
 """
 
 import argparse
-import ast
 import sys
 from pathlib import Path
-from typing import List, NamedTuple, Optional, Sequence, Set
+from typing import List, Optional, Sequence
 
-#: Repository root (this file lives in ``scripts/``).
-REPO_ROOT = Path(__file__).resolve().parent.parent
-
-#: Forbidden import roots, frozen for ``protocol_version`` 1.0 (13 tokens).
-#:
-#: The set mixes distribution names and import roots deliberately. Where they
-#: differ: the ``lava-nc`` *distribution* is imported as ``lava``, so only
-#: ``lava`` can ever appear in an ``import`` statement; ``huggingface_hub``,
-#: ``pydantic``, ``fastapi``, ``uvicorn``, ``nir``, ``nirtorch``, ``onnx``,
-#: ``onnxruntime``, ``tonic``, ``tensorboard``, and ``wandb`` use the same
-#: token for both. ``FROZEN_BOUNDARY`` below records the full design list for
-#: the ``--list`` output.
-FORBIDDEN_ROOTS: Set[str] = frozenset(
-    {
-        "fastapi",
-        "pydantic",
-        "uvicorn",
-        "huggingface_hub",
-        "nir",
-        "nirtorch",
-        "onnx",
-        "onnxruntime",
-        "norse",
-        "lava",
-        "tonic",
-        "tensorboard",
-        "wandb",
-    }
+from check_core_boundary_rules import (
+    ALLOWED_LOCAL_IMPORTERS,
+    FORBIDDEN_ROOTS,
+    FROZEN_BOUNDARY,
+    Violation,
 )
-
-#: The design document's frozen boundary, including the ``lava-nc``
-#: distribution token that never appears as an import root.
-FROZEN_BOUNDARY: Sequence[str] = (
-    "fastapi",
-    "pydantic",
-    "uvicorn",
-    "huggingface_hub",
-    "nir",
-    "nirtorch",
-    "onnx",
-    "onnxruntime",
-    "norse",
-    "lava",
-    "lava-nc",
-    "tonic",
-    "tensorboard",
-    "wandb",
+from check_core_boundary_scan import (
+    format_violation,
+    iter_modules,
+    scan,
 )
-
-#: Sanctioned lazy shims (tier 3) that may import a forbidden SDK *inside a
-#: function* and report availability instead of raising. Module-level imports
-#: are never exempt, even in these modules.
-#:
-#: The design document names ``tracking.tensorboard_sink`` and
-#: ``tracking.wandb_sink`` as the tracking exception; the concrete ``import
-#: wandb`` lives in ``tracking.sink_probe``, whose own docstring calls it "the
-#: only module ... that imports tensorboard or wandb". It is the same
-#: sanctioned site, so it is listed here too.
-ALLOWED_LOCAL_IMPORTERS: Set[str] = frozenset(
-    {
-        "spikeforge.nir_bridge.api",
-        "spikeforge.onnx_bridge.api",
-        "spikeforge.events.tonic_api",
-        "spikeforge.tracking.tensorboard_sink",
-        "spikeforge.tracking.wandb_sink",
-        "spikeforge.tracking.sink_probe",
-    }
-)
-
-#: Directories the core distribution never ships, so they are never scanned.
-#: Mirrors the ``exclude`` list in ``packages/spikeforge/pyproject.toml``
-#: (``server*``, ``tests*``, ``spikeforge_targets*``, ``spikeforge_hub*``).
-EXCLUDED_PREFIXES = ("server", "tests", "spikeforge_targets", "spikeforge_hub")
-
-#: Package directories the core distribution ships, relative to the repo root.
-SCAN_DIRS = ("spikeforge",)
-
-#: Top-level single-file modules the core distribution ships.
-SCAN_FILES = ("main.py", "main_encodings.py")
-
-
-class Violation(NamedTuple):
-    """A single forbidden import found in a scanned module."""
-
-    path: Path
-    line: int
-    kind: str
-    root: str
-    statement: str
-
-
-class _Visitor(ast.NodeVisitor):
-    """Collect forbidden imports, separating module- from function-level."""
-
-    def __init__(
-        self, module: str, path: Path, violations: List[Violation]
-    ) -> None:
-        """Record the module name, its path, and the shared result list."""
-        self._module = module
-        self._path = path
-        self._violations = violations
-        self._function_depth = 0
-
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        """Descend into a sync function body, marking imports as local."""
-        self._function_depth += 1
-        self.generic_visit(node)
-        self._function_depth -= 1
-
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        """Descend into an async function body (same rule as sync)."""
-        self._function_depth += 1
-        self.generic_visit(node)
-        self._function_depth -= 1
-
-    def visit_Import(self, node: ast.Import) -> None:
-        """Check every binding in ``import a, b``."""
-        for alias in node.names:
-            self._check(alias.name, node.lineno)
-
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        """Check the module named by ``from x.y import ...``."""
-        if node.level:
-            return
-        if node.module:
-            self._check(node.module, node.lineno)
-
-    def _check(self, dotted: str, line: int) -> None:
-        """Record a violation unless this is a sanctioned lazy import."""
-        root = dotted.split(".", 1)[0]
-        if root not in FORBIDDEN_ROOTS:
-            return
-        if self._function_depth:
-            if self._module in ALLOWED_LOCAL_IMPORTERS:
-                return
-            kind = "function-local"
-        else:
-            kind = "module-level"
-        self._violations.append(
-            Violation(self._path, line, kind, root, dotted)
-        )
-
-
-def _module_name(path: Path) -> str:
-    """Return the dotted module name for a scanned file."""
-    relative = path.relative_to(REPO_ROOT).with_suffix("")
-    parts = list(relative.parts)
-    if parts and parts[-1] == "__init__":
-        parts.pop()
-    return ".".join(parts)
-
-
-def _is_excluded(relative: Path) -> bool:
-    """Return True when a repo-relative path is outside the core ship set."""
-    return any(
-        part.startswith(EXCLUDED_PREFIXES) for part in relative.parts
-    )
-
-
-def iter_modules() -> List[Path]:
-    """Return the ``.py`` files the core distribution ships, sorted."""
-    modules: List[Path] = []
-    for directory in SCAN_DIRS:
-        root = REPO_ROOT / directory
-        if not root.is_dir():
-            continue
-        for path in sorted(root.rglob("*.py")):
-            if _is_excluded(path.relative_to(REPO_ROOT)):
-                continue
-            modules.append(path)
-    for name in SCAN_FILES:
-        path = REPO_ROOT / name
-        if path.is_file():
-            modules.append(path)
-    return modules
-
-
-def scan(paths: Sequence[Path]) -> List[Violation]:
-    """Parse ``paths`` and return every core-boundary violation found."""
-    violations: List[Violation] = []
-    for path in paths:
-        source = path.read_text(encoding="utf-8")
-        tree = ast.parse(source, filename=str(path))
-        _Visitor(_module_name(path), path, violations).visit(tree)
-    return violations
-
-
-def format_violation(violation: Violation) -> str:
-    """Render one violation as a ``path:line`` report line."""
-    relative = violation.path.relative_to(REPO_ROOT)
-    return (
-        f"{relative}:{violation.line}: {violation.kind} import of "
-        f"forbidden root '{violation.root}' ({violation.statement})"
-    )
 
 
 def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
@@ -244,32 +60,41 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _print_boundary() -> None:
+    """Print the frozen boundary and the lazy-shim allow-list."""
+    print("forbidden boundary (design): " + ", ".join(FROZEN_BOUNDARY))
+    print("forbidden import roots (scanned): " + ", ".join(
+        sorted(FORBIDDEN_ROOTS)
+    ))
+    print("lazy-shim allow-list: " + ", ".join(
+        sorted(ALLOWED_LOCAL_IMPORTERS)
+    ))
+
+
+def _report_violations(
+    violations: List[Violation], modules: List[Path]
+) -> int:
+    """Print every violation and return the failure exit code."""
+    for violation in violations:
+        print(format_violation(violation), file=sys.stderr)
+    print(
+        f"core-boundary: {len(violations)} violation(s) across "
+        f"{len(modules)} module(s)",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Run the scan and return a process exit code."""
     args = _parse_args(argv)
-
     if args.list:
-        print("forbidden boundary (design): " + ", ".join(FROZEN_BOUNDARY))
-        print("forbidden import roots (scanned): " + ", ".join(
-            sorted(FORBIDDEN_ROOTS)
-        ))
-        print("lazy-shim allow-list: " + ", ".join(
-            sorted(ALLOWED_LOCAL_IMPORTERS)
-        ))
+        _print_boundary()
         return 0
-
     modules = iter_modules()
     violations = scan(modules)
     if violations:
-        for violation in violations:
-            print(format_violation(violation), file=sys.stderr)
-        print(
-            f"core-boundary: {len(violations)} violation(s) across "
-            f"{len(modules)} module(s)",
-            file=sys.stderr,
-        )
-        return 1
-
+        return _report_violations(violations, modules)
     if not args.quiet:
         print(
             f"core-boundary: OK - {len(modules)} module(s) scanned, "

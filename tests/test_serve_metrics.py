@@ -1,18 +1,18 @@
 """Issue #7 acceptance: the ``/metrics`` endpoint and serving instrumentation.
 
 The service is driven through its ASGI interface directly (no ``httpx`` /
-``TestClient`` dependency), reusing the in-process driver pattern from
-``tests/test_serve_app.py`` and extending it to carry request headers and to
-return the raw body so the Prometheus ``text/plain`` response can be asserted.
+``TestClient`` dependency), importing the shared in-process driver from
+``tests/_fakes`` and asserting on the raw body so the Prometheus
+``text/plain`` response shape is covered.
 """
 
 import asyncio
-import json
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Iterator, List
 
 import pytest
 import torch
+from _fakes import _get, _post, _websocket
 
 from spikeforge.observability import metrics
 from spikeforge.serving import bundle_manifest as bm
@@ -70,119 +70,6 @@ def _clean(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.delenv(METRICS_TOKEN_ENV, raising=False)
     yield
     metrics.reset()
-
-
-def _headers(
-    has_body: bool, extra: Optional[Dict[str, str]]
-) -> List[Tuple[bytes, bytes]]:
-    """Return ASGI header pairs for a JSON request."""
-    headers: List[Tuple[bytes, bytes]] = []
-    if has_body:
-        headers.append((b"content-type", b"application/json"))
-    for name, value in (extra or {}).items():
-        headers.append((name.lower().encode(), value.encode()))
-    return headers
-
-
-async def _http(
-    app: Any,
-    method: str,
-    path: str,
-    body: Any = None,
-    headers: Optional[Dict[str, str]] = None,
-) -> Tuple[int, bytes, Dict[str, str]]:
-    """Drive ``app`` as ASGI HTTP and return ``(status, body, headers)``."""
-    raw = b"" if body is None else json.dumps(body).encode("utf-8")
-    sent: List[Dict[str, Any]] = []
-
-    async def receive() -> Dict[str, Any]:
-        """Return the whole request body once."""
-        return {"type": "http.request", "body": raw, "more_body": False}
-
-    async def send(message: Dict[str, Any]) -> None:
-        """Record one response message."""
-        sent.append(message)
-
-    scope = {
-        "type": "http",
-        "asgi": {"version": "3.0", "spec_version": "2.3"},
-        "http_version": "1.1",
-        "method": method,
-        "scheme": "http",
-        "path": path,
-        "raw_path": path.encode("utf-8"),
-        "query_string": b"",
-        "root_path": "",
-        "headers": _headers(body is not None, headers),
-        "client": ("testclient", 50000),
-        "server": ("testserver", 80),
-    }
-    await app(scope, receive, send)
-    start = next(
-        item
-        for item in sent
-        if item["type"] == "http.response.start"
-    )
-    chunks = [
-        item["body"]
-        for item in sent
-        if item["type"] == "http.response.body"
-    ]
-    response_headers = {
-        name.decode().lower(): value.decode()
-        for name, value in start.get("headers", [])
-    }
-    return start["status"], b"".join(chunks), response_headers
-
-
-def _get(
-    app: Any, path: str, headers: Optional[Dict[str, str]] = None
-) -> Tuple[int, bytes, Dict[str, str]]:
-    """Issue a GET request against ``app``."""
-    return asyncio.run(_http(app, "GET", path, headers=headers))
-
-
-def _post(app: Any, path: str, body: Any) -> Tuple[int, bytes, Dict[str, str]]:
-    """Issue a POST request against ``app``."""
-    return asyncio.run(_http(app, "POST", path, body))
-
-
-async def _websocket(
-    app: Any, path: str, messages: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
-    """Drive ``app`` as an ASGI WebSocket session and return sent frames."""
-    queue: asyncio.Queue = asyncio.Queue()
-    await queue.put({"type": "websocket.connect"})
-    for message in messages:
-        await queue.put(
-            {"type": "websocket.receive", "text": json.dumps(message)}
-        )
-    await queue.put({"type": "websocket.disconnect", "code": 1000})
-    sent: List[Dict[str, Any]] = []
-
-    async def receive() -> Dict[str, Any]:
-        """Return the next queued client message."""
-        return await queue.get()
-
-    async def send(message: Dict[str, Any]) -> None:
-        """Record one server frame."""
-        sent.append(message)
-
-    scope = {
-        "type": "websocket",
-        "asgi": {"version": "3.0", "spec_version": "2.3"},
-        "http_version": "1.1",
-        "scheme": "ws",
-        "path": path,
-        "raw_path": path.encode("utf-8"),
-        "query_string": b"",
-        "root_path": "",
-        "headers": [],
-        "client": ("testclient", 50000),
-        "server": ("testserver", 80),
-    }
-    await app(scope, receive, send)
-    return sent
 
 
 def test_metrics_endpoint_exposes_prometheus_text(bundle_path: str) -> None:

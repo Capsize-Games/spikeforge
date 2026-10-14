@@ -27,9 +27,7 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from build_wiki import build  # noqa: E402
+from build_wiki import build
 
 _LINK = re.compile(r"\]\(([^)\s]+)\)")
 #: Wiki-relative targets that are always resolvable: an absolute URL, an

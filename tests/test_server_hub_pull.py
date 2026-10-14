@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pytest
 import torch
+from _fakes import FakeWS
 
 import server.hub_payloads as hub_payloads
 from server.handlers import dispatch
@@ -33,16 +34,6 @@ _COMMUNITY_ENTRY: Dict[str, Any] = {
 _NAME = "hub_pull_bundle_ckpt"
 
 
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 async def _dispatch(
@@ -105,7 +96,7 @@ async def _dispatch_pull(
 ) -> List[Dict[str, Any]]:
     """Dispatch against a session owned by the fake pull manager."""
     session = Session(asyncio.get_running_loop())
-    session.hub_pulls = fake  # type: ignore[assignment]
+    session.hub_pulls = fake
     return await _dispatch(message, session)
 
 

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Tuple
 
 import pytest
 import torch
+from _fakes import FakeSample, FakeWS
 
 from server.handlers import dispatch
 from server.payloads import nir_graph_payload, nir_validation_payload
@@ -22,28 +23,8 @@ _CONV: _Case = ("conv_net", {"channels": 2, "num_classes": 3})
 _SMALL = {"hidden": 4, "beta": 0.5, "num_classes": 3}
 
 
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
-class FakeSample:
-    """A minimal stand-in for the configured encoder engine."""
-
-    def __init__(self, steps: int = 4) -> None:
-        """Hold a fixed [T,1,784] spike volume."""
-        self._spikes = torch.rand(steps, 1, 784)
-
-    def spike_input(self) -> torch.Tensor:
-        """Return the [T,1,784] spike volume."""
-        return self._spikes
 
 
 def _build(case: _Case) -> Tuple[Any, Any]:

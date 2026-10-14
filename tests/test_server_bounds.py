@@ -10,6 +10,7 @@ import contextlib
 from typing import Any, Dict, List
 
 import pytest
+from _fakes import FakeWS
 from fastapi import WebSocketDisconnect
 from pydantic import ValidationError
 
@@ -18,25 +19,6 @@ from server.protocol_version import PROTOCOL_VERSION
 from server.schemas import ClientMessage, EncodeConfig, TrainConfig
 from server.schemas.hub_query import HubQuery
 from server.session import INBOX_MAXSIZE, RATE_BURST, Session
-
-
-class _FloodWS:
-    """Enough of a WebSocket to drive ``_serve`` with queued frames."""
-
-    def __init__(self, incoming: List[Dict[str, Any]]) -> None:
-        """Queue ``incoming`` frames and start with an empty send log."""
-        self._incoming = list(incoming)
-        self.sent: List[Dict[str, Any]] = []
-
-    async def receive_json(self) -> Dict[str, Any]:
-        """Yield the next queued frame, then drop the connection."""
-        if not self._incoming:
-            raise WebSocketDisconnect()
-        return self._incoming.pop(0)
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 def test_defaults_still_validate_unchanged() -> None:
@@ -137,9 +119,9 @@ def test_socket_flood_reports_drops() -> None:
             {"protocol_version": PROTOCOL_VERSION, "type": "stop"}
             for _ in range(INBOX_MAXSIZE + 10)
         ]
-        ws = _FloodWS(frames)
+        ws = FakeWS(frames)
         with contextlib.suppress(WebSocketDisconnect):
-            await _serve(ws, session)  # type: ignore[arg-type]
+            await _serve(ws, session)
         assert session.inbox.qsize() == INBOX_MAXSIZE
         return ws.sent
 

@@ -5,6 +5,7 @@ import contextlib
 from typing import Any, Dict, Iterator, List
 
 import torch
+from _fakes import FakeWS
 
 from server import animation
 from server.handlers import stream_frames
@@ -21,16 +22,6 @@ _STEPS = 3
 _INTERVAL_MS = 20
 
 
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 class _Net:

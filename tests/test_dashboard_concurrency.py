@@ -12,6 +12,7 @@ import asyncio
 from typing import Any, Dict, List
 
 import pytest
+from _fakes import FakeWS
 
 from server import concurrency
 from server.concurrency import (
@@ -25,23 +26,11 @@ from server.schemas import ClientMessage, PipelineGraphConfig, TrainConfig
 from server.session import Session
 
 
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
-
-
 @pytest.fixture(autouse=True)
 def _reset(monkeypatch: pytest.MonkeyPatch) -> None:
     """Clear the job-cap env var and the shared active-job counter."""
     monkeypatch.delenv(MAX_CONCURRENT_JOBS_ENV, raising=False)
-    concurrency._active = 0  # noqa: SLF001 -- resetting shared test state
+    concurrency._active = 0
 
 
 def test_max_concurrent_jobs_defaults_when_unset() -> None:
@@ -92,7 +81,7 @@ def test_release_never_goes_negative() -> None:
     """An extra release doesn't let the counter (and thus the cap) invert."""
     concurrency.release()
     concurrency.release()
-    assert concurrency._active == 0  # noqa: SLF001 -- asserting test state
+    assert concurrency._active == 0
 
 
 def test_handle_train_reports_busy_when_the_cap_is_full(
@@ -162,7 +151,7 @@ def test_a_real_training_run_releases_its_slot_when_it_finishes() -> None:
         # The worker thread queues train_state just before returning, so
         # the outer finally's concurrency.release() can lag it by a beat.
         for _ in range(100):
-            if concurrency._active == 0:  # noqa: SLF001
+            if concurrency._active == 0:
                 return
             await asyncio.sleep(0.01)
         raise AssertionError("job slot was never released")

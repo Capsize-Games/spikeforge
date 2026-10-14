@@ -386,6 +386,7 @@ jobs:
             --ignore=tests/test_server_read_only.py \
             --ignore=tests/test_server_target_actions.py \
             --ignore=tests/test_serve_app.py \
+            --ignore=tests/test_serve_app_errors.py \
             --ignore=tests/test_serve_metrics.py \
             --ignore=tests/test_serve_modules.py \
             --ignore=tests/test_serve_payload_bounds.py \
@@ -595,6 +596,48 @@ jobs:
             --targets-wheel packages/spikeforge-targets/dist/spikeforge_targets-*.whl \
             --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl \
             --io-wheel packages/spikeforge-io/dist/spikeforge_io-*.whl
+
+  banned-directives:
+    # Issue #116: `# noqa` and `# type: ignore` are banned in Python, and
+    # `ts-ignore` / `eslint-disable` in the client. A suppression that is
+    # still needed is a typed seam waiting to be fixed, not a comment to
+    # keep. Pure grep, so it runs with no installs or caches.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Reject noqa, type-ignore, ts-ignore, eslint-disable
+        run: |
+          set -eu
+          fail=0
+          hits="$(git grep -n \
+            -E '#[[:space:]]*(noqa|type:[[:space:]]*ignore)' \
+            -- '*.py' || true)"
+          if [ -n "$hits" ]; then
+            # scripts/check_packaging_guards.py is being split by another
+            # worker; its two type: ignores leave with that PR.
+            hits="$(printf '%s\n' "$hits" \
+              | grep -v '^scripts/check_packaging_guards.py:' || true)"
+          fi
+          if [ -n "$hits" ]; then
+            echo 'banned Python directives found:'
+            echo "$hits"
+            fail=1
+          fi
+          hits="$(git grep -n -E 'ts-ignore|eslint-disable' \
+            -- '*.ts' '*.tsx' || true)"
+          if [ -n "$hits" ]; then
+            # The generated protocol file keeps its header until its owner
+            # regenerates it (issue #123).
+            hits="$(printf '%s\n' "$hits" \
+              | grep -v '^client/src/protocol/generated.ts:' || true)"
+          fi
+          if [ -n "$hits" ]; then
+            echo 'banned client directives found:'
+            echo "$hits"
+            fail=1
+          fi
+          exit "$fail"
 
   lockfile:
     # The Dockerfile's install chain, replayed: the CPU lock must install
