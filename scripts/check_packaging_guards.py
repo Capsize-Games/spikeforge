@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Packaging-topology guards for the ARCH-0001 multi-distribution layout.
 
-Three release-blocking health metrics from
+Four release-blocking health metrics from
 ``plans/arch-0001-decision-metrics.md`` that the runtime blockers do not cover:
 
 * **disjoint import roots** - no top-level import root may be shipped by two
@@ -14,7 +14,11 @@ Three release-blocking health metrics from
   :data:`CORE_FREE_DISTRIBUTIONS` (currently ``spikeforge-clients``, which must
   never pull the torch-backed core) is exempt from the pin but must declare no
   ``spikeforge`` dependency at all, while every other satellite must declare
-  exactly the matrix pin.
+  exactly the matrix pin;
+* **coordinated minor bump** - a core MINOR bump across the last two
+  ``compatibility.json`` rows requires every pinned satellite to ship its
+  own version bump in the new row. The 0.6.0 release forgot serve,
+  targets, and io, and the recorded combination could not be installed.
 
 Import roots and scripts are read from each distribution's ``pyproject.toml``.
 When built wheels are passed with ``--core-wheel``, ``--server-wheel``,
@@ -35,14 +39,15 @@ Usage::
 
 import argparse
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Set
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
-try:
+if sys.version_info >= (3, 11):
     import tomllib
-except ImportError:  # pragma: no cover - Python 3.10 fallback
+else:  # pragma: no cover - Python 3.10 fallback
     import tomli as tomllib
 
 #: Repository root (this file lives in ``scripts/``).
@@ -79,6 +84,16 @@ COMPATIBILITY = REPO_ROOT / "compatibility.json"
 #: ``.github/workflows/release.yml``.
 CORE_FREE_DISTRIBUTIONS = frozenset({CLIENTS_DISTRIBUTION})
 
+#: Satellites that must ride along a core MINOR bump with their own
+#: release: every non-core distribution except the core-free ones.
+PINNED_DISTRIBUTIONS = (
+    SERVER_DISTRIBUTION,
+    SERVE_DISTRIBUTION,
+    TARGETS_DISTRIBUTION,
+    HUB_DISTRIBUTION,
+    IO_DISTRIBUTION,
+)
+
 
 def _read_toml(path: Path) -> Dict[str, object]:
     """Parse a ``pyproject.toml`` into a dict."""
@@ -88,12 +103,26 @@ def _read_toml(path: Path) -> Dict[str, object]:
 
 def _project(path: Path) -> Dict[str, object]:
     """Return the ``[project]`` table of a ``pyproject.toml``."""
-    return _read_toml(path).get("project", {})  # type: ignore[return-value]
+    project = _read_toml(path).get("project", {})
+    if not isinstance(project, dict):
+        return {}
+    return project
 
 
 def _scripts(path: Path) -> Set[str]:
     """Return the console-script names a distribution declares."""
-    return set(_project(path).get("scripts", {}))
+    scripts = _project(path).get("scripts", {})
+    if not isinstance(scripts, dict):
+        return set()
+    return set(scripts)
+
+
+def _dependencies(project: Dict[str, object]) -> List[object]:
+    """Return the ``dependencies`` list of a ``[project]`` table."""
+    dependencies = project.get("dependencies", [])
+    if not isinstance(dependencies, list):
+        return []
+    return dependencies
 
 
 def _find_table(path: Path) -> Dict[str, object]:
@@ -174,14 +203,64 @@ def check_script_ownership(
     return f"console scripts owned by multiple distributions: {detail}"
 
 
-def _latest_release() -> Dict[str, object]:
-    """Return the newest release entry from ``compatibility.json``."""
+def _releases() -> List[Dict[str, object]]:
+    """Return every release entry from ``compatibility.json``."""
     with COMPATIBILITY.open("rb") as handle:
         data = json.load(handle)
     releases = data.get("releases", [])
+    if not isinstance(releases, list):
+        raise SystemExit("compatibility.json releases is not a list")
+    return releases
+
+
+def _latest_release() -> Dict[str, object]:
+    """Return the newest release entry from ``compatibility.json``."""
+    releases = _releases()
     if not releases:
         raise SystemExit("compatibility.json has no release entries")
     return releases[-1]
+
+
+def _minor(version: object) -> Optional[Tuple[int, int]]:
+    """Return the (major, minor) pair of a dotted version string."""
+    match = re.match(r"^(\d+)\.(\d+)", str(version))
+    if match is None:
+        return None
+    return (int(match.group(1)), int(match.group(2)))
+
+
+def _stale_satellites(
+    previous: Dict[str, object],
+    current: Dict[str, object],
+) -> List[str]:
+    """Return pinned satellites whose version did not move this row."""
+    return sorted(
+        distribution
+        for distribution in PINNED_DISTRIBUTIONS
+        if current.get(distribution) == previous.get(distribution)
+    )
+
+
+def check_coordinated_minor_bump(
+    releases: Sequence[Dict[str, object]],
+) -> Optional[str]:
+    """Refuse a core MINOR bump that ships stale satellites.
+
+    A core MINOR bump breaks the satellites' ``spikeforge~=`` pins, so
+    each pinned satellite must ship its own bump in the same row.
+    """
+    if len(releases) < 2:
+        return None
+    old = _minor(releases[-2].get(CORE_DISTRIBUTION))
+    new = _minor(releases[-1].get(CORE_DISTRIBUTION))
+    if old is None or new is None:
+        return "compatibility.json core version is not a dotted X.Y"
+    if old == new:
+        return None
+    stale = _stale_satellites(releases[-2], releases[-1])
+    if not stale:
+        return None
+    return f"core minor bump without coordinated bumps: {', '.join(stale)}"
 
 
 def _requirement_name(requirement: object) -> str:
@@ -254,7 +333,7 @@ def check_matrix_pins(pyprojects: Dict[str, Path]) -> Optional[str]:
             continue
         problem = check_core_pin(
             distribution,
-            project.get("dependencies", []),
+            _dependencies(project),
             release.get(CORE_DISTRIBUTION),
         )
         if problem:
@@ -302,8 +381,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     }
     if all(wheels.values()):
         roots_by_distribution = {
-            name: roots_from_wheel(path)  # type: ignore[arg-type]
-            for name, path in wheels.items()
+            name: roots_from_wheel(wheel)
+            for name, wheel in wheels.items()
+            if wheel is not None
         }
         source = "built wheels"
     else:
@@ -319,6 +399,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ),
         ("console-script ownership", check_script_ownership(pyprojects)),
         ("compatibility pin", check_matrix_pins(pyprojects)),
+        (
+            "coordinated minor bump",
+            check_coordinated_minor_bump(_releases()),
+        ),
     )
     failures = [(name, message) for name, message in checks if message]
     if failures:
