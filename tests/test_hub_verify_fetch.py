@@ -1,7 +1,7 @@
 """Fetching the dispatched artifact, capped and named on failure."""
 
 import io
-from typing import Any
+from typing import Any, List
 from urllib import error as urlerror
 
 import pytest
@@ -42,6 +42,22 @@ def test_fetch_writes_the_payload(
     fetch.fetch_artifact("https://cdn.example/x", dest)
     with open(dest, "rb") as handle:
         assert handle.read() == payload
+
+
+def test_fetch_identifies_with_a_runner_agent(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The artifact GET carries the runner agent the edge requires."""
+    seen: List[Any] = []
+
+    def _open(request: Any, timeout: int = 0) -> Any:
+        seen.append(request)
+        return _FakeResponse(b"spkf-bytes")
+
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", _open)
+    fetch.fetch_artifact("https://cdn.example/x", str(tmp_path / "a"))
+    sent = dict(seen[0].header_items())
+    assert sent["User-agent"] == "spikeforge-hub-verify"
 
 
 def test_fetch_refuses_past_the_byte_cap(
