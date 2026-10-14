@@ -94,6 +94,21 @@ def load(name: Optional[str]) -> Dict[str, Any]:
         ) from exc
 
 
+def load_checkpoint_meta(name: Optional[str]) -> Dict[str, Any]:
+    """Return a checkpoint's stored ``meta`` mapping, or ``{}`` if missing.
+
+    Only a missing checkpoint file falls back to ``{}``. A file that exists
+    but refuses to load raises :class:`CheckpointError` naming it, so a
+    corrupt checkpoint can never be mistaken for one without metadata.
+    """
+    if not name:
+        return {}
+    try:
+        return load(name).get("meta", {})
+    except FileNotFoundError:
+        return {}
+
+
 def manifest(name: Optional[str]) -> Dict[str, Any]:
     """Return a checkpoint's stored reproducibility manifest.
 
