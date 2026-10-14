@@ -48,6 +48,18 @@ that and describe the local source tree only.
   compares bit-for-bit, and `documentation/encoding-goldens.md`
   specifies each coding's math and RNG procedure. No encoder behavior
   changed.
+- **Serving runs through a torch/C backend seam.** `InferenceSession`,
+  `ServingService`, `create_app`, and `spikeforge-serve run`/`serve` take
+  an inference backend: `torch` (the default) steps the bundle's module
+  as before, while `nir-c` (`--backend nir-c`, `--c-lib` or
+  `NIR_C_RUNTIME_LIB`) exports the bundle once through `export_c_package`
+  and steps its graph in-process in `libnir_c_runtime.so` via ctypes,
+  carrying LI/Delay state across steps. Unsupported topologies fail with
+  the typed `CExportError` naming their node kinds; C readouts match the
+  torch path bit-exactly on the committed conv-net fixture (acceptance
+  bar: 1e-3 max-abs). The C path steps one sample at a time on CPU and
+  reports no per-stage spikes. See "Serving through the C runtime" in
+  `documentation/model-deployment.md`.
 - **Bundles export a C-loadable package.** `DeploymentBundle.export_c_package`
   writes the NIR graph in `graph_summary` shape with the bundle's real
   weights as plain JSON plus a manifest recording the source bundle's

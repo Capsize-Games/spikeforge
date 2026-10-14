@@ -8,7 +8,7 @@ parsing the message text. The hierarchy mirrors
 :mod:`spikeforge_targets.backends.errors`.
 """
 
-from typing import Sequence, Tuple
+from typing import Any, Sequence, Tuple
 
 
 class ServingError(Exception):
@@ -88,6 +88,55 @@ class CExportError(BundleError):
             path, f"graph uses node kinds the C runtime rejects: {names}"
         )
         self.kinds: Tuple[str, ...] = tuple(sorted(kinds))
+
+
+class BackendError(ServingError):
+    """Raised when an inference backend is misused or misconfigured.
+
+    Covers an unknown backend name, a backend/option combination the
+    session cannot honor (such as a torch ``post_step`` hook on the C
+    backend), and use after :meth:`close`. Frames a backend cannot
+    consume are plain :class:`ValueError`, like every other frame
+    refusal on the serving path. The offending ``detail`` is stored
+    as an attribute.
+    """
+
+    def __init__(self, detail: str) -> None:
+        """Record ``detail`` and build a clear message."""
+        super().__init__(f"invalid inference backend use: {detail}")
+        self.detail: str = detail
+
+
+class CRuntimeLibraryError(BackendError):
+    """Raised when the ``nir-c-runtime`` shared library cannot load.
+
+    The attempted ``path`` (an explicit path, the ``NIR_C_RUNTIME_LIB``
+    environment variable, or ``None`` when neither was given) is stored
+    as an attribute, and the message explains how to build the library
+    from the ``nir-c-runtime`` repository.
+    """
+
+    def __init__(self, path: Any, detail: str) -> None:
+        """Record ``path`` and the load-failure ``detail``."""
+        super().__init__(f"cannot load the C runtime ({path}): {detail}")
+        self.path: Any = path
+
+
+class CRuntimeExecutionError(BackendError):
+    """Raised when a ``nir-c-runtime`` call itself fails.
+
+    The failing C ``operation`` (``parse``, ``load``, ``init``, ``run``)
+    is stored as an attribute; the message carries the runtime's own
+    text after the operation, so a caller can report what the C side
+    rejected without parsing prose.
+    """
+
+    def __init__(self, operation: str, detail: str) -> None:
+        """Record ``operation`` and the C runtime's ``detail``."""
+        super().__init__(
+            f"C runtime {operation} failed: {detail}"
+        )
+        self.operation: str = operation
 
 
 class EncodeSpecError(ServingError):

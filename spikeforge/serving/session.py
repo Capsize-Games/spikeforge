@@ -7,7 +7,6 @@ from typing import (
     Iterator,
     Mapping,
     Optional,
-    Tuple,
     Union,
 )
 
@@ -16,50 +15,54 @@ import torch
 from spikeforge.runtime.execution_mode import ExecutionMode
 from spikeforge.serving import preprocess, tensor_codec
 from spikeforge.serving.bundle import DeploymentBundle
-from spikeforge.serving.errors import StateError
-from spikeforge.serving.prediction import Prediction
-from spikeforge.serving.state_tree import StateTree
-from spikeforge.simulator.grad_policy import detach_state
-from spikeforge.simulator.module_spec import spec_of
-from spikeforge.simulator.state import initial_state, neuron_kinds
-from spikeforge.simulator.step_stages import PostStep, step_stages
-from spikeforge.topology.spec import TopologySpec
-from spikeforge.topology.stage_module import (
-    CURRENT_KEY,
-    PREV_KEY,
-    StageModule,
+from spikeforge.serving.errors import BackendError, StateError
+from spikeforge.serving.inference_backend import (
+    NIR_C_BACKEND,
+    TORCH_BACKEND,
+    InferenceBackend,
+    resolve_backend,
 )
-
-#: Carried-state entries that are not neuron stages.
-_RESERVED: Tuple[str, ...] = (PREV_KEY, CURRENT_KEY)
+from spikeforge.serving.nir_c_backend import NirCBackend
+from spikeforge.serving.prediction import Prediction
+from spikeforge.serving.torch_backend import TorchBackend
+from spikeforge.simulator.step_stages import PostStep
+from spikeforge.topology.spec import TopologySpec
+from spikeforge.topology.stage_module import StageModule
 
 
 class InferenceSession:
-    """Drive one topology timestep at a time, carrying neuron state.
+    """Drive one topology timestep at a time, carrying state.
 
-    A session is built from a :class:`DeploymentBundle`. Every :meth:`step`
-    advances exactly one timestep and the carried state persists until
-    :meth:`reset`. The per-step body is the same shared
-    :func:`~spikeforge.simulator.step_stages.step_stages` the closed-loop
-    simulator uses, so a stream and a whole-tensor ``run`` agree by
-    construction rather than by convention.
+    A session steps a :class:`DeploymentBundle` through one
+    :class:`InferenceBackend` — ``torch`` (the default) or ``nir-c``.
+    Every :meth:`step` advances exactly one timestep and the carried
+    state persists until :meth:`reset`.
     """
 
     def __init__(
-        self, bundle: DeploymentBundle, module: StageModule,
+        self, bundle: DeploymentBundle,
+        module: Optional[StageModule] = None,
         device: Union[str, torch.device] = "cpu",
         mode: ExecutionMode = ExecutionMode.PRODUCTION,
         post_step: Optional[PostStep] = None,
+        backend: str = TORCH_BACKEND,
+        c_lib: Optional[str] = None,
     ) -> None:
-        """Wrap ``module`` and ``bundle``; see the ``post_step`` property."""
+        """Open ``backend`` over ``bundle``; see :meth:`load`.
+
+        The torch backend needs the bundle's ``module``; the ``nir-c``
+        backend builds its own graph from the bundle, takes no module
+        and no ``post_step`` hook, and reads its C library from
+        ``c_lib`` or the ``NIR_C_RUNTIME_LIB`` environment variable.
+        """
         self._bundle = bundle
-        self._module = module
+        self._backend_name = resolve_backend(backend)
+        self._backend = _open_backend(
+            self._backend_name, bundle, module, device, post_step, c_lib
+        )
         self._device = torch.device(device)
         self._mode = mode
         self._post_step = post_step
-        self._spec: TopologySpec = spec_of(module)
-        self._neurons: Tuple[str, ...] = tuple(neuron_kinds(self._spec))
-        self._state: Optional[Dict[str, Any]] = None
         self._totals: Optional[torch.Tensor] = None
         self._steps = 0
 
@@ -69,13 +72,30 @@ class InferenceSession:
         device: Union[str, torch.device] = "cpu",
         mode: ExecutionMode = ExecutionMode.PRODUCTION,
         strict: bool = True, post_step: Optional[PostStep] = None,
+        backend: str = TORCH_BACKEND,
+        c_lib: Optional[str] = None,
     ) -> "InferenceSession":
         """Load a session from a bundle object or a ``.spkf`` path."""
+        name = resolve_backend(backend)
         resolved = _resolve_bundle(bundle, strict)
+        if name == NIR_C_BACKEND:
+            return cls(
+                resolved, device=device, mode=mode, post_step=post_step,
+                backend=name, c_lib=c_lib,
+            )
         module = resolved.build_module(device=device)
         return cls(
-            resolved, module, device=device, mode=mode, post_step=post_step
+            resolved, module, device=device, mode=mode,
+            post_step=post_step, backend=name,
         )
+
+    def __enter__(self) -> "InferenceSession":
+        """Return this session for a ``with`` block."""
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        """Close the backend on block exit."""
+        self.close()
 
     @property
     def bundle(self) -> DeploymentBundle:
@@ -83,9 +103,14 @@ class InferenceSession:
         return self._bundle
 
     @property
+    def backend_name(self) -> str:
+        """Return the backend this session steps through."""
+        return self._backend_name
+
+    @property
     def spec(self) -> TopologySpec:
         """Return the topology the session executes."""
-        return self._spec
+        return self._backend.spec
 
     @property
     def mode(self) -> ExecutionMode:
@@ -104,7 +129,7 @@ class InferenceSession:
 
     def reset(self) -> None:
         """Clear the carried state and the cumulative readout."""
-        self._state = None
+        self._backend.reset()
         self._totals = None
         self._steps = 0
 
@@ -127,7 +152,7 @@ class InferenceSession:
         """
         spec = self._bundle.encode_spec()
         return preprocess.encode(
-            sample, spec, self._spec, geometry=spec.input_size
+            sample, spec, self._backend.spec, geometry=spec.input_size
         )
 
     def step_sample(self, sample: Any) -> Prediction:
@@ -152,7 +177,7 @@ class InferenceSession:
         return {
             "steps": self._steps,
             "totals": tensor_codec.encode(self._totals),
-            "state": StateTree(self._state).to_dict(),
+            "state": self._backend.capture_state(),
         }
 
     def load_state(self, state: Mapping[str, Any]) -> None:
@@ -163,71 +188,56 @@ class InferenceSession:
         """
         if not isinstance(state, Mapping):
             raise StateError("state payload must be an object")
-        tree = StateTree.from_dict(state.get("state") or {}).to(self._device)
-        self._validate(tree.raw())
-        self._state = dict(tree.raw()) or None
+        self._backend.restore_state(state.get("state") or {})
         self._totals = tensor_codec.decode(state.get("totals"), self._device)
         self._steps = int(state.get("steps", 0) or 0)
 
-    def _step_once(
-        self, inputs: torch.Tensor
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
-        """Run one shared step under no_grad; update carried state/totals."""
-        with torch.no_grad():
-            if self._state is None:
-                self._state = dict(initial_state(self._spec, inputs))
-            outputs, state = step_stages(
-                self._module, inputs, self._state, post_step=self._post_step
-            )
-            readout = outputs[self._spec.output].detach()
-            total = readout if self._totals is None else self._totals + readout
-            self._state = detach_state(state)
-            spikes = self._spikes(outputs)
-            return readout, spikes, total.detach()
+    def close(self) -> None:
+        """Close the backend; stepping or resetting after this refuses."""
+        self._backend.close()
 
     def _advance(self, inputs: torch.Tensor) -> Prediction:
-        """Run one shared step and fold its readout into the totals."""
-        readout, spikes, totals = self._step_once(inputs)
-        self._totals = totals
+        """Run one backend step and fold its readout into the totals."""
+        readout, spikes = self._backend.step(inputs)
+        total = readout if self._totals is None else self._totals + readout
+        self._totals = total.detach()
         self._steps += 1
         return Prediction(
             logits=readout,
             spikes=spikes,
-            class_totals=totals,
+            class_totals=self._totals,
             steps=self._steps,
-            label=int(totals.argmax(dim=-1).reshape(-1)[0]),
+            label=int(self._totals.argmax(dim=-1).reshape(-1)[0]),
         )
-
-    def _spikes(
-        self, outputs: Mapping[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
-        """Return this step's neuron-stage spikes, bounded to the neurons."""
-        return {
-            name: outputs[name].detach()
-            for name in self._neurons
-            if name in outputs
-        }
-
-    def _validate(self, raw: Mapping[str, Any]) -> None:
-        """Raise when ``raw`` names stages this session's spec lacks."""
-        if not raw:
-            return
-        present = set(raw) - set(_RESERVED)
-        unknown = present - set(self._neurons)
-        missing = set(self._neurons) - present
-        if unknown or missing:
-            raise StateError(
-                "stage mismatch: unknown="
-                + repr(sorted(unknown))
-                + " missing="
-                + repr(sorted(missing))
-            )
 
     def _as_input(self, frame: Any) -> torch.Tensor:
         """Return ``frame`` as a tensor on the session's device."""
         if isinstance(frame, torch.Tensor):
             return frame.to(self._device)
         return torch.as_tensor(frame, dtype=torch.float32, device=self._device)
+
+
+def _open_backend(
+    name: str, bundle: DeploymentBundle,
+    module: Optional[StageModule],
+    device: Union[str, torch.device],
+    post_step: Optional[PostStep], c_lib: Optional[str],
+) -> InferenceBackend:
+    """Return the ``name`` backend, refusing contradictory options."""
+    if name == NIR_C_BACKEND:
+        if module is not None:
+            raise BackendError(
+                "the nir-c backend builds its own graph from "
+                "the bundle; pass no module"
+            )
+        if post_step is not None:
+            raise BackendError(
+                "the nir-c backend cannot apply a torch post_step hook"
+            )
+        return NirCBackend.from_bundle(bundle, device=device, lib=c_lib)
+    if module is None:
+        raise BackendError("the torch backend needs the bundle's module")
+    return TorchBackend(module, device=device, post_step=post_step)
 
 
 def _resolve_bundle(
