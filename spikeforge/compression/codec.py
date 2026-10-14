@@ -10,6 +10,12 @@ dequantize rule ``(code - zero_point) * scale``:
 ``uint8``  asymmetric per-tensor; codes are ``uint8`` in ``[0, 255]`` and the
            zero-point shifts the observed range onto the unsigned grid.
 
+Grids come from :mod:`spikeforge.compression.grid`, shared with the target
+drift simulation, so both agree on every ``(scale, zero_point)`` pair by
+construction. Degenerate grids stay loadable (a positive scale) and
+reproduce their values: an all-zero tensor decodes to zeros and a constant
+tensor decodes to its level rather than being erased.
+
 Only 8-bit schemes are implemented. A request for another bit-width is
 refused with :class:`~spikeforge.compression.errors.CompressionError` rather
 than rounded to 8-bit behind the caller's back. Non-floating tensors (integer
@@ -23,6 +29,16 @@ from typing import Any, Dict, Mapping, Tuple
 import torch
 
 from spikeforge.compression.errors import CompressionError
+from spikeforge.compression.grid import (
+    INT8_MAX_CODE,
+    INT8_MIN_CODE,
+    UINT8_MAX_CODE,
+    UINT8_MIN_CODE,
+    int8_grid,
+    is_degenerate_uint8,
+    uint8_degenerate,
+    uint8_grid,
+)
 
 #: Version of the weight-encoding contract recorded in a bundle manifest.
 WEIGHTS_ENCODING_VERSION: int = 1
@@ -35,37 +51,44 @@ SCHEME_UINT8 = "uint8"
 #: Every scheme this codec can execute.
 SCHEMES: Tuple[str, ...] = (SCHEME_NONE, SCHEME_INT8, SCHEME_UINT8)
 
-#: Largest magnitude a symmetric int8 code may take.
-_INT8_LEVELS = 127.0
-#: Span of the unsigned 8-bit grid.
-_UINT8_LEVELS = 255.0
-#: Peak below which a tensor is treated as all-zero.
-_EPS = 1e-12
-
 
 def _int8_codes(values: torch.Tensor) -> Tuple[torch.Tensor, float, int]:
-    """Return symmetric int8 codes, scale, and zero-point for ``values``."""
+    """Return symmetric int8 codes, scale, and zero-point for ``values``.
+
+    The shared degenerate grid ``(1.0, 0)`` rounds near-zero values to
+    code zero, so no separate all-zero branch is needed.
+    """
     peak = float(values.abs().max()) if values.numel() else 0.0
-    if peak <= _EPS:
-        return torch.zeros_like(values, dtype=torch.int8), 0.0, 0
-    scale = peak / _INT8_LEVELS
-    codes = torch.round(values / scale).clamp(-_INT8_LEVELS, _INT8_LEVELS)
-    return codes.to(torch.int8), scale, 0
+    grid = int8_grid(peak)
+    codes = torch.round(values / grid.scale).clamp(
+        INT8_MIN_CODE, INT8_MAX_CODE
+    )
+    return codes.to(torch.int8), grid.scale, grid.zero_point
+
+
+def _degenerate_uint8(
+    values: torch.Tensor, low: float, high: float
+) -> Tuple[torch.Tensor, float, int]:
+    """Return the single-level codes, scale, zero-point for ``values``."""
+    grid, code = uint8_degenerate(low, high)
+    codes = torch.full(list(values.shape), code, dtype=torch.uint8)
+    return codes, grid.scale, grid.zero_point
 
 
 def _uint8_codes(values: torch.Tensor) -> Tuple[torch.Tensor, float, int]:
     """Return asymmetric uint8 codes, scale, zero-point for ``values``."""
     if values.numel() == 0:
-        return torch.zeros_like(values, dtype=torch.uint8), 0.0, 0
+        grid = uint8_grid(0.0, 0.0)
+        codes = torch.zeros_like(values, dtype=torch.uint8)
+        return codes, grid.scale, grid.zero_point
     low = float(values.min())
     high = float(values.max())
-    if high - low <= _EPS:
-        return torch.zeros_like(values, dtype=torch.uint8), 0.0, 0
-    scale = (high - low) / _UINT8_LEVELS
-    zero = max(0, min(255, int(round(-low / scale))))
-    codes = torch.round(values / scale) + zero
-    codes = codes.clamp(0.0, _UINT8_LEVELS).to(torch.uint8)
-    return codes, scale, zero
+    if is_degenerate_uint8(low, high):
+        return _degenerate_uint8(values, low, high)
+    grid = uint8_grid(low, high)
+    codes = torch.round(values / grid.scale) + grid.zero_point
+    codes = codes.clamp(UINT8_MIN_CODE, UINT8_MAX_CODE).to(torch.uint8)
+    return codes, grid.scale, grid.zero_point
 
 
 def _codes_and_grid(
