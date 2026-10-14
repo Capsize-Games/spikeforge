@@ -614,12 +614,6 @@ jobs:
             -E '#[[:space:]]*(noqa|type:[[:space:]]*ignore)' \
             -- '*.py' || true)"
           if [ -n "$hits" ]; then
-            # scripts/check_packaging_guards.py is being split by another
-            # worker; its two type: ignores leave with that PR.
-            hits="$(printf '%s\n' "$hits" \
-              | grep -v '^scripts/check_packaging_guards.py:' || true)"
-          fi
-          if [ -n "$hits" ]; then
             echo 'banned Python directives found:'
             echo "$hits"
             fail=1

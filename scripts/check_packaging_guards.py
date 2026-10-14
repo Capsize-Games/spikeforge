@@ -25,6 +25,11 @@ When built wheels are passed with ``--core-wheel``, ``--server-wheel``,
 ``--targets-wheel``, and ``--hub-wheel`` the import-root check runs against the
 actual archives instead, so CI proves the artifact and not just the intent.
 
+The checks live in :mod:`scripts.packaging_layout`,
+:mod:`scripts.packaging_check_topology`, :mod:`scripts.packaging_check_bump`,
+and :mod:`scripts.packaging_check_pins`; this module keeps the CLI entry
+point and the historical import surface (#149).
+
 Usage::
 
     python scripts/check_packaging_guards.py \
@@ -38,309 +43,74 @@ Usage::
 """
 
 import argparse
-import json
-import re
 import sys
-import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing import Optional, Sequence
 
-if sys.version_info >= (3, 11):
-    import tomllib
-else:  # pragma: no cover - Python 3.10 fallback
-    import tomli as tomllib
-
-#: Repository root (this file lives in ``scripts/``).
-REPO_ROOT = Path(__file__).resolve().parent.parent
-
-CORE_DISTRIBUTION = "spikeforge"
-SERVER_DISTRIBUTION = "spikeforge-server"
-SERVE_DISTRIBUTION = "spikeforge-serve"
-CLIENTS_DISTRIBUTION = "spikeforge-clients"
-TARGETS_DISTRIBUTION = "spikeforge-targets"
-HUB_DISTRIBUTION = "spikeforge-hub"
-IO_DISTRIBUTION = "spikeforge-io"
-CORE_PYPROJECT = REPO_ROOT / "packages" / CORE_DISTRIBUTION / "pyproject.toml"
-SERVER_PYPROJECT = (
-    REPO_ROOT / "packages" / SERVER_DISTRIBUTION / "pyproject.toml"
-)
-SERVE_PYPROJECT = (
-    REPO_ROOT / "packages" / SERVE_DISTRIBUTION / "pyproject.toml"
-)
-CLIENTS_PYPROJECT = (
-    REPO_ROOT / "packages" / CLIENTS_DISTRIBUTION / "pyproject.toml"
-)
-TARGETS_PYPROJECT = (
-    REPO_ROOT / "packages" / TARGETS_DISTRIBUTION / "pyproject.toml"
-)
-HUB_PYPROJECT = REPO_ROOT / "packages" / HUB_DISTRIBUTION / "pyproject.toml"
-IO_PYPROJECT = REPO_ROOT / "packages" / IO_DISTRIBUTION / "pyproject.toml"
-COMPATIBILITY = REPO_ROOT / "compatibility.json"
-
-#: Distributions that deliberately declare no ``spikeforge`` core dependency.
-#: A client install must never pull the torch-backed core, so these are exempt
-#: from the core-pin rule; declaring a core dependency in one is itself an
-#: error. Keep this in sync with ``core_free_distributions`` in
-#: ``.github/workflows/release.yml``.
-CORE_FREE_DISTRIBUTIONS = frozenset({CLIENTS_DISTRIBUTION})
-
-#: Satellites that must ride along a core MINOR bump with their own
-#: release: every non-core distribution except the core-free ones.
-PINNED_DISTRIBUTIONS = (
-    SERVER_DISTRIBUTION,
-    SERVE_DISTRIBUTION,
-    TARGETS_DISTRIBUTION,
-    HUB_DISTRIBUTION,
-    IO_DISTRIBUTION,
-)
-
-
-def _read_toml(path: Path) -> Dict[str, object]:
-    """Parse a ``pyproject.toml`` into a dict."""
-    with path.open("rb") as handle:
-        return tomllib.load(handle)
-
-
-def _project(path: Path) -> Dict[str, object]:
-    """Return the ``[project]`` table of a ``pyproject.toml``."""
-    project = _read_toml(path).get("project", {})
-    if not isinstance(project, dict):
-        return {}
-    return project
-
-
-def _scripts(path: Path) -> Set[str]:
-    """Return the console-script names a distribution declares."""
-    scripts = _project(path).get("scripts", {})
-    if not isinstance(scripts, dict):
-        return set()
-    return set(scripts)
-
-
-def _dependencies(project: Dict[str, object]) -> List[object]:
-    """Return the ``dependencies`` list of a ``[project]`` table."""
-    dependencies = project.get("dependencies", [])
-    if not isinstance(dependencies, list):
-        return []
-    return dependencies
-
-
-def _find_table(path: Path) -> Dict[str, object]:
-    """Return the ``setuptools.packages.find`` table, or an empty dict."""
-    setuptools = _read_toml(path).get("tool", {}).get("setuptools", {})
-    if not isinstance(setuptools, dict):
-        return {}
-    find = setuptools.get("packages", {}).get("find", {})
-    return find if isinstance(find, dict) else {}
-
-
-def _py_modules(path: Path) -> List[str]:
-    """Return the ``setuptools.py-modules`` list, or an empty list."""
-    setuptools = _read_toml(path).get("tool", {}).get("setuptools", {})
-    if not isinstance(setuptools, dict):
-        return []
-    modules = setuptools.get("py-modules", [])
-    return list(modules) if isinstance(modules, list) else []
-
-
-def roots_from_pyproject(path: Path) -> Set[str]:
-    """Return the top-level import roots a distribution declares."""
-    roots = {module.split(".")[0] for module in _py_modules(path)}
-    for pattern in _find_table(path).get("include", []):
-        roots.add(str(pattern).rstrip("*").split(".")[0])
-    return roots
-
-
-def roots_from_wheel(path: Path) -> Set[str]:
-    """Return the top-level archive entries of a built wheel."""
-    roots: Set[str] = set()
-    with zipfile.ZipFile(path) as archive:
-        for name in archive.namelist():
-            top = name.split("/", 1)[0]
-            if top.endswith((".dist-info", ".data")):
-                continue
-            roots.add(top)
-    return roots
-
-
-def check_disjoint_roots(
-    roots_by_distribution: Dict[str, Set[str]],
-) -> Optional[str]:
-    """Return an error when two distributions ship the same import root."""
-    names = sorted(roots_by_distribution)
-    clashes: List[str] = []
-    for index, left in enumerate(names):
-        for right in names[index + 1:]:
-            overlap = sorted(
-                roots_by_distribution[left] & roots_by_distribution[right]
-            )
-            if overlap:
-                clashes.append(
-                    f"{', '.join(overlap)} shared by {left} and {right}"
-                )
-    if clashes:
-        return "import roots shipped by multiple distributions: " + (
-            "; ".join(clashes)
-        )
-    return None
-
-
-def check_script_ownership(
-    pyprojects: Dict[str, Path],
-) -> Optional[str]:
-    """Return an error when a console script is owned by two distributions."""
-    owners: Dict[str, List[str]] = {}
-    for distribution, path in pyprojects.items():
-        for script in _scripts(path):
-            owners.setdefault(script, []).append(distribution)
-    clashes = {name: names for name, names in owners.items() if len(names) > 1}
-    if not clashes:
-        return None
-    detail = "; ".join(
-        f"{name} in {', '.join(sorted(names))}"
-        for name, names in sorted(clashes.items())
+try:  # imported as part of the scripts package
+    from scripts.packaging_check_bump import (
+        _releases,
+        check_coordinated_minor_bump,
     )
-    return f"console scripts owned by multiple distributions: {detail}"
-
-
-def _releases() -> List[Dict[str, object]]:
-    """Return every release entry from ``compatibility.json``."""
-    with COMPATIBILITY.open("rb") as handle:
-        data = json.load(handle)
-    releases = data.get("releases", [])
-    if not isinstance(releases, list):
-        raise SystemExit("compatibility.json releases is not a list")
-    return releases
-
-
-def _latest_release() -> Dict[str, object]:
-    """Return the newest release entry from ``compatibility.json``."""
-    releases = _releases()
-    if not releases:
-        raise SystemExit("compatibility.json has no release entries")
-    return releases[-1]
-
-
-def _minor(version: object) -> Optional[Tuple[int, int]]:
-    """Return the (major, minor) pair of a dotted version string."""
-    match = re.match(r"^(\d+)\.(\d+)", str(version))
-    if match is None:
-        return None
-    return (int(match.group(1)), int(match.group(2)))
-
-
-def _stale_satellites(
-    previous: Dict[str, object],
-    current: Dict[str, object],
-) -> List[str]:
-    """Return pinned satellites whose version did not move this row."""
-    return sorted(
-        distribution
-        for distribution in PINNED_DISTRIBUTIONS
-        if current.get(distribution) == previous.get(distribution)
+    from scripts.packaging_check_pins import check_core_pin, check_matrix_pins
+    from scripts.packaging_check_topology import (
+        check_disjoint_roots,
+        check_script_ownership,
+    )
+    from scripts.packaging_layout import (
+        CLIENTS_DISTRIBUTION,
+        CLIENTS_PYPROJECT,
+        CORE_DISTRIBUTION,
+        CORE_FREE_DISTRIBUTIONS,
+        CORE_PYPROJECT,
+        HUB_DISTRIBUTION,
+        HUB_PYPROJECT,
+        IO_DISTRIBUTION,
+        IO_PYPROJECT,
+        SERVE_DISTRIBUTION,
+        SERVE_PYPROJECT,
+        SERVER_DISTRIBUTION,
+        SERVER_PYPROJECT,
+        TARGETS_DISTRIBUTION,
+        TARGETS_PYPROJECT,
+        roots_from_pyproject,
+        roots_from_wheel,
+    )
+except ImportError:  # run directly as scripts/check_packaging_guards.py
+    from packaging_check_bump import _releases, check_coordinated_minor_bump
+    from packaging_check_pins import check_core_pin, check_matrix_pins
+    from packaging_check_topology import (
+        check_disjoint_roots,
+        check_script_ownership,
+    )
+    from packaging_layout import (
+        CLIENTS_DISTRIBUTION,
+        CLIENTS_PYPROJECT,
+        CORE_DISTRIBUTION,
+        CORE_FREE_DISTRIBUTIONS,
+        CORE_PYPROJECT,
+        HUB_DISTRIBUTION,
+        HUB_PYPROJECT,
+        IO_DISTRIBUTION,
+        IO_PYPROJECT,
+        SERVE_DISTRIBUTION,
+        SERVE_PYPROJECT,
+        SERVER_DISTRIBUTION,
+        SERVER_PYPROJECT,
+        TARGETS_DISTRIBUTION,
+        TARGETS_PYPROJECT,
+        roots_from_pyproject,
+        roots_from_wheel,
     )
 
-
-def check_coordinated_minor_bump(
-    releases: Sequence[Dict[str, object]],
-) -> Optional[str]:
-    """Refuse a core MINOR bump that ships stale satellites.
-
-    A core MINOR bump breaks the satellites' ``spikeforge~=`` pins, so
-    each pinned satellite must ship its own bump in the same row.
-    """
-    if len(releases) < 2:
-        return None
-    old = _minor(releases[-2].get(CORE_DISTRIBUTION))
-    new = _minor(releases[-1].get(CORE_DISTRIBUTION))
-    if old is None or new is None:
-        return "compatibility.json core version is not a dotted X.Y"
-    if old == new:
-        return None
-    stale = _stale_satellites(releases[-2], releases[-1])
-    if not stale:
-        return None
-    return f"core minor bump without coordinated bumps: {', '.join(stale)}"
-
-
-def _requirement_name(requirement: object) -> str:
-    """Return the distribution name of a PEP 508 requirement string.
-
-    The satellites share the ``spikeforge`` prefix (for example
-    ``spikeforge-targets``), so a plain ``str.startswith`` would misread a
-    satellite pin as a core pin; comparing the bare name avoids that.
-    """
-    text = str(requirement).strip()
-    for index, char in enumerate(text):
-        if char in "<>=!~;[":
-            return text[:index].strip()
-    return text
-
-
-def check_core_pin(
-    distribution: str,
-    dependencies: Sequence[object],
-    core_version: object,
-) -> Optional[str]:
-    """Return an error when a distribution's core pin breaks the rule.
-
-    The rule mirrors the ``release.yml`` verify step so local guards and CI
-    agree:
-
-    * the core distribution itself is exempt;
-    * a distribution in :data:`CORE_FREE_DISTRIBUTIONS` must declare no
-      ``spikeforge`` dependency at all;
-    * every other non-core distribution must declare exactly one
-      ``spikeforge`` dependency pinned ``spikeforge~=<core_version>``.
-    """
-    if distribution == CORE_DISTRIBUTION:
-        return None
-    expected_pin = f"{CORE_DISTRIBUTION}~={core_version}"
-    pins = [
-        dependency
-        for dependency in dependencies
-        if _requirement_name(dependency) == CORE_DISTRIBUTION
-    ]
-    if distribution in CORE_FREE_DISTRIBUTIONS:
-        if pins:
-            return (
-                f"{distribution} is declared core-free but declares core "
-                f"dependencies {pins}"
-            )
-        return None
-    if pins != [expected_pin]:
-        return (
-            f"{distribution} core pin {pins} is not the matrix pin "
-            f"{expected_pin!r}"
-        )
-    return None
-
-
-def check_matrix_pins(pyprojects: Dict[str, Path]) -> Optional[str]:
-    """Return an error when a distribution disagrees with the matrix."""
-    release = _latest_release()
-    problems: List[str] = []
-    for distribution, path in pyprojects.items():
-        project = _project(path)
-        expected_version = release.get(distribution)
-        actual_version = project.get("version")
-        if expected_version != actual_version:
-            problems.append(
-                f"{distribution} version {actual_version!r} != "
-                f"matrix {expected_version!r}"
-            )
-        if distribution == CORE_DISTRIBUTION:
-            continue
-        problem = check_core_pin(
-            distribution,
-            _dependencies(project),
-            release.get(CORE_DISTRIBUTION),
-        )
-        if problem:
-            problems.append(problem)
-    if problems:
-        return "compatibility pin mismatch: " + "; ".join(problems)
-    return None
+__all__ = [
+    "CLIENTS_DISTRIBUTION",
+    "CORE_DISTRIBUTION",
+    "CORE_FREE_DISTRIBUTIONS",
+    "check_coordinated_minor_bump",
+    "check_core_pin",
+    "main",
+]
 
 
 def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
