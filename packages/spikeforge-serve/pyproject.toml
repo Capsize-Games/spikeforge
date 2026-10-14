@@ -52,7 +52,7 @@ classifiers = [
 dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
-    "spikeforge~=0.6.0",
+    "spikeforge~=0.6.1",
 ]
 
 [project.optional-dependencies]
