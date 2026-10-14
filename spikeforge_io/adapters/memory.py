@@ -4,11 +4,17 @@ Split out of the ``adapters`` package root so each adapter lives in its
 own file.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import torch
+from spikeforge_io.adapters.base import (
+    StreamAdapter,
+    as_stream,
+    as_stream_numpy,
+)
 
-from spikeforge_io.adapters.base import StreamAdapter, as_stream
+if TYPE_CHECKING:
+    import numpy as np
+    import torch
 
 
 class InMemoryAdapter(StreamAdapter):
@@ -19,6 +25,10 @@ class InMemoryAdapter(StreamAdapter):
         self._payload = payload
         self.source = source
 
-    def stream(self) -> torch.Tensor:
+    def stream(self) -> "torch.Tensor":
         """Return the payload as a ``[N, D]`` tensor."""
         return as_stream(self._payload, self.source)
+
+    def stream_numpy(self) -> "np.ndarray":
+        """Return the payload as a ``[N, D]`` array without torch."""
+        return as_stream_numpy(self._payload, self.source)

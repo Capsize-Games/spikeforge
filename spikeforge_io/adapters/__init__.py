@@ -4,9 +4,11 @@ Every adapter answers one question — "what is this recorded source, as an
 ``[N, D]`` numeric stream?" — and nothing more. Windowing, normalization, and
 encoding are then the shared core contract (see
 :mod:`spikeforge_io.windowing`), so an adapter can never invent its own
-preprocessing. Only the standard library and torch are used for CSV/JSON and
-in-memory data; numpy is imported lazily and only for ``.npy``, and its absence
-is a typed :class:`~spikeforge_io.errors.AdapterDependencyError` rather than an
+preprocessing. Each adapter offers the same stream twice — torch via
+:meth:`~spikeforge_io.adapters.base.StreamAdapter.stream` and numpy via
+:meth:`~spikeforge_io.adapters.base.StreamAdapter.stream_numpy`. Both
+frameworks are imported lazily, and a missing one is a typed
+:class:`~spikeforge_io.errors.AdapterDependencyError` rather than an
 ``ImportError`` at the call site.
 
 The dataset-adapter **hook** (:class:`DatasetAdapter`) is deliberately
@@ -22,7 +24,11 @@ using this path.
 
 from typing import Any, Callable, Dict
 
-from spikeforge_io.adapters.base import StreamAdapter, as_stream
+from spikeforge_io.adapters.base import (
+    StreamAdapter,
+    as_stream,
+    as_stream_numpy,
+)
 from spikeforge_io.adapters.csv_adapter import CsvAdapter
 from spikeforge_io.adapters.dataset import DATASET_METHODS, DatasetAdapter
 from spikeforge_io.adapters.json_adapter import JSON_KEYS, JsonAdapter
@@ -42,6 +48,7 @@ __all__ = [
     "StreamAdapter",
     "adapter_for",
     "as_stream",
+    "as_stream_numpy",
 ]
 
 #: Adapter factories keyed by a lower-cased filename suffix.
