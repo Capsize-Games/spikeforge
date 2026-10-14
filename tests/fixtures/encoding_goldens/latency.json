@@ -1,0 +1,48 @@
+{
+  "name": "latency",
+  "description": "latency coding of the fixture image.",
+  "generator": {
+    "script": "scripts/generate_encoding_goldens.py",
+    "spikeforge_commit": "b611c2559fd8357c2a35c4016614dfa4769609d5",
+    "torch": "2.14.1+cpu",
+    "snntorch": "1.0.0",
+    "python": "3.12.13"
+  },
+  "spec": {
+    "coding": "latency",
+    "num_steps": 8,
+    "tau": 5.0,
+    "threshold": 0.01,
+    "clip": false,
+    "normalize": true,
+    "linear": true,
+    "delta_threshold": 4.0,
+    "random_scale": 0.5,
+    "random_seed": null,
+    "gain": 1.0,
+    "off_spike": false,
+    "input_size": null,
+    "spec_version": 1
+  },
+  "spec_digest": "f59fb8e44978229f708e59df9cdd1a010affb9a4fddf9148f7694e890a213f5f",
+  "procedure": "preprocess.encode; deterministic, no RNG is consumed.",
+  "input": {
+    "shape": [1, 1, 2, 4],
+    "values": [
+      0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 1.0
+    ]
+  },
+  "output": {
+    "shape": [8, 1, 8],
+    "values": [
+      0, 0, 0, 0, 0, 0, 0, 1,
+      0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 1, 0,
+      0, 0, 0, 0, 0, 1, 0, 0,
+      0, 0, 0, 1, 1, 0, 0, 0,
+      0, 0, 1, 0, 0, 0, 0, 0,
+      0, 1, 0, 0, 0, 0, 0, 0,
+      1, 0, 0, 0, 0, 0, 0, 0
+    ]
+  }
+}
