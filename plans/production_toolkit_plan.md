@@ -54,7 +54,7 @@ and stay there.
 | NIR serialization | version-stamped graph envelope | [`serialization.py`](spikeforge/nir_bridge/serialization.py:52) | not bundled with weights/encoder |
 | ONNX | single forward step + metadata | [`onnx_bridge/export.py`](spikeforge/onnx_bridge/export.py:1) | not a temporal runtime (by design) |
 | Encoding | `SpikeEncoder` owns rate/latency/delta/random | [`spike_encoder.py`](spikeforge/encoding/spike_encoder.py:1), [`encode_config.schema.json`](protocol/payloads/encode_config.schema.json:1) | encoding not frozen into the artifact |
-| Targets | 6 declared; `reference`/`norse`/`lava_loihi2` executable | [`catalog.py`](spikeforge_targets/catalog.py:145), [`backends/api.py`](spikeforge_targets/backends/api.py:20) | `speck`/`xylo`/`spinnaker2` not wired |
+| Targets | 6 declared; `reference`/`norse`/`lava_loihi2` executable | [`catalog.py`](spikeforge_targets/catalog.py:145), [`backends/api/`](spikeforge_targets/backends/api/__init__.py) | `speck`/`xylo`/`spinnaker2` not wired |
 | Lava path | defaults to **Loihi 2 CPU emulator**, device opt-in | [`lava_backend.py`](spikeforge_targets/backends/lava_backend.py:33) | document it; broaden lowering |
 | Energy | declared tables, `measured: false`; measurement hook exists | [`accounting.py`](spikeforge_targets/energy/accounting.py:1) | nothing (honest by design) |
 | Quantization | weight-only schemes | [`quantize.py`](spikeforge_targets/quantize.py:103), [`quantize_schemes.py`](spikeforge_targets/quantize_schemes.py:1) | no activation/membrane quant |
@@ -67,7 +67,7 @@ and stay there.
 
 - `reference` stays available unconditionally ([`catalog.py`](spikeforge_targets/catalog.py:61)); every report stays `estimate: true` where applicable.
 - The closed-loop `run()` / `run_production()` surfaces, the WebSocket protocol ([`protocol/`](protocol/README.md:1)), and all existing payload keys stay **additive**.
-- Core stays **headless and dependency-light**: no `fastapi`/`uvicorn`/`pydantic` in `spikeforge` (enforced by [`check_core_boundary.py`](scripts/check_core_boundary.py:1)); SDK imports stay confined to isolated probes ([`backends/api.py`](spikeforge_targets/backends/api.py:1)).
+- Core stays **headless and dependency-light**: no `fastapi`/`uvicorn`/`pydantic` in `spikeforge` (enforced by [`check_core_boundary.py`](scripts/check_core_boundary.py:1)); SDK imports stay confined to isolated probes ([`backends/api/`](spikeforge_targets/backends/api/__init__.py:1)).
 - House style: one class per file, ≤250-line files, ≤20-line functions, 79 columns ([`rules.md`](rules.md:1)).
 
 ---
@@ -225,7 +225,7 @@ matrix so "test deploy" is a first-class, documented experience.
 | `xylo` | Rockpool Xylo simulator | vendor SDK | declared only | isolated probe + backend |
 | `spinnaker2` | sPyNNaker / py-spinnaker2 host sim | vendor SDK | declared only | isolated probe + backend |
 
-- **Design:** each backend follows [`backends/api.py`](spikeforge_targets/backends/api.py:1)
+- **Design:** each backend follows [`backends/api/`](spikeforge_targets/backends/api/__init__.py:1)
   (isolated import, `available()`, `compile()`, `run()`) and returns a
   `BackendResult` with a `path` + notes that name the emulator
   (pattern: [`lava_backend.py`](spikeforge_targets/backends/lava_backend.py:33)).
