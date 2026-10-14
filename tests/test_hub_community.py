@@ -123,6 +123,8 @@ def test_fetch_stores_the_index_and_its_etag(
     assert result.issues == []
     assert seen[0].full_url == "https://hub.test/v1/index.json"
     assert "If-None-Match" not in seen[0].headers
+    sent = dict(seen[0].header_items())
+    assert sent["User-agent"] == "spikeforge-hub"
     assert community.read_etag() == '"v1"'
 
 

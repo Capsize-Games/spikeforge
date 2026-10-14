@@ -102,6 +102,16 @@ def test_me_sends_bearer_auth(
     assert request.headers["Authorization"] == "Bearer pat"
 
 
+def test_requests_identify_with_a_user_agent(
+    sandbox: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every call carries the hub agent the edge requires (no 403)."""
+    seen = _serve(monkeypatch, lambda req: _respond(b'{"ok": true}'))
+    HubClient(base="https://hub.test", token="pat").me()
+    sent = dict(seen[0].header_items())
+    assert sent["User-agent"] == "spikeforge-hub"
+
+
 def _hub(
     monkeypatch: pytest.MonkeyPatch, replies: List[Dict[str, Any]]
 ) -> Tuple[HubClient, List[Any]]:

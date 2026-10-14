@@ -119,6 +119,13 @@ that and describe the local source tree only.
   the checkpoint meta card, and the built network agree with each other.
   Restoring a checkpoint adopts the stored resolved width, which also
   heals pre-fix cards whose top-level value was stale.
+- Hub calls identify with a `User-Agent` the edge accepts. The API
+  client, the community-index refresh, artifact downloads, and the
+  verification runner's fetch and signed callback previously sent the
+  default `Python-urllib/*` agent, which the edge answers with 403 — so
+  `pull` could never refresh a fresh cache and authenticated calls never
+  reached the API. All five call sites now send `spikeforge-hub` (the
+  runner sends `spikeforge-hub-verify`).
 
 ### Changed
 

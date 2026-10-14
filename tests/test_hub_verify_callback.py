@@ -38,6 +38,7 @@ def test_posts_a_correctly_signed_body(
         # (first character up, the rest down), so the header must be read
         # back the same way rather than by its original spelling.
         sent["signature"] = request.headers[SIGNATURE_HEADER.capitalize()]
+        sent["agent"] = request.headers["User-agent"]
         return _FakeReply(200)
 
     monkeypatch.setattr(callback.urllib.request, "urlopen", _urlopen)
@@ -50,6 +51,7 @@ def test_posts_a_correctly_signed_body(
     )
     assert json.loads(sent["body"]) == report
     assert signature_matches(sent["body"], "sekrit", sent["signature"])
+    assert sent["agent"] == "spikeforge-hub-verify"
 
 
 def test_error_status_is_a_callback_error(
