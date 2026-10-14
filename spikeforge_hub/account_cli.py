@@ -9,10 +9,11 @@ community models. Every command prints JSON, mirroring
 import argparse
 import getpass
 import json
+from pathlib import Path
 from typing import Any
 
 from spikeforge_hub.client import HubClient, require_client, write_token
-from spikeforge_hub.errors import HubError
+from spikeforge_hub.errors import HubArtifactError, HubError
 from spikeforge_hub.transfer import pull_model, push_saved_model
 
 
@@ -71,6 +72,25 @@ def _run_quota(args: argparse.Namespace) -> int:
     return 0
 
 
+def _description_text(args: argparse.Namespace) -> str:
+    """Return the push description from the flag or the file, if given."""
+    if args.description and args.description_file:
+        raise HubArtifactError(
+            args.name,
+            "pass --description or --description-file, not both",
+        )
+    if args.description_file:
+        try:
+            text = Path(args.description_file).read_text(encoding="utf-8")
+        except OSError as exc:
+            raise HubArtifactError(
+                args.description_file,
+                f"cannot read description file: {exc}",
+            ) from exc
+        return text.strip()
+    return args.description or ""
+
+
 def _run_push(args: argparse.Namespace) -> int:
     """Build a saved model and publish it through the two-phase upload."""
     try:
@@ -85,6 +105,11 @@ def _run_push(args: argparse.Namespace) -> int:
             dataset=args.dataset or "",
             dataset_license=args.dataset_license or "",
             dataset_attribution=args.dataset_attribution or "",
+            description=_description_text(args),
+            checkpoint=args.checkpoint,
+            test_accuracy=args.test_accuracy,
+            test_samples=args.test_samples,
+            test_dataset=args.test_dataset or "",
         )
     except HubError as error:
         return _fail(str(error))
@@ -117,14 +142,48 @@ def _add_session(subs: Any) -> None:
 def _add_push(subs: Any) -> None:
     """Register the ``push`` subcommand."""
     push = subs.add_parser("push", help="publish a saved model")
-    push.add_argument("name")
+    push.add_argument(
+        "name",
+        help="a saved model, a reference/* catalog id, or -- with "
+        "--checkpoint -- the name for an outside .pt file",
+    )
     push.add_argument("--version", required=True)
-    push.add_argument("--license", required=True)
+    push.add_argument(
+        "--license",
+        default=None,
+        help="required, unless the name is a reference/* id (which "
+        "carries its own licence)",
+    )
     push.add_argument("--slug", default=None)
     push.add_argument("--summary", default=None)
+    push.add_argument("--description", default=None)
+    push.add_argument("--description-file", default=None)
     push.add_argument("--dataset", default=None)
     push.add_argument("--dataset-license", default=None)
     push.add_argument("--dataset-attribution", default=None)
+    push.add_argument(
+        "--checkpoint",
+        default=None,
+        help="push this .pt file's bytes under the given name instead "
+        "of a saved model",
+    )
+    push.add_argument(
+        "--test-accuracy",
+        type=float,
+        default=None,
+        help="uploader-claimed accuracy, 0-100, recorded into the bundle",
+    )
+    push.add_argument(
+        "--test-samples",
+        type=int,
+        default=None,
+        help="held-out samples behind --test-accuracy",
+    )
+    push.add_argument(
+        "--test-dataset",
+        default=None,
+        help="dataset the claimed accuracy was measured on",
+    )
     push.set_defaults(handler=_run_push)
 
 
