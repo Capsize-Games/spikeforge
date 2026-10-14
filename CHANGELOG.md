@@ -39,6 +39,22 @@ that and describe the local source tree only.
   `pull` downloads a community id (optionally pinned) through the existing
   inspect/compat/promote funnel, which now reads `.spkf` bundles exactly as
   it reads the checkpoints they were built from.
+- **Bundles export a C-loadable package.** `DeploymentBundle.export_c_package`
+  writes the NIR graph in `graph_summary` shape with the bundle's real
+  weights as plain JSON plus a manifest recording the source bundle's
+  identity; graphs using node kinds the C runtime rejects are refused with
+  a typed error naming them. The `.spkf` format itself is unchanged.
+- **Quantized summaries feed the C loader's weight envelope.**
+  `export_quantized_summary` emits `graph_summary` shape with every float
+  weight replaced by the `{data, dtype, scale, zero_point}` envelope, using
+  the same grids as the drift simulation. The `none` scheme returns the
+  float summary unchanged. The JSON contract both producers satisfy is
+  documented in `plans/c_package_contract.md`.
+- **One shared 8-bit grid module.** `spikeforge.compression.grid` owns the
+  `(scale, zero_point)` math the bundle codec and the drift simulation both
+  derive from, including loadable degenerate grids (a positive scale that
+  reproduces constant values instead of erasing them) and an unclamped
+  uint8 zero-point so single-sign tensors keep their accuracy.
 
 ### Changed
 
