@@ -44,7 +44,7 @@ def test_url_source_fetches_and_verifies(
     blob = b"payload"
     calls: List[str] = []
 
-    def fake_fetch(url: str, path: str) -> str:
+    def fake_fetch(url: str, path: str, **_kwargs: Any) -> str:
         calls.append(url)
         Path(path).write_bytes(blob)
         return path
@@ -63,7 +63,7 @@ def test_url_checksum_mismatch_reports_failure(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """A tampered URL payload fails checksum verification."""
-    def fake_fetch(url: str, path: str) -> str:
+    def fake_fetch(url: str, path: str, **_kwargs: Any) -> str:
         Path(path).write_bytes(b"tampered")
         return path
 
@@ -77,7 +77,7 @@ def test_bundled_source_never_touches_the_network(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """A bundled entry needs no fetch and is honestly unverified."""
-    def boom(url: str, path: str) -> str:
+    def boom(url: str, path: str, **_kwargs: Any) -> str:
         raise AssertionError("network used for a bundled entry")
 
     monkeypatch.setattr(download_cli, "fetch_url", boom)
@@ -118,7 +118,7 @@ def test_main_exits_nonzero_on_checksum_mismatch(
     capsys: pytest.CaptureFixture,
 ) -> None:
     """The worker exits non-zero when a seeded checksum is wrong."""
-    def fake_fetch(url: str, path: str) -> str:
+    def fake_fetch(url: str, path: str, **_kwargs: Any) -> str:
         Path(path).write_bytes(b"tampered")
         return path
 
