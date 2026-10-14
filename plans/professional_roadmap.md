@@ -95,7 +95,7 @@ Every row is grounded in the current source. "Gap" is what this program closes.
 | 17 | Third-party `nirtorch` extraction | Deferred, absent | [`api.py`](spikeforge/nir_bridge/api.py:63) | F |
 | 18 | Quantization applied | Declared in constraints only | [`target_spec.py`](spikeforge_targets/target_spec.py:28) | F |
 | 19 | Non-square sensor geometry | Hardcoded 28x28 / square conv math | [`presets.py`](spikeforge/topology/presets.py:128) | F |
-| 20 | Per-step hidden animation | Raster snapshots only | [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md:21) | F |
+| 20 | Per-step hidden animation | Raster snapshots only | [`integration_plan_historical.md`](integration_plan_historical.md:21) | F |
 
 ### 3.1 Invariants that must not break (all workstreams)
 
@@ -419,7 +419,7 @@ identical outputs, exactly as
   become executed substitutions *with* a rewrite report and a drift check.
 - **Out of scope:** multi-user sessions and auth are explicitly deferred (see
   [`interpreter_spine_plan.md`](plans/interpreter_spine_plan.md:1) precedent and
-  [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md:23)).
+  [`integration_plan_historical.md`](integration_plan_historical.md:23)).
 
 ---
 

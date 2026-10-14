@@ -25,7 +25,7 @@ animation** in the client. Each is a small, independently verifiable phase.
 | `nirtorch` extraction | Probe exists, extraction deferred | [`api.py`](spikeforge/nir_bridge/api.py:63) |
 | Quantization | Declared in constraints only | [`target_spec.py`](spikeforge_targets/target_spec.py:28) |
 | Geometry | 28x28 / square conv math hardcoded | [`presets.py`](spikeforge/topology/presets.py:128), [`datasets.py`](spikeforge/data/datasets.py:73) |
-| Hidden-layer animation | Raster snapshots only | [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md:21) |
+| Hidden-layer animation | Raster snapshots only | [`integration_plan_historical.md`](integration_plan_historical.md:21) |
 
 ### 1.1 Invariants that must not break
 
@@ -173,8 +173,8 @@ default path is unchanged.
 
 ### 6.2 Per-step hidden-layer animation
 
-**Gap.** `INTEGRATION_PLAN.md` deliberately deferred per-step hidden-layer
-*animation* ([`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md:21)); only rasters are
+**Gap.** `integration_plan_historical.md` deliberately deferred per-step hidden-layer
+*animation* ([`integration_plan_historical.md`](integration_plan_historical.md:21)); only rasters are
 streamed.
 
 **Design:** extend the existing `spike_frame` stream

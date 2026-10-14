@@ -226,7 +226,7 @@ now recorded as resolved in the roadmap's §12:
 
 - [x] **Multi-user sessions and authentication** — explicitly out of scope
   ([`plans/professional_roadmap.md`](plans/professional_roadmap.md:476),
-  [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md)).
+  [`plans/integration_plan_historical.md`](plans/integration_plan_historical.md)).
 - [x] **Remote telemetry** — no phone-home, no remote metrics; the metrics
   registry is per-process and local by default.
 - [x] **Measured (rather than estimated) energy** — deferred until a physical

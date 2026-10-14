@@ -256,7 +256,7 @@ taken; noted here only for completeness against the original list.
   documented no-back-compat-shim policy (`plans/arch-0001-migration-plan.md`).
   Flagged prominently in `CHANGELOG.md` under `[Unreleased]` / "Changed" as
   breaking. Not renamed: two historical planning documents
-  (`INTEGRATION_PLAN.md`, `EVALUATION_REPORT.md`) that reference the old
+  (`plans/integration_plan_historical.md`, `EVALUATION_REPORT.md`) that reference the old
   name alongside other already-stale file paths from an earlier phase of the
   project — fixing the class name there without fixing the surrounding
   stale paths would have made those documents more, not less, misleading;
