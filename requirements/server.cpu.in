@@ -1,0 +1,13 @@
+# CPU server image: third-party closure with torch from the CPU index.
+# Recompile with:
+#   uv pip compile requirements/server.cpu.in --python-version 3.13 \
+#       --python-platform x86_64-unknown-linux-gnu --generate-hashes \
+#       --emit-index-url --index-strategy unsafe-best-match \
+#       --index-url https://download.pytorch.org/whl/cpu \
+#       --extra-index-url https://pypi.org/simple \
+#       -o requirements/server.cpu.lock
+# (--index-strategy is safe here: torch/torchvision are pinned exact and
+# every locked file carries hashes, so no index can substitute a build.)
+-r base.in
+torch==2.14.1+cpu
+torchvision==0.29.1+cpu

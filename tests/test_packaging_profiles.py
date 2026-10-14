@@ -407,3 +407,102 @@ def test_install_lists_cover_the_server_dependency_closure(
         f"{relative} omits {sorted(required - installed)}; pip would resolve "
         f"those from PyPI instead of this checkout"
     )
+
+
+_LOCKS = {
+    "requirements/server.cpu.lock": "https://download.pytorch.org/whl/cpu",
+    "requirements/server.cu132.lock": (
+        "https://download.pytorch.org/whl/cu132"
+    ),
+}
+
+
+def _locked_versions(relative: str) -> Dict[str, str]:
+    """Return the ``{name: version}`` pins locked in ``relative``."""
+    versions: Dict[str, str] = {}
+    for line in (_ROOT / relative).read_text(encoding="utf-8").splitlines():
+        match = re.match(r"^([A-Za-z0-9_.-]+)==([^ ]+)", line)
+        if match:
+            versions[match.group(1).lower()] = match.group(2)
+    return versions
+
+
+def _public(version: str) -> str:
+    """Return ``version`` without its torch ``+cpu``/``+cu132`` segment."""
+    return version.split("+", maxsplit=1)[0]
+
+
+def test_dockerfile_installs_from_a_hashed_lockfile() -> None:
+    """The image installs the closure with hash verification enabled."""
+    text = (_ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "--require-hashes" in text
+    assert re.search(r"-r \$\{LOCKFILE\}", text)
+    assert "pip install --index-url" not in text
+    assert "pip install -r requirements.txt" not in text
+
+
+def test_dockerfile_local_installs_fail_closed() -> None:
+    """A missing local dist fails the build instead of using PyPI."""
+    text = (_ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "--no-deps ./packages/" in text
+    assert "pip check" in text
+
+
+def test_dockerfile_records_the_lockfile_cadence() -> None:
+    """The Dockerfile header says when the locks are recompiled."""
+    text = (_ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "Lockfile cadence" in text
+
+
+def test_lockfiles_carry_hashes_for_every_pin() -> None:
+    """Every locked pin carries hashes, so installs verify bytes."""
+    for relative, index in _LOCKS.items():
+        text = (_ROOT / relative).read_text(encoding="utf-8")
+        assert f"--index-url {index}\n" in text
+        pins = _locked_versions(relative)
+        assert pins, f"{relative} locks nothing"
+        assert len(re.findall(r"--hash=sha256:", text)) >= len(pins)
+
+
+def test_lockfiles_agree_on_shared_versions() -> None:
+    """The CPU and CUDA locks differ only by torch build and extras."""
+    versions = {
+        relative: _locked_versions(relative) for relative in _LOCKS
+    }
+    cpu, cuda = (
+        versions["requirements/server.cpu.lock"],
+        versions["requirements/server.cu132.lock"],
+    )
+    shared = set(cpu) & set(cuda)
+    assert shared, "the locks share no packages"
+    mismatched = {
+        name
+        for name in shared
+        if _public(cpu[name]) != _public(cuda[name])
+    }
+    assert not mismatched, f"version drift across locks: {mismatched}"
+    assert cpu["torch"].endswith("+cpu")
+    assert cuda["torch"].endswith("+cu132")
+
+
+def test_requirements_match_the_lockfiles() -> None:
+    """requirements.txt pins the same public versions as the locks."""
+    wanted: Dict[str, str] = {}
+    for line in (_ROOT / "requirements.txt").read_text(
+        encoding="utf-8"
+    ).splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        name, separator, version = stripped.partition("==")
+        assert separator, f"floating pin in requirements.txt: {stripped!r}"
+        wanted[name.strip().lower()] = version.strip()
+    assert wanted, "requirements.txt pins nothing"
+    for relative in _LOCKS:
+        locked = _locked_versions(relative)
+        for name, version in wanted.items():
+            assert name in locked, f"{name} is missing from {relative}"
+            assert _public(locked[name]) == version, (
+                f"{name}=={version} disagrees with {relative} "
+                f"({locked[name]})"
+            )

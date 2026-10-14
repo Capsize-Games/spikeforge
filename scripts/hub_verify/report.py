@@ -29,13 +29,21 @@ def build_report(
     checks: Dict[str, Optional[Any]],
     summary: str,
     run_url: str,
+    framework: Optional[str] = None,
+    kind: Optional[str] = None,
+    topology: Optional[str] = None,
+    input_shape: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Return the JSON-able report body for one verification run.
 
     ``reasons`` names every failing step in the uploader's own words (see
     :mod:`hub_verify.errors`); it is empty exactly when ``passed`` is True.
     ``checks`` carries the bundle/inspect/compat/drift/energy detail a
-    listing page can render even for a passing artifact.
+    listing page can render even for a passing artifact. The identity
+    fields (``framework``, ``kind``, ``topology``, ``input_shape``) name
+    what the artifact *is*, measured by this runner from the bytes -- the
+    hub side renders them verbatim, so they are always present and null
+    whenever the run failed before the funnel completed.
     """
     return {
         "version_id": version_id,
@@ -45,6 +53,10 @@ def build_report(
         "summary": summary,
         "generated_at": _now_iso(),
         "runner": {"workflow": "hub-verify.yml", "run_url": run_url},
+        "framework": framework,
+        "kind": kind,
+        "topology": topology,
+        "input_shape": input_shape,
     }
 
 

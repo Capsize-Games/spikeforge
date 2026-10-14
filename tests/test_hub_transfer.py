@@ -1,11 +1,12 @@
 """Push/pull orchestration and the ``.spkf`` import funnel."""
 
+import hashlib
 import io
 import json
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
 import torch
@@ -13,6 +14,7 @@ import torch
 from spikeforge.network import model_store
 from spikeforge.serving import bundle as bundle_mod
 from spikeforge.serving import bundle_manifest as bm
+from spikeforge.serving.bundle import DeploymentBundle
 from spikeforge.training.training_engine import TrainingEngine
 from spikeforge_hub import cache, download_cli, transfer
 from spikeforge_hub.artifact_readers import inspect_file
@@ -54,10 +56,12 @@ def _save_checkpoint(name: str = "transfer_ckpt") -> None:
     engine.save(name)
 
 
-def _spkf_bytes(name: str, dest: Path) -> bytes:
+def _spkf_bytes(
+    name: str, dest: Path, metrics: Optional[Dict[str, Any]] = None
+) -> bytes:
     """Build saved model ``name`` and return its ``.spkf`` bytes."""
     out = str(dest / f"{name}.spkf")
-    bundle_mod.build(name, out=out)
+    bundle_mod.build(name, out=out, expected_metrics=metrics or {})
     return Path(out).read_bytes()
 
 
@@ -159,6 +163,156 @@ def test_push_unknown_model_names_it(sandbox: Path) -> None:
         )
 
 
+def _manifest_metrics(blob: bytes, dest: Path) -> Dict[str, Any]:
+    """Return the ``expected_metrics`` recorded in ``.spkf`` bytes."""
+    path = dest / "probe.spkf"
+    path.write_bytes(blob)
+    loaded = DeploymentBundle.load(str(path), strict=True)
+    metrics = loaded.manifest.get("expected_metrics")
+    assert isinstance(metrics, dict)
+    return dict(metrics)
+
+
+def test_push_reference_id_builds_from_packaged_weights(
+    sandbox: Path,
+) -> None:
+    """A reference id pushes its shipped checkpoint with its provenance.
+
+    The licence, dataset declarations, and measured scores come from the
+    catalog row, so staff do not restate (or mistype) them per push.
+    """
+    fake = _FakeClient()
+    report = transfer.push_saved_model(
+        fake, "reference/mnist-fc-legacy", version="1"
+    )
+    intent = fake.intents[0]
+    assert intent["name"] == "mnist-fc-legacy"
+    assert intent["license"] == "BSD-3-Clause"
+    assert intent["dataset"] == "mnist"
+    assert "MNIST" in intent["dataset_attribution"]
+    expected = {
+        "test_accuracy": 94.29,
+        "test_samples": 10000,
+        "test_dataset": "mnist",
+    }
+    assert _manifest_metrics(fake.put[0], sandbox) == expected
+    assert report["expected_metrics"] == expected
+    staged = [
+        model["name"] for model in model_store.list_models()
+        if model["name"].startswith("push-staging-")
+    ]
+    assert staged == []
+
+
+def test_push_checkpoint_file_builds_outside_bytes(
+    sandbox: Path,
+) -> None:
+    """``checkpoint`` pushes a .pt file's bytes under the given name."""
+    _save_checkpoint()
+    fake = _FakeClient()
+    report = transfer.push_saved_model(
+        fake,
+        "from-file",
+        version="1",
+        license_id="BSD-3-Clause",
+        checkpoint=model_store.path_for("transfer_ckpt"),
+    )
+    assert fake.intents[0]["name"] == "from-file"
+    assert report["state"] == "published"
+    assert _manifest_metrics(fake.put[0], sandbox) == {}
+
+
+def test_push_missing_checkpoint_file_is_refused(sandbox: Path) -> None:
+    """A checkpoint path that names no file is refused, not built."""
+    with pytest.raises(HubArtifactError, match="no checkpoint file"):
+        transfer.push_saved_model(
+            _FakeClient(),
+            "from-file",
+            version="1",
+            license_id="BSD-3-Clause",
+            checkpoint=str(sandbox / "missing.pt"),
+        )
+
+
+def test_push_metrics_flags_land_in_the_manifest(
+    sandbox: Path,
+) -> None:
+    """Claim flags are recorded into the bundle and echoed in the report."""
+    _save_checkpoint()
+    fake = _FakeClient()
+    report = transfer.push_saved_model(
+        fake,
+        "transfer_ckpt",
+        version="1",
+        license_id="BSD-3-Clause",
+        test_accuracy=94.29,
+        test_samples=10000,
+        test_dataset="mnist",
+    )
+    expected = {
+        "test_accuracy": 94.29,
+        "test_samples": 10000,
+        "test_dataset": "mnist",
+    }
+    assert _manifest_metrics(fake.put[0], sandbox) == expected
+    assert report["expected_metrics"] == expected
+
+
+def test_push_without_metrics_records_empty(sandbox: Path) -> None:
+    """Unstated scores ship ``{}``, never a zero that reads as measured."""
+    _save_checkpoint()
+    fake = _FakeClient()
+    report = transfer.push_saved_model(
+        fake, "transfer_ckpt", version="1", license_id="BSD-3-Clause"
+    )
+    assert _manifest_metrics(fake.put[0], sandbox) == {}
+    assert report["expected_metrics"] == {}
+
+
+def test_push_impossible_accuracy_is_refused(sandbox: Path) -> None:
+    """A claim outside 0-100, or a non-number, fails like the catalog."""
+    _save_checkpoint()
+    for bad in (101.0, -1.0, "high"):
+        with pytest.raises(HubArtifactError, match="test_accuracy"):
+            transfer.push_saved_model(
+                _FakeClient(),
+                "transfer_ckpt",
+                version="1",
+                license_id="BSD-3-Clause",
+                test_accuracy=bad,
+            )
+
+
+def test_push_samples_need_an_accuracy(sandbox: Path) -> None:
+    """Qualifiers without a claim are refused rather than half-recorded."""
+    _save_checkpoint()
+    with pytest.raises(HubArtifactError, match="--test-accuracy"):
+        transfer.push_saved_model(
+            _FakeClient(),
+            "transfer_ckpt",
+            version="1",
+            license_id="BSD-3-Clause",
+            test_samples=10000,
+        )
+
+
+def test_push_description_reaches_the_intent(sandbox: Path) -> None:
+    """A model-card body rides the intent the server persists."""
+    _save_checkpoint()
+    fake = _FakeClient()
+    transfer.push_saved_model(
+        fake,
+        "transfer_ckpt",
+        version="1",
+        license_id="BSD-3-Clause",
+        description="Intended for digit demos; not production OCR.",
+    )
+    intent = fake.intents[0]
+    assert intent["description"] == (
+        "Intended for digit demos; not production OCR."
+    )
+
+
 def test_bundle_inspects_as_a_state_dict(sandbox: Path) -> None:
     """A ``.spkf`` reports its weight keys like the checkpoint it came from."""
     _save_checkpoint()
@@ -192,7 +346,13 @@ def test_pull_downloads_and_imports_through_the_funnel(
     """Pull fetches the index URL, then the funnel judges the bytes."""
     _save_checkpoint()
     blob = _spkf_bytes("transfer_ckpt", sandbox)
-    _seed(sandbox, [{**_ENTRY, "size_bytes": len(blob)}])
+    # The hosted index pins the digest it measured on arrival, so the
+    # pulled bytes verify at import; the seed mirrors that contract.
+    _seed(sandbox, [{
+        **_ENTRY,
+        "size_bytes": len(blob),
+        "sha256": hashlib.sha256(blob).hexdigest(),
+    }])
     seen = _fake_fetch(monkeypatch, blob)
     _fake_index(monkeypatch)
     report = transfer.pull_model("@ada/mnist-fc")
@@ -201,10 +361,35 @@ def test_pull_downloads_and_imports_through_the_funnel(
     assert report["index_refreshed"] is True
     assert report["index_issues"] == []
     assert report["import"]["verdict"]["verdict"] == "mappable"
+    assert report["expected_metrics"] == {}
+    assert report["metrics_claim"] is None
     again = transfer.pull_model("@ada/mnist-fc")
     assert again["downloaded"] is False
     assert again["download"] is None
     assert len(seen) == 1
+
+
+def test_pull_surfaces_claimed_metrics(
+    sandbox: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pull reports the bundle's metrics as uploader-claimed, never more."""
+    _save_checkpoint()
+    claimed = {
+        "test_accuracy": 94.29,
+        "test_samples": 10000,
+        "test_dataset": "mnist",
+    }
+    blob = _spkf_bytes("transfer_ckpt", sandbox, claimed)
+    _seed(sandbox, [{
+        **_ENTRY,
+        "size_bytes": len(blob),
+        "sha256": hashlib.sha256(blob).hexdigest(),
+    }])
+    _fake_fetch(monkeypatch, blob)
+    _fake_index(monkeypatch)
+    report = transfer.pull_model("@ada/mnist-fc")
+    assert report["expected_metrics"] == claimed
+    assert report["metrics_claim"] == "uploader-claimed"
 
 
 def test_pull_pinned_version_downloads_its_own_bytes(
@@ -239,7 +424,7 @@ def test_pull_non_community_source_is_refused(
     sandbox: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An at-id entry that is not community-owned is refused, not pulled."""
-    _seed(sandbox, [{**_ENTRY, "source": "url"}])
+    _seed(sandbox, [{**_ENTRY, "source": "url", "sha256": "0" * 64}])
     _fake_index(monkeypatch)
     with pytest.raises(HubDownloadError, match="community id"):
         transfer.pull_model("@ada/mnist-fc")

@@ -1,0 +1,21 @@
+# Shared third-party dependencies of the server image, with the same
+# lower bounds the distributions declare (see requirements.txt and
+# packages/*/pyproject.toml). torch/torchvision are pinned per target
+# in server.cpu.in / server.cu132.in, because the torch indexes ship
+# them with a +cpu/+cu132 local version segment.
+#
+# This file is the input to the hashed lockfiles — edit the bounds
+# here, then recompile both targets (see server.cpu.in).
+capsize-commons>=0.1.1
+snntorch>=1.0
+matplotlib>=3.8
+Pillow>=10.0
+numpy>=1.26
+psutil>=5.9
+nir>=1.0
+nirtorch>=1.0
+fastapi>=0.110
+uvicorn[standard]>=0.27
+websockets>=12.0
+pydantic>=2.5
+huggingface_hub>=0.20
