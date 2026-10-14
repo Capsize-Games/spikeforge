@@ -98,6 +98,15 @@ that and describe the local source tree only.
   `spikeforge_hub/entry_checks.py`. Every resulting file is within the
   250-line limit; import paths and behavior are unchanged.
 
+## [co-installable 0.6.0 combination] - 2026-10-14
+
+Patch-release serve 0.2.5, targets 0.2.2, and io 0.1.5 with no code
+changes: their `spikeforge~=0.5.x` pins excluded core 0.6.0, so the
+combination the 0.6.0 row first recorded could not be installed
+together (caught by the dashboard e2e backend install). The row now
+records the installable set; core, hub, and server versions are
+unchanged.
+
 ## [spikeforge-v0.6.0] - 2026-10-13
 
 Community hub namespace and account CLI. `spikeforge-hub` 0.4.0 accepts
