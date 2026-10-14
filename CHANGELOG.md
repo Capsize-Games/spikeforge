@@ -118,6 +118,51 @@ that and describe the local source tree only.
   `spikeforge_hub/entry_checks.py`. Every resulting file is within the
   250-line limit; import paths and behavior are unchanged.
 
+## [spikeforge-v0.6.2] - 2026-10-14
+
+Patch. Over-long modules are split along their seams with import paths and
+behavior unchanged: the training engine gains session and event-geometry
+mixins (#144), the serving bundle becomes six focused modules (#145), the
+streaming recipe becomes seven, and the benchmark serving helper becomes
+four. Dataset downloaders accept `download=False` and thread it through
+`build_loader`, the training engine, and `SampleSource`, so an offline run
+raises the dataset's own not-found error instead of touching the network;
+transient mirror failures are retried with backoff (#87).
+
+## [spikeforge-server-v0.5.1] - 2026-10-14
+
+Patch. Core-pin alignment with the 0.6.2 matrix row only; no code change.
+
+## [spikeforge-serve-v0.2.6] - 2026-10-14
+
+Patch. The WebSocket `/v1/stream` path validates its frame up front: a new
+`frame_from` helper rejects a missing or oversized frame before any tensor
+is allocated from it.
+
+## [spikeforge-clients-v0.1.2] - 2026-10-14
+
+Patch. The in-process ASGI harness is refactored into small helpers
+(collector, queue fill, scope base); behavior is unchanged.
+
+## [spikeforge-targets-v0.2.3] - 2026-10-14
+
+Patch. `activation_quant` and `backends/api` become packages split along
+their seams (calibration/quantizer/scheme; lava/norse/probes/vendors), and
+weight quantization moves to its own module; import paths and behavior are
+unchanged.
+
+## [spikeforge-hub-v0.5.1] - 2026-10-14
+
+Patch. The registry becomes seven focused modules (checks, entry,
+governance, promotion, schema, signing, store) with shared validation
+factored out; import paths and behavior are unchanged.
+
+## [spikeforge-io-v0.1.6] - 2026-10-14
+
+Patch. The adapters module becomes a package split along its seams
+(base, csv, dataset, json, memory, npy); import paths and behavior are
+unchanged.
+
 ## [spikeforge-v0.6.1] - 2026-10-14
 
 Security-hardening patch. Checkpoint loads are fail-closed:
