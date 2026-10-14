@@ -5,12 +5,18 @@ own file. The hook is deliberately duck-typed so a future dataset lib can
 join without this package depending on it.
 """
 
-from typing import Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
-import torch
-
-from spikeforge_io.adapters.base import StreamAdapter, as_stream
+from spikeforge_io.adapters.base import (
+    StreamAdapter,
+    as_stream,
+    as_stream_numpy,
+)
 from spikeforge_io.errors import AdapterFormatError
+
+if TYPE_CHECKING:
+    import numpy as np
+    import torch
 
 #: Methods the dataset-adapter hook recognises, in probing order.
 DATASET_METHODS: Tuple[str, ...] = ("to_tensor", "array", "numpy")
@@ -47,6 +53,10 @@ class DatasetAdapter(StreamAdapter):
             "dataset must expose to_tensor()/array() or the sequence protocol",
         )
 
-    def stream(self) -> torch.Tensor:
+    def stream(self) -> "torch.Tensor":
         """Return the dataset's samples as a ``[N, D]`` tensor."""
         return as_stream(self._payload(), self.source)
+
+    def stream_numpy(self) -> "np.ndarray":
+        """Return the dataset's samples as a ``[N, D]`` array."""
+        return as_stream_numpy(self._payload(), self.source)

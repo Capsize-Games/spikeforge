@@ -62,11 +62,17 @@ class AdapterDependencyError(IoError):
     format is reported rather than guessed at.
     """
 
-    def __init__(self, dependency: str, feature: str) -> None:
-        """Name the missing dependency and the feature that needs it."""
+    def __init__(
+        self,
+        dependency: str,
+        feature: str,
+        *,
+        hint: Optional[str] = None,
+    ) -> None:
+        """Name the missing dependency, the feature, and how to fix it."""
+        install = hint or "install the `spikeforge-io[npy]` extra"
         super().__init__(
-            f"{dependency} is required to read {feature}; install the "
-            "`spikeforge-io[npy]` extra"
+            f"{dependency} is required to read {feature}; {install}"
         )
         self.dependency: str = dependency
         self.feature: str = feature

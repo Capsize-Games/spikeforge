@@ -5,12 +5,18 @@ own file.
 """
 
 import csv
-from typing import List, Optional, Sequence
+from typing import TYPE_CHECKING, List, Optional, Sequence
 
-import torch
-
-from spikeforge_io.adapters.base import StreamAdapter, as_stream
+from spikeforge_io.adapters.base import (
+    StreamAdapter,
+    as_stream,
+    as_stream_numpy,
+)
 from spikeforge_io.errors import AdapterFormatError, AdapterShapeError
+
+if TYPE_CHECKING:
+    import numpy as np
+    import torch
 
 
 def _read_rows(path: str, delimiter: str) -> List[List[str]]:
@@ -88,8 +94,8 @@ class CsvAdapter(StreamAdapter):
         _uniform_width(self.source, parsed)
         return parsed
 
-    def stream(self) -> torch.Tensor:
-        """Return the CSV's numeric rows as a ``[N, D]`` tensor."""
+    def _validated_rows(self) -> List[List[float]]:
+        """Return the parsed rows after the channel-count check."""
         parsed = self._rows()
         width = len(parsed[0])
         if self._channels is not None and width != self._channels:
@@ -97,4 +103,12 @@ class CsvAdapter(StreamAdapter):
                 self.source,
                 f"expected {self._channels} channels, got {width}",
             )
-        return as_stream(parsed, self.source)
+        return parsed
+
+    def stream(self) -> "torch.Tensor":
+        """Return the CSV's numeric rows as a ``[N, D]`` tensor."""
+        return as_stream(self._validated_rows(), self.source)
+
+    def stream_numpy(self) -> "np.ndarray":
+        """Return the CSV's numeric rows as a ``[N, D]`` array."""
+        return as_stream_numpy(self._validated_rows(), self.source)

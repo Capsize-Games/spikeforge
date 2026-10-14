@@ -17,6 +17,7 @@ plain dict, and the caller supplies the ``send`` callable, so
 
 from dataclasses import dataclass, field
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -27,9 +28,10 @@ from typing import (
     Tuple,
 )
 
-import torch
-
 from spikeforge_io.adapters import StreamAdapter
+
+if TYPE_CHECKING:
+    import torch
 
 #: A callable that receives one frame tensor (or message dict).
 Sink = Callable[[Any], Any]
@@ -54,7 +56,9 @@ class ReplayReport:
         }
 
 
-def _frames(adapter: StreamAdapter, window_spec: Any) -> List[torch.Tensor]:
+def _frames(
+    adapter: StreamAdapter, window_spec: Any
+) -> List["torch.Tensor"]:
     """Return the adapter's replay frames as a list of tensors.
 
     Without a ``window_spec`` each frame is one raw ``[D]`` sample; with one,
