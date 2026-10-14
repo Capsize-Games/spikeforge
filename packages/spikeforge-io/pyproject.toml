@@ -17,7 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spikeforge-io"
-version = "0.1.4"
+version = "0.1.5"
 description = "Recorded-stream I/O adapters and the windowing surface for spikeforge."
 # ``README.md`` and ``LICENSE`` are committed symlinks to the repository-root
 # files, mirroring the core and client distributions' metadata approach.
