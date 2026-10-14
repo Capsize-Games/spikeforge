@@ -104,7 +104,11 @@ def _run_inspect(args: argparse.Namespace) -> int:
 def _run_import(args: argparse.Namespace) -> int:
     """Import one entry and gate on the compatibility verdict."""
     try:
-        result = import_model(entry_id=args.entry, topology=args.topology)
+        result = import_model(
+            entry_id=args.entry,
+            topology=args.topology,
+            allow_unverified=args.allow_unverified,
+        )
     except HubError as error:
         return _fail(str(error))
     _print(result)
@@ -144,6 +148,11 @@ def _add_actions(subs: Any) -> None:
     promote = subs.add_parser("import", help="import a compatible model")
     promote.add_argument("entry")
     promote.add_argument("--topology", default=None)
+    promote.add_argument(
+        "--allow-unverified",
+        action="store_true",
+        help="import checksum-less bytes anyway (refused by default)",
+    )
     promote.set_defaults(handler=_run_import)
 
 

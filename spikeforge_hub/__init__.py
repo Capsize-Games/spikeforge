@@ -29,6 +29,7 @@ from spikeforge_hub.errors import (
     HubError,
     HubExtraMissingError,
     HubImportError,
+    HubIntegrityError,
 )
 from spikeforge_hub.import_model import import_model as _run_import
 from spikeforge_hub.inspect import inspect_artifact, resolve_path
@@ -76,6 +77,7 @@ __all__ = [
     "HubError",
     "HubExtraMissingError",
     "HubImportError",
+    "HubIntegrityError",
     "Registry",
     "RegistryApprovalError",
     "RegistryCompatibilityError",
@@ -138,6 +140,12 @@ def import_model(
     entry_id: str,
     topology: Optional[str] = None,
     promote: bool = True,
+    allow_unverified: bool = False,
 ) -> Dict[str, Any]:
     """Inspect, classify, and (when compatible) promote a catalog artifact."""
-    return _run_import(entry_id=entry_id, topology=topology, promote=promote)
+    return _run_import(
+        entry_id=entry_id,
+        topology=topology,
+        promote=promote,
+        allow_unverified=allow_unverified,
+    )

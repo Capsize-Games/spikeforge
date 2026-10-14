@@ -558,6 +558,38 @@ jobs:
             --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl \
             --io-wheel packages/spikeforge-io/dist/spikeforge_io-*.whl
 
+  lockfile:
+    # The Dockerfile's install chain, replayed: the CPU lock must install
+    # with hash verification, the local distributions must install
+    # --no-deps on top of it, and pip check must pass — so a lock that no
+    # longer covers the closure fails here instead of in the image build.
+    # GitHub-hosted because this public repository's CI is intentionally
+    # independent of workstation state.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the locked CPU closure with hash verification
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r requirements/server.cpu.lock
+
+      - name: Install the local distributions without PyPI fallback
+        run: |
+          pip install --no-deps ./packages/spikeforge \
+            ./packages/spikeforge-targets \
+            ./packages/spikeforge-hub \
+            ./packages/spikeforge-serve \
+            ./packages/spikeforge-server
+          pip check
+
+      - name: Smoke-import the server on the locked closure
+        run: python -c "import spikeforge, server.app"
+
   leaf:
     # The fast lane. The leaf paths above cannot reach torch, the server stack
     # or the satellite distributions, so this covers the touched module without

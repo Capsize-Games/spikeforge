@@ -26,9 +26,14 @@ from spikeforge_hub.errors import HubArtifactError
 
 
 def _load_torch(path: str) -> Any:
-    """Load a torch artifact at ``path`` or raise ``HubArtifactError``."""
+    """Load a torch artifact at ``path`` or raise ``HubArtifactError``.
+
+    Hub bytes are untrusted, so the load is fail-closed: anything that
+    is not plain tensors and containers is refused with a typed error
+    instead of unpickling.
+    """
     try:
-        return torch.load(path, map_location="cpu", weights_only=False)
+        return torch.load(path, map_location="cpu", weights_only=True)
     except Exception as exc:  # pickle/format errors must not escape untagged
         raise HubArtifactError(path, f"unreadable torch file: {exc}") from exc
 

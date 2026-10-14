@@ -12,6 +12,23 @@ from spikeforge.config import MODEL_DIR
 _SAFE = re.compile(r"[^A-Za-z0-9_.-]")
 
 
+class CheckpointError(Exception):
+    """Raised when a checkpoint file exists but is refused a load.
+
+    The checkpoint directory is shared with hub imports and, on a
+    default deploy, with bytes that arrived over the socket, so every
+    load here is fail-closed: a file that is not plain tensors and
+    containers raises this instead of unpickling. The offending
+    ``name`` and a human ``detail`` are stored as attributes.
+    """
+
+    def __init__(self, name: str, detail: str) -> None:
+        """Record ``name`` and ``detail`` and build a clear message."""
+        super().__init__(f"checkpoint {name!r} is not loadable: {detail}")
+        self.name: str = name
+        self.detail: str = detail
+
+
 def _ensure_dir() -> None:
     """Create the model directory if it does not already exist."""
     os.makedirs(MODEL_DIR, exist_ok=True)
@@ -60,13 +77,21 @@ def load(name: Optional[str]) -> Dict[str, Any]:
     Raises a plain ``FileNotFoundError`` with the checkpoint name (not the
     raw disk path) so a client that surfaces ``str(exc)`` verbatim shows
     something a user can act on instead of a server filesystem path.
+    A file that is not plain tensors and containers raises
+    :class:`CheckpointError` instead of unpickling: checkpoint bytes
+    are untrusted, so the load is fail-closed.
     """
     filepath = path_for(name)
     if not os.path.exists(filepath):
         raise FileNotFoundError(
             f"checkpoint {name!r} not found (it may have been deleted)"
         )
-    return torch.load(filepath, map_location="cpu", weights_only=False)
+    try:
+        return torch.load(filepath, map_location="cpu", weights_only=True)
+    except Exception as exc:  # refused pickles must not escape untagged
+        raise CheckpointError(
+            name or "", f"refused unsafe load: {exc}"
+        ) from exc
 
 
 def manifest(name: Optional[str]) -> Dict[str, Any]:
@@ -103,13 +128,24 @@ def list_models() -> List[Dict[str, Any]]:
 
 
 def _describe(entry: os.DirEntry) -> Dict[str, Any]:
-    """Build a summary dict for one checkpoint file."""
+    """Build a summary dict for one checkpoint file.
+
+    The load is fail-closed: a file that is not plain tensors and
+    containers is skipped and reported with ``unreadable`` and
+    ``error`` instead of unpickling, so one planted file can neither
+    execute code on a read-only listing nor hide silently.
+    """
+    extra: Dict[str, Any] = {}
     try:
-        ckpt = torch.load(entry.path, map_location="cpu", weights_only=False)
+        ckpt = torch.load(entry.path, map_location="cpu", weights_only=True)
         meta = ckpt.get("meta", {})
         saved_at = ckpt.get("saved_at", entry.stat().st_mtime)
-    except Exception:
+    except Exception as exc:
         meta, saved_at = {}, entry.stat().st_mtime
+        extra = {
+            "unreadable": True,
+            "error": f"refused unsafe load: {exc}",
+        }
     return {
         "name": entry.name[: -len(".pt")],
         "meta": meta,
@@ -117,6 +153,7 @@ def _describe(entry: os.DirEntry) -> Dict[str, Any]:
         "coding": meta.get("coding", "raw"),
         "topology": meta.get("topology", "fc_legacy"),
         "saved_at": saved_at,
+        **extra,
     }
 
 
