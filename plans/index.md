@@ -83,6 +83,11 @@ The `spikeforge-server` extraction did not fire (T4 no-go).
 - [C package contract](plans/c_package_contract.md) — the plain-JSON artifact
   a bundle exports for torch-free targets: the graph shape, the quantized
   weight envelope, degenerate grids, and the readout tolerances.
+- [NIR C-runtime export profile](plans/nir-c-runtime-profile.md) — the
+  node-kind set the C loader implements and the spikeforge-side validator
+  gating exports against it.
+- [NIR-unmappable stage decisions](plans/nir-unmappable-decisions.md) —
+  the per-kind verdict for every stage with no NIR rendering.
 
 ## Production use cases (PC-0)
 

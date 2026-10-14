@@ -64,6 +64,18 @@ that and describe the local source tree only.
   derive from, including loadable degenerate grids (a positive scale that
   reproduces constant values instead of erasing them) and an unclamped
   uint8 zero-point so single-sign tensors keep their accuracy.
+- **Exports validate against the C runtime profile.** `validate_for_c_runtime`
+  reports every node, edge, and structural assumption the `nir-c-runtime`
+  loader would reject by node name and kind, and `check_for_c_runtime`
+  raises the typed `CRuntimeUnsupportedError` on the same violations. The
+  11-kind supported set is single-sourced in
+  `spikeforge_targets/c_runtime.py`, documented in
+  `plans/nir-c-runtime-profile.md`.
+- **NIR-unmappable stages carry per-kind verdicts.**
+  `plans/nir-unmappable-decisions.md` records whether each unmappable
+  stage kind awaits an upstream primitive or decomposes into existing NIR
+  (with the exact construction and follow-up issues), and
+  `UnsupportedStageError` for these kinds points at the record.
 
 ### Changed
 
