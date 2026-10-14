@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { max1, rowOrder, usePaintRaster } from "./rasterPaint";
 import { useTheme } from "../theme";
 import type { RasterPayload } from "../types";
 
@@ -28,26 +29,6 @@ interface Props {
    * inside one shared panel (label + summary become one compact header row).
    */
   bare?: boolean;
-}
-
-/** Neuron draw order on the y-axis (top = most active when sorted). */
-function rowOrder(raster: RasterPayload, sortByRate: boolean): number[] {
-  const order = Array.from({ length: max1(raster.num_neurons) }, (_, i) => i);
-  if (!sortByRate) return order;
-  const counts = new Array(max1(raster.num_neurons)).fill(0);
-  raster.neurons.forEach((n) => {
-    counts[n] += 1;
-  });
-  return order.slice().sort((a, b) => counts[b] - counts[a]);
-}
-
-function max1(n: number): number {
-  return Math.max(1, n);
-}
-
-/** Pixel y for a neuron/rank on the plot (0 at the bottom). */
-function yFor(pos: number, neurons: number, plotH: number): number {
-  return 8 + plotH - (pos / neurons) * plotH;
 }
 
 export function RasterCanvas({
@@ -91,103 +72,17 @@ export function RasterCanvas({
     return () => ro.disconnect();
   }, []);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.fillStyle = colors.bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (!raster) {
-      if (emptyNote) {
-        ctx.fillStyle = colors.text;
-        ctx.font = "12px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(emptyNote, canvas.width / 2, canvas.height / 2);
-        ctx.textAlign = "start";
-      }
-      return;
-    }
-
-    const steps = max1(raster.num_steps);
-    const neurons = max1(raster.num_neurons);
-    const padL = 0;
-    const padR = 0;
-    const padB = 22;
-    const plotW = canvas.width - padL - padR;
-    const plotH = canvas.height - padB - 14;
-    const bandH = plotH / neurons;
-
-    ctx.strokeStyle = colors.grid;
-    ctx.strokeRect(padL, 8, plotW, plotH);
-
-    const order = rowOrder(raster, sortByRate);
-    const rank = new Array(neurons).fill(0);
-    order.forEach((neuron, pos) => {
-      rank[neuron] = pos;
-    });
-
-    (highlightRows ?? []).forEach((row) => {
-      if (row < 0 || row >= neurons) return;
-      ctx.fillStyle = colors.highlight;
-      ctx.fillRect(
-        padL,
-        yFor(rank[row], neurons, plotH) - bandH / 2,
-        plotW,
-        bandH,
-      );
-    });
-
-    ctx.fillStyle = colors.dot;
-    for (let i = 0; i < raster.time.length; i++) {
-      const x = padL + (raster.time[i] / steps) * plotW;
-      const y = yFor(rank[raster.neurons[i]] ?? 0, neurons, plotH);
-      ctx.fillRect(x, y, 1.4, 1.4);
-    }
-
-    if (highlightStep !== null && highlightStep !== undefined) {
-      const idx = Math.max(0, Math.min(highlightStep, steps - 1));
-      const x0 = padL + (idx / steps) * plotW;
-      const bandW = Math.max(2, plotW / steps);
-      ctx.fillStyle = colors.accentSoft;
-      ctx.fillRect(x0, 8, bandW, plotH);
-      ctx.fillStyle = colors.accent;
-      for (let i = 0; i < raster.time.length; i++) {
-        if (raster.time[i] !== idx) continue;
-        const x = padL + (raster.time[i] / steps) * plotW;
-        const y = yFor(rank[raster.neurons[i]] ?? 0, neurons, plotH);
-        ctx.fillRect(x, y, 2.4, 2.4);
-      }
-      ctx.strokeStyle = colors.accent;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x0 + bandW / 2, 8);
-      ctx.lineTo(x0 + bandW / 2, 8 + plotH);
-      ctx.stroke();
-    }
-
-    ctx.font = "10px sans-serif";
-    ctx.fillStyle = colors.text;
-    ctx.fillText("Time step", plotW / 2 - 18, canvas.height - 6);
-    ctx.fillText(String(steps), plotW - 20, canvas.height - 6);
-  }, [
+  usePaintRaster({
+    canvasRef,
     raster,
-    // plotWidth/measuredHeight are the canvas' real pixel size: React
-    // rewrites the width/height attributes when they change, which clears
-    // the bitmap — so the redraw has to be triggered by them, not only by
-    // the (fixed) default width/height props.
     plotWidth,
     measuredHeight,
-    width,
-    height,
     highlightStep,
     emptyNote,
-    yLabels,
     highlightRows,
     sortByRate,
     colors,
-  ]);
+  });
 
   // Rail labels mirror the canvas row geometry so they line up with dots.
   const rowTop = 8;

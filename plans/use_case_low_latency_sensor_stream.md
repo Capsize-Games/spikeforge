@@ -80,7 +80,7 @@ the latency harness is the new machinery.
   `preprocessing.json` in the bundle; the stream is `[N, D]` at sensor rate,
   streamed sample-by-sample with no lookahead.
 - **Repo fit:** high-rate replay belongs to `spikeforge-io`
-  ([`adapters.py`](spikeforge_io/adapters.py:64), [`replay.py`](spikeforge_io/replay.py:1)).
+  ([`adapters/`](spikeforge_io/adapters/__init__.py), [`replay.py`](spikeforge_io/replay.py:1)).
 
 ### 3.2 Encoding
 - **Primary coding:** `delta` (per-sample temporal change is the signal) with

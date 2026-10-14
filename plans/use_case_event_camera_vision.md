@@ -139,7 +139,7 @@ flowchart LR
   ([`client.py`](spikeforge_clients/client.py:1)).
 - A **recorded-stream replay harness** in `spikeforge-io` feeds a stored event
   file into `/v1/stream` deterministically
-  ([`replay.py`](spikeforge_io/replay.py:1), [`adapters.py`](spikeforge_io/adapters.py:64)).
+  ([`replay.py`](spikeforge_io/replay.py:1), [`adapters/`](spikeforge_io/adapters/__init__.py)).
   A live DVS-camera adapter is optional (W7) and out of the MVP.
 
 ### 4.5 Observability

@@ -1,0 +1,27 @@
+/* --- measured line charts --- */
+/* LineChart draws at the container's real size, so the plot fills its column
+   with crisp gridlines and legend instead of a stretched fixed buffer. */
+.chart-fill {
+  width: 100%;
+  min-width: 0;
+}
+
+.chart-fill canvas.chart-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The training stack fills the tab's height: its two charts share whatever
+   room the status grid and subsection headings leave. */
+.training-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.training-panel .chart-fill {
+  flex: 1 1 0;
+  min-height: 120px;
+}
