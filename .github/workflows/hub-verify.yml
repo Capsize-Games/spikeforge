@@ -1,13 +1,12 @@
 name: Hub artifact verification (sandbox)
 
 # The community-upload verification sandbox (issue #48; the design of
-# record is plans/hub_accounts_plan.md §7). Dispatched by
-# spikeforge-hub-api once a committed upload enters its `verifying`
-# state. That hub-api endpoint (spikeforge-hub-api#4) is not built as of
-# this writing, so the `hub-artifact-verify` event type and the
-# client_payload shape below are this repo's half of a contract the two
-# repositories have to agree on -- see the pull request that introduced
-# this file for the coordination note.
+# record is plans/hub_accounts_plan.md §7, pinned as-shipped in §7.3).
+# Dispatched by spikeforge-hub-api once a committed upload enters its
+# `verifying` state. The hub-api half (dispatch plus the signed-callback
+# endpoint) shipped in spikeforge-hub-api#7 and was aligned with this
+# runner in spikeforge-hub-api 0632a5e; the `hub-artifact-verify` event
+# type and the client_payload shape below are the reconciled contract.
 #
 # SECURITY -- read before changing `runs-on` or the egress allowlist:
 #

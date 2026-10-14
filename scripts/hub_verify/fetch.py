@@ -1,7 +1,7 @@
 """Fetch the one artifact this job was dispatched to verify.
 
-The URL is a signed, read-only, single-object URL the hub API mints for
-this job alone (``plans/hub_accounts_plan.md`` §7.2); this module does not
+The URL is the public content-addressed download URL from the dispatch
+payload (``plans/hub_accounts_plan.md`` §7.3); this module does not
 authenticate to anything else and never reuses the URL beyond one GET.
 """
 
