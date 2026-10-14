@@ -119,6 +119,7 @@ nav:
       - Operations: operations_plan.md
       - Interop fold-ins: interop_foldins_plan.md
       - Hub accounts and uploads: hub_accounts_plan.md
+      - C package contract: c_package_contract.md
   - Production toolkit:
       - Overview: production_toolkit_plan.md
       - Use cases: production_use_cases.md

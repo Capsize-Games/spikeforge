@@ -80,6 +80,9 @@ The `spikeforge-server` extraction did not fire (T4 no-go).
   the hosted architecture for signing up at spikeforge.net, signing in from the
   desktop app, bounded per-account storage, and publishing or downloading a
   community model without touching the curated catalog.
+- [C package contract](plans/c_package_contract.md) — the plain-JSON artifact
+  a bundle exports for torch-free targets: the graph shape, the quantized
+  weight envelope, degenerate grids, and the readout tolerances.
 
 ## Production use cases (PC-0)
 

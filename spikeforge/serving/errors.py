@@ -8,6 +8,8 @@ parsing the message text. The hierarchy mirrors
 :mod:`spikeforge_targets.backends.errors`.
 """
 
+from typing import Sequence, Tuple
+
 
 class ServingError(Exception):
     """Base error for the stateful serving runtime."""
@@ -69,6 +71,23 @@ class BundleCompatibilityError(BundleError):
     def __init__(self, path: str, detail: str) -> None:
         """Record the compatibility ``detail``."""
         super().__init__(path, f"incompatible bundle: {detail}")
+
+
+class CExportError(BundleError):
+    """Raised when a bundle cannot be exported as a C-loadable package.
+
+    The offending node ``kinds`` are stored as an attribute so a caller can
+    name exactly which topology nodes the C runtime does not implement,
+    without parsing the message text.
+    """
+
+    def __init__(self, path: str, kinds: Sequence[str]) -> None:
+        """Record the unsupported ``kinds`` and build a clear message."""
+        names = ", ".join(repr(kind) for kind in sorted(kinds))
+        super().__init__(
+            path, f"graph uses node kinds the C runtime rejects: {names}"
+        )
+        self.kinds: Tuple[str, ...] = tuple(sorted(kinds))
 
 
 class EncodeSpecError(ServingError):
