@@ -177,6 +177,77 @@ jobs:
           python -m pip install --upgrade pip build
           python -m build "${{ needs.parse.outputs.package_dir }}"
 
+      - name: Install the hub wheel into a clean venv
+        # Issue #164: the hub wheel's runtime data (models.json plus the
+        # reference weights) is invisible to every static guard, so a hub
+        # release proves the exact published artifact loads its catalog
+        # and verifies its weights before it reaches PyPI. No other
+        # distribution ships runtime data, so only hub releases pay for
+        # this venv.
+        if: needs.parse.outputs.distribution == 'spikeforge-hub'
+        env:
+          PACKAGE_DIR: ${{ needs.parse.outputs.package_dir }}
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/hub-smoke
+          /tmp/hub-smoke/bin/python -m pip install --upgrade pip
+          # CPU wheels keep this light; mirrors ci.yml's TORCH_INDEX_URL.
+          /tmp/hub-smoke/bin/pip install torch torchvision \
+            --index-url https://download.pytorch.org/whl/cpu
+          # The wheel under test is the one the publish step uploads; the
+          # row's other distributions resolve from the local builds above
+          # when they are newer than PyPI.
+          /tmp/hub-smoke/bin/pip install \
+            "${PACKAGE_DIR}"/dist/spikeforge_hub-*.whl \
+            --find-links dist-all
+
+      - name: Smoke-test the hub wheel's catalog and weights
+        if: needs.parse.outputs.distribution == 'spikeforge-hub'
+        run: |
+          # From /tmp so the checkout never shadows the installed wheel
+          # on sys.path (``python -`` puts the cwd first).
+          cd /tmp
+          /tmp/hub-smoke/bin/python - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          import spikeforge_hub
+
+          wheel_home = Path(spikeforge_hub.__file__).resolve().parent
+          assert "/tmp/hub-smoke/" in str(wheel_home), (
+              f"smoke test imported {wheel_home}, not the wheel"
+          )
+          completed = subprocess.run(
+              ["/tmp/hub-smoke/bin/spikeforge-hub", "list"],
+              capture_output=True,
+              text=True,
+              check=False,
+          )
+          assert completed.returncode == 0, completed.stderr
+          payload = json.loads(completed.stdout)
+          assert payload["entries"], "the wheel's catalog lists no rows"
+          assert payload["issues"] == [], payload["issues"]
+
+          from spikeforge_hub.catalog import entries
+          from spikeforge_hub.inspect import reference_path
+          from spikeforge_hub.verify import verify_file
+
+          references = [
+              entry for entry in entries() if entry.source == "reference"
+          ]
+          assert references, "the wheel carries no reference rows"
+          for entry in references:
+              path = reference_path(entry)
+              result = verify_file(path, entry.sha256, entry.size_bytes)
+              assert result.verified, f"{entry.id}: {result.reason}"
+              print(f"{entry.id}: verified {path}")
+          print(
+              f"hub smoke OK: {len(payload['entries'])} rows, "
+              f"{len(references)} reference weights verified"
+          )
+          PY
+
       - name: Publish to PyPI (OIDC trusted publishing)
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
