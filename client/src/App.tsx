@@ -1,18 +1,12 @@
-import { lazy, Suspense, useCallback, useRef } from "react";
+import { useCallback, useRef } from "react";
 
-import { AnalysisPanels } from "./components/AnalysisPanels";
 import { AppHeader } from "./components/AppHeader";
 import { DownloadProgress } from "./components/DownloadProgress";
-import { EnergyPanel } from "./components/EnergyPanel";
-import { HubPanel } from "./components/HubPanel";
-import { ModelWorkspace } from "./components/ModelWorkspace";
 import { NavRail } from "./components/NavRail";
+import { OperationsTabs } from "./components/OperationsTabs";
 import { StatusBar } from "./components/StatusBar";
-import { TabPanel } from "./components/TabPanel";
-import { TargetsPanel } from "./components/TargetsPanel";
 import { TourCard } from "./components/TourCard";
-import { TrainingPanel } from "./components/TrainingPanel";
-import { ViewerPanels } from "./components/ViewerPanels";
+import { WorkspaceTabs } from "./components/WorkspaceTabs";
 import { useEncodeConfig } from "./hooks/useEncodeConfig";
 import { useEnergy } from "./hooks/useEnergy";
 import { useHub } from "./hooks/useHub";
@@ -26,21 +20,10 @@ import { TABS } from "./tabs";
 import { LESSONS } from "./tour/lessons";
 import { useTraining } from "./useTraining";
 import { useWebSocket } from "./useWebSocket";
-import { useI18n } from "./i18n/I18nProvider";
 import type { TabId } from "./tabs";
-import type { Modality, ServerMsg } from "./types";
-
-// React Flow is a real bundle addition (~100kb), so the Pipeline tab is the
-// app's first code-split boundary -- everyone else's initial load stays
-// exactly as it was.
-const PipelinePanel = lazy(() =>
-  import("./components/PipelinePanel").then((m) => ({
-    default: m.PipelinePanel,
-  })),
-);
+import type { ServerMsg } from "./types";
 
 export default function App() {
-  const { t } = useI18n();
   const { config, configRef, patchConfig, replaceConfig } = useEncodeConfig();
   const training = useTraining();
   const tour = useTour(LESSONS);
@@ -108,14 +91,6 @@ export default function App() {
     pipeline: pipeline.state.running,
   };
 
-  // The configured surrogate drives the curve panel's initial selection.
-  const rawSurrogate = training.state.config.topology_params.surrogate;
-  const currentSurrogate = typeof rawSurrogate === "string" ? rawSurrogate : "";
-
-  const listed = training.state.datasets.find((d) => d.name === config.dataset);
-  const modality: Modality = listed?.modality ?? "image";
-  const readOnly = viewer.state.status?.read_only === true;
-
   return (
     <div className="app">
       <NavRail
@@ -137,174 +112,27 @@ export default function App() {
       />
 
       <main className="app-main">
-        <TabPanel id="model" active={tabs.active}>
-          <ModelWorkspace
-            config={config}
-            model={training.state.config}
-            datasets={training.state.datasets}
-            models={training.state.models}
-            currentModel={training.state.loaded?.name ?? null}
-            loaded={training.state.loaded}
-            sample={viewer.state.sample}
-            eventFrame={viewer.state.eventFrame}
-            topologies={training.state.topologies}
-            neurons={training.state.neurons}
-            surrogates={training.state.surrogates}
-            gpuAvailable={viewer.gpuAvailable}
-            connected={ws.connected}
-            busy={training.state.running}
-            loading={viewer.modelLoading}
-            readOnly={readOnly}
-            locked={viewer.locked}
-            onPatchConfig={patchConfig}
-            onModelChange={training.patch}
-            onSelectSample={actions.selectSample}
-            onNew={actions.newModel}
-            onLoad={actions.loadModel}
-            onSave={actions.saveModel}
-            onTrain={actions.train}
-            onStopTrain={actions.stopTrain}
-          />
-        </TabPanel>
+        <WorkspaceTabs
+          active={tabs.active}
+          config={config}
+          training={training}
+          viewer={viewer}
+          actions={actions}
+          connected={ws.connected}
+          onPatchConfig={patchConfig}
+          onToggleAutoPredict={toggleAutoPredict}
+        />
 
-        <TabPanel id="viewer" active={tabs.active}>
-          <ViewerPanels
-            sample={viewer.state.sample}
-            eventFrame={viewer.state.eventFrame}
-            spikeFrame={viewer.displayFrame}
-            reconGain1={viewer.state.reconGain1}
-            rasters={viewer.state.rasters}
-            inference={viewer.state.inference}
-            modality={modality}
-            hiddenFrame={viewer.state.spikeFrames.hidden}
-            animation={viewer.state.animation}
-            loaded={training.state.loaded}
-            coding={config.coding}
-            mode={training.state.config.mode}
-            sampleIndex={config.sample_index}
-            timeStep={viewer.timeStep}
-            numSteps={viewer.numSteps}
-            trajectory={viewer.state.trajectory}
-            nirGraph={viewer.state.nirGraph}
-            nirValidation={viewer.state.nirValidation}
-            autoPredict={viewer.autoPredict}
-            canAutoPredict={viewer.canAutoPredict}
-            onToggleAutoPredict={toggleAutoPredict}
-            playing={viewer.state.running}
-            onPlay={actions.playPreview}
-            onStop={actions.stopPreview}
-            onScrub={(step) => viewer.setScrubStep(step)}
-            onSelectSample={(index) =>
-              actions.selectSample({ sample_index: index })
-            }
-            onRefreshTrajectory={actions.requestTrajectory}
-            onRefreshNirGraph={actions.requestNirExport}
-            onRefreshNirValidation={actions.requestNirValidate}
-            onSwitchToEducational={() =>
-              training.patch({ mode: "educational" })
-            }
-          />
-        </TabPanel>
-
-        <TabPanel id="training" active={tabs.active}>
-          <div className="tab-cols tab-cols-training">
-            <div className="tab-col">
-              <TrainingPanel
-                loss={training.state.loss}
-                trainAccuracy={training.state.trainAccuracy}
-                testAccuracy={training.state.testAccuracy}
-                last={training.state.last}
-                device={training.state.device}
-              />
-            </div>
-
-            <div className="tab-col">
-              <AnalysisPanels
-                mode={training.state.config.mode}
-                metrics={viewer.state.metrics}
-                encodingReport={viewer.state.encodingReport}
-                surrogateCurve={viewer.state.surrogateCurve}
-                benchmark={training.state.benchmark}
-                benchmarkLoading={training.state.benchmarkLoading}
-                surrogates={training.state.surrogates}
-                currentSurrogate={currentSurrogate}
-                onRefreshMetrics={actions.requestMetrics}
-                onRefreshEncodingReport={actions.requestEncodingReport}
-                onRequestSurrogateCurve={actions.requestSurrogateCurve}
-                onRunBenchmark={actions.requestBenchmark}
-                onSwitchMode={() => training.patch({ mode: "educational" })}
-              />
-            </div>
-          </div>
-        </TabPanel>
-
-        <TabPanel id="hub" active={tabs.active}>
-          <div className="tab-col hub-col">
-            <HubPanel hub={hub} />
-          </div>
-        </TabPanel>
-
-        <TabPanel id="deploy" active={tabs.active}>
-          <div className="tab-cols tab-cols-deploy">
-            <div className="tab-col">
-              <TargetsPanel
-                list={viewer.state.targetList}
-                report={viewer.state.deploymentReport}
-                backendRun={viewer.state.backendRun}
-                onRefresh={actions.requestTargets}
-                onSelectTarget={actions.requestDeploymentReport}
-                onRunBackend={actions.requestDeployRun}
-              />
-            </div>
-
-            <div className="tab-col">
-              <EnergyPanel
-                payload={energy.payload}
-                targets={viewer.state.targetList?.targets ?? []}
-                loading={energy.loading}
-                onRun={(target) => energy.run(training.state.config, target)}
-              />
-            </div>
-          </div>
-        </TabPanel>
-
-        <TabPanel id="pipeline" active={tabs.active}>
-          <Suspense
-            fallback={<div className="muted">{t("pipeline.loading")}</div>}
-          >
-            <PipelinePanel
-              models={training.state.models}
-              connected={ws.connected}
-              graph={pipeline.state.graph}
-              pipelines={pipeline.state.pipelines}
-              running={pipeline.state.running}
-              nodeStatus={pipeline.state.nodeStatus}
-              nodeResult={pipeline.state.nodeResult}
-              status={pipeline.state.status}
-              onListPipelines={() => ws.sendAction("list_pipelines")}
-              onSavePipeline={(name) =>
-                ws.sendSavePipeline(name, pipeline.state.graph)
-              }
-              onLoadPipeline={(name) =>
-                ws.sendPipelineName("load_pipeline", name)
-              }
-              onDeletePipeline={(name) =>
-                ws.sendPipelineName("delete_pipeline", name)
-              }
-              onRunPipeline={(input) =>
-                ws.sendRunPipeline(pipeline.state.graph, input)
-              }
-              onStopPipeline={() => ws.sendAction("stop_pipeline")}
-              onSetGraph={pipeline.setGraph}
-              onAddNode={pipeline.addNode}
-              onMoveNode={pipeline.moveNode}
-              onRemoveNode={pipeline.removeNode}
-              onAddEdge={pipeline.addEdge}
-              onRemoveEdge={pipeline.removeEdge}
-              onSetEdgeExtract={pipeline.setEdgeExtract}
-            />
-          </Suspense>
-        </TabPanel>
+        <OperationsTabs
+          active={tabs.active}
+          ws={ws}
+          hub={hub}
+          energy={energy}
+          pipeline={pipeline}
+          training={training}
+          viewer={viewer}
+          actions={actions}
+        />
 
         {viewer.state.error && (
           <div className="error">{viewer.state.error}</div>

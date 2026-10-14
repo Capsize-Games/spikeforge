@@ -159,7 +159,7 @@ The codebase is closer to splittable than its single distribution suggests:
 - **Optional imports are lazy** behind `api.py` shims:
   [`nir_bridge/api.py`](../spikeforge/nir_bridge/api.py),
   [`onnx_bridge/api.py`](../spikeforge/onnx_bridge/api.py),
-  [`targets/backends/api.py`](../spikeforge_targets/backends/api.py),
+  [`targets/backends/api/`](../spikeforge_targets/backends/api/__init__.py),
   [`events/tonic_api.py`](../spikeforge/events/tonic_api.py),
   [`hub/probe.py`](../spikeforge_hub/probe.py),
   [`targets/probe.py`](../spikeforge_targets/probe.py).

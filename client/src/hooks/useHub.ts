@@ -1,17 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 
-import type {
-  HubBundleBuiltPayload,
-  HubDownloadState,
-  HubImportPayload,
-  HubInspectPayload,
-  HubListPayload,
-  HubPullState,
-  HubQueryInput,
-  HubSearchPayload,
-} from "../hubTypes";
-import type { ServerMsg } from "../types";
+import type { HubQueryInput } from "../hubTypes";
 import { useWebSocket } from "../useWebSocket";
+import { useHubState } from "./useHubState";
 
 type WebSocketControls = ReturnType<typeof useWebSocket>;
 
@@ -20,46 +11,18 @@ interface Options {
   connected: boolean;
 }
 
-/** Own the hub browser state and fold hub server messages into it. */
+/** Hub catalog actions over the shared hub browser state. */
 export function useHub({ ws, connected }: Options) {
   const { sendHub } = ws;
-  const [list, setList] = useState<HubListPayload | null>(null);
-  const [search, setSearch] = useState<HubSearchPayload | null>(null);
-  const [download, setDownload] = useState<HubDownloadState | null>(null);
-  const [inspect, setInspect] = useState<HubInspectPayload | null>(null);
-  const [imported, setImported] = useState<HubImportPayload | null>(null);
-  const [pull, setPull] = useState<HubPullState | null>(null);
-  const [built, setBuilt] = useState<HubBundleBuiltPayload | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-
-  /** Fold one server message into the hub state; other types pass through. */
-  const onMessage = useCallback((msg: ServerMsg) => {
-    switch (msg.type) {
-      case "hub_list":
-        setList(msg.payload);
-        break;
-      case "hub_search":
-        setSearch(msg.payload);
-        break;
-      case "hub_download_state":
-        setDownload(msg.payload);
-        break;
-      case "hub_inspect":
-        setInspect(msg.payload);
-        break;
-      case "hub_import":
-        setImported(msg.payload);
-        break;
-      case "hub_pull_state":
-        setPull(msg.payload);
-        break;
-      case "bundle_built":
-        setBuilt(msg.payload);
-        break;
-      default:
-        break;
-    }
-  }, []);
+  const hub = useHubState();
+  const {
+    setSearch,
+    setDownload,
+    setInspect,
+    setImported,
+    setPull,
+    setSelected,
+  } = hub;
 
   /** Refresh the catalog, optionally re-filtering it. */
   const refresh = useCallback(
@@ -67,7 +30,7 @@ export function useHub({ ws, connected }: Options) {
       setSearch(null);
       sendHub("hub_list", filters);
     },
-    [sendHub],
+    [sendHub, setSearch],
   );
 
   const runSearch = useCallback(
@@ -75,11 +38,14 @@ export function useHub({ ws, connected }: Options) {
     [sendHub],
   );
 
-  const select = useCallback((id: string) => {
-    setSelected(id);
-    setInspect(null);
-    setImported(null);
-  }, []);
+  const select = useCallback(
+    (id: string) => {
+      setSelected(id);
+      setInspect(null);
+      setImported(null);
+    },
+    [setImported, setInspect, setSelected],
+  );
 
   const downloadEntry = useCallback(
     (id: string) => {
@@ -93,7 +59,7 @@ export function useHub({ ws, connected }: Options) {
       });
       sendHub("hub_download", {}, id);
     },
-    [select, sendHub],
+    [select, sendHub, setDownload],
   );
 
   const cancelDownload = useCallback(
@@ -107,7 +73,7 @@ export function useHub({ ws, connected }: Options) {
       setImported(null);
       sendHub("hub_inspect", {}, id);
     },
-    [sendHub],
+    [sendHub, setImported, setSelected],
   );
 
   const importEntry = useCallback(
@@ -115,7 +81,7 @@ export function useHub({ ws, connected }: Options) {
       setSelected(id);
       sendHub("hub_import", {}, id);
     },
-    [sendHub],
+    [sendHub, setSelected],
   );
 
   const pullEntry = useCallback(
@@ -130,7 +96,7 @@ export function useHub({ ws, connected }: Options) {
       });
       sendHub("hub_pull", {}, id);
     },
-    [select, sendHub],
+    [select, sendHub, setPull],
   );
 
   const buildBundle = useCallback(
@@ -144,15 +110,15 @@ export function useHub({ ws, connected }: Options) {
   }, [connected, sendHub]);
 
   return {
-    list,
-    search,
-    download,
-    inspect,
-    imported,
-    pull,
-    built,
-    selected,
-    onMessage,
+    list: hub.list,
+    search: hub.search,
+    download: hub.download,
+    inspect: hub.inspect,
+    imported: hub.imported,
+    pull: hub.pull,
+    built: hub.built,
+    selected: hub.selected,
+    onMessage: hub.onMessage,
     refresh,
     runSearch,
     select,
