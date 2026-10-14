@@ -118,6 +118,7 @@ nav:
       - Event runtime: event_runtime_plan.md
       - Operations: operations_plan.md
       - Interop fold-ins: interop_foldins_plan.md
+      - Hub accounts and uploads: hub_accounts_plan.md
   - Production toolkit:
       - Overview: production_toolkit_plan.md
       - Use cases: production_use_cases.md
