@@ -76,6 +76,10 @@ The `spikeforge-server` extraction did not fire (T4 no-go).
   tracking sinks, determinism, and this docs site (WS-E).
 - [Interop fold-ins](plans/interop_foldins_plan.md) — ONNX, `nirtorch`,
   quantization, and geometry (WS-F).
+- [Hub accounts, quotas, and community uploads](plans/hub_accounts_plan.md) —
+  the hosted architecture for signing up at spikeforge.net, signing in from the
+  desktop app, bounded per-account storage, and publishing or downloading a
+  community model without touching the curated catalog.
 
 ## Production use cases (PC-0)
 
