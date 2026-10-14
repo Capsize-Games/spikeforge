@@ -20,6 +20,10 @@ that and describe the local source tree only.
   community downloads verify like direct-URL ones. New WebSocket pairs
   `hub_pull`/`hub_pull_state` and `bundle_build`/`bundle_built` pull a
   community version and build a saved model into a `.spkf` (protocol 1.1).
+- The verification report now carries the runner-measured model identity:
+  top-level `framework`, `kind`, `topology`, and `input_shape`, pinned in
+  `plans/hub_accounts_plan.md` §7.3. The hub side already renders these
+  keys, so machine-checked uploads show their real topology and kind.
 - **`spikeforge-hub` manages community accounts and transfers.**
   `login`/`whoami`/`quota` handle the hub token and account position, `push`
   builds a saved model and publishes it through the two-phase upload, and
