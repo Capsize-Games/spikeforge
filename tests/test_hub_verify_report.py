@@ -1,6 +1,15 @@
 """The verification report's shape and the hub-api trust contract."""
 
+from typing import Any, Dict
+
 from hub_verify.report import build_report, rejection_summary
+
+_IDENTITY: Dict[str, Any] = {
+    "framework": "spikeforge",
+    "kind": "state_dict",
+    "topology": "fc_small",
+    "input_shape": "1x28x28",
+}
 
 
 def test_passed_report_carries_a_true_boolean() -> None:
@@ -42,3 +51,43 @@ def test_failed_report_names_the_reason() -> None:
 def test_rejection_summary_of_no_reasons_names_the_bug() -> None:
     """An empty reason list on a rejection is itself flagged, not hidden."""
     assert "bug" in rejection_summary([])
+
+
+def test_passing_report_carries_measured_identity() -> None:
+    """A passing report names what the artifact is, measured by the runner.
+
+    The hub side renders these fields verbatim into the index entry, so a
+    machine-checked upload shows its real topology and kind instead of
+    the generic defaults.
+    """
+    report = build_report(
+        version_id="v1",
+        passed=True,
+        reasons=[],
+        checks={"bundle": {"ok": True}},
+        summary="passed every check",
+        run_url="https://github.com/x/y/actions/runs/1",
+        **_IDENTITY,
+    )
+    for key, value in _IDENTITY.items():
+        assert report[key] == value
+
+
+def test_identity_fields_are_present_even_when_unmeasured() -> None:
+    """The four identity keys are always present, null when unmeasured.
+
+    A run that fails before the funnel completes still posts a report;
+    the hub side must be able to read the keys unconditionally.
+    """
+    reasons = ["bundle: weights are not loadable: bad magic number"]
+    report = build_report(
+        version_id="v2",
+        passed=False,
+        reasons=reasons,
+        checks={"bundle": {"ok": False}},
+        summary=rejection_summary(reasons),
+        run_url="",
+    )
+    for key in ("framework", "kind", "topology", "input_shape"):
+        assert key in report
+        assert report[key] is None

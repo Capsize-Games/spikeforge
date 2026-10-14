@@ -116,3 +116,20 @@ class HubImportError(HubError):
         super().__init__(f"hub import failed for {entry_id!r}: {detail}")
         self.entry_id: str = entry_id
         self.detail: str = detail
+
+
+class HubIntegrityError(HubError):
+    """Raised when an artifact fails verification before import.
+
+    The offending ``subject`` (an entry id or a path) and a human
+    ``detail`` are stored as attributes so tampered or checksum-less
+    bytes are refused by name instead of being promoted silently.
+    """
+
+    def __init__(self, subject: str, detail: str) -> None:
+        """Record ``subject`` and ``detail`` and build a clear message."""
+        super().__init__(
+            f"hub integrity check failed for {subject!r}: {detail}"
+        )
+        self.subject: str = subject
+        self.detail: str = detail

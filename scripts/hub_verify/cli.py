@@ -12,7 +12,7 @@ destination this job trusts, not attacker-influenced data).
 import os
 import sys
 import tempfile
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from hub_verify.callback import post_report
 from hub_verify.energy import energy_reports
@@ -28,6 +28,14 @@ _EMPTY_CHECKS: Dict[str, object] = {
     "compat": None,
     "drift": None,
     "energy": None,
+}
+
+#: Identity block when the run failed before the funnel completed.
+_EMPTY_IDENTITY: Dict[str, object] = {
+    "framework": None,
+    "kind": None,
+    "topology": None,
+    "input_shape": None,
 }
 
 
@@ -49,14 +57,28 @@ def _run_url() -> str:
     return f"{server}/{repo}/actions/runs/{run_id}"
 
 
+def _identity(funnel: Dict[str, object]) -> Dict[str, object]:
+    """Return the funnel's measured identity, or nulls when absent."""
+    found = funnel.get("identity")
+    if isinstance(found, dict):
+        return dict(found)
+    return dict(_EMPTY_IDENTITY)
+
+
+def _text(value: object) -> Optional[str]:
+    """Return ``value`` when it is text, else None for the report."""
+    return value if isinstance(value, str) else None
+
+
 def _run_checks(
     tmp_dir: str, artifact_path: str
-) -> Tuple[Dict[str, object], List[str]]:
-    """Run the bundle/funnel/energy stages; return ``(checks, reasons)``.
+) -> Tuple[Dict[str, object], List[str], Dict[str, object]]:
+    """Run the bundle/funnel/energy stages.
 
-    A stage that raises :class:`VerificationStepError` stops the pipeline
-    there -- a later stage needs the module the failed stage would have
-    produced -- and its message becomes the sole rejection reason.
+    Return ``(checks, reasons, identity)``. A stage that raises
+    :class:`VerificationStepError` stops the pipeline there -- a later
+    stage needs the module the failed stage would have produced -- and
+    its message becomes the sole rejection reason.
     """
     checks = dict(_EMPTY_CHECKS)
     try:
@@ -71,11 +93,14 @@ def _run_checks(
         checks["energy"] = energy_reports(bundle.spec, module)
     except VerificationStepError as error:
         checks[error.step] = {"ok": False, "detail": error.reason}
-        return checks, [f"{error.step}: {error.reason}"]
-    return checks, []
+        failed = [f"{error.step}: {error.reason}"]
+        return checks, failed, dict(_EMPTY_IDENTITY)
+    return checks, [], _identity(funnel)
 
 
-def _verify(artifact_url: str) -> Tuple[Dict[str, object], List[str]]:
+def _verify(
+    artifact_url: str,
+) -> Tuple[Dict[str, object], List[str], Dict[str, object]]:
     """Fetch the artifact and run every check against it."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         try:
@@ -83,7 +108,9 @@ def _verify(artifact_url: str) -> Tuple[Dict[str, object], List[str]]:
                 artifact_url, os.path.join(tmp_dir, "artifact.spkf")
             )
         except VerificationStepError as error:
-            return dict(_EMPTY_CHECKS), [f"{error.step}: {error.reason}"]
+            empty = dict(_EMPTY_CHECKS)
+            failed = [f"{error.step}: {error.reason}"]
+            return empty, failed, dict(_EMPTY_IDENTITY)
         return _run_checks(tmp_dir, artifact_path)
 
 
@@ -94,7 +121,7 @@ def main() -> int:
     base_url = _env("SPIKEFORGE_HUB_API_BASE_URL")
     secret = _env("SPIKEFORGE_HUB_VERIFICATION_SECRET")
 
-    checks, reasons = _verify(artifact_url)
+    checks, reasons, identity = _verify(artifact_url)
     passed = not reasons
     summary = "passed every check" if passed else rejection_summary(reasons)
     report = build_report(
@@ -104,6 +131,10 @@ def main() -> int:
         checks=checks,
         summary=summary,
         run_url=_run_url(),
+        framework=_text(identity.get("framework")),
+        kind=_text(identity.get("kind")),
+        topology=_text(identity.get("topology")),
+        input_shape=_text(identity.get("input_shape")),
     )
     try:
         post_report(base_url, version_id, report, secret)

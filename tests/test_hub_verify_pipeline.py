@@ -7,6 +7,7 @@ import pytest
 import torch
 from hub_verify.energy import energy_reports
 from hub_verify.errors import VerificationStepError
+from hub_verify.fixtures import probe_spikes
 from hub_verify.funnel import run_funnel
 from hub_verify.pipeline import load_and_build
 
@@ -72,3 +73,21 @@ def test_a_tampered_bundle_is_rejected_at_the_bundle_stage(
         load_and_build(out)
     assert info.value.step == "bundle"
     assert info.value.reason
+
+
+def test_the_funnel_measures_the_bundle_identity(tmp_path: Any) -> None:
+    """The identity block matches the inspected bundle, not uploader claims.
+
+    The kind is what the inspect step found, the topology names the spec
+    the runner loaded and drift-checked, and the input shape is the probe
+    layout the drift check consumed.
+    """
+    out = _written(tmp_path)
+    bundle, module = load_and_build(out)
+    funnel: Dict[str, Any] = run_funnel(bundle, module, str(tmp_path))
+    identity = funnel["identity"]
+    assert identity["framework"] == "spikeforge"
+    assert identity["kind"] == funnel["inspect"]["kind"]
+    assert identity["topology"] == bundle.manifest.get("topology")
+    shape = probe_spikes(bundle.spec).shape[2:]
+    assert identity["input_shape"] == "x".join(str(d) for d in shape)

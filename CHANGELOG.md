@@ -20,6 +20,10 @@ that and describe the local source tree only.
   community downloads verify like direct-URL ones. New WebSocket pairs
   `hub_pull`/`hub_pull_state` and `bundle_build`/`bundle_built` pull a
   community version and build a saved model into a `.spkf` (protocol 1.1).
+- The verification report now carries the runner-measured model identity:
+  top-level `framework`, `kind`, `topology`, and `input_shape`, pinned in
+  `plans/hub_accounts_plan.md` §7.3. The hub side already renders these
+  keys, so machine-checked uploads show their real topology and kind.
 - **`spikeforge-hub` manages community accounts and transfers.**
   `login`/`whoami`/`quota` handle the hub token and account position, `push`
   builds a saved model and publishes it through the two-phase upload, and
@@ -37,6 +41,13 @@ that and describe the local source tree only.
 
 ### Fixed
 
+- `hub_import` (and `spikeforge-hub import`) now verifies fetched bytes
+  before anything is loaded: a checksum mismatch raises a typed integrity
+  error and writes nothing, and checksum-less bytes are refused unless
+  `--allow-unverified` (or `SPIKEFORGE_HUB_ALLOW_UNVERIFIED=1`) opts in.
+  The verification outcome is recorded in the promoted checkpoint `meta`
+  and the import report, and `source: url` catalog entries must pin a
+  `sha256` like reference entries already do.
 - Dashboard deployments build the CPU image on the GitHub-hosted runner,
   transfer it over the pinned private connection, and verify the loaded
   revision before starting it without builds or pulls on the shared host.
