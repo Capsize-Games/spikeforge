@@ -94,6 +94,20 @@ def frames_from(payload: Any) -> List[Any]:
     return list(frames)
 
 
+def frame_from(message: Mapping[str, Any]) -> Any:
+    """Return the bounded ``frame`` carried by one stream message.
+
+    A missing or oversized frame is rejected here, before any tensor
+    is allocated from it — the single-frame analogue of
+    :func:`frames_from` for the WebSocket ``/v1/stream`` path.
+    """
+    if "frame" not in message:
+        raise ValueError("stream message has no 'frame'")
+    frame = message["frame"]
+    _frame_size(frame)
+    return frame
+
+
 def encoded_flag(payload: Mapping[str, Any]) -> bool:
     """Return the request's ``encoded`` flag, defaulting to False."""
     return bool(payload.get("encoded", False))
