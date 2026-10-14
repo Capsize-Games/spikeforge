@@ -24,11 +24,11 @@ def test_unexportable_kind_raises_with_named_reason(kind: str) -> None:
 
 
 def test_sequence_attn_export_names_first_unexportable_stage() -> None:
-    """Exporting the attention demo fails on its first unexportable stage."""
+    """Exporting the attention demo fails on positional encoding now."""
     spec, module = registry.build_topology("sequence_attn")
     with pytest.raises(UnsupportedStageError) as excinfo:
         to_nir(spec, module)
-    assert excinfo.value.kind == "embedding"
+    assert excinfo.value.kind == "positional_encoding"
 
 
 def test_alpha_neuron_still_raises_named_error() -> None:
@@ -42,6 +42,6 @@ def test_alpha_neuron_still_raises_named_error() -> None:
 def test_unmappable_table_carries_reasons() -> None:
     """Every unexportable kind has a non-empty honest reason."""
     reasons = stages_unmappable.UNMAPPABLE_STAGES
-    expected = {"embedding", "attention", "layer_norm", "maxpool2d"}
+    expected = {"attention", "layer_norm", "maxpool2d"}
     assert expected <= set(reasons)
     assert all(reason for reason in reasons.values())

@@ -157,8 +157,9 @@ class DeploymentBundle:
         unchanged): the NIR graph in ``graph_summary`` shape with this
         bundle's real weights as plain float arrays, plus a manifest
         recording the source bundle's identity. Needs the ``nir`` extra;
-        a graph with C-unsupported node kinds is refused with a typed
-        error naming them instead of writing an unloadable package.
+        a graph the C runtime cannot load is refused with a typed error
+        naming the offending nodes and kinds instead of writing an
+        unloadable package.
         """
         from spikeforge.serving.c_package import write_c_package
 

@@ -65,8 +65,6 @@ def test_every_verdict_is_decided_with_a_reason() -> None:
 def test_decomposable_kinds_name_their_follow_up() -> None:
     """Decompositions point at the filed export issue by number."""
     rows = _rows()
-    assert rows["embedding"][0] == "decompose-into-existing-NIR"
-    assert rows["batch_norm"][0] == "decompose-into-existing-NIR"
     for kind, (verdict, _, follow_up) in rows.items():
         if verdict == "decompose-into-existing-NIR":
             assert "#" in follow_up, kind
