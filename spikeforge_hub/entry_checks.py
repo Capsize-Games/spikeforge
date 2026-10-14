@@ -136,6 +136,12 @@ def _check_source(data: Mapping[str, Any]) -> None:
         raise HubCatalogError(
             _label(data), "source 'hf_repo' needs an 'hf_repo'"
         )
+    if source == "url" and not _text(data.get("sha256")):
+        raise HubCatalogError(
+            _label(data),
+            "source 'url' needs a 'sha256' checksum; a download "
+            "without a pinned checksum cannot be verified at import",
+        )
     if source == "reference":
         _check_reference(data)
     _check_optional(data)

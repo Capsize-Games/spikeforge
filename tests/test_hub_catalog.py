@@ -141,6 +141,27 @@ def test_url_source_requires_a_url() -> None:
         HubEntry.from_dict(_valid_entry(source="url"))
 
 
+def test_url_source_requires_a_checksum() -> None:
+    """A URL-sourced entry without a ``sha256`` is rejected.
+
+    A download without a pinned checksum cannot be verified at import,
+    so the catalog refuses to carry one -- the same bar reference
+    entries already meet.
+    """
+    with pytest.raises(HubCatalogError, match="sha256"):
+        HubEntry.from_dict(
+            _valid_entry(source="url", url="https://example.test/m.pt")
+        )
+    entry = HubEntry.from_dict(
+        _valid_entry(
+            source="url",
+            url="https://example.test/m.pt",
+            sha256="0" * 64,
+        )
+    )
+    assert entry.sha256 == "0" * 64
+
+
 def test_hf_source_requires_a_repo() -> None:
     """An HF-sourced entry without an ``hf_repo`` is rejected."""
     with pytest.raises(HubCatalogError):
