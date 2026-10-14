@@ -810,6 +810,17 @@ Callback (runner → hub API).
   change. The runner sends `version_id`, `passed`, `reasons`, `checks`
   (bundle/inspect/compat/drift/energy detail), `summary`, `generated_at`,
   and `runner` (workflow + run URL).
+- Identity: the runner also sends top-level `framework`, `kind`,
+  `topology`, and `input_shape`, measured from the bytes — never from
+  uploader claims. `framework` is the runner's own assertion (`spikeforge`:
+  it only verifies `.spkf` bundles, whose load enforces that format);
+  `kind` is what the inspect step found; `topology` names the spec the
+  runner loaded, built, and drift-checked; `input_shape` is the trailing
+  probe dimensions of the exact tensor the drift check consumed (e.g.
+  `1x28x28`, `784`). The four keys are always present and null whenever
+  the run fails before the funnel completes. The hub side renders them
+  verbatim into the index entry (`hub_api/catalog/index.py::entry_for`),
+  so a machine-checked upload shows its real topology and kind.
 - Effect (`apply_report`): `passed` → `published` (stamped
   `published_at`); failed → `rejected`; the report is stored verbatim in
   `version.verification` either way. Only a version in `verifying` can

@@ -29,6 +29,10 @@ that and describe the local source tree only.
   and `--description` / `--description-file` sets the model-card body.
   `pull` surfaces the recorded metrics labeled uploader-claimed. The
   reference release runbook is `plans/hub_accounts_plan.md` §8.4.
+- The verification report now carries the runner-measured model identity:
+  top-level `framework`, `kind`, `topology`, and `input_shape`, pinned in
+  `plans/hub_accounts_plan.md` §7.3. The hub side already renders these
+  keys, so machine-checked uploads show their real topology and kind.
 - **`spikeforge-hub` manages community accounts and transfers.**
   `login`/`whoami`/`quota` handle the hub token and account position, `push`
   builds a saved model and publishes it through the two-phase upload, and
