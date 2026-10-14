@@ -108,6 +108,16 @@ async def send_run_state(
     })
 
 
+async def reject_if_read_only(
+    ws: WebSocket, session: Session, message: str
+) -> bool:
+    """Send a read-only error and return True when writes are disabled."""
+    if not read_only():
+        return False
+    await send_locked(ws, session, {"type": "error", "payload": message})
+    return True
+
+
 async def send_train_state(
     ws: WebSocket, session: Session, running: bool, reason: str = "",
     mode: str = "",

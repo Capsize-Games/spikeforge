@@ -6,7 +6,6 @@ from typing import Any, Dict, Type
 from fastapi import WebSocket
 
 from server.download_errors import DownloadCancelledError
-from server.downloads import manager
 from server.encoder import EncoderEngine
 from server.event_engine import EventEngine
 from server.messages import send_download_state
@@ -37,7 +36,7 @@ async def ensure_dataset(
     if not _needs_download(dataset):
         return True
     try:
-        await manager.ensure(
+        await session.downloads.ensure(
             dataset, train, lambda state: _emit(ws, session, state)
         )
     except DownloadCancelledError:

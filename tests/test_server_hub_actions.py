@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 import pytest
 
-import server.hub_handlers as hub_handlers
+import server.session as session_module
 from server.downloads import DownloadManager
 from server.handlers import dispatch
 from server.protocol_handlers import PROTOCOL_ACTIONS
@@ -132,7 +132,7 @@ def test_hub_download_unknown_reports_error() -> None:
 def test_hub_cancel_emits_terminal_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cancelling replies with the manager's terminal download state."""
+    """Cancelling replies with the session's terminal download state."""
 
     class FakeManager:
         """A stand-in manager reporting a cancelled snapshot."""
@@ -150,7 +150,7 @@ def test_hub_cancel_emits_terminal_state(
                 "verified": False,
             }
 
-    monkeypatch.setattr(hub_handlers, "manager", FakeManager())
+    monkeypatch.setattr(session_module, "HubDownloadManager", FakeManager)
     message = ClientMessage(type="hub_cancel", name="nir/fc_small")
     sent = asyncio.run(_dispatch(message))
     assert [item["type"] for item in sent] == ["hub_download_state"]

@@ -137,6 +137,63 @@ def test_push_passes_flags_to_transfer(
     assert out["state"] == "published"
 
 
+def test_push_forwards_provenance_flags(
+    sandbox: Path, monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``push`` forwards checkpoint, claim, and description flags."""
+    calls: List[Any] = []
+
+    def fake_push(hub: Any, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        calls.append((args, kwargs))
+        return {"state": "published", "upload_id": "u1"}
+    monkeypatch.setattr(account_cli, "require_client", lambda: _FakeHub())
+    monkeypatch.setattr(account_cli, "push_saved_model", fake_push)
+    argv = ["push", "ckpt", "--version", "2", "--checkpoint", "m.pt",
+           "--test-accuracy", "94.29", "--test-samples", "10000",
+           "--test-dataset", "mnist", "--description", "body"]
+    assert cli.main(argv) == 0
+    args, kwargs = calls[0]
+    assert args == ("ckpt", "2", None)
+    assert kwargs["checkpoint"] == "m.pt"
+    assert kwargs["test_accuracy"] == 94.29
+    assert kwargs["test_samples"] == 10000
+    assert kwargs["test_dataset"] == "mnist"
+    assert kwargs["description"] == "body"
+
+
+def test_push_description_file_reads_text(
+    sandbox: Path, monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str], tmp_path: Path,
+) -> None:
+    """``push --description-file`` sends the file's text, stripped."""
+    calls: List[Any] = []
+
+    def fake_push(hub: Any, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        calls.append((args, kwargs))
+        return {"state": "published", "upload_id": "u1"}
+    monkeypatch.setattr(account_cli, "require_client", lambda: _FakeHub())
+    monkeypatch.setattr(account_cli, "push_saved_model", fake_push)
+    card = tmp_path / "card.md"
+    card.write_text("file body\n", encoding="utf-8")
+    argv = ["push", "ckpt", "--version", "2", "--license", "MIT",
+           "--description-file", str(card)]
+    assert cli.main(argv) == 0
+    assert calls[0][1]["description"] == "file body"
+
+
+def test_push_both_descriptions_is_refused(
+    sandbox: Path, monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``push`` with both description flags fails naming the clash."""
+    monkeypatch.setattr(account_cli, "require_client", lambda: _FakeHub())
+    argv = ["push", "ckpt", "--version", "2", "--license", "MIT",
+           "--description", "a", "--description-file", "b.md"]
+    assert cli.main(argv) == 1
+    assert "not both" in capsys.readouterr().out
+
+
 def test_pull_gates_on_the_import_verdict(
     sandbox: Path,
     monkeypatch: pytest.MonkeyPatch,

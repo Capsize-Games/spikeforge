@@ -23,10 +23,14 @@ class _FakeWS:
     def __init__(
         self, query: Optional[Dict[str, str]] = None,
         headers: Optional[Dict[str, str]] = None,
+        cookies: Optional[Dict[str, str]] = None,
+        scope: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Seed query/header maps; track accept/close and outbound frames."""
+        """Seed handshake maps; track accept/close and outbound frames."""
         self.query_params: Dict[str, str] = query or {}
         self.headers: Dict[str, str] = headers or {}
+        self.cookies: Dict[str, str] = cookies or {}
+        self.scope: Dict[str, Any] = scope or {}
         self.accepted = False
         self.close_code: Optional[int] = None
         self.sent: List[Dict[str, Any]] = []

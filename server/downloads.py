@@ -124,6 +124,3 @@ class DownloadManager:
             raise RuntimeError("dataset download failed")
         self._status = "done"
         await emit(self.snapshot())
-
-
-manager = DownloadManager()

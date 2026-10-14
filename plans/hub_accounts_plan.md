@@ -810,6 +810,17 @@ Callback (runner → hub API).
   change. The runner sends `version_id`, `passed`, `reasons`, `checks`
   (bundle/inspect/compat/drift/energy detail), `summary`, `generated_at`,
   and `runner` (workflow + run URL).
+- Identity: the runner also sends top-level `framework`, `kind`,
+  `topology`, and `input_shape`, measured from the bytes — never from
+  uploader claims. `framework` is the runner's own assertion (`spikeforge`:
+  it only verifies `.spkf` bundles, whose load enforces that format);
+  `kind` is what the inspect step found; `topology` names the spec the
+  runner loaded, built, and drift-checked; `input_shape` is the trailing
+  probe dimensions of the exact tensor the drift check consumed (e.g.
+  `1x28x28`, `784`). The four keys are always present and null whenever
+  the run fails before the funnel completes. The hub side renders them
+  verbatim into the index entry (`hub_api/catalog/index.py::entry_for`),
+  so a machine-checked upload shows its real topology and kind.
 - Effect (`apply_report`): `passed` → `published` (stamped
   `published_at`); failed → `rejected`; the report is stored verbatim in
   `version.verification` either way. Only a version in `verifying` can
@@ -875,6 +886,35 @@ Making the hosted dashboard genuinely per-user means per-user
 `spikeforge/config.py:24-38`), per-user process or job isolation, and a
 compute budget on a 3 GB shared box. That is phase 5 at the earliest, with a
 hosting decision behind it, and it should not gate any of the above.
+
+### 8.4 Reference release runbook
+
+The six `reference/*` checkpoints are the only trained weights this project
+vouches for, and they reach the hosted index through the same push path as
+any community upload — no separate first-party pipeline:
+
+1. **Train.** `python scripts/train_reference_models.py --only
+   <name> --publish` trains the row and publishes the checkpoint into
+   `spikeforge_hub/weights/` with its catalog entry (checksum, dataset
+   declarations, measured `test_accuracy`/`test_samples`).
+2. **Push.** `spikeforge-hub push reference/<name> --version <v>` stages
+   the packaged `.pt`, builds the `.spkf`, and uploads it. Licence,
+   dataset declarations, and scores default from the catalog row; explicit
+   flags override them. The bundle's `expected_metrics` carries the
+   catalog-measured scores.
+3. **Verify.** The commit dispatches `hub-verify.yml` (§7.3); the version
+   moves to `published` with the `machine-checked` label, or to `rejected`
+   with named reasons.
+4. **Pull round-trip.** `spikeforge-hub pull @<handle>/<slug>` re-downloads
+   the bytes through the funnel; the pulled bundle's sha256 must match the
+   pushed `.spkf`, and `pull` surfaces the recorded `expected_metrics`.
+
+A staff-pushed reference renders as a community upload — `unchecked` until
+the runner passes, `machine-checked` after. That is deliberate: there is no
+third trust word. The project's vouching lives in the curated catalog row
+the bytes were built from, not in a hub-side badge, and inventing a
+`curated` label for hosted bytes would promise human review no step here
+performs (see §6 and `hub_api/catalog/trust.py`).
 
 ---
 

@@ -1,10 +1,13 @@
 """Encoding experiment configuration schema."""
 
-from typing import Literal, Optional, Tuple
+from typing import Annotated, Literal, Optional, Tuple
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 CodingType = Literal["rate", "latency", "delta", "random"]
+
+#: Bounds for one ``input_size`` (H, W) sensor dimension.
+SensorDim = Annotated[int, Field(ge=1, le=1024)]
 
 
 class EncodeConfig(BaseModel):
@@ -12,10 +15,10 @@ class EncodeConfig(BaseModel):
 
     coding: CodingType = "rate"
     dataset: str = "mnist"
-    subset: int = 10
-    batch_size: int = 128
-    num_steps: int = 100
-    sample_index: int = 0
+    subset: int = Field(default=10, ge=1, le=1000000)
+    batch_size: int = Field(default=128, ge=1, le=8192)
+    num_steps: int = Field(default=100, ge=1, le=100000)
+    sample_index: int = Field(default=0, ge=0)
     gain: float = 0.25
     vector_value: float = 0.5
     tau: float = 5.0
@@ -27,8 +30,8 @@ class EncodeConfig(BaseModel):
     delta_threshold: float = 4.0
     random_scale: float = 0.5
     random_seed: Optional[int] = None
-    interval_ms: int = 100
+    interval_ms: int = Field(default=100, ge=0, le=3600000)
     #: Optional (H, W) sensor geometry; None keeps the default 28x28.
-    input_size: Optional[Tuple[int, int]] = None
+    input_size: Optional[Tuple[SensorDim, SensorDim]] = None
     #: Opt-in per-step hidden-layer animation; default off keeps the stream.
     animate_hidden: bool = False
