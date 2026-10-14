@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import pytest
 
@@ -91,6 +91,25 @@ def test_import_incompatible_exits_nonzero(
     assert cli.main(["import", "nir/fc_small"]) == 1
     payload = json.loads(capsys.readouterr().out)
     assert payload["verdict"]["verdict"] == "incompatible"
+
+
+def test_import_allow_unverified_flag_reaches_the_funnel(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """``import --allow-unverified`` passes the opt-in through."""
+    seen: Dict[str, Any] = {}
+
+    def fake(**kwargs: Any) -> dict:
+        """Record the funnel arguments and report an exact verdict."""
+        seen.update(kwargs)
+        return {"verdict": {"verdict": "exact", "mismatches": []}}
+
+    monkeypatch.setattr(cli, "import_model", fake)
+    assert cli.main(["import", "nir/fc_small", "--allow-unverified"]) == 0
+    assert seen["allow_unverified"] is True
+    assert cli.main(["import", "nir/fc_small"]) == 0
+    assert seen["allow_unverified"] is False
 
 
 def test_download_failure_exits_nonzero(

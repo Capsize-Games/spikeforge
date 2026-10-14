@@ -16,7 +16,7 @@ from spikeforge_hub.inspect import (
 
 def _entry(source: str = "hf_repo") -> HubEntry:
     """Return an offline test entry for the requested remote source."""
-    return HubEntry.from_dict({
+    data = {
         "id": "hf/example",
         "name": "Example snapshot",
         "framework": "hf",
@@ -26,7 +26,10 @@ def _entry(source: str = "hf_repo") -> HubEntry:
         "url": "https://example.test/model.safetensors",
         "license": "Apache-2.0",
         "notes": "unit-test entry",
-    })
+    }
+    if source == "url":
+        data["sha256"] = "0" * 64
+    return HubEntry.from_dict(data)
 
 
 @pytest.mark.parametrize("nested", [False, True])
