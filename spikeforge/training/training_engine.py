@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 import torch
 
 from spikeforge.data.data_loader import build_loader
-from spikeforge.data.datasets import dataset_info
 from spikeforge.encoding.spike_encoder import SpikeEncoder
 from spikeforge.network import inference
 from spikeforge.runtime import device as device_mod
@@ -15,15 +14,11 @@ from spikeforge.simulator.runner import run
 from spikeforge.simulator.trajectory import Trajectory
 from spikeforge.topology import registry
 from spikeforge.topology.stage_module import StageModule
-from spikeforge.tracking.determinism import enable_deterministic
-from spikeforge.tracking.seed import set_seed
 from spikeforge.training.checkpoint_mixin import CheckpointMixin
 from spikeforge.training.encoding_mixin import EncodingMixin
 from spikeforge.training.eval_mixin import EvalMixin
-from spikeforge.training.scaleup_mixin import (
-    ScaleUpMixin,
-    scaleup_options,
-)
+from spikeforge.training.scaleup_mixin import ScaleUpMixin
+from spikeforge.training.session_mixin import SessionMixin
 from spikeforge.training.topology_mixin import TopologyMixin
 
 _Batch = Tuple[torch.Tensor, torch.Tensor]
@@ -36,6 +31,7 @@ class TrainingEngine(
     EncodingMixin,
     ScaleUpMixin,
     EvalMixin,
+    SessionMixin,
 ):
     """Run a cancellable training loop that emits metric dicts."""
 
@@ -54,13 +50,12 @@ class TrainingEngine(
     _deterministic: bool
     _determinism_report: Optional[Dict[str, Any]]
 
-    def __init__(
-        self, dataset: str = "mnist", hidden: int = 128, beta: float = 0.5,
-        lr: float = 1e-2, weight_decay: float = 0.0, epochs: int = 1,
-        num_steps: int = 10, subset: int = 10, batch_size: int = 64,
-        checkpoint: Optional[str] = None, encode: Any = None,
-        input_mode: Optional[str] = None, device: Optional[str] = None,
-        topology: str = "fc_legacy",
+    def __init__(self, dataset: str = "mnist", hidden: int = 128,
+        beta: float = 0.5, lr: float = 1e-2, weight_decay: float = 0.0,
+        epochs: int = 1, num_steps: int = 10, subset: int = 10,
+        batch_size: int = 64, checkpoint: Optional[str] = None,
+        encode: Any = None, input_mode: Optional[str] = None,
+        device: Optional[str] = None, topology: str = "fc_legacy",
         topology_params: Optional[Dict[str, Any]] = None,
         mode: str = "production", seed: Optional[int] = None,
         amp: bool = False, grad_checkpoint: bool = False,
@@ -68,84 +63,15 @@ class TrainingEngine(
         tracking: Optional[str] = None, deterministic: bool = False,
     ) -> None:
         """Resolve inputs, build the topology, and optionally restore it."""
-        self._store_settings(
-            dataset, hidden, beta, lr, weight_decay, epochs, num_steps,
-            subset, batch_size,
-        )
+        self._store_settings(dataset, hidden, beta, lr, weight_decay,
+                             epochs, num_steps, subset, batch_size)
         self._configure_session(
             mode, seed, tracking, deterministic, encode, topology,
-            topology_params, amp, grad_checkpoint, bptt_steps, multi_gpu,
-        )
-        self._setup_input(encode, input_mode, device)
-        self._build(lr, checkpoint)
+            topology_params, amp, grad_checkpoint, bptt_steps, multi_gpu)
+        self._build(encode, input_mode, device, lr, checkpoint)
 
-    def _configure_session(
-        self, mode: str, seed: Optional[int], tracking: Optional[str],
-        deterministic: bool, encode: Any, topology: str,
-        topology_params: Optional[Dict[str, Any]], amp: bool,
-        grad_checkpoint: bool, bptt_steps: Optional[int], multi_gpu: bool,
-    ) -> None:
-        """Store the mode/seed/tracking/topology/scaleup settings."""
-        self._mode = ExecutionMode(mode)
-        self._seed = None if seed is None else int(seed)
-        self._tracking = tracking
-        self._deterministic = bool(deterministic)
-        self._determinism_report = None
-        self._encode = encode
-        self._topology = topology
-        self._topology_params = dict(topology_params or {})
-        self._scaleups = scaleup_options(
-            amp, grad_checkpoint, bptt_steps, multi_gpu
-        )
-
-    def _store_settings(
-        self, dataset: str, hidden: int, beta: float, lr: float,
-        weight_decay: float, epochs: int, num_steps: int, subset: int,
-        batch_size: int,
-    ) -> None:
-        """Store the plain training settings on the instance."""
-        self._dataset = dataset
-        self._num_classes, _ = dataset_info(dataset)
-        self._hidden = hidden
-        self._beta = beta
-        self._lr = lr
-        self._weight_decay = weight_decay
-        self._epochs = epochs
-        self._num_steps = num_steps
-        self._subset = subset
-        self._batch_size = batch_size
-
-    def _setup_input(
-        self, encode: Any, input_mode: Optional[str], device: Optional[str]
-    ) -> None:
-        """Resolve the encoder, effective input mode, and compute device."""
-        self._encoder = (
-            SpikeEncoder.from_encode_config(encode)
-            if encode is not None
-            else None
-        )
-        self._encode_spec = EncodeSpec.from_mapping(encode)
-        self._explicit_mode = input_mode
-        coding = encode.coding if encode is not None else "raw"
-        self._input_mode = input_mode or coding
-        self._set_device(device or "auto", encoder=self._encoder,
-                         hidden=self._hidden, num_classes=self._num_classes,
-                         num_steps=self._num_steps,
-                         batch_size=self._batch_size)
-
-    def _apply_seed(self) -> None:
-        """Seed torch and, if requested, enable deterministic mode."""
-        if self._seed is not None:
-            set_seed(self._seed)
-        if self._deterministic:
-            report = enable_deterministic(self._seed)
-            self._determinism_report = report.to_dict()
-
-    def _build(self, lr: float, checkpoint: Optional[str] = None) -> None:
-        """Create the configured topology/optimiser and restore a ckpt."""
-        self._apply_seed()
-        self._adopt_topology(checkpoint)
-        params = self._topology_arguments()
+    def _make_topology(self, params: Dict[str, Any]) -> None:
+        """Build the spec/module from ``params`` and warm it up."""
         self._architecture = registry.resolved_params(self._topology, params)
         self._apply_effective()
         self._spec, self._net = registry.build_topology(
@@ -153,6 +79,16 @@ class TrainingEngine(
         )
         self._net.to(self._device)
         device_mod.warmup(self._net, self._dummy_spikes())
+
+    def _build(
+        self, encode: Any, input_mode: Optional[str], device: Optional[str],
+        lr: float, checkpoint: Optional[str] = None,
+    ) -> None:
+        """Resolve the input, then create the topology and restore a ckpt."""
+        self._setup_input(encode, input_mode, device)
+        self._apply_seed()
+        self._adopt_topology(checkpoint)
+        self._make_topology(self._topology_arguments())
         self._optimizer = torch.optim.Adam(
             self._net.parameters(), lr=lr, weight_decay=self._weight_decay
         )
