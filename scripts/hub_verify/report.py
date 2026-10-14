@@ -3,12 +3,10 @@
 The one binding field is ``passed``: ``spikeforge-hub-api``'s
 ``hub_api/catalog/trust.py::label_for`` reads
 ``version.verification["passed"]`` and shows the ``machine-checked`` trust
-label only when it is the JSON boolean ``true``. Everything else in this
-report (``reasons``, ``checks``, ``summary``) is this runner's proposed
-shape for the rest of the contract issue #48 and hub-api issue #4 both
-describe in prose ("pass/fail, reasons, NIR/compat/energy summary") but
-neither repository had committed code for as of this writing -- see the
-pull request description for the coordination note.
+label only when it is the JSON boolean ``true``. The rest of the shape
+(``reasons``, ``checks``, ``summary``) is the reconciled contract pinned in
+``plans/hub_accounts_plan.md`` §7.3: the hub side stores every other field
+verbatim, so this runner owns the detail shape.
 """
 
 import datetime
