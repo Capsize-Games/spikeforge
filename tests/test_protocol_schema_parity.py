@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, get_args
 
 import jsonschema
+from _fakes import FakeWS
 from referencing import Registry, Resource
 
 from server.messages import (
@@ -66,16 +67,6 @@ def test_server_message_types_match_schema() -> None:
     assert _literal_set(ServerMessage) == _type_enum(schema)
 
 
-class _FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 class _FakeEngine:
@@ -101,7 +92,7 @@ def _capture() -> List[Dict[str, Any]]:
     async def _run() -> List[Dict[str, Any]]:
         session = Session(asyncio.get_running_loop())
         session.set_engine(_FakeEngine(), EncodeConfig())
-        ws = _FakeWS()
+        ws = FakeWS()
         await send_event_frame(ws, session)
         await send_reconstruction(ws, session)
         await send_inference(ws, session, {"predicted": 1, "_rasters": {}})

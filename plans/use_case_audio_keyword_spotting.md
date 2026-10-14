@@ -87,7 +87,7 @@ released W1/W2/W3 machinery and adds only the audio front end.
   stored in the bundle (W2), preventing train/serve skew.
 - **Repo fit:** windowing/normalization belongs to `spikeforge-io`
   ([`windowing.py`](spikeforge_io/windowing.py:1)); an audio source adapter lands
-  beside the existing adapters ([`adapters.py`](spikeforge_io/adapters.py:64)).
+  beside the existing adapters ([`adapters/`](spikeforge_io/adapters/__init__.py)).
 
 ### 3.2 Encoding
 - **Primary coding:** `latency` (time-to-first-spike carries feature salience,
@@ -148,7 +148,7 @@ released W1/W2/W3 machinery and adds only the audio front end.
 - `spikeforge-clients` Python/TS/CLI SDKs call `predict`/`stream`
   ([`client.py`](spikeforge_clients/client.py:1)).
 - A `spikeforge-io` audio adapter replays recorded WAV into `/v1/stream`
-  ([`adapters.py`](spikeforge_io/adapters.py:64), [`replay.py`](spikeforge_io/replay.py:1)).
+  ([`adapters/`](spikeforge_io/adapters/__init__.py), [`replay.py`](spikeforge_io/replay.py:1)).
 
 ### 4.5 Observability
 - Prometheus over the metrics registry

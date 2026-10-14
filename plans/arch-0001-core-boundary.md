@@ -52,7 +52,7 @@ if it breaks tier 1 or tier 2; tier 3 is explicitly permitted.
    report availability rather than raise. These modules are the only sanctioned
    exception sites and are enumerated in the static scan's allow-list. The
    backend and hub probes (`spikeforge_targets/probe.py`,
-   `spikeforge_targets/backends/api.py`, `spikeforge_hub/probe.py`) moved out of
+   `spikeforge_targets/backends/api/__init__.py`, `spikeforge_hub/probe.py`) moved out of
    core with their distributions and are no longer core exception sites.
 
 The server distribution is exempt by construction: `fastapi`, `pydantic`, and

@@ -143,6 +143,35 @@ jobs:
           print(f"{distribution} {version}: tag, pyproject, matrix agree")
           PY
 
+      - name: Run the packaging guards
+        run: python scripts/check_packaging_guards.py
+
+      - name: Resolve the matrix row from local builds
+        run: |
+          set -euo pipefail
+          # The 0.6.0 release shipped a compatibility.json row pip could
+          # not install (core 0.6.0 with satellites pinning ~=0.5.x), and
+          # agreement checks cannot see that: only a real resolution can.
+          # The row's newest versions are not on PyPI yet at gate time, so
+          # resolve against wheels built from this checkout (which the
+          # guards above prove match the matrix) instead of PyPI alone.
+          python -m pip install --upgrade pip build
+          rm -rf dist-all
+          for dist in spikeforge spikeforge-server spikeforge-serve \
+              spikeforge-clients spikeforge-targets spikeforge-hub \
+              spikeforge-io; do
+            python -m build "packages/${dist}" --outdir dist-all
+          done
+          mapfile -t pins < <(python - <<'PY'
+          import json
+          matrix = json.load(open("compatibility.json", encoding="utf-8"))
+          for name, version in matrix["releases"][-1].items():
+              if name != "dashboard":
+                  print(f"{name}=={version}")
+          PY
+          )
+          python -m pip install --dry-run --find-links dist-all "${pins[@]}"
+
       - name: Build sdist and wheel
         run: |
           python -m pip install --upgrade pip build

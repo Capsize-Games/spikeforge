@@ -8,6 +8,7 @@ import asyncio
 import contextlib
 from typing import Any, Dict, List
 
+from _fakes import FakeWS
 from fastapi import WebSocketDisconnect
 
 from server.app import VERSION_MISMATCH, _serve, _version_error
@@ -43,29 +44,12 @@ def test_a_mismatched_major_is_a_mismatch() -> None:
     assert error["client"] == "2.0"
 
 
-class _FakeWS:
-    """Queue inbound frames, then disconnect; capture outbound frames."""
-
-    def __init__(self, incoming: List[Dict[str, Any]]) -> None:
-        """Seed the inbound queue and an empty send log."""
-        self._incoming = list(incoming)
-        self.sent: List[Dict[str, Any]] = []
-
-    async def receive_json(self) -> Dict[str, Any]:
-        """Return the next queued frame, or disconnect when drained."""
-        if not self._incoming:
-            raise WebSocketDisconnect()
-        return self._incoming.pop(0)
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 def _pump(incoming: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Run ``_serve`` over the queued frames and return what it emitted."""
     async def _run() -> List[Dict[str, Any]]:
-        ws = _FakeWS(incoming)
+        ws = FakeWS(incoming)
         session = Session(asyncio.get_running_loop())
         with contextlib.suppress(WebSocketDisconnect):
             await _serve(ws, session)

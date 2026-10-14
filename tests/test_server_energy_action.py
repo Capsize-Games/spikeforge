@@ -3,6 +3,8 @@
 import asyncio
 from typing import Any, Dict, List
 
+from _fakes import FakeWS
+
 from server.handlers import dispatch
 from server.schemas import ClientMessage, ServerMessage, TrainConfig
 from server.session import Session
@@ -10,16 +12,6 @@ from server.session import Session
 _SMALL = TrainConfig(topology="fc_small", hidden=8, num_classes=4)
 
 
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 async def _dispatch(message: ClientMessage) -> List[Dict[str, Any]]:

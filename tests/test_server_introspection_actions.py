@@ -5,12 +5,12 @@ import json
 from typing import Any, Dict, List, Optional
 
 import torch
+from _fakes import FakeModel, FakeSample, FakeWS
 
 from server.handlers import dispatch
 from server.introspection_payloads import MAX_NEURONS, MAX_STAGES
 from server.schemas import ClientMessage, TrainConfig
 from server.session import Session
-from spikeforge.encoding.spike_encoder import SpikeEncoder
 from spikeforge.introspection.surrogate import list_surrogates
 from spikeforge.topology import registry
 
@@ -19,48 +19,10 @@ _WIDE = {"hidden": 100, "beta": 0.5, "num_classes": 3}
 _STEPS = 4
 
 
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
-class FakeSample:
-    """A minimal stand-in for the configured encoder engine."""
-
-    def __init__(self, steps: int = _STEPS) -> None:
-        """Hold a fixed spike volume, image, and encoder."""
-        self._spikes = torch.rand(steps, 1, 784)
-        self._image = torch.rand(1, 28, 28)
-        self._encoder = SpikeEncoder(coding="rate", num_steps=steps)
-
-    def spike_input(self) -> torch.Tensor:
-        """Return the ``[T,1,784]`` spike volume."""
-        return self._spikes
-
-    def sample_tensor(self) -> torch.Tensor:
-        """Return the raw ``[1,28,28]`` image."""
-        return self._image
-
-    @property
-    def encoder(self) -> SpikeEncoder:
-        """Return the encoder that produced the spikes."""
-        return self._encoder
 
 
-class FakeModel:
-    """A minimal stand-in for the active training engine."""
-
-    def __init__(self, spec: Any, net: Any) -> None:
-        """Store the topology spec and module."""
-        self.spec = spec
-        self.net = net
 
 
 def _model(params: Optional[Dict[str, Any]] = None) -> FakeModel:

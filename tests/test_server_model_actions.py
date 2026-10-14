@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 import torch
+from _fakes import FakeWS
 
 from server.handlers import dispatch
 from server.schemas import ClientMessage, ModelQuery
@@ -17,18 +18,6 @@ from spikeforge.network import model_store
 def _model_dir(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Redirect checkpoint writes into a per-test temporary directory."""
     monkeypatch.setattr(model_store, "MODEL_DIR", str(tmp_path))
-
-
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 def _save(

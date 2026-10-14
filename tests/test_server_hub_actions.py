@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import pytest
+from _fakes import FakeWS
 
 import server.session as session_module
 from server.downloads import DownloadManager
@@ -30,16 +31,6 @@ _HUB_ACTIONS = {
 }
 
 
-class FakeWS:
-    """Capture outbound messages instead of writing to a socket."""
-
-    def __init__(self) -> None:
-        """Start with an empty send log."""
-        self.sent: List[Dict[str, Any]] = []
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 async def _dispatch(message: ClientMessage) -> List[Dict[str, Any]]:

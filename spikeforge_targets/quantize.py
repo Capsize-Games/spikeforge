@@ -12,16 +12,13 @@ hook whose grid is calibrated on the same spike fixture unless a calibration
 is supplied, and the drift names what it includes. A target that declares
 ``none`` yields a no-op report, an unknown scheme is reported unapplied
 rather than guessed, and no device or backend is involved, so a
-device-quantized result is never claimed.
+device-quantized result is never claimed. The weight pass lives in
+:mod:`spikeforge_targets.quantize_weights`.
 """
 
-from dataclasses import replace
-from typing import Any, Dict, List, Optional, Tuple
-
-import numpy as np
+from typing import Any, Dict, Optional, Tuple
 
 from spikeforge.nir_bridge.exporter import to_nir
-from spikeforge.nir_bridge.require import require_node
 from spikeforge.topology.spec import TopologySpec
 from spikeforge_targets.activation_quant import Calibration, refused_report
 from spikeforge_targets.activation_quant_graph import (
@@ -30,15 +27,27 @@ from spikeforge_targets.activation_quant_graph import (
 )
 from spikeforge_targets.quantize_report import Layers, QuantizationReport
 from spikeforge_targets.quantize_result import QuantizationResult
-from spikeforge_targets.quantize_schemes import SCHEMES, Scheme
+from spikeforge_targets.quantize_weights import (
+    NO_QUANTIZATION,
+    UNKNOWN_SCHEME,
+    _weights,
+)
 from spikeforge_targets.registry import get_target
 from spikeforge_targets.rewrite_drift import rewrite_drift
 from spikeforge_targets.target_spec import TargetSpec
 
-#: Reason recorded when a target declares no weight quantization at all.
-NO_QUANTIZATION = "target declares no quantization"
-#: Reason recorded for a weight scheme name this module cannot apply.
-UNKNOWN_SCHEME = "unknown quantization scheme {scheme!r}"
+__all__ = [
+    "ACTIVATION_KEY",
+    "FIXTURE_SOURCE",
+    "NO_FIXTURE",
+    "NO_QUANTIZATION",
+    "UNKNOWN_SCHEME",
+    "WEIGHT_KEY",
+    "WEIGHTS",
+    "declared_report",
+    "quantize",
+]
+
 #: Reason recorded for an activation scheme that had no fixture to run on.
 NO_FIXTURE = (
     "no spike fixture supplied; activation quantization is simulated only "
@@ -52,9 +61,6 @@ FIXTURE_SOURCE = "drift fixture"
 #: Drift entry naming the weight rounding.
 WEIGHTS = "weights"
 
-_Layer = Dict[str, Any]
-#: The weight pass: the graph to run, its layer records, applied, reason.
-_Weights = Tuple[Any, Layers, bool, str]
 #: The weight pass plus the drift block and the activation hook it fed.
 _Passes = Tuple[
     Any, Layers, bool, str, Optional[Dict[str, Any]], GraphActivationQuantizer
@@ -78,63 +84,6 @@ def _as_graph(graph_or_spec: Any) -> Any:
 def _declared(spec: TargetSpec, key: str) -> str:
     """Return the scheme ``spec`` declares under ``key``, ``none`` absent."""
     return str(spec.constraints.get(key, "none"))
-
-
-def _weight(node: Any) -> Optional[np.ndarray]:
-    """Return a node's floating weight array, or ``None`` when it has none."""
-    value = getattr(node, "weight", None)
-    if value is None:
-        return None
-    array = np.asarray(value)
-    return array if array.dtype.kind == "f" else None
-
-
-def _layer(name: str, node: Any, before: Any, after: Any) -> _Layer:
-    """Return one per-layer before/after range record."""
-    return {
-        "node": name,
-        "primitive": type(node).__name__,
-        "before": [float(before[0]), float(before[1])],
-        "after": [float(after[0]), float(after[1])],
-    }
-
-
-def _one(name: str, node: Any, scheme: Scheme) -> Tuple[Any, Optional[_Layer]]:
-    """Return ``node`` with quantized weights and its layer record."""
-    weight = _weight(node)
-    if weight is None:
-        return node, None
-    quantized, before, after = scheme(weight)
-    return replace(node, weight=quantized), _layer(name, node, before, after)
-
-
-def _nodes(graph: Any, scheme: Scheme) -> Tuple[Dict[str, Any], List[_Layer]]:
-    """Return quantized nodes and their per-layer records."""
-    nodes: Dict[str, Any] = {}
-    layers: List[_Layer] = []
-    for name, node in graph.nodes.items():
-        new_node, record = _one(name, node, scheme)
-        nodes[name] = new_node
-        if record is not None:
-            layers.append(record)
-    return nodes, layers
-
-
-def _new_graph(nodes: Dict[str, Any], edges: Any) -> Any:
-    """Return a fresh, unchecked NIR graph from ``nodes`` and ``edges``."""
-    cls = require_node("NIRGraph", "graph")
-    return cls(dict(nodes), list(edges), type_check=False)
-
-
-def _weights(graph: Any, scheme_name: str) -> _Weights:
-    """Return the weight-quantized graph, or ``graph`` itself with a reason."""
-    if scheme_name == "none":
-        return graph, (), False, NO_QUANTIZATION
-    scheme = SCHEMES.get(scheme_name)
-    if scheme is None:
-        return graph, (), False, UNKNOWN_SCHEME.format(scheme=scheme_name)
-    nodes, layers = _nodes(graph, scheme)
-    return _new_graph(nodes, graph.edges), tuple(layers), True, ""
 
 
 def _hook(

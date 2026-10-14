@@ -125,8 +125,31 @@ jobs:
                       -e ./packages/spikeforge-server \
                       -e ./packages/spikeforge-io
 
+      - name: Install the spikeplot runtime (pandas)
+        # snntorch.spikeplot imports pandas unconditionally, but core
+        # packaging does not declare it; the encodings exporter tests
+        # need it. Follow-up: declare pandas or drop spikeplot.
+        run: pip install pandas
+
       - name: Test (pytest)
         run: pytest
+
+      - name: Report per-root coverage
+        # One TOTAL line per measured root (issue #115), so a drop in a
+        # single distribution is visible without scrolling the per-file
+        # table pytest already printed.
+        run: |
+          for root in spikeforge server spikeforge_targets spikeforge_hub spikeforge_io spikeforge_serve spikeforge_clients scripts; do
+            printf '%-20s ' "$root"
+            coverage report --include="$root/*" | tail -n 1
+          done
+
+      - name: Enforce the coverage ratchet
+        # Total coverage must not fall below the pinned floor. Raise it
+        # deliberately (measure, then bump) rather than lowering it to
+        # fit a regression. Started at 85 from the 2026-10-14 baseline
+        # of 85.9% with ~1pp of margin for interpreter variance.
+        run: coverage report --fail-under=85
 
   test-deploy:
     # The simulator-backed test-deploy matrix for the linear `fc_legacy`
@@ -269,6 +292,11 @@ jobs:
               -e ./packages/spikeforge-server
           fi
 
+      - name: Install the spikeplot runtime (pandas)
+        # The extras cells run the full suite, which includes the
+        # encodings exporter tests; see the test job for the follow-up.
+        run: pip install pandas
+
       - name: Exercise the ${{ matrix.extra }} extra
         run: |
           if [ "${{ matrix.extra }}" = "norse" ]; then
@@ -288,7 +316,7 @@ jobs:
     # Reconciliation: `server/` itself imports fastapi/pydantic, so the tests
     # that exercise the server must be deselected here — this job proves the
     # *core* degrades without the server stack, not that the server runs while
-    # its own base deps are blocked. The 42 server-dependent test files are
+    # its own base deps are blocked. The 43 server-dependent test files are
     # enumerated with `--ignore` below; everything else runs under the blocker.
     needs: changes
     if: needs.changes.outputs.leaf != 'true'
@@ -315,6 +343,12 @@ jobs:
             -e ./packages/spikeforge-hub \
             -e ./packages/spikeforge-serve \
             -e ./packages/spikeforge-server
+
+      - name: Install the spikeplot runtime (pandas)
+        # pandas is not in the blocked set; the encodings exporter
+        # tests run in this job too and need it. See the test job for
+        # the packaging follow-up.
+        run: pip install pandas
 
       - name: Test with the optional extras and the server stack blocked
         run: |
@@ -352,9 +386,11 @@ jobs:
             --ignore=tests/test_server_read_only.py \
             --ignore=tests/test_server_target_actions.py \
             --ignore=tests/test_serve_app.py \
+            --ignore=tests/test_serve_app_errors.py \
             --ignore=tests/test_serve_metrics.py \
             --ignore=tests/test_serve_modules.py \
             --ignore=tests/test_serve_payload_bounds.py \
+            --ignore=tests/test_serve_stream_bounds.py \
             --ignore=tests/test_serving_encode_contract.py \
             --ignore=tests/test_train_config_stage_overrides.py \
             --ignore=tests/test_train_config_topology.py \
@@ -560,6 +596,48 @@ jobs:
             --targets-wheel packages/spikeforge-targets/dist/spikeforge_targets-*.whl \
             --hub-wheel packages/spikeforge-hub/dist/spikeforge_hub-*.whl \
             --io-wheel packages/spikeforge-io/dist/spikeforge_io-*.whl
+
+  banned-directives:
+    # Issue #116: `# noqa` and `# type: ignore` are banned in Python, and
+    # `ts-ignore` / `eslint-disable` in the client. A suppression that is
+    # still needed is a typed seam waiting to be fixed, not a comment to
+    # keep. Pure grep, so it runs with no installs or caches.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Reject noqa, type-ignore, ts-ignore, eslint-disable
+        run: |
+          set -eu
+          fail=0
+          hits="$(git grep -n \
+            -E '#[[:space:]]*(noqa|type:[[:space:]]*ignore)' \
+            -- '*.py' || true)"
+          if [ -n "$hits" ]; then
+            # scripts/check_packaging_guards.py is being split by another
+            # worker; its two type: ignores leave with that PR.
+            hits="$(printf '%s\n' "$hits" \
+              | grep -v '^scripts/check_packaging_guards.py:' || true)"
+          fi
+          if [ -n "$hits" ]; then
+            echo 'banned Python directives found:'
+            echo "$hits"
+            fail=1
+          fi
+          hits="$(git grep -n -E 'ts-ignore|eslint-disable' \
+            -- '*.ts' '*.tsx' || true)"
+          if [ -n "$hits" ]; then
+            # The generated protocol file keeps its header until its owner
+            # regenerates it (issue #123).
+            hits="$(printf '%s\n' "$hits" \
+              | grep -v '^client/src/protocol/generated.ts:' || true)"
+          fi
+          if [ -n "$hits" ]; then
+            echo 'banned client directives found:'
+            echo "$hits"
+            fail=1
+          fi
+          exit "$fail"
 
   lockfile:
     # The Dockerfile's install chain, replayed: the CPU lock must install

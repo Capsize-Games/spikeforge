@@ -8,10 +8,11 @@ origin allowlist when one is configured.
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pytest
-from fastapi import HTTPException, WebSocketDisconnect
+from _fakes import FakeWS
+from fastapi import HTTPException
 
 from server.app import websocket_endpoint
 from server.auth import (
@@ -23,41 +24,6 @@ from server.auth import (
 from server.auth_routes import LoginBody, login
 from server.bundle_routes import download_bundle
 from spikeforge.network import model_store
-
-
-class _FakeWS:
-    """Enough of Starlette's ``WebSocket`` for the handshake gates."""
-
-    def __init__(
-        self, query: Optional[Dict[str, str]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        cookies: Optional[Dict[str, str]] = None,
-        scope: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        """Seed handshake maps; track accept/close and outbound frames."""
-        self.query_params: Dict[str, str] = query or {}
-        self.headers: Dict[str, str] = headers or {}
-        self.cookies: Dict[str, str] = cookies or {}
-        self.scope: Dict[str, Any] = scope or {}
-        self.accepted = False
-        self.close_code: Optional[int] = None
-        self.sent: List[Dict[str, Any]] = []
-
-    async def accept(self) -> None:
-        """Record that the handshake completed."""
-        self.accepted = True
-
-    async def close(self, code: int = 1000) -> None:
-        """Record the close code the handler chose."""
-        self.close_code = code
-
-    async def receive_json(self) -> Dict[str, Any]:
-        """Disconnect immediately -- these tests only cover the gate."""
-        raise WebSocketDisconnect()
-
-    async def send_json(self, message: Dict[str, Any]) -> None:
-        """Record one outbound message."""
-        self.sent.append(message)
 
 
 class _FakeRequest:
@@ -82,9 +48,9 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(ORIGINS_ENV, raising=False)
 
 
-def _connect(ws: _FakeWS) -> _FakeWS:
+def _connect(ws: FakeWS) -> FakeWS:
     """Run the handshake gate against ``ws`` and return it."""
-    asyncio.run(websocket_endpoint(ws))  # type: ignore[arg-type]
+    asyncio.run(websocket_endpoint(ws))
     return ws
 
 
@@ -95,21 +61,21 @@ def _exposed() -> Dict[str, Any]:
 
 def test_unset_token_accepts_loopback_bind() -> None:
     """Local development on loopback still works unauthenticated."""
-    ws = _connect(_FakeWS(scope={"server": ("127.0.0.1", 8000)}))
+    ws = _connect(FakeWS(scope={"server": ("127.0.0.1", 8000)}))
     assert ws.accepted is True
     assert ws.close_code is None
 
 
 def test_unset_token_accepts_missing_server() -> None:
     """A missing server address counts as a local bind."""
-    ws = _connect(_FakeWS())
+    ws = _connect(FakeWS())
     assert ws.accepted is True
     assert ws.close_code is None
 
 
 def test_unset_token_rejects_exposed_bind() -> None:
     """No token on a non-loopback bind fails the handshake."""
-    ws = _connect(_FakeWS(scope=_exposed()))
+    ws = _connect(FakeWS(scope=_exposed()))
     assert ws.accepted is False
     assert ws.close_code == 1008
 
@@ -119,7 +85,7 @@ def test_open_opt_out_allows_exposed_bind(
 ) -> None:
     """The explicit opt-out reopens an exposed bind without a token."""
     monkeypatch.setenv(OPEN_ENV, "1")
-    ws = _connect(_FakeWS(scope=_exposed()))
+    ws = _connect(FakeWS(scope=_exposed()))
     assert ws.accepted is True
     assert ws.close_code is None
 
@@ -129,7 +95,7 @@ def test_configured_token_accepts_login_cookie(
 ) -> None:
     """The login cookie authenticates without a query param."""
     monkeypatch.setenv(DASHBOARD_TOKEN_ENV, "secret")
-    ws = _connect(_FakeWS(cookies={TOKEN_COOKIE: "secret"}))
+    ws = _connect(FakeWS(cookies={TOKEN_COOKIE: "secret"}))
     assert ws.accepted is True
     assert ws.close_code is None
 
@@ -139,7 +105,7 @@ def test_configured_token_rejects_wrong_cookie(
 ) -> None:
     """A wrong cookie is rejected like a wrong query param."""
     monkeypatch.setenv(DASHBOARD_TOKEN_ENV, "secret")
-    ws = _connect(_FakeWS(cookies={TOKEN_COOKIE: "wrong"}))
+    ws = _connect(FakeWS(cookies={TOKEN_COOKIE: "wrong"}))
     assert ws.accepted is False
     assert ws.close_code == 1008
 
@@ -149,7 +115,7 @@ def test_disallowed_origin_rejected(
 ) -> None:
     """A foreign Origin is refused when an allowlist is configured."""
     monkeypatch.setenv(ORIGINS_ENV, "https://dash.example")
-    ws = _connect(_FakeWS(headers={"origin": "https://evil.example"}))
+    ws = _connect(FakeWS(headers={"origin": "https://evil.example"}))
     assert ws.accepted is False
     assert ws.close_code == 1008
 
@@ -159,7 +125,7 @@ def test_allowed_origin_accepted(
 ) -> None:
     """A listed Origin passes the handshake gate."""
     monkeypatch.setenv(ORIGINS_ENV, "https://dash.example")
-    ws = _connect(_FakeWS(headers={"origin": "https://dash.example"}))
+    ws = _connect(FakeWS(headers={"origin": "https://dash.example"}))
     assert ws.accepted is True
     assert ws.close_code is None
 
@@ -169,7 +135,7 @@ def test_missing_origin_accepted_with_allowlist(
 ) -> None:
     """Native clients send no Origin and stay accepted."""
     monkeypatch.setenv(ORIGINS_ENV, "https://dash.example")
-    ws = _connect(_FakeWS())
+    ws = _connect(FakeWS())
     assert ws.accepted is True
     assert ws.close_code is None
 
@@ -207,7 +173,7 @@ def test_bundle_rejects_exposed_bind_without_token() -> None:
     """Bundle downloads fail closed on an exposed bind too."""
     request = _FakeRequest(scope=_exposed())
     with pytest.raises(HTTPException) as excinfo:
-        asyncio.run(download_bundle("nope", request=request))  # type: ignore[arg-type]
+        asyncio.run(download_bundle("nope", request=request))
     assert excinfo.value.status_code == 401
     assert "not configured" in excinfo.value.detail
 
@@ -220,5 +186,5 @@ def test_bundle_accepts_login_cookie(
     monkeypatch.setattr(model_store, "MODEL_DIR", str(tmp_path))
     request = _FakeRequest(cookies={TOKEN_COOKIE: "secret"})
     with pytest.raises(HTTPException) as excinfo:
-        asyncio.run(download_bundle("nope", request=request))  # type: ignore[arg-type]
+        asyncio.run(download_bundle("nope", request=request))
     assert excinfo.value.status_code == 404

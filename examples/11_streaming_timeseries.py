@@ -18,7 +18,7 @@ the reported numbers move with the config.
 
 import os
 import tempfile
-from typing import Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Type
 
 from spikeforge.network import model_store
 from spikeforge.streaming import (
@@ -37,10 +37,15 @@ from spikeforge.streaming import (
 )
 from spikeforge.streaming.serving import serve_window
 
+if TYPE_CHECKING:
+    from spikeforge_serve.service import ServingService as _ServiceType
+
+#: The serving entry point when spikeforge-serve is installed, else None.
+ServingService: Optional[Type["_ServiceType"]]
 try:
     from spikeforge_serve.service import ServingService
 except ImportError:  # spikeforge-serve is a separate, optional distribution
-    ServingService = None  # type: ignore[assignment,misc]
+    ServingService = None
 
 _NAME = "uc1_example"
 

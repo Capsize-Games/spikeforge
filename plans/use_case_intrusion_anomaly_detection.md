@@ -135,7 +135,7 @@ flowchart LR
 - `spikeforge-clients` SDKs call `predict`/`stream`
   ([`client.py`](spikeforge_clients/client.py:1)).
 - `spikeforge-io` adapters (MQTT/Kafka/replay) feed the stream
-  ([`adapters.py`](spikeforge_io/adapters.py:64), [`replay.py`](spikeforge_io/replay.py:1)).
+  ([`adapters/`](spikeforge_io/adapters/__init__.py), [`replay.py`](spikeforge_io/replay.py:1)).
 
 ### 4.5 Observability
 - Prometheus over the registry ([`registry.py`](spikeforge/observability/registry.py:1)):
