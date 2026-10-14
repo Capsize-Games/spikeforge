@@ -28,6 +28,10 @@ TOKEN_ENV = "SPIKEFORGE_HUB_TOKEN"
 TOKEN_FILE_NAME = "token"
 #: Seconds to wait for one API call before giving up.
 REQUEST_TIMEOUT = 30
+#: User-Agent for every hub call. The edge answers the default
+#: ``Python-urllib/*`` agent with 403, so anonymous-looking requests
+#: never reach the API.
+USER_AGENT = "spikeforge-hub"
 
 
 def token_path() -> str:
@@ -94,6 +98,7 @@ class HubClient:
         return {
             "Accept": "application/json",
             "Authorization": f"Bearer {self._token}",
+            "User-Agent": USER_AGENT,
         }
 
     def _send(

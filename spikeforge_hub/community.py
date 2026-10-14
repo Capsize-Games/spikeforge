@@ -23,6 +23,7 @@ from typing import List, Optional, Tuple
 
 from spikeforge.config import HUB_API_BASE
 from spikeforge_hub import cache
+from spikeforge_hub.client import USER_AGENT
 from spikeforge_hub.entry import HubEntry
 from spikeforge_hub.errors import HubCatalogError, HubDownloadError
 
@@ -113,7 +114,9 @@ def fetch_index(
 
 def _fetch(url: str, timeout: int) -> FetchResult:
     """Return the namespace from the network, storing what it sent."""
-    request = urllib.request.Request(url, method="GET")
+    request = urllib.request.Request(
+        url, method="GET", headers={"User-Agent": USER_AGENT}
+    )
     etag = read_etag()
     if etag is not None:
         request.add_header("If-None-Match", etag)

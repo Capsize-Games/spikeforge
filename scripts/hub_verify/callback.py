@@ -11,6 +11,7 @@ import urllib.error
 import urllib.request
 from typing import Final
 
+from hub_verify import USER_AGENT
 from hub_verify.errors import CallbackError
 from hub_verify.signing import SIGNATURE_HEADER, sign_body
 
@@ -20,6 +21,22 @@ _TIMEOUT_SECONDS: Final[int] = 30
 def _url(base_url: str, version_id: str) -> str:
     """Return the internal verification-callback URL for ``version_id``."""
     return f"{base_url.rstrip('/')}/internal/v1/verifications/{version_id}"
+
+
+def _request(
+    base_url: str, version_id: str, body: bytes, secret: str
+) -> urllib.request.Request:
+    """Return the signed callback POST identifying this runner."""
+    return urllib.request.Request(
+        _url(base_url, version_id),
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": USER_AGENT,
+            SIGNATURE_HEADER: sign_body(body, secret),
+        },
+    )
 
 
 def post_report(
@@ -33,15 +50,7 @@ def post_report(
     silently leaving the version stuck in ``verifying``.
     """
     body = json.dumps(report, sort_keys=True).encode("utf-8")
-    request = urllib.request.Request(
-        _url(base_url, version_id),
-        data=body,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            SIGNATURE_HEADER: sign_body(body, secret),
-        },
-    )
+    request = _request(base_url, version_id, body, secret)
     try:
         with urllib.request.urlopen(
             request, timeout=_TIMEOUT_SECONDS

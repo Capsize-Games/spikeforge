@@ -9,6 +9,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Final
 
+from hub_verify import USER_AGENT
 from hub_verify.errors import FetchError
 
 #: Matches the community-upload single-artifact cap
@@ -37,6 +38,13 @@ def _read_capped(response: Any, dest: str) -> int:
             handle.write(chunk)
 
 
+def _request(url: str) -> urllib.request.Request:
+    """Return a GET for ``url`` identifying this runner."""
+    return urllib.request.Request(
+        url, method="GET", headers={"User-Agent": USER_AGENT}
+    )
+
+
 def fetch_artifact(url: str, dest: str) -> str:
     """Download ``url`` to ``dest`` and return ``dest``.
 
@@ -47,7 +55,7 @@ def fetch_artifact(url: str, dest: str) -> str:
     """
     try:
         with urllib.request.urlopen(
-            url, timeout=_TIMEOUT_SECONDS
+            _request(url), timeout=_TIMEOUT_SECONDS
         ) as response:
             _read_capped(response, dest)
     except FetchError:

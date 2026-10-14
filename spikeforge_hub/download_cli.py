@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional
 
 from spikeforge_hub import cache, hf_api, verify
 from spikeforge_hub.catalog import get as catalog_get
+from spikeforge_hub.client import USER_AGENT
 from spikeforge_hub.entry import HubEntry
 from spikeforge_hub.errors import HubDownloadError, HubError
 
@@ -167,7 +168,9 @@ def fetch_url(
     bytes move. The fetch aborts past ``timeout`` or ``max_bytes``.
     """
     _require_https(url)
-    request = urllib.request.Request(url, method="GET")
+    request = urllib.request.Request(
+        url, method="GET", headers={"User-Agent": USER_AGENT}
+    )
     with _open(request, url, timeout) as response:
         _refuse_when_declared_over(url, response, max_bytes)
         _copy_capped(response, path, max_bytes, url)

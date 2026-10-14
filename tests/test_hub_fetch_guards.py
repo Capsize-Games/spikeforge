@@ -52,10 +52,12 @@ class _FakeOpener:
         """Serve ``response`` (or raise it when it is an error)."""
         self._response = response
         self.timeouts: List[Any] = []
+        self.requests: List[Any] = []
 
     def open(self, request: Any, timeout: Any = None) -> Any:
         """Record the timeout, then serve or raise the response."""
         self.timeouts.append(timeout)
+        self.requests.append(request)
         if isinstance(self._response, Exception):
             raise self._response
         return self._response
@@ -68,6 +70,19 @@ def _serve(
     opener = _FakeOpener(response)
     monkeypatch.setattr(download_cli, "_opener", lambda: opener)
     return opener
+
+
+def test_fetch_identifies_with_a_user_agent(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Fetches carry the hub agent the edge requires (no 403)."""
+    opener = _serve(monkeypatch, _FakeResponse(b"bytes"))
+    download_cli.fetch_url(
+        "https://example.test/artifact.bin",
+        str(tmp_path / "artifact.bin"),
+    )
+    sent = dict(opener.requests[0].header_items())
+    assert sent["User-agent"] == "spikeforge-hub"
 
 
 def test_file_url_refused_without_touching_disk(tmp_path: Path) -> None:

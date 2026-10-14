@@ -25,3 +25,8 @@ See :mod:`hub_verify.cli` for the orchestration entry point and
 implements against ``spikeforge-hub-api``'s (not yet built, as of this
 writing) ``POST /internal/v1/verifications/{version_id}``.
 """
+
+#: User-Agent for the runner's hub calls. The edge answers the default
+#: ``Python-urllib/*`` agent with 403, so the artifact fetch and the
+#: signed callback identify this runner instead of looking anonymous.
+USER_AGENT = "spikeforge-hub-verify"
