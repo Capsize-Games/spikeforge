@@ -136,4 +136,6 @@ nav:
   - Reference:
       - Project rules: rules.md
       - Public-facing copy policy: COPY_POLICY.md
+  - Historical:
+      - Integration plan (superseded): integration_plan_historical.md
   - README: readme.md
