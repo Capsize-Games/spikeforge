@@ -14,7 +14,12 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
-from server.auth import authorized
+from server.auth import (
+    TOKEN_COOKIE,
+    configured_token,
+    origin_allowed,
+    request_authorized,
+)
 from spikeforge.network import model_store
 from spikeforge.serving import bundle as bundle_mod
 
@@ -31,14 +36,30 @@ async def download_bundle(
 
     Gated by ``SPIKEFORGE_DASHBOARD_TOKEN`` (see ``server/auth.py``) via a
     ``token`` query param -- what the dashboard's plain ``<a download>``
-    link can send -- or an ``Authorization: Bearer`` header for other
-    clients. ``request`` is a real ``Request`` when routed through the app
-    (FastAPI special-cases the bare ``Request`` annotation and injects it
-    regardless of the default) and None when a test calls this coroutine
-    directly (see ``tests/test_server_bundle_route.py``).
+    link can send -- the login cookie, or an ``Authorization: Bearer``
+    header for other clients. ``request`` is a real ``Request`` when
+    routed through the app (FastAPI special-cases the bare ``Request``
+    annotation and injects it regardless of the default) and None when a
+    test calls this coroutine directly (see
+    ``tests/test_server_bundle_route.py``).
     """
     header = request.headers.get("authorization") if request else None
-    if not authorized(token, header):
+    cookie = request.cookies.get(TOKEN_COOKIE) if request else None
+    scope = request.scope if request else {}
+    origin = request.headers.get("origin") if request else None
+    if not origin_allowed(origin):
+        raise HTTPException(403, detail="origin not allowed")
+    if not request_authorized(
+        server=scope.get("server"),
+        query_token=token,
+        header=header,
+        cookie=cookie,
+    ):
+        if configured_token() is None:
+            raise HTTPException(
+                401, detail="dashboard token is not configured; "
+                "refusing an exposed bind",
+            )
         raise HTTPException(401, detail="missing or invalid token")
     saved = {entry["name"] for entry in model_store.list_models()}
     if name not in saved:
