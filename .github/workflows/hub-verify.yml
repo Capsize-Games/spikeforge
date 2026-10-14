@@ -69,6 +69,7 @@ jobs:
             pypi.org:443
             files.pythonhosted.org:443
             download.pytorch.org:443
+            download-r2.pytorch.org:443
             hub.spikeforge.net:443
             cdn.spikeforge.net:443
 
