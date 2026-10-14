@@ -234,7 +234,7 @@ def test_community_download_fetches_its_index_url(
     blob = b"bundle-bytes"
     calls: List[str] = []
 
-    def fake_fetch(url: str, path: str) -> str:
+    def fake_fetch(url: str, path: str, **_kwargs: Any) -> str:
         calls.append(url)
         Path(path).write_bytes(blob)
         return path
