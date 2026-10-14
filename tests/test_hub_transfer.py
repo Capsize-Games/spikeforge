@@ -87,7 +87,7 @@ def _fake_fetch(
     """Serve ``payload`` for every artifact fetch, recording URLs."""
     seen: List[str] = []
 
-    def fake_fetch(url: str, path: str) -> str:
+    def fake_fetch(url: str, path: str, **_kwargs: Any) -> str:
         seen.append(url)
         Path(path).write_bytes(payload)
         return path

@@ -13,7 +13,7 @@ them like any other override without special-casing a topology.
 
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
-from spikeforge.topology import presets, sequence_presets
+from spikeforge.topology import presets, sequence_presets, size_bounds
 from spikeforge.topology.builder import build_module
 from spikeforge.topology.spec import TopologySpec
 from spikeforge.topology.stage_module import StageModule
@@ -183,9 +183,14 @@ def _uses_legacy_wrapper(resolved: Mapping[str, Any]) -> bool:
 def build_topology(
     name: str, params: Optional[Mapping[str, Any]] = None
 ) -> Tuple[TopologySpec, StageModule]:
-    """Build ``name`` and return its ``(spec, module)`` pair."""
+    """Build ``name`` and return its ``(spec, module)`` pair.
+
+    Size-bearing params are validated first, so an absurd override
+    fails before any spec or module -- and any tensor -- is built.
+    """
     builder, _, module_builder = _entry(name)
     resolved = resolved_params(name, params)
+    size_bounds.validate_params(name, resolved)
     spec = builder(**resolved)
     if module_builder is not None and _uses_legacy_wrapper(resolved):
         return spec, module_builder(resolved)
