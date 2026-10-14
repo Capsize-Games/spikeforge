@@ -44,6 +44,7 @@ services:
       context: .
       args:
         TORCH_INDEX_URL: https://download.pytorch.org/whl/cpu
+        LOCKFILE: requirements/server.cpu.lock
     container_name: spikeforge-cpu
     ports:
       - "${SPIKEFORGE_HOST_PORT:-8877}:8877"
@@ -61,6 +62,7 @@ services:
       context: .
       args:
         TORCH_INDEX_URL: https://download.pytorch.org/whl/cu132
+        LOCKFILE: requirements/server.cu132.lock
     container_name: spikeforge-gpu
     ports:
       - "${SPIKEFORGE_HOST_PORT:-8877}:8877"
