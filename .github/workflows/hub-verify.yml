@@ -81,6 +81,41 @@ jobs:
           # to be a disposable sandbox for untrusted content, and a pip
           # cache is one more thing that could be poisoned across runs.
 
+      - name: Confirm the runner is wired
+        # Issue #162: fail before the torch install, not after it.
+        # hub_verify/cli.py would exit on the first missing variable
+        # anyway, but only once the sandbox is fully built. Presence
+        # only -- values are never printed.
+        env:
+          SPIKEFORGE_HUB_API_BASE_URL: >-
+            ${{ vars.SPIKEFORGE_HUB_API_BASE_URL }}
+          SPIKEFORGE_HUB_VERIFICATION_SECRET: >-
+            ${{ secrets.SPIKEFORGE_HUB_VERIFICATION_SECRET }}
+          SPIKEFORGE_HUB_VERIFY_VERSION_ID: >-
+            ${{ github.event.client_payload.version_id }}
+          SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL: >-
+            ${{ github.event.client_payload.artifact_url }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in SPIKEFORGE_HUB_API_BASE_URL \
+              SPIKEFORGE_HUB_VERIFICATION_SECRET \
+              SPIKEFORGE_HUB_VERIFY_VERSION_ID \
+              SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::hub-verify is not wired: ${name} is empty"
+              missing=1
+            fi
+          done
+          if [ "${missing}" -ne 0 ]; then
+            echo "Set the SPIKEFORGE_HUB_API_BASE_URL repo variable and"
+            echo "the SPIKEFORGE_HUB_VERIFICATION_SECRET repo secret"
+            echo "(issue #162), dispatch with version_id + artifact_url,"
+            echo "then retry."
+            exit 1
+          fi
+          echo "hub-verify wiring OK (values not shown)"
+
       - name: Install torch CPU wheels
         run: |
           python -m pip install --upgrade pip
