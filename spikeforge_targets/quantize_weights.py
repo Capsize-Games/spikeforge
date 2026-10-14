@@ -9,11 +9,9 @@ is reported unapplied rather than guessed.
 from dataclasses import replace
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
-
 from spikeforge.nir_bridge.require import require_node
 from spikeforge_targets.quantize_report import Layers
-from spikeforge_targets.quantize_schemes import SCHEMES, Scheme
+from spikeforge_targets.quantize_schemes import SCHEMES, Scheme, node_weight
 
 #: Reason recorded when a target declares no weight quantization at all.
 NO_QUANTIZATION = "target declares no quantization"
@@ -23,15 +21,6 @@ UNKNOWN_SCHEME = "unknown quantization scheme {scheme!r}"
 _Layer = Dict[str, Any]
 #: The weight pass: the graph to run, its layer records, applied, reason.
 _Weights = Tuple[Any, Layers, bool, str]
-
-
-def _weight(node: Any) -> Optional[np.ndarray]:
-    """Return a node's floating weight array, or ``None`` when it has none."""
-    value = getattr(node, "weight", None)
-    if value is None:
-        return None
-    array = np.asarray(value)
-    return array if array.dtype.kind == "f" else None
 
 
 def _layer(name: str, node: Any, before: Any, after: Any) -> _Layer:
@@ -46,7 +35,7 @@ def _layer(name: str, node: Any, before: Any, after: Any) -> _Layer:
 
 def _one(name: str, node: Any, scheme: Scheme) -> Tuple[Any, Optional[_Layer]]:
     """Return ``node`` with quantized weights and its layer record."""
-    weight = _weight(node)
+    weight = node_weight(node)
     if weight is None:
         return node, None
     quantized, before, after = scheme(weight)

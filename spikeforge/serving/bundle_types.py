@@ -150,6 +150,20 @@ class DeploymentBundle:
             handle.write(self.to_bytes())
         return path
 
+    def export_c_package(self, path: str) -> str:
+        """Write this bundle's C-loadable package into ``path``.
+
+        The package is a derived artifact (the ``.spkf`` format is
+        unchanged): the NIR graph in ``graph_summary`` shape with this
+        bundle's real weights as plain float arrays, plus a manifest
+        recording the source bundle's identity. Needs the ``nir`` extra;
+        a graph with C-unsupported node kinds is refused with a typed
+        error naming them instead of writing an unloadable package.
+        """
+        from spikeforge.serving.c_package import write_c_package
+
+        return write_c_package(self, path)
+
     @classmethod
     def load(cls, path: str, strict: bool = True) -> "DeploymentBundle":
         """Read, verify, and return the bundle at ``path``.
