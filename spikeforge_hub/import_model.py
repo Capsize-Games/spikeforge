@@ -6,6 +6,11 @@ the preset, a drift check run, and the result saved into ``MODEL_DIR`` with hub
 provenance in ``meta``. An incompatible artifact is never promoted; the report
 names every mismatch and, for a NIR graph, states that it stays ingestable by
 the reference interpreter.
+
+Before any of that, a fetched artifact has to pass the integrity gate: bytes
+that fail their published checksum are refused outright, and checksum-less
+bytes are refused unless the operator explicitly opts in. The verified flag
+is a gate, not advisory text.
 """
 
 import os
@@ -13,10 +18,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 
-from spikeforge_hub import catalog
+from spikeforge_hub import catalog, verify
 from spikeforge_hub.compat import CompatibilityVerdict, classify
 from spikeforge_hub.entry import HubEntry
-from spikeforge_hub.errors import HubArtifactError, HubImportError
+from spikeforge_hub.errors import (
+    HubArtifactError,
+    HubImportError,
+    HubIntegrityError,
+)
 from spikeforge_hub.inspect import (
     NIR_GRAPH,
     STATE_DICT,
@@ -32,6 +41,15 @@ STEPS = 4
 BATCH = 1
 FEATURES = 28 * 28
 SEED = 0
+
+#: Operator opt-in, for callers with no CLI flag (notably the socket path):
+#: when set to a truthy value, checksum-less entries import without the
+#: explicit ``allow_unverified`` argument. Failed checksums are still refused.
+ALLOW_UNVERIFIED_ENV = "SPIKEFORGE_HUB_ALLOW_UNVERIFIED"
+
+#: Sources whose bytes are never fetched, so there is nothing to verify.
+#: Bundled presets are rendered locally from this install's own registry.
+_LOCAL_SOURCES = ("bundled",)
 
 
 def _resolve(
@@ -57,10 +75,91 @@ def _probe_spikes(spec: Any) -> torch.Tensor:
     return input_shape.to_input_shape(flat, spec)
 
 
+def _env_allows_unverified() -> bool:
+    """Return True when the operator opted in via the environment."""
+    return os.environ.get(ALLOW_UNVERIFIED_ENV, "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def _local_verification(reason: str) -> verify.VerificationResult:
+    """Return the honest verdict for bytes that were never fetched."""
+    return verify.VerificationResult(verify.UNVERIFIED, reason, None, 0)
+
+
+def _verification(
+    entry: Optional[HubEntry], artifact_path: str
+) -> verify.VerificationResult:
+    """Verify the resolved artifact against its entry's expectations.
+
+    Local bytes -- an explicit path or a locally rendered bundled preset --
+    are reported unverified but never gated: the operator already holds
+    them. Fetched bytes are checked against the published checksum and
+    size, and a directory snapshot against its summed size.
+    """
+    if entry is None:
+        return _local_verification(
+            "local file; no published checksum to check"
+        )
+    if entry.source in _LOCAL_SOURCES:
+        return _local_verification(
+            "bundled preset rendered locally; nothing was fetched"
+        )
+    if os.path.isdir(artifact_path):
+        return verify.verify_dir(artifact_path, entry.size_bytes)
+    return verify.verify_file(
+        artifact_path, entry.sha256, entry.size_bytes
+    )
+
+
+def _verification_dict(
+    result: verify.VerificationResult,
+) -> Dict[str, Any]:
+    """Return the JSON-able form of a verification outcome."""
+    return {
+        "status": result.status,
+        "verified": result.verified,
+        "reason": result.reason,
+        "sha256": result.sha256,
+    }
+
+
+def _gate(
+    label: str,
+    entry: Optional[HubEntry],
+    result: verify.VerificationResult,
+    allow_unverified: bool,
+) -> None:
+    """Refuse fetched bytes that fail verification, before any load.
+
+    A checksum or size mismatch is refused unconditionally. Checksum-less
+    bytes are refused unless the operator opted in explicitly, either
+    with ``allow_unverified`` or the environment variable. Local bytes
+    always pass: they are reported, not gated.
+    """
+    if result.failed:
+        raise HubIntegrityError(label, result.reason or "verification failed")
+    if result.verified:
+        return
+    if entry is None or entry.source in _LOCAL_SOURCES:
+        return
+    if allow_unverified or _env_allows_unverified():
+        return
+    raise HubIntegrityError(
+        label,
+        f"{result.reason}; re-run with --allow-unverified or set "
+        f"{ALLOW_UNVERIFIED_ENV}=1 to import these bytes anyway",
+    )
+
+
 def _meta(
     entry: Optional[HubEntry],
     report: ArtifactReport,
     verdict: CompatibilityVerdict,
+    verification: verify.VerificationResult,
 ) -> Dict[str, Any]:
     """Return the checkpoint provenance recorded for a promoted artifact."""
     return {
@@ -71,6 +170,7 @@ def _meta(
         "topology": verdict.topology,
         "input_shape": entry.input_shape if entry is not None else None,
         "sha256": entry.sha256 if entry is not None else None,
+        "verification": _verification_dict(verification),
     }
 
 
@@ -160,6 +260,7 @@ def _promote(
     verdict: CompatibilityVerdict,
     artifact_path: str,
     label: str,
+    verification: verify.VerificationResult,
 ) -> Dict[str, Any]:
     """Build the preset, map weights, validate, and save into the store."""
     from spikeforge.topology.registry import build_topology
@@ -177,7 +278,7 @@ def _promote(
     if not validation["within_tolerance"]:
         reason = "drift check failed; refusing to promote"
         return _fail(loaded.to_dict(), validation, reason)
-    meta = _meta(entry, report, verdict)
+    meta = _meta(entry, report, verdict, verification)
     return _final(label, module, meta, loaded, validation)
 
 
@@ -202,10 +303,11 @@ def _skeleton(
     report: ArtifactReport,
     verdict: CompatibilityVerdict,
     artifact_path: str,
+    verification: verify.VerificationResult,
 ) -> Dict[str, Any]:
     """Return the report skeleton with its additive default keys."""
     result = _base(label, report, verdict, artifact_path)
-    result["meta"] = _meta(entry, report, verdict)
+    result["meta"] = _meta(entry, report, verdict, verification)
     result.update({
         "promoted": False,
         "destination": None,
@@ -213,6 +315,7 @@ def _skeleton(
         "validation": None,
         "reason": None,
         "nir_ingestable": report.kind == NIR_GRAPH,
+        "verification": _verification_dict(verification),
     })
     return result
 
@@ -236,14 +339,27 @@ def import_model(
     path: Optional[str] = None,
     topology: Optional[str] = None,
     promote: bool = True,
+    allow_unverified: bool = False,
 ) -> Dict[str, Any]:
-    """Run the three-gate funnel and return its JSON-able report."""
+    """Run the three-gate funnel and return its JSON-able report.
+
+    Fetched bytes are verified before anything is loaded: a checksum
+    mismatch raises :class:`HubIntegrityError` unconditionally, and
+    checksum-less bytes raise unless ``allow_unverified`` (or the
+    ``SPIKEFORGE_HUB_ALLOW_UNVERIFIED`` environment variable) opts in.
+    """
     label, entry, artifact_path = _resolve(entry_id, path)
+    verification = _verification(entry, artifact_path)
+    _gate(label, entry, verification, allow_unverified)
     report = inspect_artifact(artifact_path)
     verdict = classify(report, topology)
-    result = _skeleton(label, entry, report, verdict, artifact_path)
+    result = _skeleton(
+        label, entry, report, verdict, artifact_path, verification
+    )
     result["notes"] = _reject(report, verdict, promote)
     if not verdict.compatible or not promote:
         return result
-    result.update(_promote(entry, report, verdict, artifact_path, label))
+    result.update(
+        _promote(entry, report, verdict, artifact_path, label, verification)
+    )
     return result

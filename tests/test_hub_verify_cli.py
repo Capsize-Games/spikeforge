@@ -70,6 +70,46 @@ def test_a_passing_artifact_posts_passed_true(
     assert posted["report"]["reasons"] == []
 
 
+def test_a_passing_artifact_posts_measured_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The funnel's measured identity reaches the posted report."""
+    _set_env(monkeypatch)
+    monkeypatch.setattr(
+        cli, "fetch_artifact", lambda url, dest: dest
+    )
+    monkeypatch.setattr(
+        cli, "load_and_build", lambda path: (_FakeBundle(), object())
+    )
+    identity = {
+        "framework": "spikeforge",
+        "kind": "state_dict",
+        "topology": "fc_small",
+        "input_shape": "1x28x28",
+    }
+    monkeypatch.setattr(
+        cli,
+        "run_funnel",
+        lambda bundle, module, tmp: {
+            "inspect": {"kind": "state_dict"},
+            "compat": {"verdict": "incompatible"},
+            "drift": {"within_tolerance": True},
+            "identity": dict(identity),
+        },
+    )
+    monkeypatch.setattr(cli, "energy_reports", lambda spec, module: [])
+
+    posted: Dict[str, Any] = {}
+    monkeypatch.setattr(
+        cli,
+        "post_report",
+        lambda base, vid, report, secret: posted.update(report=report),
+    )
+    assert cli.main() == 0
+    for key, value in identity.items():
+        assert posted["report"][key] == value
+
+
 def test_a_failing_stage_posts_the_named_reason(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -92,6 +132,29 @@ def test_a_failing_stage_posts_the_named_reason(
     assert posted["report"]["passed"] is False
     reasons: List[str] = posted["report"]["reasons"]
     assert reasons == ["bundle: weights are not loadable"]
+
+
+def test_a_failing_stage_posts_null_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A run that never completes the funnel posts null identity fields."""
+    _set_env(monkeypatch)
+    monkeypatch.setattr(cli, "fetch_artifact", lambda url, dest: dest)
+
+    def _raise(path: str) -> Tuple[Any, Any]:
+        raise VerificationStepError("bundle", "weights are not loadable")
+
+    monkeypatch.setattr(cli, "load_and_build", _raise)
+
+    posted: Dict[str, Any] = {}
+    monkeypatch.setattr(
+        cli,
+        "post_report",
+        lambda base, vid, report, secret: posted.update(report=report),
+    )
+    assert cli.main() == 0
+    for key in ("framework", "kind", "topology", "input_shape"):
+        assert posted["report"][key] is None
 
 
 def test_a_failed_callback_exits_loudly(

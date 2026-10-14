@@ -11,6 +11,8 @@ non-zero — no stage is ever silently dropped.
 
 import argparse
 import json
+import pickle
+import types
 from typing import Any, Dict, List, Optional
 
 import torch
@@ -36,6 +38,56 @@ ExtractError = (
     OSError,
     RuntimeError,
 )
+
+#: Inert builtins a serialized module may reference (pickle spells the
+#: module ``__builtin__`` on the wire; both spellings are accepted).
+_RESTRICTED_BUILTINS = frozenset({"set", "frozenset", "slice"})
+
+
+class _RestrictedUnpickler(pickle.Unpickler):
+    """Unpickler that only rebuilds torch modules and plain containers.
+
+    ``extract`` ingests third-party module files, so a plain
+    ``weights_only=False`` load would execute an embedded ``__reduce__``
+    payload. ``weights_only=True`` cannot rebuild ``nn.Module`` objects
+    at all, so module files go through this unpickler instead: only
+    ``torch`` classes, ``collections.OrderedDict``, and a few inert
+    builtins resolve, and anything else — including a custom class from
+    the file's original ``__main__`` — raises :class:`ExtractionError`.
+    """
+
+    def find_class(self, module: str, name: str) -> Any:
+        """Return the named global, or refuse it with a typed error."""
+        if module == "torch" or module.startswith("torch."):
+            return super().find_class(module, name)
+        if module == "collections" and name == "OrderedDict":
+            return super().find_class(module, name)
+        if (
+            module in ("builtins", "__builtin__")
+            and name in _RESTRICTED_BUILTINS
+        ):
+            return super().find_class(module, name)
+        raise ExtractionError(
+            f"refused to unpickle {module}.{name}: a module file may "
+            "only reference torch classes, tensors, and plain "
+            "containers"
+        )
+
+
+def _restricted_pickle_module() -> Any:
+    """Return a ``pickle``-shaped module using the restricted unpickler.
+
+    Every other attribute is copied from :mod:`pickle` so ``torch.load``
+    keeps its storage handling; only ``Unpickler`` is constrained.
+    """
+    module = types.ModuleType("spikeforge_restricted_pickle")
+    module.__dict__.update(pickle.__dict__)
+    module.Unpickler = _RestrictedUnpickler
+    return module
+
+
+#: The ``pickle_module`` argument ``load_module`` passes to ``torch.load``.
+_RESTRICTED_PICKLE = _restricted_pickle_module()
 
 
 def input_features(graph: Any) -> Optional[int]:
@@ -99,8 +151,28 @@ def extract_report(
 
 
 def load_module(path: str) -> torch.nn.Module:
-    """Load a serialized ``torch.nn.Module`` from ``path``."""
-    loaded = torch.load(path, weights_only=False)
+    """Load a serialized ``torch.nn.Module`` from ``path``.
+
+    The file goes through the restricted unpickler, so an embedded
+    ``__reduce__`` payload is refused with :class:`ExtractionError`
+    instead of executing; a file that loads but holds no module raises
+    the same typed error.
+    """
+    try:
+        # weights_only must stay off — it cannot rebuild nn.Module at
+        # all — but _RestrictedUnpickler constrains the same load.
+        loaded = torch.load(
+            path,
+            map_location="cpu",
+            weights_only=False,
+            pickle_module=_RESTRICTED_PICKLE,
+        )
+    except ExtractionError:
+        raise
+    except Exception as exc:  # unreadable files must not escape untagged
+        raise ExtractionError(
+            f"{path!r} is not a loadable module: {exc}"
+        ) from exc
     if not isinstance(loaded, torch.nn.Module):
         raise ExtractionError(f"{path!r} does not contain an nn.Module")
     return loaded
