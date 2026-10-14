@@ -28,7 +28,7 @@ The registry ships:
 SDKs are optional and are reported **honestly**. Availability is resolved on
 demand through isolated probes
 ([`targets/probe.py`](../spikeforge_targets/probe.py:1) and
-[`targets/backends/api.py`](../spikeforge_targets/backends/api.py:1) — the
+[`targets/backends/api/`](../spikeforge_targets/backends/api/__init__.py:1) — the
 only modules that import a backend SDK; both import nothing at module load
 time). A target whose SDK is absent is returned with `"available": false` and
 named in the report notes; it is never hidden or silently treated as ready.
