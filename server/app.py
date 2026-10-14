@@ -165,7 +165,12 @@ async def _serve(ws: WebSocket, session: Session) -> None:
         if message.type == "hub_cancel":
             await _handle_hub_cancel(ws, session)
             continue
-        await session.inbox.put(message)
+        dropped = session.offer(message)
+        if dropped is not None:
+            await send_locked(ws, session, {
+                "type": "error",
+                "payload": f"inbound message dropped: inbox {dropped}",
+            })
 
 
 async def _spawn_workers(
