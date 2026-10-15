@@ -145,7 +145,8 @@ def test_reference_entries_import_verified(sandbox: Path) -> None:
         entry.id for entry in catalog_entries()
         if entry.source == "reference"
     ]
-    assert len(found) == 6
+    # Six stock reference checkpoints plus the RSI search policy.
+    assert len(found) == 7
     for entry_id in found:
         result = import_model(entry_id)
         assert result["meta"]["verification"]["status"] == "verified"
