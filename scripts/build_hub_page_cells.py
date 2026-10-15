@@ -1,11 +1,22 @@
 """One table row per catalog entry, HTML-escaping every field."""
 
 import html
+from pathlib import Path
 from typing import Any, Dict
+from urllib.parse import quote
 
 UNVERIFIED_CANDIDATE = "unverified-candidate"
 #: The one catalog source whose entries carry trained weights.
 TRAINED_SOURCE = "reference"
+#: Raw-file base for the shipped weight bytes beside the catalog.
+WEIGHTS_RAW = (
+    "https://raw.githubusercontent.com/Capsize-Games/spikeforge"
+    "/main/spikeforge_hub/weights/"
+)
+#: On-disk weights beside the catalog, for manifest sidecars at build time.
+WEIGHTS_DIR = (
+    Path(__file__).resolve().parent.parent / "spikeforge_hub" / "weights"
+)
 
 
 def _verified(entry: Dict[str, Any]) -> bool:
@@ -28,12 +39,30 @@ def _score_text(accuracy: Any, samples: Any, dataset: str) -> str:
     )
 
 
+def _download_links(entry: Dict[str, Any]) -> str:
+    """Direct download anchors for an entry's shipped weight bytes."""
+    weights = str(entry.get("weights") or "")
+    if not weights:
+        return ""
+    links = [
+        f'<a href="{WEIGHTS_RAW}{quote(weights)}">download weights</a>'
+    ]
+    stem, _, _ = weights.rpartition(".")
+    if stem and (WEIGHTS_DIR / (stem + ".manifest.json")).is_file():
+        links.append(
+            f'<a href="{WEIGHTS_RAW}{quote(stem + ".manifest.json")}">'
+            "manifest</a>"
+        )
+    return "<br>" + " · ".join(links)
+
+
 def _weights_cell(entry: Dict[str, Any]) -> str:
     """Return the cell that says whether this entry is a usable model.
 
     This is the column a visitor actually came for. A catalog of untrained
     shapes and a catalog of trained models are different products, so the
     page states which each row is instead of leaving it to the notes.
+    Trained rows link their bytes directly: the page is the download.
     """
     if not _trained(entry):
         return (
@@ -45,7 +74,7 @@ def _weights_cell(entry: Dict[str, Any]) -> str:
     score = _score_text(accuracy, samples, dataset)
     return (
         '<span class="badge badge-trained">trained weights</span><br>'
-        f"{score}"
+        f"{score}{_download_links(entry)}"
     )
 
 

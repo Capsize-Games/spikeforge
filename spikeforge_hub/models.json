@@ -234,7 +234,8 @@
       "size_bytes": 4483,
       "notes": "SNN search-control policy: linear(12,h)/leaky(beta 0.9)/readout, 12 drive steps, seed 0, 50 pairwise-margin epochs on W1 traces + same-op contrastive pairs. Ranked search beats the plain enumerator on 3/3 held-out novel rules; beam 9/24 vs ranked enumeration. Reproduce with rsi-programmer/scripts/train.py --seed 0 --epochs 50 (Capsize-Games/rsi-programmer; see rsi-search-policy-w1.manifest.json). Weights + manifest + LICENSE ship together; the LICENSE file governs the weights. Built and trained through Spikeforge TopologySpec/build_module. test_accuracy here means task-level solve rate: 3/3 held-out novel rules solved by SNN-guided ranked search (158/122/957 tried vs 939/939/6807 enumerator), not sample classification accuracy.",
       "dataset_license": "BSD-3-Clause",
-      "test_accuracy": 100.0
+      "test_accuracy": 100.0,
+      "test_samples": 3
     }
   ]
 }
