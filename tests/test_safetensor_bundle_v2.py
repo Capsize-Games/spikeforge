@@ -7,6 +7,8 @@ from typing import Any, Callable, Dict
 import pytest
 import torch
 
+pytest.importorskip("safetensors", reason="serve extra not installed")
+
 from spikeforge.network import model_store
 from spikeforge.serving import model_activation as act
 from spikeforge.serving import runtime_map as rt

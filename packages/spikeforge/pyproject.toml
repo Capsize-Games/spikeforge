@@ -90,6 +90,9 @@ nir = [
     "nir>=1.0",
     "nirtorch>=1.0",
 ]
+serve = [
+    "safetensors>=0.4",
+]
 events = [
     "tonic>=1.4",
 ]

@@ -118,7 +118,7 @@ jobs:
 
       - name: Install core + targets + hub + server + io editable
         run: |
-          pip install -e "./packages/spikeforge[dev,nir]" \
+          pip install -e "./packages/spikeforge[dev,nir,serve]" \
                       -e ./packages/spikeforge-targets \
                       -e ./packages/spikeforge-hub \
                       -e ./packages/spikeforge-serve \
