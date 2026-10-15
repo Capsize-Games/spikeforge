@@ -182,11 +182,7 @@ def test_every_shipped_entry_declares_its_training_data_terms() -> None:
         provenance = dataset_provenance(str(entry.dataset))
         assert entry.dataset_license == provenance.license, entry.id
         assert entry.dataset_attribution == provenance.attribution, entry.id
-        # Stock checkpoints are BSD-3-Clause. The RSI policy is the
-        # admitted exception: Capsize-owned, trained in the public
-        # rsi-programmer repo, proprietary-licensed with its manifest.
-        assert entry.license in ("BSD-3-Clause",
-                                 "LicenseRef-Capsize-Proprietary"), entry.id
+        assert entry.license == "BSD-3-Clause", entry.id
 
 
 def test_a_dataset_licence_is_never_free_text() -> None:

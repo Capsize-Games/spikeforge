@@ -1,5 +1,5 @@
 {
-  "license": "LicenseRef-Capsize-Proprietary",
+  "license": "BSD-3-Clause",
   "license_file": "rsi-search-policy-w1.LICENSE",
   "measured": {
     "beam": "9/24 vs ranked enumeration, identical accounting",
