@@ -59,8 +59,8 @@ the script above. Its weights train in the public sibling repo
 [Capsize-Games/rsi-programmer](https://github.com/Capsize-Games/rsi-programmer)
 via its canonical `scripts/train.py`; the entry's `notes` name that command
 verbatim, and its `manifest` carries the full topology spec and provenance.
-Both weights and synthetic training rows are Capsize-owned under
-`LicenseRef-Capsize-Proprietary`, recorded in
+Weights and synthetic training rows are BSD-3-Clause like the rest of the
+catalog, recorded in
 [`spikeforge/data/dataset_provenance.py`](../spikeforge/data/dataset_provenance.py)
 like every other dataset. No further exception is grandfathered by this
 paragraph: a second externally-trained entry needs its own review.
