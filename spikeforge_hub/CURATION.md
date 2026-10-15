@@ -52,8 +52,22 @@ report a `test_accuracy`, and declare that dataset's own
 that cannot say what it scores, or what the data it encodes permits, is
 rejected on load.
 
+### Admitted exception: the RSI search policy
+
+`reference/rsi-search-policy-w1` is the one reference entry not produced by
+the script above. Its weights train in the public sibling repo
+[Capsize-Games/rsi-programmer](https://github.com/Capsize-Games/rsi-programmer)
+via its canonical `scripts/train.py`; the entry's `notes` name that command
+verbatim, and its `manifest` carries the full topology spec and provenance.
+Both weights and synthetic training rows are Capsize-owned under
+`LicenseRef-Capsize-Proprietary`, recorded in
+[`spikeforge/data/dataset_provenance.py`](../spikeforge/data/dataset_provenance.py)
+like every other dataset. No further exception is grandfathered by this
+paragraph: a second externally-trained entry needs its own review.
+
 **`license` is the weights; `dataset_license` is the data.** The first is this
-project's own term (`BSD-3-Clause`); the second is the upstream dataset's, with
+project's own term (`BSD-3-Clause`, or `LicenseRef-Capsize-Proprietary` for
+the RSI exception above); the second is the upstream dataset's, with
 a different holder, and neither stands in for the other. Both are held to the
 same rule — a concrete SPDX-style id or the `unverified-candidate` marker, with
 free text rejected — so a dataset whose terms could not be read from the

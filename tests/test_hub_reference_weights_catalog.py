@@ -64,7 +64,11 @@ def test_the_packaged_weights_stay_within_their_size_budget() -> None:
 def test_every_trained_entry_names_a_reproduction_command() -> None:
     """A published number a reader cannot reproduce is not evidence."""
     for entry in _shipped():
-        assert "train_reference_models.py" in entry.notes, (
+        # Stock checkpoints reproduce through the in-repo script; the RSI
+        # policy reproduces through its public sibling repo's canonical
+        # command, named verbatim so the claim stays checkable.
+        assert ("train_reference_models.py" in entry.notes
+                or "rsi-programmer/scripts/train.py" in entry.notes), (
             f"{entry.id}: notes do not name the command that reproduces it"
         )
 
@@ -178,7 +182,11 @@ def test_every_shipped_entry_declares_its_training_data_terms() -> None:
         provenance = dataset_provenance(str(entry.dataset))
         assert entry.dataset_license == provenance.license, entry.id
         assert entry.dataset_attribution == provenance.attribution, entry.id
-        assert entry.license == "BSD-3-Clause", entry.id
+        # Stock checkpoints are BSD-3-Clause. The RSI policy is the
+        # admitted exception: Capsize-owned, trained in the public
+        # rsi-programmer repo, proprietary-licensed with its manifest.
+        assert entry.license in ("BSD-3-Clause",
+                                 "LicenseRef-Capsize-Proprietary"), entry.id
 
 
 def test_a_dataset_licence_is_never_free_text() -> None:
