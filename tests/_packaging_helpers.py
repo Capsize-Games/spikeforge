@@ -31,6 +31,7 @@ _EXPECTED_EXTRAS = {
     "all",
     "dev",
     "nir",
+    "serve",
     "events",
     "onnx",
     "tracking",
