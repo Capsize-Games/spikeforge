@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from scripts.build_hub_page import _load_entries, _verified, main, render
+from scripts.build_hub_page_cells import _download_links
 
 
 def test_loads_the_real_catalog() -> None:
@@ -43,6 +44,26 @@ def test_render_includes_every_entry_once() -> None:
     page = render(entries)
     for entry in entries:
         assert page.count(str(entry["id"])) == 1
+
+
+def test_trained_rows_link_their_bytes() -> None:
+    """Every trained row anchors its weights file for download."""
+    entries = _load_entries()
+    trained = [e for e in entries if e.get("source") == "reference"]
+    assert trained
+    for entry in trained:
+        links = _download_links(entry)
+        assert "download weights" in links, entry["id"]
+        assert entry["weights"] in links, entry["id"]
+
+
+def test_bundled_rows_link_nothing() -> None:
+    """Structure-only rows offer no bytes to download."""
+    entries = _load_entries()
+    bundled = [e for e in entries if e.get("source") != "reference"]
+    assert bundled
+    for entry in bundled:
+        assert _download_links(entry) == "", entry["id"]
 
 
 def test_main_writes_the_output_file(tmp_path: Path) -> None:
