@@ -10,6 +10,8 @@ on:
       - "spikeforge/**"
       - "packages/**"
       - "Dockerfile"
+      - "requirements/**"
+      - "requirements.txt"
       - ".dockerignore"
       - "docker-compose.hetzner.yml"
       - "deploy/docs.Caddyfile"
