@@ -9,7 +9,7 @@
 capsize-commons>=0.1.1
 snntorch>=1.0
 matplotlib>=3.8
-Pillow>=10.0
+Pillow>=13.0.0
 numpy>=1.26
 psutil>=5.9
 nir>=1.0
