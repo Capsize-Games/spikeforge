@@ -11,6 +11,10 @@ that and describe the local source tree only.
 
 ## [Unreleased]
 
+### Security
+
+- Refresh container CA certificates, bootstrap pip 26.2.2 from its verified wheel, and use Node 22.23.4 for the client build after the eMudhra certificate incident.
+
 ### Added
 
 - `embedding` stages export to NIR as a one-hot ingest plus an `Affine`
