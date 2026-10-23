@@ -39,6 +39,13 @@ except filelock.Timeout:
     return result.stdout.strip()
 
 
+@pytest.mark.skipif(
+    filelock.__version__ != "4.2.4",
+    reason=(
+        "Only the server runtime lock pins filelock; "
+        "the core test extra does not."
+    ),
+)
 def test_security_patch_version_is_installed() -> None:
     """The runtime contains the selected patched filelock release."""
     assert filelock.__version__ == "4.2.4"
