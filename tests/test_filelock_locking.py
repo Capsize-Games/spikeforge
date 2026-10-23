@@ -40,6 +40,7 @@ except filelock.Timeout:
 
 
 def test_security_patch_version_is_installed() -> None:
+    """The runtime contains the selected patched filelock release."""
     assert filelock.__version__ == "4.2.4"
 
 
@@ -47,6 +48,7 @@ def test_security_patch_version_is_installed() -> None:
 def test_lock_blocks_other_process_then_releases(
     tmp_path: Path, lock_kind: str
 ) -> None:
+    """A separate process waits until each lock type is released."""
     path = tmp_path / "shared.lock"
     if lock_kind == "ReadWriteLock":
         lock = ReadWriteLock(str(path))
