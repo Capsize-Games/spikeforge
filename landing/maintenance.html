@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Spikeforge is temporarily unavailable</title>
+    <style>
+      :root {
+        --page-bg: #0d1117;
+        --page-text: #c9d1d9;
+        --page-muted: #8b949e;
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+      }
+      [data-theme="light"] {
+        --page-bg: #f6f8fa;
+        --page-text: #1f2328;
+        --page-muted: #59636e;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --page-bg: #f6f8fa;
+          --page-text: #1f2328;
+          --page-muted: #59636e;
+          color-scheme: light;
+        }
+      }
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: center;
+        background: var(--page-bg);
+        color: var(--page-text);
+      }
+      main {
+        width: min(42rem, calc(100% - 3rem));
+        padding-block: 3rem;
+      }
+      h1 {
+        font-size: clamp(2rem, 6vw, 3.25rem);
+        line-height: 1.1;
+      }
+      p {
+        color: var(--page-muted);
+        font-size: 1.125rem;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Spikeforge is temporarily unavailable.</h1>
+      <p>This site is undergoing maintenance. Please check back later.</p>
+    </main>
+  </body>
+</html>
