@@ -61,7 +61,9 @@ dependencies = [
     # Shared §14 JSON logging. Logging is part of the capsize-commons base
     # install — 0.1.1 defines no separate "logging" extra — so the dependency
     # carries no bracket.
-    "capsize-commons>=0.1.1",
+    # Keep the last public release: yanked 0.1.2 remains installable by exact
+    # pin for existing consumers; newer private releases require auth.
+    "capsize-commons==0.1.2",
     "torch>=2.5",
     "torchvision>=0.20",
     "snntorch>=1.0",
