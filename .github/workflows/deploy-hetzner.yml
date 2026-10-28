@@ -10,6 +10,8 @@ on:
       - "spikeforge/**"
       - "packages/**"
       - "Dockerfile"
+      - "requirements/**"
+      - "requirements.txt"
       - ".dockerignore"
       - "docker-compose.hetzner.yml"
       - "deploy/docs.Caddyfile"
@@ -155,6 +157,27 @@ jobs:
             -o ConnectTimeout=15 \
             "$HETZNER_USER@$HETZNER_HOST" \
             'bash /opt/spikeforge/deploy/configure-docs.sh'
+
+      - name: Verify the documentation redirect
+        run: |
+          set -euo pipefail
+          headers=$(curl -fsSI --max-time 20 --max-redirs 0 \
+            https://docs.spikeforge.net/)
+          status=$(printf '%s\n' "$headers" | \
+            awk '/^HTTP\// { code=$2 } END { print code }')
+          location=$(printf '%s\n' "$headers" | awk '
+            tolower($1) == "location:" {
+              sub("\\r$", "")
+              $1 = ""
+              sub("^[[:space:]]+", "")
+              print
+              exit
+            }')
+          printf 'docs.spikeforge.net: HTTP %s -> %s\n' \
+            "$status" "$location"
+          test "$status" = 308
+          test "$location" = \
+            'https://github.com/Capsize-Games/spikeforge/wiki/'
 
       - name: Verify the dashboard is healthy and live
         run: |

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # ---------- Stage 1: build the React client ----------
-FROM node:22-alpine AS client-build
+FROM node:22.23.4-alpine AS client-build
 WORKDIR /build
 COPY client/package.json client/package-lock.json ./
 RUN npm ci
@@ -17,7 +17,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # System libs for matplotlib/Pillow etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libgl1 libglib2.0-0 libgomp1 \
+        ca-certificates libgl1 libglib2.0-0 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -36,6 +36,11 @@ WORKDIR /app
 # enforces the closure statically.
 COPY . .
 
+# Remove distrusted roots before dependency downloads. Persist the Debian
+# exclusions so later update-ca-certificates runs cannot restore them.
+RUN python tests/test_retire_distrusted_ca.py \
+    && python scripts/retire_distrusted_ca.py --apply
+
 # Third-party closure: installed from a hashed lockfile, never floating
 # pins, so two image builds install byte-identical versions. LOCKFILE
 # must match TORCH_INDEX_URL (server.cpu.lock for the CPU index,
@@ -50,7 +55,7 @@ COPY . .
 # into requirements.txt so dev installs track the image.
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu132
 ARG LOCKFILE=requirements/server.cu132.lock
-RUN pip install --upgrade pip \
+RUN python -m pip install --no-deps --upgrade "pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70" \
     && grep -qF -- "--index-url ${TORCH_INDEX_URL}" ${LOCKFILE} \
     && pip install --require-hashes -r ${LOCKFILE} \
     && pip install --no-deps ./packages/spikeforge \
@@ -58,7 +63,8 @@ RUN pip install --upgrade pip \
         ./packages/spikeforge-hub \
         ./packages/spikeforge-serve \
         ./packages/spikeforge-server \
-    && pip check
+    && pip check \
+    && python scripts/retire_distrusted_ca.py --check
 
 # Built client bundle (the Dockerfile's own copy overrides client/dist).
 COPY --from=client-build /build/dist /app/client/dist

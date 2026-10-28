@@ -31,6 +31,7 @@ _EXPECTED_EXTRAS = {
     "all",
     "dev",
     "nir",
+    "serve",
     "events",
     "onnx",
     "tracking",
@@ -38,7 +39,7 @@ _EXPECTED_EXTRAS = {
     "docs",
 }
 _EXPECTED_CORE_DEPS = {
-    "capsize-commons>=0.1.1",
+    "capsize-commons==0.1.2",
     "torch>=2.5",
     "torchvision>=0.20",
     "snntorch>=1.0",
