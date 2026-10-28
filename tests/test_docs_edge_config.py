@@ -16,8 +16,14 @@ def _fake_docker(directory: Path) -> Path:
         'case "$1" in\n'
         "  ps) echo fake-caddy ;;\n"
         '  inspect) echo "$MOCK_CADDYFILE" ;;\n'
-        '  cp) cp "$2" "$MOCK_CANDIDATE" ;;\n'
-        '  exec) printf "%s\\n" "$*" >> "$MOCK_LOG" ;;\n'
+        '  exec)\n'
+        '    if [ "$2" = -i ]; then\n'
+        '      cat > "$MOCK_CANDIDATE"\n'
+        '      echo "stream candidate" >> "$MOCK_LOG"\n'
+        '    else\n'
+        '      printf "%s\\n" "$*" >> "$MOCK_LOG"\n'
+        '    fi\n'
+        '    ;;\n'
         "esac\n"
     )
     docker.chmod(0o755)
@@ -43,5 +49,6 @@ def test_docs_reload_uses_current_host_file(tmp_path: Path) -> None:
     subprocess.run(["bash", str(SCRIPT)], check=True, env=env)
     assert candidate.read_text() == config.read_text()
     calls = log.read_text().splitlines()
-    assert "caddy validate --config /tmp/spikeforge-docs-candidate" in calls[0]
-    assert "caddy reload --config /tmp/spikeforge-docs-candidate" in calls[1]
+    assert calls[0] == "stream candidate"
+    assert "caddy validate --config /tmp/spikeforge-docs-candidate" in calls[1]
+    assert "caddy reload --config /tmp/spikeforge-docs-candidate" in calls[2]

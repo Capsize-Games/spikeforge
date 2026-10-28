@@ -7,6 +7,7 @@ on:
   push:
     branches: [main, arch-0001/phase-1]
     paths:
+      - ".maintenance-mode"
       - "landing/**"
       - "spikeforge_hub/models.json"
       - "scripts/build_hub_page.py"
@@ -49,6 +50,12 @@ jobs:
       - name: Render the model-hub catalog page (stdlib-only, no core install)
         run: |
           python scripts/build_hub_page.py --out build/pages/hub/index.html
+
+      - name: Apply maintenance page
+        if: ${{ hashFiles('.maintenance-mode') != '' }}
+        run: |
+          find build/pages -type f -name '*.html' \
+            -exec cp landing/maintenance.html {} \;
 
       - uses: actions/upload-pages-artifact@v5
         with:

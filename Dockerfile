@@ -36,6 +36,11 @@ WORKDIR /app
 # enforces the closure statically.
 COPY . .
 
+# Remove distrusted roots before dependency downloads. Persist the Debian
+# exclusions so later update-ca-certificates runs cannot restore them.
+RUN python tests/test_retire_distrusted_ca.py \
+    && python scripts/retire_distrusted_ca.py --apply
+
 # Third-party closure: installed from a hashed lockfile, never floating
 # pins, so two image builds install byte-identical versions. LOCKFILE
 # must match TORCH_INDEX_URL (server.cpu.lock for the CPU index,
@@ -58,7 +63,8 @@ RUN python -m pip install --no-deps --upgrade "pip @ https://files.pythonhosted.
         ./packages/spikeforge-hub \
         ./packages/spikeforge-serve \
         ./packages/spikeforge-server \
-    && pip check
+    && pip check \
+    && python scripts/retire_distrusted_ca.py --check
 
 # Built client bundle (the Dockerfile's own copy overrides client/dist).
 COPY --from=client-build /build/dist /app/client/dist
