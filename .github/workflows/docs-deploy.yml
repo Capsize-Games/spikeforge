@@ -12,12 +12,18 @@ on:
       - "spikeforge_hub/models.json"
       - "scripts/build_hub_page.py"
       - ".github/workflows/docs-deploy.yml"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      maintenance_mode:
+        description: "Persist the deployed Spikeforge Pages maintenance state"
+        required: true
+        type: choice
+        options:
+          - "on"
+          - "off"
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Only one Pages deployment at a time; let a newer push win.
 concurrency:
@@ -25,8 +31,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  persist-maintenance-mode:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Save requested maintenance mode
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          MAINTENANCE_MODE: ${{ inputs.maintenance_mode }}
+        run: gh variable set SPIKEFORGE_MAINTENANCE_MODE --repo "$GH_REPO" --body "$MAINTENANCE_MODE"
+
+  build:
+    needs: persist-maintenance-mode
+    if: ${{ always() && (needs.persist-maintenance-mode.result == 'success' || needs.persist-maintenance-mode.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
@@ -52,10 +78,21 @@ jobs:
           python scripts/build_hub_page.py --out build/pages/hub/index.html
 
       - name: Apply maintenance page
-        if: ${{ hashFiles('.maintenance-mode') != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          find build/pages -type f -name '*.html' \
-            -exec cp landing/maintenance.html {} \;
+          mode="$(gh variable get SPIKEFORGE_MAINTENANCE_MODE --repo "$GH_REPO" 2>/dev/null || true)"
+          if [ -z "$mode" ]; then
+            if [ -f .maintenance-mode ]; then mode=on; else mode=off; fi
+          fi
+          if [ "$mode" = "on" ]; then
+            find build/pages -type f -name '*.html' \
+              -exec cp landing/maintenance.html {} \;
+          elif [ "$mode" != "off" ]; then
+            echo "Unknown maintenance mode: $mode" >&2
+            exit 1
+          fi
 
       - uses: actions/upload-pages-artifact@v5
         with:
@@ -64,6 +101,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

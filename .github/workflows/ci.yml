@@ -1,9 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
+  # Gate pull requests; the full matrix runs only on release tags
+  # (`*-v*`, same scheme as release.yml). A merge to main triggers no
+  # CI jobs at all.
   pull_request:
+  push:
+    tags:
+      - "*-v*"
 
 # Cancel superseded runs on the same ref to save CI minutes.
 concurrency:
@@ -24,8 +28,8 @@ jobs:
   changes:
     # Classify a pull request so a leaf-module edit runs a fast, deterministic
     # check set instead of the full matrix (hq#14). It runs on a GitHub-hosted
-    # runner so classification never depends on workstation state; a `push` to
-    # main always takes the full path.
+    # runner so classification never depends on workstation state; a release
+    # tag always takes the full path.
     runs-on: ubuntu-latest
     outputs:
       leaf: ${{ steps.classify.outputs.leaf }}
@@ -644,9 +648,9 @@ jobs:
     # independent of workstation state.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
