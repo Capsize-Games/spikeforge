@@ -1141,3 +1141,43 @@ start the moment uploads open.
   plus a description field.
 - Any change to `spikeforge_hub/models.json`, `CURATION.md`, or the reference
   checkpoints. The curated catalog is untouched by all of this (§6).
+
+## 16. Network boundary correction (2026-10-24)
+
+This section supersedes the earlier §1 and §11 instructions that put the Hub
+API, PostgreSQL and customer edge services together on `uwu_shared`. The
+existing compose instructions describe the original deployment; they do not
+meet the currently selected isolation boundary.
+
+For the next reviewed deployment, use three distinct paths:
+
+- `uwu_shared` connects Caddy to the Hub API and Hub CDN. Keep the API on this
+  network to receive proxied requests. Do not attach PostgreSQL or the mail
+  relay to it.
+- An internal `hub_backend` bridge connects only the Hub API and PostgreSQL.
+  PostgreSQL has no host port and no other network attachment. This makes the
+  API the only container with a route to the database.
+- A non-internal `spikeforge_mail` bridge connects the Hub API to the
+  send-only mail relay. The relay needs outbound delivery; do not attach Caddy
+  or PostgreSQL to this network. Keep the relay without host port bindings.
+
+The API therefore joins all three networks; the database joins only
+`hub_backend`; Caddy and the CDN join only `uwu_shared`; and the mail relay
+joins only `spikeforge_mail`. Caddy can reach the API/CDN, but cannot reach
+PostgreSQL or the mail relay. The API retains the database and SMTP paths it
+needs. Continue to preserve the attached-volume bind mounts and all database,
+artifact, and mail data during network changes.
+
+This is a target topology, not a claim that the deployed containers already
+use it. The latest HQ recovery-plan readback recorded the API, database, and
+relay on `uwu_shared`, with the API stopped and the database and relay still
+running. The live files are `/opt/spikeforge-hub-api/compose.yaml` and
+`/opt/spikeforge-mail-relay/compose.yaml`. The current upstream source is
+`Capsize-Games/spikeforge-hub-api` `main` at `89c8e36`; its `compose.yaml` and
+`deploy/mail-relay/compose.yaml` are the maintained sources. A workstation clone
+on `chore/hub-api-fleet-audit` at `9ae1ab6` predates the deployed Compose file
+and must not be used as the rollout source. Before implementation, render the
+current upstream Hub and relay Compose configurations and compare them with the
+live files; verify network membership and reachability after a separately
+reviewed rollout. Do not restore the Hub hostname while those checks or the
+database backup/restore gate remain open.
