@@ -116,16 +116,6 @@
   }
   .pre1 b{color:var(--text);}
 
-  .install{margin-top:20px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:13px 15px;max-width:min(100%,640px);}
-  .install .cmd{font-size:13px;overflow-x:auto;}
-  .install .cmd .p{color:var(--accent);}
-  .install .cmd.code{margin-top:4px;line-height:1.65;overflow-wrap:anywhere;}
-  .install .cmd .kw{color:var(--accent);}
-  .install .cmd .str,.install .cmd .fn{color:var(--muted);}
-  .install-lead{margin:0 0 6px;font-size:13px;color:var(--muted);}
-  .install .cmd + .install-lead{margin-top:14px;}
-  .install-note{margin:12px 0 0;font-size:12.5px;color:var(--muted);}
-  .install-note a{color:inherit;}
 
   .callouts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0 0 34px;}
   .callout{
@@ -254,24 +244,6 @@
       <div class="hero-actions"><a href="https://dash.spikeforge.net/" data-i18n="openDashboard">Open dashboard</a><a href="https://docs.spikeforge.net/" data-i18n="readDocs">Read the docs</a></div>
 
       <div class="pre1" data-i18n-html="pre"></div>
-
-      <div class="install">
-        <p class="install-lead" data-i18n="installLead">Install from PyPI:</p>
-        <div class="cmd mono">
-          <span class="p">$</span> pip install spikeforge
-        </div>
-        <p class="install-lead" data-i18n="installThen">Then train a network:</p>
-        <div class="cmd mono code">
-          <span class="kw">from</span> spikeforge <span class="kw">import</span> TrainingEngine<br>
-          <br>
-          engine = TrainingEngine(dataset=<span class="str">"mnist"</span>, hidden=32, epochs=1, num_steps=5)<br>
-          <span class="kw">for</span> metrics <span class="kw">in</span> engine.train():<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;last = metrics<br>
-          <span class="fn">print</span>(last)
-        </div>
-        <p class="install-note" data-i18n-html="installNote"></p>
-      </div>
-
     </div>
 
 
@@ -343,11 +315,6 @@
           <td class="note" data-i18n="statusDeterminismNote"></td>
         </tr>
         <tr>
-          <td><code>spikeforge-serve</code></td>
-          <td><span class="pill done" data-i18n="done">done</span></td>
-          <td class="note" data-i18n="statusServeNote"></td>
-        </tr>
-        <tr>
           <td data-i18n="statusPipeline">Pipeline builder</td>
           <td><span class="pill done" data-i18n="done">done</span></td>
           <td class="note" data-i18n="statusPipelineNote"></td>
@@ -376,11 +343,6 @@
           <td><code>speck</code> / <code>xylo</code> / <code>spinnaker2</code></td>
           <td><span class="pill dev" data-i18n="inProgress">in progress</span></td>
           <td class="note" data-i18n="statusVendorNote"></td>
-        </tr>
-        <tr>
-          <td data-i18n="statusPypi">PyPI release</td>
-          <td><span class="pill done" data-i18n="done">done</span></td>
-          <td class="note" data-i18n-html="statusPypiNote"></td>
         </tr>
       </tbody>
     </table>

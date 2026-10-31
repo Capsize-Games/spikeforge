@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from scripts.build_hub_page import _load_entries, _verified, main, render
-from scripts.build_hub_page_cells import _download_links
 
 
 def test_loads_the_real_catalog() -> None:
@@ -46,24 +45,24 @@ def test_render_includes_every_entry_once() -> None:
         assert page.count(str(entry["id"])) == 1
 
 
-def test_trained_rows_link_their_bytes() -> None:
-    """Every trained row anchors its weights file for download."""
+def test_trained_rows_do_not_link_artifact_bytes() -> None:
+    """The public hub describes trained entries without download anchors."""
     entries = _load_entries()
     trained = [e for e in entries if e.get("source") == "reference"]
     assert trained
     for entry in trained:
-        links = _download_links(entry)
-        assert "download weights" in links, entry["id"]
-        assert entry["weights"] in links, entry["id"]
+        page = render([entry])
+        assert "trained weights" in page, entry["id"]
+        assert "raw.githubusercontent.com/Capsize-Games/spikeforge/main/spikeforge_hub/weights/" not in page
 
 
-def test_bundled_rows_link_nothing() -> None:
-    """Structure-only rows offer no bytes to download."""
+def test_bundled_rows_are_still_identified_as_structure_only() -> None:
+    """Structure-only rows remain described without artifact links."""
     entries = _load_entries()
     bundled = [e for e in entries if e.get("source") != "reference"]
     assert bundled
     for entry in bundled:
-        assert _download_links(entry) == "", entry["id"]
+        assert "structure only" in render([entry]), entry["id"]
 
 
 def test_main_writes_the_output_file(tmp_path: Path) -> None:
