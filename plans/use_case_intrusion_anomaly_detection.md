@@ -93,7 +93,7 @@ flowchart LR
   is required for the MVP.
 - **Reuse:** [`TrainingEngine`](spikeforge/training/training_engine.py:1),
   surrogate gradients, checkpointing
-  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75)).
+  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34)).
 
 ### 3.4 Evaluation
 - Window AUROC / AUPRC with a false-positive budget; score-distribution plots.
@@ -142,13 +142,13 @@ flowchart LR
   latency histogram, throughput, spike sparsity, anomaly-score distribution,
   alarm count, FP-rate proxy, drift distance.
 - Serving benchmark p50/p99 + throughput, wired into the regression gate
-  ([`compare.py`](spikeforge/benchmark/compare.py:123)).
+  ([`compare.py`](spikeforge/benchmark/compare.py:75)).
 
 ### 4.6 Compression option
 - Unstructured pruning to ~50–70% sparsity via
   [`pruning.py`](spikeforge/compression/pruning.py:1) plus weight-only
-  quantization ([`quantize.py`](spikeforge_targets/quantize.py:103)); the induced
-  AUROC drift from [`PruningReport`](spikeforge/compression/pruning.py:48) is
+  quantization ([`quantize.py`](spikeforge_targets/quantize.py:202)); the induced
+  AUROC drift from [`PruningReport`](spikeforge/compression/pruning_report.py:8) is
   recorded, and a regression beyond tolerance refuses the artifact.
 
 ### 4.7 Test-deploy matrix row

@@ -97,7 +97,7 @@ flowchart LR
 - **Head:** sequence classifier or next-token head.
 - **Reuse:** [`TrainingEngine`](spikeforge/training/training_engine.py:1),
   surrogate gradients, AMP/BPTT scale-ups, checkpointing
-  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75)).
+  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34)).
 - **Export contract (new deliverable):** define the primitive set an attention
   stage must use to be NIR-mappable, so
   [`stages_unmappable.py`](spikeforge/nir_bridge/stages_unmappable.py:1) refuses
@@ -147,11 +147,11 @@ flowchart LR
 - Prometheus over the registry ([`registry.py`](spikeforge/observability/registry.py:1)):
   latency histogram, throughput, peak memory, spike sparsity per stage.
 - Serving benchmark p50/p99 + throughput at long `T`, wired into the regression
-  gate ([`compare.py`](spikeforge/benchmark/compare.py:123)).
+  gate ([`compare.py`](spikeforge/benchmark/compare.py:75)).
 
 ### 4.6 Compression option
 - Pruning ([`pruning.py`](spikeforge/compression/pruning.py:1)) plus weight-only
-  quantization ([`quantize.py`](spikeforge_targets/quantize.py:103)) to test
+  quantization ([`quantize.py`](spikeforge_targets/quantize.py:202)) to test
   whether the efficiency case survives compression; drift recorded.
 
 ### 4.7 Test-deploy matrix row

@@ -99,7 +99,7 @@ flowchart LR
   fatigue.
 - **Reuse:** [`TrainingEngine`](spikeforge/training/training_engine.py:1),
   surrogate gradients, checkpointing
-  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75)).
+  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34)).
 
 ### 3.4 Evaluation
 - Subject-independent sensitivity/specificity/AUROC; event-detection latency.
@@ -148,13 +148,13 @@ flowchart LR
   latency histogram, sensitivity/specificity proxy, alarm count, calibration
   drift — **no PHI**.
 - Serving benchmark p50/p99 + throughput, wired into the regression gate
-  ([`compare.py`](spikeforge/benchmark/compare.py:123)).
+  ([`compare.py`](spikeforge/benchmark/compare.py:75)).
 
 ### 4.6 Compression option
 - Pruning ([`pruning.py`](spikeforge/compression/pruning.py:1)) to fit a wearable
   budget plus weight-only/activation quantization
   ([`activation_quant/`](spikeforge_targets/activation_quant/__init__.py:1),
-  [`quantize.py`](spikeforge_targets/quantize.py:103)); any sensitivity drift is
+  [`quantize.py`](spikeforge_targets/quantize.py:202)); any sensitivity drift is
   recorded and a regression beyond tolerance **fails the release gate**.
 
 ### 4.7 Test-deploy matrix row
