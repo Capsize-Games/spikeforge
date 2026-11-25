@@ -8,9 +8,8 @@
       if (location.hostname === "dash.spikeforge.net") {
         var counter = document.createElement("script");
         counter.async = true;
-        counter.dataset.goatcounter =
-          "https://stats.capsize.online/spikeforge/count";
-        counter.src = "https://stats.capsize.online/count.js";
+        counter.dataset.site = "spikeforge";
+        counter.src = "https://stats.capsize.online/capsize-count.js";
         document.head.appendChild(counter);
       }
     </script>

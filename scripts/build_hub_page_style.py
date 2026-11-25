@@ -6,8 +6,7 @@ _WORDMARK = '<span class="wordmark-spike">spike</span>forge'
 
 _HEAD = """
 <link rel="stylesheet" href="../assets/fonts/inter.css">
-<script data-goatcounter="https://stats.capsize.online/spikeforge/count"
-  async src="https://stats.capsize.online/count.js"></script>
+<script async src="https://stats.capsize.online/capsize-count.js" data-site="spikeforge"></script>
 <link rel="stylesheet" href="../assets/capsize-landing.css">
 """
 
