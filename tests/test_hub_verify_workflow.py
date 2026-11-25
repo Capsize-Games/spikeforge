@@ -36,3 +36,15 @@ def test_the_preflight_covers_every_required_variable() -> None:
         "SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL",
     ):
         assert name in text
+
+
+def test_the_preflight_rejects_a_non_uuid_version_id() -> None:
+    """A canary name fails the preflight before the torch install."""
+    text = _text()
+    assert "must be a UUID" in text
+
+
+def test_the_preflight_rejects_a_non_https_artifact_url() -> None:
+    """A non-HTTPS artifact URL fails the preflight before fetching."""
+    text = _text()
+    assert "must be an https" in text

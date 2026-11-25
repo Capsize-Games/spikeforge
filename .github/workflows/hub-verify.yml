@@ -115,6 +115,20 @@ jobs:
             echo "then retry."
             exit 1
           fi
+          case "${SPIKEFORGE_HUB_VERIFY_VERSION_ID}" in
+            ????????-????-????-????-????????????) ;;
+            *)
+              echo "::error::version_id must be a UUID, not a name"
+              exit 1
+              ;;
+          esac
+          case "${SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL}" in
+            https://*) ;;
+            *)
+              echo "::error::artifact_url must be an https:// URL"
+              exit 1
+              ;;
+          esac
           echo "hub-verify wiring OK (values not shown)"
 
       - name: Install torch CPU wheels

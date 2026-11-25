@@ -7,7 +7,9 @@ from hub_verify import cli
 from hub_verify.errors import CallbackError, VerificationStepError
 
 _ENV = {
-    "SPIKEFORGE_HUB_VERIFY_VERSION_ID": "v1",
+    "SPIKEFORGE_HUB_VERIFY_VERSION_ID": (
+        "e00f1cda-6b74-4436-ac2e-cc78102b1e6a"
+    ),
     "SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL": "https://cdn.example/a.spkf",
     "SPIKEFORGE_HUB_API_BASE_URL": "https://hub.example",
     "SPIKEFORGE_HUB_VERIFICATION_SECRET": "sekrit",
@@ -35,6 +37,30 @@ def test_missing_env_var_exits_loudly(
         "SPIKEFORGE_HUB_VERIFY_VERSION_ID", raising=False
     )
     with pytest.raises(SystemExit, match="SPIKEFORGE_HUB_VERIFY_VERSION_ID"):
+        cli.main()
+
+
+def test_non_uuid_version_id_exits_loudly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A canary-style name fails fast instead of a 422 after verify."""
+    _set_env(monkeypatch)
+    monkeypatch.setenv(
+        "SPIKEFORGE_HUB_VERIFY_VERSION_ID", "canary-2026-10-14-egress"
+    )
+    with pytest.raises(SystemExit, match="must be a UUID"):
+        cli.main()
+
+
+def test_non_https_artifact_url_exits_loudly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A non-HTTPS artifact URL is refused before any fetch."""
+    _set_env(monkeypatch)
+    monkeypatch.setenv(
+        "SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL", "http://cdn.example/a.spkf"
+    )
+    with pytest.raises(SystemExit, match="must be an https"):
         cli.main()
 
 

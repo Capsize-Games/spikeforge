@@ -10,6 +10,7 @@ destination this job trusts, not attacker-influenced data).
 """
 
 import os
+import re
 import sys
 import tempfile
 from typing import Dict, List, Optional, Tuple
@@ -44,6 +45,35 @@ def _env(name: str) -> str:
     value = os.environ.get(name, "")
     if not value:
         sys.exit(f"hub_verify: missing required env var {name}")
+    return value
+
+
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{12}$"
+)
+
+
+def _version_id() -> str:
+    """Return the dispatch version id, refusing a non-UUID value."""
+    value = _env("SPIKEFORGE_HUB_VERIFY_VERSION_ID")
+    if not _UUID_RE.match(value):
+        sys.exit(
+            "hub_verify: SPIKEFORGE_HUB_VERIFY_VERSION_ID "
+            "must be a UUID"
+        )
+    return value
+
+
+def _artifact_url() -> str:
+    """Return the dispatch artifact URL, refusing a non-HTTPS value."""
+    value = _env("SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL")
+    if not value.startswith("https://"):
+        sys.exit(
+            "hub_verify: SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL "
+            "must be an https:// URL"
+        )
     return value
 
 
@@ -116,8 +146,8 @@ def _verify(
 
 def main() -> int:
     """Verify the dispatched artifact and post its signed report."""
-    version_id = _env("SPIKEFORGE_HUB_VERIFY_VERSION_ID")
-    artifact_url = _env("SPIKEFORGE_HUB_VERIFY_ARTIFACT_URL")
+    version_id = _version_id()
+    artifact_url = _artifact_url()
     base_url = _env("SPIKEFORGE_HUB_API_BASE_URL")
     secret = _env("SPIKEFORGE_HUB_VERIFICATION_SECRET")
 
