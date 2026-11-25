@@ -27,7 +27,7 @@ then frozen (`net.requires_grad_(False)` in
 separate module,
 [`OneShotAssociativeMemory`](spikeforge/memory/one_shot_associative_memory.py:18),
 is taught digit 9 from a **single** example: one outer-product Hebbian
-write ([`HebbianSynapse.write`](spikeforge/memory/hebbian_synapse.py:38))
+write ([`HebbianSynapse.write`](spikeforge/memory/hebbian_synapse.py:41))
 into a dedicated LIF neuron's incoming weights — no gradient, no
 optimizer step. Recall is ordinary `snn.Leaky` dynamics over that
 synapse's current.
@@ -97,11 +97,11 @@ The **unchanged** #22 module,
 [`OneShotAssociativeMemory`](spikeforge/memory/one_shot_associative_memory.py:18).
 The open integration question is the input contract: #22 feeds it
 `fc_small`'s hidden-layer spikes
-([`hidden_trace`](spikeforge/memory/lockstep_runner.py:15)); stage 3 here
+([`hidden_trace`](spikeforge/memory/lockstep_runner.py:16)); stage 3 here
 needs the labeler's crop turned into a spike pattern of the same shape
 (`[T, H]`) before `teach()`/`step()` can be called unchanged. The
 simplest bridge — rate-code a fixed-size embedding of the crop through
-the existing [`SpikeEncoder`](spikeforge/encoding/spike_encoder.py:8) —
+the existing [`SpikeEncoder`](spikeforge/encoding/spike_encoder.py:9) —
 needs no new code, only a decision on which embedding to rate-code.
 
 ### 3.4 Open questions (unresolved, tracked here rather than guessed at)
@@ -134,10 +134,10 @@ taught; #24 asks whether a spiking embedder's *notion of similarity*
 transfers to characters it never saw any example of, in any class.
 That requires changing the training objective from a fixed N-way
 classifier to episodic metric learning
-([`prototypical_loss`](spikeforge/memory/prototypical.py:26), Snell et
+([`prototypical_loss`](spikeforge/memory/prototypical.py:25), Snell et
 al.'s Prototypical Networks, adapted to spiking readouts): `fc_small`'s
 final layer is repurposed as an embedding
-([`episodic_trainer.py`](spikeforge/memory/episodic_trainer.py:17)),
+([`episodic_trainer.py`](spikeforge/memory/episodic_trainer.py:19)),
 trained so same-class rate-coded spike patterns land close together and
 different classes land apart, over randomly sampled N-way K-shot
 episodes
@@ -207,9 +207,9 @@ A fresh, abstract 3-entity task, not tied to #22/#24's vision datasets:
 a transitive dominance hierarchy
 ([`hierarchy_outcome`](spikeforge/rrt/relation.py:23)) reversed into the
 minimal non-transitive 3-cycle that flips only the top-vs-bottom edge
-([`cycle_outcome`](spikeforge/rrt/relation.py:29)). The falsification
+([`cycle_outcome`](spikeforge/rrt/relation.py:32)). The falsification
 candidate
-([`build_frozen_predictor`](spikeforge/rrt/context_model.py:35)) is
+([`build_frozen_predictor`](spikeforge/rrt/context_model.py:34)) is
 meta-trained once via backprop across many randomly permuted hierarchy
 sessions, then permanently frozen (`requires_grad_(False)`); its only
 test-time adaptation channel is

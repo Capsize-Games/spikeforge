@@ -98,7 +98,7 @@ flowchart LR
   the head for a per-window score.
 - **Reuse:** [`TrainingEngine`](spikeforge/training/training_engine.py:1),
   surrogate gradients, BPTT over event slices
-  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75)).
+  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34)).
 
 ### 3.4 Evaluation
 - Top-1 accuracy / macro-F1 / per-class recall on the held-out event split.
@@ -148,13 +148,13 @@ flowchart LR
   score distribution.
 - Serving benchmark p50/p99, throughput at concurrency N, cold start, peak
   memory, wired into the regression gate
-  ([`compare.py`](spikeforge/benchmark/compare.py:123)).
+  ([`compare.py`](spikeforge/benchmark/compare.py:75)).
 
 ### 4.6 Compression option
 - Optional structured prune of spiking conv channels via
   [`pruning.py`](spikeforge/compression/pruning.py:1) plus weight-only
-  quantization ([`quantize.py`](spikeforge_targets/quantize.py:103)); drift from
-  [`PruningReport`](spikeforge/compression/pruning.py:48) recorded in the bundle.
+  quantization ([`quantize.py`](spikeforge_targets/quantize.py:202)); drift from
+  [`PruningReport`](spikeforge/compression/pruning_report.py:8) recorded in the bundle.
 
 ### 4.7 Test-deploy matrix row
 - Test-deploy the compact conv spiking net on `reference`, `norse`, and

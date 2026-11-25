@@ -98,7 +98,7 @@ the latency harness is the new machinery.
   hysteresis) applied to the carried state.
 - **Reuse:** [`TrainingEngine`](spikeforge/training/training_engine.py:1),
   surrogate gradients, checkpointing
-  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75)).
+  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34)).
 
 ### 3.4 Evaluation
 - Task metric (accuracy / AUROC) above the floor; **latency distribution**
@@ -142,13 +142,13 @@ the latency harness is the new machinery.
   throughput, spike rate per step.
 - Serving benchmark: p50/p99 latency, throughput at concurrency N, cold start,
   peak memory — wired into the regression gate
-  ([`compare.py`](spikeforge/benchmark/compare.py:123)); **the tail-latency gate
+  ([`compare.py`](spikeforge/benchmark/compare.py:75)); **the tail-latency gate
   is the whole point of this use case.**
 
 ### 4.6 Compression option
 - Optional pruning ([`pruning.py`](spikeforge/compression/pruning.py:1)) to shrink
   per-step cost, with weight-only quantization
-  ([`quantize.py`](spikeforge_targets/quantize.py:103)) for edge CPU. Drift is
+  ([`quantize.py`](spikeforge_targets/quantize.py:202)) for edge CPU. Drift is
   recorded; the latency budget is re-checked after compression.
 
 ### 4.7 Test-deploy matrix row

@@ -103,7 +103,7 @@ reproducible snapshot rather than a serving endpoint, though the same
   circuit be replayed statefully. Where learning is in scope, reuse
   [`TrainingEngine`](spikeforge/training/training_engine.py:1) with surrogate
   gradients; checkpoint via
-  [`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75).
+  [`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34).
 
 ### 3.4 Evaluation
 - **Fidelity:** compare trajectories to a reference trace (analytical or

@@ -98,7 +98,7 @@ per-step body through the stateful runtime.
   per-step simulator body, plus a policy-gradient/surrogate-gradient objective on
   [`TrainingEngine`](spikeforge/training/training_engine.py:1) primitives;
   checkpointing via
-  [`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75).
+  [`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34).
 - **Cross-sim export:** NIR envelope from
   [`serialization.py`](spikeforge/nir_bridge/serialization.py:52) for
   cross-simulator checks; refusal stays typed (`UnsupportedStageError`).
@@ -148,13 +148,13 @@ per-step body through the stateful runtime.
   per-step latency histogram, return/episode metrics, spike sparsity, action
   saturation.
 - Serving benchmark p50/p99 + throughput, wired into the regression gate
-  ([`compare.py`](spikeforge/benchmark/compare.py:123)).
+  ([`compare.py`](spikeforge/benchmark/compare.py:75)).
 
 ### 4.6 Compression option
 - Pruning ([`pruning.py`](spikeforge/compression/pruning.py:1)) plus weight-only
-  quantization ([`quantize.py`](spikeforge_targets/quantize.py:103)) to shrink the
+  quantization ([`quantize.py`](spikeforge_targets/quantize.py:202)) to shrink the
   controller; return drift from
-  [`PruningReport`](spikeforge/compression/pruning.py:48) is recorded, and a
+  [`PruningReport`](spikeforge/compression/pruning_report.py:8) is recorded, and a
   regression beyond tolerance refuses the artifact.
 
 ### 4.7 Test-deploy matrix row

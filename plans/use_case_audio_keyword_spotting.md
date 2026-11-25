@@ -108,7 +108,7 @@ released W1/W2/W3 machinery and adds only the audio front end.
   variant is a binary head over `{wake, not-wake}` reusing the same trunk.
 - **Reuse:** [`TrainingEngine`](spikeforge/training/training_engine.py:1),
   surrogate gradients, checkpointing
-  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75)).
+  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34)).
 
 ### 3.4 Evaluation
 - Accuracy / macro-F1 / per-keyword recall; confusion matrix.
@@ -157,13 +157,13 @@ released W1/W2/W3 machinery and adds only the audio front end.
   wake-word score distribution, false-accept counter.
 - Serving benchmark: p50/p99, throughput at concurrency N, cold start, peak
   memory, wired into the regression gate
-  ([`compare.py`](spikeforge/benchmark/compare.py:123)).
+  ([`compare.py`](spikeforge/benchmark/compare.py:75)).
 
 ### 4.6 Compression option
 - Optional unstructured pruning to ~50% sparsity via
   [`pruning.py`](spikeforge/compression/pruning.py:1) plus weight-only
-  quantization ([`quantize.py`](spikeforge_targets/quantize.py:103)); the
-  [`PruningReport`](spikeforge/compression/pruning.py:48) drift is recorded in the
+  quantization ([`quantize.py`](spikeforge_targets/quantize.py:202)); the
+  [`PruningReport`](spikeforge/compression/pruning_report.py:8) drift is recorded in the
   bundle. Weight-only stays the default when the edge profile is not requested.
 
 ### 4.7 Test-deploy matrix row

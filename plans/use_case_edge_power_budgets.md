@@ -90,15 +90,15 @@ flowchart LR
   Declared once as a [`TopologySpec`](spikeforge/topology/spec.py:1).
 - **Compression pipeline (the core deliverable):**
   - pruning via [`pruning.py`](spikeforge/compression/pruning.py:1) with the
-    achieved-vs-target [`PruningReport`](spikeforge/compression/pruning.py:48);
+    achieved-vs-target [`PruningReport`](spikeforge/compression/pruning_report.py:8);
   - weight-only **and** activation/membrane quantization via
     [`quantize_schemes.py`](spikeforge_targets/quantize_schemes.py:1) and
     [`activation_quant/`](spikeforge_targets/activation_quant/__init__.py:1);
-  - export via [`quantize.py`](spikeforge_targets/quantize.py:103) and NIR
+  - export via [`quantize.py`](spikeforge_targets/quantize.py:202) and NIR
     ([`serialization.py`](spikeforge/nir_bridge/serialization.py:52)).
 - **Reuse:** [`TrainingEngine`](spikeforge/training/training_engine.py:1),
   surrogate gradients, checkpointing
-  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:75)).
+  ([`checkpoint_mixin.py`](spikeforge/training/checkpoint_mixin.py:34)).
 
 ### 3.4 Evaluation
 - Accuracy/F1 retained vs the fp32 model; **drift** from
@@ -147,7 +147,7 @@ flowchart LR
   per-inference latency histogram, artifact size, spike density, op count,
   quantized-range coverage — plus the budget matrix readout.
 - Serving benchmark p50/p99 + throughput + peak memory, wired into the regression
-  gate ([`compare.py`](spikeforge/benchmark/compare.py:123)).
+  gate ([`compare.py`](spikeforge/benchmark/compare.py:75)).
 
 ### 4.6 Compression option
 - This use case **is** the compression path; the option is fully exercised
