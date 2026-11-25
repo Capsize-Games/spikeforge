@@ -18,7 +18,7 @@ torchvision==0.29.1
 snntorch==1.0.0
 matplotlib==3.11.2
 Pillow==13.0.0
-numpy==2.5.4
+numpy==2.5.5
 psutil==7.2.2
 
 # NIR interop: the official Neuromorphic Intermediate Representation packages.
